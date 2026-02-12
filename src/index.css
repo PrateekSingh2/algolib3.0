@@ -1,0 +1,220 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 2%;
+    --foreground: 220 10% 92%;
+
+    --card: 220 15% 6%;
+    --card-foreground: 220 10% 92%;
+
+    --popover: 220 15% 8%;
+    --popover-foreground: 220 10% 92%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 263 70% 50%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 15% 12%;
+    --muted-foreground: 220 10% 55%;
+
+    --accent: 263 70% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 14%;
+    --input: 220 15% 14%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.75rem;
+
+    --glass-bg: 220 20% 8% / 0.6;
+    --glass-border: 220 20% 30% / 0.2;
+    --glass-blur: 16px;
+
+    --neon-blue: 217 91% 60%;
+    --neon-purple: 263 70% 50%;
+    --neon-glow-blue: 0 0 20px hsl(217 91% 60% / 0.4);
+    --neon-glow-purple: 0 0 20px hsl(263 70% 50% / 0.4);
+
+    --sidebar-background: 220 15% 6%;
+    --sidebar-foreground: 220 10% 92%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 263 70% 50%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 15% 14%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace !important;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-lg;
+  }
+
+  .glass-strong {
+    @apply bg-card/80 backdrop-blur-2xl border border-white/15 shadow-xl;
+  }
+
+  .neon-glow-blue {
+    box-shadow: 0 0 20px hsl(217 91% 60% / 0.3), 0 0 60px hsl(217 91% 60% / 0.1);
+  }
+
+  .neon-glow-purple {
+    box-shadow: 0 0 20px hsl(263 70% 50% / 0.3), 0 0 60px hsl(263 70% 50% / 0.1);
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+  }
+
+  .gradient-border {
+    border-image: linear-gradient(135deg, hsl(217 91% 60%), hsl(263 70% 50%)) 1;
+  }
+
+  .neural-grid {
+    background-image:
+      linear-gradient(hsl(220 15% 15% / 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(220 15% 15% / 0.3) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .scanning-line {
+    @apply absolute left-0 right-0 h-px;
+    background: linear-gradient(90deg, transparent, hsl(217 91% 60%), transparent);
+    animation: scan 2s ease-in-out infinite;
+  }
+
+  @keyframes scan {
+    0%, 100% { top: 0; opacity: 0; }
+    50% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes pulse-neon {
+    0%, 100% { box-shadow: 0 0 20px hsl(217 91% 60% / 0.3); }
+    50% { box-shadow: 0 0 40px hsl(217 91% 60% / 0.5), 0 0 80px hsl(217 91% 60% / 0.2); }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-neon {
+    animation: pulse-neon 3s ease-in-out infinite;
+  }
+}
+
+/* Prism.js theme override */
+pre[class*="language-"],
+code[class*="language-"] {
+  color: hsl(220 10% 85%);
+  background: transparent;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+pre[class*="language-"] {
+  @apply p-4 rounded-lg overflow-auto;
+  background: hsl(220 15% 5%);
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: hsl(220 10% 40%);
+}
+
+.token.punctuation {
+  color: hsl(220 10% 55%);
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: hsl(340 82% 65%);
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: hsl(95 60% 60%);
+}
+
+.token.operator,
+.token.entity,
+.token.url {
+  color: hsl(40 90% 65%);
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: hsl(217 91% 65%);
+}
+
+.token.function,
+.token.class-name {
+  color: hsl(263 70% 70%);
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: hsl(40 90% 65%);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(220 15% 6%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(220 15% 20%);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(220 15% 30%);
+}
