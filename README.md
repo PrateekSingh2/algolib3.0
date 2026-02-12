@@ -1,4 +1,4 @@
-# Welcome to your AlgoLib project
+# Welcome to your AlgoLib-3.0 project
 
 **Use your preferred IDE**
 
