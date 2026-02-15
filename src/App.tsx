@@ -9,17 +9,23 @@ import Visualizer from "./pages/Visualizer";
 import Developer from "./pages/Developer";
 import Contributors from "./pages/Contributors";
 import NotFound from "./pages/NotFound";
+import CustomCursor from "@/components/CustomCursor"; // Import the cursor
+import Docs from "./pages/Docs";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      {/* The cursor sits above everything else */}
+      <CustomCursor />
+      
       <Toaster />
       <Sonner />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/docs" element={<Docs />} />
           <Route path="/view/:id" element={<SnippetView />} />
           <Route path="/visualizer" element={<Visualizer />} />
           <Route path="/developer" element={<Developer />} />

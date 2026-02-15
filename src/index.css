@@ -55,6 +55,15 @@
 }
 
 @layer base {
+  /* Hide default cursor on desktop */
+  @media (min-width: 768px) {
+    body, a, button, input, select, textarea {
+      cursor: none !important;
+    }
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
   }

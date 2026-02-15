@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, Users, Code2, Database, Github, Cpu } from "lucide-react";
+import { Home, Users, Code2, Database, BookOpen, Cpu } from "lucide-react";
 
 const Navbar = () => {
   const location = useLocation();
@@ -76,19 +76,18 @@ const Navbar = () => {
           })}
         </div>
 
-        {/* --- RIGHT: EXTERNAL LINK --- */}
-        <a 
-           href="https://github.com/prateeksingh2/algolib-project" 
-           target="_blank" 
-           rel="noreferrer"
+        {/* --- RIGHT: DOCS/REFERENCE BUTTON --- */}
+        <Link 
+           to="/docs" 
            className="ml-2 p-2 rounded-full hover:bg-white/10 transition-colors relative z-10 group mr-1"
+           title="Documentation & Reference"
         >
-           <Github className="w-5 h-5 text-gray-400 group-hover:text-white" />
-        </a>
+           <BookOpen className="w-5 h-5 text-gray-400 group-hover:text-[#00f5ff] transition-colors" />
+        </Link>
 
       </div>
       
-      {/* Decorative "Hanging" Wires/Lines (Visual Flair) */}
+      {/* Decorative "Hanging" Wires/Lines */}
       <div className="absolute -z-10 top-1/2 -left-10 w-8 h-[1px] bg-gradient-to-r from-transparent to-[#00f5ff]/30 hidden md:block" />
       <div className="absolute -z-10 top-1/2 -right-10 w-8 h-[1px] bg-gradient-to-l from-transparent to-[#00f5ff]/30 hidden md:block" />
 
