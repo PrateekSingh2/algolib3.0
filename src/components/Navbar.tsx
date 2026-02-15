@@ -1,88 +1,98 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Code2, Terminal } from "lucide-react";
-
-const navLinks = [
-  { label: "Home", path: "/" },
-  { label: "Visualizer", path: "/visualizer" },
-  { label: "Developers", path: "/developer" },
-  { label: "Contributors", path: "/contributors" },
-];
+import { motion } from "framer-motion";
+import { Home, Users, Code2, Database, Github, Cpu } from "lucide-react";
 
 const Navbar = () => {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
+  const navLinks = [
+    { name: "CORE", path: "/", icon: Home },
+    { name: "VISUALIZER", path: "/visualizer", icon: Database },
+    { name: "CREW", path: "/developer", icon: Code2 },
+    { name: "NODES", path: "/contributors", icon: Users },
+  ];
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass-strong">
-      <div className="container mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="relative">
-              <Code2 className="h-7 w-7 text-primary" />
-              <Terminal className="h-3 w-3 text-accent absolute -bottom-0.5 -right-0.5" />
-            </div>
-            <span className="text-lg font-bold gradient-text">AlgoLib</span>
-          </Link>
-
-          {/* Desktop Links */}
-          <div className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  location.pathname === link.path
-                    ? "text-primary bg-primary/10 neon-glow-blue"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-
-          {/* Mobile Toggle */}
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-          >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+    <motion.div
+      initial={{ y: -100, opacity: 0, x: "-50%" }}
+      animate={{ y: 0, opacity: 1, x: "-50%" }}
+      transition={{ duration: 0.8, type: "spring", stiffness: 100 }}
+      className="fixed top-6 left-1/2 z-50 w-[95%] max-w-2xl"
+    >
+      {/* FLOATING CAPSULE CONTAINER 
+        - Rounded-full for organic feel
+        - Backdrop blur for glass effect
+        - Glowing border 
+      */}
+      <div className="relative flex items-center justify-between px-2 py-2 rounded-full bg-[#0a0a1a]/80 border border-white/10 backdrop-blur-md shadow-[0_0_20px_rgba(0,0,0,0.5)] overflow-hidden">
+        
+        {/* Scanning Line Animation (Inside Navbar) */}
+        <div className="absolute inset-0 pointer-events-none opacity-20 overflow-hidden rounded-full">
+           <motion.div 
+             animate={{ x: ["-100%", "200%"] }}
+             transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+             className="absolute top-0 bottom-0 w-10 bg-gradient-to-r from-transparent via-[#00f5ff] to-transparent skew-x-12"
+           />
         </div>
-      </div>
 
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden glass-strong border-t border-border overflow-hidden"
-          >
-            <div className="px-4 py-3 space-y-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setMobileOpen(false)}
-                  className={`block px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    location.pathname === link.path
-                      ? "text-primary bg-primary/10"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </nav>
+        {/* --- LEFT: LOGO MARK --- */}
+        <Link to="/" className="pl-4 pr-6 flex items-center gap-2 group relative z-10">
+           <div className="relative">
+              <Cpu className="w-5 h-5 text-[#00f5ff] group-hover:rotate-90 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-[#00f5ff] blur-md opacity-40 group-hover:opacity-80 transition-opacity" />
+           </div>
+           <span className="font-bold text-white tracking-tighter text-sm hidden sm:block">
+              ALGO<span className="text-[#00f5ff]">LIB</span>
+           </span>
+        </Link>
+
+        {/* --- CENTER: NAVIGATION LINKS --- */}
+        <div className="flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/5 relative z-10">
+          {navLinks.map((link) => {
+            const isActive = location.pathname === link.path;
+            const Icon = link.icon;
+            
+            return (
+              <Link
+                key={link.name}
+                to={link.path}
+                className="relative px-4 py-2 rounded-full transition-all duration-300 group"
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="nav-pill"
+                    className="absolute inset-0 bg-[#00f5ff]/20 rounded-full border border-[#00f5ff]/30 shadow-[0_0_10px_rgba(0,245,255,0.2)]"
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  />
+                )}
+                <div className="relative z-10 flex items-center gap-2">
+                   <Icon className={`w-4 h-4 ${isActive ? 'text-[#00f5ff]' : 'text-gray-400 group-hover:text-white'} transition-colors`} />
+                   <span className={`text-[10px] font-mono font-bold tracking-wider hidden sm:block ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'} transition-colors`}>
+                      {link.name}
+                   </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* --- RIGHT: EXTERNAL LINK --- */}
+        <a 
+           href="https://github.com/prateeksingh2/algolib-project" 
+           target="_blank" 
+           rel="noreferrer"
+           className="ml-2 p-2 rounded-full hover:bg-white/10 transition-colors relative z-10 group mr-1"
+        >
+           <Github className="w-5 h-5 text-gray-400 group-hover:text-white" />
+        </a>
+
+      </div>
+      
+      {/* Decorative "Hanging" Wires/Lines (Visual Flair) */}
+      <div className="absolute -z-10 top-1/2 -left-10 w-8 h-[1px] bg-gradient-to-r from-transparent to-[#00f5ff]/30 hidden md:block" />
+      <div className="absolute -z-10 top-1/2 -right-10 w-8 h-[1px] bg-gradient-to-l from-transparent to-[#00f5ff]/30 hidden md:block" />
+
+    </motion.div>
   );
 };
 

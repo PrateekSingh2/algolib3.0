@@ -1,84 +1,161 @@
 import React, { useState } from 'react';
-import { Layout, GitCommit, Layers, ArrowRightLeft, List, BarChart3, Database } from 'lucide-react';
+import { GitCommit, Layers, ArrowRightLeft, BarChart3, Database, Activity, Cpu, Network, Binary, Search, Smartphone, Monitor } from 'lucide-react';
+import { motion } from 'framer-motion';
+// Assumes you have these files.
 import LinkedListVisualizer from './LinkedListVisualizer';
 import StackVisualizer from './StackVisualizer';
 import QueueVisualizer from './QueueVisualizer';
 import SortingVisualizer from './SortingVisualizer';
-import Navbar from '@/components/Navbar'; // Import the Navbar
+import BSTVisualizer from './BSTVisualizer';
+import GraphVisualizer from './GraphVisualizer';
+import Navbar from '@/components/Navbar';
+
+// Reuse the Alien Background
+const AlienBackground = () => (
+  <div className="fixed inset-0 -z-10 bg-[#050510]">
+     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#1a0b2e] via-[#050510] to-[#000000]" />
+  </div>
+);
 
 const Visualizer = () => {
   const [activeTab, setActiveTab] = useState('ll');
 
   const MENU = [
-    { id: 'll', label: 'Linked Lists', icon: <GitCommit size={18} />, component: <LinkedListVisualizer /> },
-    { id: 'stack', label: 'Stack (LIFO)', icon: <Layers size={18} />, component: <StackVisualizer /> },
-    { id: 'queue', label: 'Queue (FIFO)', icon: <ArrowRightLeft size={18} />, component: <QueueVisualizer /> },
-    { id: 'sorting', label: 'Sorting / Array', icon: <BarChart3 size={18} />, component: <SortingVisualizer /> },
+    { id: 'll', label: 'LINKED_LIST', icon: <GitCommit size={16} />, component: <LinkedListVisualizer /> },
+    { id: 'stack', label: 'STACK_LIFO', icon: <Layers size={16} />, component: <StackVisualizer /> },
+    { id: 'queue', label: 'QUEUE_FIFO', icon: <ArrowRightLeft size={16} />, component: <QueueVisualizer /> },
+    { id: 'sorting', label: 'SORTING_ALG', icon: <BarChart3 size={16} />, component: <SortingVisualizer /> },
+    { id: 'bst', label: 'BINARY_TREE', icon: <Binary size={16} />, component: <BSTVisualizer /> },
+    { id: 'graph', label: 'GRAPH_NET', icon: <Network size={16} />, component: <GraphVisualizer /> },
   ];
 
   return (
-    // Changed: flex-col to stack Navbar on top, h-screen for full viewport
-    <div className="flex flex-col h-screen w-full bg-neutral-950 text-white font-sans overflow-hidden">
+    <>
+      <AlienBackground />
       
-      {/* 1. Global Navbar Added Here */}
-      <Navbar />
+      {/* --- NAVBAR (Fixed Top, High Z-Index) --- */}
+      <div className='fixed top-0 left-0 right-0 z-[200]'>
+        <Navbar />
+      </div>
 
-      {/* 2. Main Workspace Container 
-          - flex-1: Fills remaining height after Navbar 
-          - pt-20: Adds top padding to clear the fixed Navbar (adjust if Navbar height differs)
-          - overflow-hidden: Ensures scrollbars appear inside panels, not on the window
-      */}
-      <div className="flex flex-1 overflow-hidden pt-20">
-        
-        {/* SIDEBAR */}
-        <div className="w-64 border-r border-white/10 bg-neutral-900/50 flex flex-col z-20 shrink-0">
-          <div className="p-6 border-b border-white/10">
-            <h1 className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 flex items-center gap-2">
-              <Database className="text-blue-400" />
-              AlgoLib.VIZ
-            </h1>
+      {/* --- MOBILE WARNING SCREEN (Visible only on < md) --- */}
+      <div className="flex md:hidden h-screen flex-col items-center justify-center p-8 text-center relative z-50 pt-20">
+          <div className="p-6 rounded-full bg-[#00f5ff]/5 border border-[#00f5ff]/20 mb-6 relative group">
+             <div className="absolute inset-0 bg-[#00f5ff]/20 blur-xl rounded-full opacity-50 animate-pulse" />
+             <Smartphone size={48} className="text-[#00f5ff] relative z-10" />
+             <XIconOverlay />
           </div>
           
-          <div className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {MENU.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === item.id
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                    : 'text-neutral-400 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                {item.icon}
-                {item.label}
-              </button>
-            ))}
-          </div>
+          <h2 className="text-xl font-black text-white font-mono tracking-tighter mb-2">
+            MOBILE_VIEW <span className="text-red-500">RESTRICTED</span>
+          </h2>
+          
+          <p className="text-gray-400 text-xs font-mono leading-relaxed max-w-xs mb-8">
+            The Algorithm Visualizer engine requires high-performance rendering and a larger viewport canvas.
+          </p>
 
-          <div className="p-4 border-t border-white/10 text-[10px] text-neutral-600 font-mono text-center">
-            Interactive DS Visualization Engine
+          <div className="flex items-center gap-3 px-4 py-3 bg-[#0a0a1a] border border-white/10 rounded-lg text-[10px] text-gray-500 font-mono">
+             <Monitor size={14} className="text-[#00f5ff]" />
+             <span>PLEASE SWITCH TO DESKTOP / TABLET</span>
           </div>
-        </div>
-
-        {/* MAIN CONTENT AREA */}
-        <div className="flex-1 relative flex flex-col min-w-0">
-          {/* Top Bar */}
-          <div className="h-16 border-b border-white/5 bg-neutral-900/30 flex items-center px-8 justify-between backdrop-blur-sm shrink-0">
-             <span className="text-neutral-500 font-mono text-xs">
-               MODE: <span className="text-blue-400 font-bold">{MENU.find(m => m.id === activeTab)?.label.toUpperCase()}</span>
-             </span>
-          </div>
-
-          {/* Dynamic Component Render */}
-          <div className="flex-1 relative overflow-hidden bg-neutral-950">
-            {MENU.find(m => m.id === activeTab)?.component}
-          </div>
-        </div>
-
       </div>
-    </div>
+
+      {/* --- DESKTOP/TABLET APP (Visible on md+) --- */}
+      <div className="hidden md:flex flex-col h-screen w-full text-white font-sans overflow-hidden relative pt-20">
+        <div className="flex flex-1 overflow-hidden px-4 pb-4 gap-4">
+          
+          {/* --- LEFT CONTROL PANEL (SIDEBAR) --- 
+              Visible on Tablet (md) and Desktop (lg)
+          */}
+          <div className="w-56 lg:w-64 flex flex-col z-20 shrink-0">
+            
+            {/* Panel Header */}
+            <div className="p-4 mb-4 rounded-tl-xl rounded-br-xl bg-[#0a0a1a]/80 border border-[#00f5ff]/30 backdrop-blur-md relative overflow-hidden group">
+               <div className="absolute inset-0 bg-gradient-to-r from-[#00f5ff]/10 to-transparent opacity-20" />
+               <h1 className="text-lg font-black text-white flex items-center gap-2 font-mono tracking-tighter relative z-10">
+                <Database className="text-[#00f5ff] w-4 h-4" />
+                AlgoVIZ
+              </h1>
+              <div className="text-[9px] text-[#00f5ff] font-mono mt-1 opacity-70">INTERACTIVE SIMULATION</div>
+            </div>
+            
+            {/* Navigation Keys */}
+            <div className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
+              {MENU.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full relative group overflow-hidden flex items-center gap-3 px-4 py-3.5 border-l-2 transition-all duration-300 rounded-r-md ${
+                    activeTab === item.id
+                      ? 'border-[#00f5ff] bg-[#00f5ff]/10'
+                      : 'border-transparent hover:border-[#00f5ff]/50 hover:bg-white/5'
+                  }`}
+                >
+                   {/* Active Glow Background */}
+                   {activeTab === item.id && (
+                      <motion.div layoutId="activeTab" className="absolute inset-0 bg-gradient-to-r from-[#00f5ff]/10 to-transparent" />
+                   )}
+                   
+                  <div className={`relative z-10 ${activeTab === item.id ? 'text-[#00f5ff]' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                     {item.icon}
+                  </div>
+                  <span className={`relative z-10 text-[11px] font-bold font-mono tracking-wider ${
+                     activeTab === item.id ? 'text-white' : 'text-gray-500 group-hover:text-white'
+                  }`}>
+                     {item.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Panel Footer */}
+            <div className="mt-auto p-4 rounded-bl-xl rounded-tr-xl border border-white/5 bg-black/40 backdrop-blur-md">
+               <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500">
+                  <Activity className="w-3 h-3 text-[#00ff88] animate-pulse" />
+                  SYSTEM_READY
+               </div>
+            </div>
+          </div>
+
+          {/* --- MAIN HOLOGRAPHIC WORKSPACE --- */}
+          <div className="flex-1 relative flex flex-col min-w-0 rounded-2xl overflow-hidden border border-white/10 bg-[#050510]/50 backdrop-blur-sm shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+            
+            {/* Top HUD Strip */}
+            <div className="h-12 border-b border-white/5 bg-black/20 flex items-center px-6 justify-between shrink-0">
+               <div className="flex items-center gap-3">
+                  <Cpu className="w-4 h-4 text-[#9d00ff]" />
+                  <span className="text-gray-500 font-mono text-[10px] tracking-widest uppercase">
+                    ACTIVE_PROTOCOL :: <span className="text-[#00f5ff] font-bold">{MENU.find(m => m.id === activeTab)?.label}</span>
+                  </span>
+               </div>
+               <div className="flex gap-1.5">
+                  {[1,2,3].map(i => <div key={i} className="w-1.5 h-1.5 bg-[#00f5ff] rounded-full opacity-50 animate-pulse" style={{ animationDelay: `${i * 0.2}s`}} />)}
+               </div>
+            </div>
+
+            {/* Visualization Canvas */}
+            <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-transparent to-[#0a0a1a]/80">
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f1a_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f1a_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none opacity-50" />
+              <div className="relative z-10 h-full w-full">
+                 {MENU.find(m => m.id === activeTab)?.component}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </>
   );
 };
+
+// Helper for the "X" overlay on the smartphone icon
+const XIconOverlay = () => (
+    <div className="absolute -bottom-1 -right-1 bg-[#050510] rounded-full p-1 border border-red-500/50">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+    </div>
+);
 
 export default Visualizer;
