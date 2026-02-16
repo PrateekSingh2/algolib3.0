@@ -12,7 +12,14 @@ import {
   ArrowRight, Eye, ChevronDown, Hash, 
   Command, Terminal, Plus, Minus, Cpu, Sparkles 
 } from "lucide-react";
-import { fetchAlgorithms, fetchVisitCount, getCategories, type Algorithm } from "@/lib/algorithms";
+// Ensure incrementVisitCount and getVisitCount are exported from your lib file
+import { 
+  fetchAlgorithms, 
+  getVisitCount, 
+  incrementVisitCount, 
+  getCategories, 
+  type Algorithm 
+} from "@/lib/algorithms";
 import Navbar from "@/components/Navbar";
 
 // --- 1. INTERACTIVE CYBER-NETWORK BACKGROUND ---
@@ -300,13 +307,36 @@ const Index = () => {
   const INITIAL_CATEGORY_COUNT = 8;
 
   useEffect(() => {
-    const sessionKey = "algolib_session_active";
-    if (!sessionStorage.getItem(sessionKey)) sessionStorage.setItem(sessionKey, "true");
-    Promise.all([fetchAlgorithms(), fetchVisitCount()]).then(([algos, count]) => {
-      setAlgorithms(algos);
-      setVisitCount(count); 
-      setLoading(false);
-    });
+    const initializeData = async () => {
+      try {
+        // 1. Fetch Algorithms First
+        const algos = await fetchAlgorithms();
+        setAlgorithms(algos);
+
+        // 2. VIEW COUNT LOGIC
+        const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        const sessionKey = "algolib_session_active";
+        const hasVisitedSession = sessionStorage.getItem(sessionKey);
+
+        // LOGIC: Only increment if NOT localhost AND NOT visited in this session
+        if (!isLocalhost && !hasVisitedSession) {
+           await incrementVisitCount();
+           // Mark session as visited so subsequent navigations/refreshes don't count
+           sessionStorage.setItem(sessionKey, "true");
+        }
+
+        // 3. Always fetch the latest count to display
+        const count = await getVisitCount();
+        setVisitCount(count);
+
+      } catch (error) {
+        console.error("Initialization failed", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeData();
   }, []);
 
   useEffect(() => { setIsGridExpanded(false); }, [selectedCategory, search]);

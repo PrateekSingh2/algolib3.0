@@ -23,15 +23,31 @@ export async function fetchAlgorithms(): Promise<Algorithm[]> {
   return cachedAlgorithms;
 }
 
-export async function fetchVisitCount(): Promise<number> {
-  try {
-    const res = await fetch("https://api.counterapi.dev/v1/algolib.netlify.app/visits/up");
-    const data = await res.json();
-    return data.count ?? 0;
-  } catch {
-    return 0;
-  }
-}
+const STORAGE_KEY = "algolib_global_visits";
+
+export const getVisitCount = async (): Promise<number> => {
+  // Simulate network delay
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored ? parseInt(stored, 10) : 285; // Default starting count
+};
+
+export const incrementVisitCount = async (): Promise<number> => {
+  const current = await getVisitCount();
+  const newVal = current + 1;
+  localStorage.setItem(STORAGE_KEY, newVal.toString());
+  return newVal;
+};
+
+export const reduceVisitCount = async (amount: number): Promise<number> => {
+  const current = await getVisitCount();
+  // Ensure count doesn't go below 0
+  const newVal = Math.max(0, current - amount);
+  localStorage.setItem(STORAGE_KEY, newVal.toString());
+  return newVal;
+};
+export const fetchVisitCount = getVisitCount;
 
 export function getCategories(algorithms: Algorithm[]): string[] {
   const cats = new Set<string>();
