@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { GitCommit, Layers, ArrowRightLeft, BarChart3, Database, Activity, Cpu, Network, Binary, Search, Smartphone, Monitor } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { 
+  GitCommit, Layers, ArrowRightLeft, BarChart3, 
+  Database, Activity, Cpu, Network, Binary, 
+  Smartphone, PanelLeftClose, PanelLeftOpen 
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 // Assumes you have these files.
 import LinkedListVisualizer from './LinkedListVisualizer';
 import StackVisualizer from './StackVisualizer';
@@ -19,6 +23,7 @@ const AlienBackground = () => (
 
 const Visualizer = () => {
   const [activeTab, setActiveTab] = useState('ll');
+  const [isNavOpen, setIsNavOpen] = useState(true);
 
   const MENU = [
     { id: 'll', label: 'LINKED_LIST', icon: <GitCommit size={16} />, component: <LinkedListVisualizer /> },
@@ -53,81 +58,100 @@ const Visualizer = () => {
           <p className="text-gray-400 text-xs font-mono leading-relaxed max-w-xs mb-8">
             The Algorithm Visualizer engine requires high-performance rendering and a larger viewport canvas.
           </p>
-
-          <div className="flex items-center gap-3 px-4 py-3 bg-[#0a0a1a] border border-white/10 rounded-lg text-[10px] text-gray-500 font-mono">
-             <Monitor size={14} className="text-[#00f5ff]" />
-             <span>PLEASE SWITCH TO DESKTOP / TABLET</span>
-          </div>
       </div>
 
       {/* --- DESKTOP/TABLET APP (Visible on md+) --- */}
       <div className="hidden md:flex flex-col h-screen w-full text-white font-sans overflow-hidden relative pt-20">
-        <div className="flex flex-1 overflow-hidden px-4 pb-4 gap-4">
+        <div className="flex flex-1 overflow-hidden px-4 pb-4">
           
-          {/* --- LEFT CONTROL PANEL (SIDEBAR) --- 
-              Visible on Tablet (md) and Desktop (lg)
-          */}
-          <div className="w-56 lg:w-64 flex flex-col z-20 shrink-0">
-            
-            {/* Panel Header */}
-            <div className="p-4 mb-4 rounded-tl-xl rounded-br-xl bg-[#0a0a1a]/80 border border-[#00f5ff]/30 backdrop-blur-md relative overflow-hidden group">
-               <div className="absolute inset-0 bg-gradient-to-r from-[#00f5ff]/10 to-transparent opacity-20" />
-               <h1 className="text-lg font-black text-white flex items-center gap-2 font-mono tracking-tighter relative z-10">
-                <Database className="text-[#00f5ff] w-4 h-4" />
-                AlgoVIZ
-              </h1>
-              <div className="text-[9px] text-[#00f5ff] font-mono mt-1 opacity-70">INTERACTIVE SIMULATION</div>
-            </div>
-            
-            {/* Navigation Keys */}
-            <div className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
-              {MENU.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full relative group overflow-hidden flex items-center gap-3 px-4 py-3.5 border-l-2 transition-all duration-300 rounded-r-md ${
-                    activeTab === item.id
-                      ? 'border-[#00f5ff] bg-[#00f5ff]/10'
-                      : 'border-transparent hover:border-[#00f5ff]/50 hover:bg-white/5'
-                  }`}
-                >
-                   {/* Active Glow Background */}
-                   {activeTab === item.id && (
-                      <motion.div layoutId="activeTab" className="absolute inset-0 bg-gradient-to-r from-[#00f5ff]/10 to-transparent" />
-                   )}
-                   
-                  <div className={`relative z-10 ${activeTab === item.id ? 'text-[#00f5ff]' : 'text-gray-500 group-hover:text-gray-300'}`}>
-                     {item.icon}
-                  </div>
-                  <span className={`relative z-10 text-[11px] font-bold font-mono tracking-wider ${
-                     activeTab === item.id ? 'text-white' : 'text-gray-500 group-hover:text-white'
-                  }`}>
-                     {item.label}
-                  </span>
-                </button>
-              ))}
-            </div>
+          {/* --- LEFT CONTROL PANEL (SIDEBAR) --- */}
+          <motion.div 
+            initial={{ width: 256, opacity: 1, marginRight: 16 }}
+            animate={{ 
+                width: isNavOpen ? 256 : 0, 
+                opacity: isNavOpen ? 1 : 0,
+                marginRight: isNavOpen ? 16 : 0
+            }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col z-20 shrink-0 overflow-hidden"
+          >
+            <div className="w-64 flex flex-col h-full"> {/* Inner Container fixed width to prevent content squashing */}
+                
+                {/* Panel Header */}
+                <div className="p-4 mb-4 rounded-tl-xl rounded-br-xl bg-[#0a0a1a]/80 border border-[#00f5ff]/30 backdrop-blur-md relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-r from-[#00f5ff]/10 to-transparent opacity-20" />
+                <h1 className="text-lg font-black text-white flex items-center gap-2 font-mono tracking-tighter relative z-10">
+                    <Database className="text-[#00f5ff] w-4 h-4" />
+                    AlgoVIZ
+                </h1>
+                <div className="text-[9px] text-[#00f5ff] font-mono mt-1 opacity-70">INTERACTIVE SIMULATION</div>
+                </div>
+                
+                {/* Navigation Keys */}
+                <div className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
+                {MENU.map((item) => (
+                    <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full relative group overflow-hidden flex items-center gap-3 px-4 py-3.5 border-l-2 transition-all duration-300 rounded-r-md ${
+                        activeTab === item.id
+                        ? 'border-[#00f5ff] bg-[#00f5ff]/10'
+                        : 'border-transparent hover:border-[#00f5ff]/50 hover:bg-white/5'
+                    }`}
+                    >
+                    {/* Active Glow Background */}
+                    {activeTab === item.id && (
+                        <motion.div layoutId="activeTab" className="absolute inset-0 bg-gradient-to-r from-[#00f5ff]/10 to-transparent" />
+                    )}
+                    
+                    <div className={`relative z-10 ${activeTab === item.id ? 'text-[#00f5ff]' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                        {item.icon}
+                    </div>
+                    <span className={`relative z-10 text-[11px] font-bold font-mono tracking-wider ${
+                        activeTab === item.id ? 'text-white' : 'text-gray-500 group-hover:text-white'
+                    }`}>
+                        {item.label}
+                    </span>
+                    </button>
+                ))}
+                </div>
 
-            {/* Panel Footer */}
-            <div className="mt-auto p-4 rounded-bl-xl rounded-tr-xl border border-white/5 bg-black/40 backdrop-blur-md">
-               <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500">
-                  <Activity className="w-3 h-3 text-[#00ff88] animate-pulse" />
-                  SYSTEM_READY
-               </div>
+                {/* Panel Footer */}
+                <div className="mt-auto p-4 rounded-bl-xl rounded-tr-xl border border-white/5 bg-black/40 backdrop-blur-md">
+                <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500">
+                    <Activity className="w-3 h-3 text-[#00ff88] animate-pulse" />
+                    SYSTEM_READY
+                </div>
+                </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* --- MAIN HOLOGRAPHIC WORKSPACE --- */}
           <div className="flex-1 relative flex flex-col min-w-0 rounded-2xl overflow-hidden border border-white/10 bg-[#050510]/50 backdrop-blur-sm shadow-[0_0_50px_rgba(0,0,0,0.5)]">
             
             {/* Top HUD Strip */}
-            <div className="h-12 border-b border-white/5 bg-black/20 flex items-center px-6 justify-between shrink-0">
-               <div className="flex items-center gap-3">
-                  <Cpu className="w-4 h-4 text-[#9d00ff]" />
-                  <span className="text-gray-500 font-mono text-[10px] tracking-widest uppercase">
-                    ACTIVE_PROTOCOL :: <span className="text-[#00f5ff] font-bold">{MENU.find(m => m.id === activeTab)?.label}</span>
-                  </span>
+            <div className="h-12 border-b border-white/5 bg-black/20 flex items-center px-4 justify-between shrink-0">
+               <div className="flex items-center gap-4">
+                  
+                  {/* SIDEBAR TOGGLE BUTTON */}
+                  <button 
+                    onClick={() => setIsNavOpen(!isNavOpen)}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-[#00f5ff]/20 text-gray-400 hover:text-[#00f5ff] transition-colors border border-white/5 hover:border-[#00f5ff]/30"
+                    title={isNavOpen ? "Maximize Workspace" : "Open Navigation"}
+                  >
+                    {isNavOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+                  </button>
+
+                  <div className="h-6 w-px bg-white/10" />
+
+                  <div className="flex items-center gap-3">
+                    <Cpu className="w-4 h-4 text-[#9d00ff]" />
+                    <span className="text-gray-500 font-mono text-[10px] tracking-widest uppercase">
+                        PROTOCOL :: <span className="text-[#00f5ff] font-bold">{MENU.find(m => m.id === activeTab)?.label}</span>
+                    </span>
+                  </div>
                </div>
+
                <div className="flex gap-1.5">
                   {[1,2,3].map(i => <div key={i} className="w-1.5 h-1.5 bg-[#00f5ff] rounded-full opacity-50 animate-pulse" style={{ animationDelay: `${i * 0.2}s`}} />)}
                </div>

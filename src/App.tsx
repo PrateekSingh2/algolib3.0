@@ -11,6 +11,7 @@ import Contributors from "./pages/Contributors";
 import NotFound from "./pages/NotFound";
 import CustomCursor from "@/components/CustomCursor"; // Import the cursor
 import Docs from "./pages/Docs";
+import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/docs" element={<Docs />} />
           <Route path="/view/:id" element={<SnippetView />} />
           <Route path="/visualizer" element={<Visualizer />} />

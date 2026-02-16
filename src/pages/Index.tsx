@@ -481,38 +481,48 @@ const Index = () => {
         </div>
       </section>
 
-      {/* --- REFINED CLASSY FOOTER (NO LINKS) --- */}
+      {/* --- REFINED CLASSY FOOTER --- */}
       <footer className="relative border-t border-white/10 bg-[#020205] pt-16 pb-8 overflow-hidden z-20">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-[#3b82f6]/50 to-transparent" />
         
-        <div className="container mx-auto px-4 relative z-10 flex flex-col items-center">
+        <div className="container mx-auto px-6 relative z-10 flex flex-col items-center">
+           {/* TOP SECTION: Logo & Text */}
            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="h-4 w-4 text-[#3b82f6]" />
-              <span className="text-lg font-bold tracking-tight text-white">
-                 Algo<span className="text-[#3b82f6]">Lib</span>
+              <Sparkles className="h-6 w-6 text-[#3b82f6]" />
+              <span className="text-lg font-bold tracking-tight text-white text-[24px]">
+                  Algo<span className="text-[#3b82f6]">Lib</span>
               </span>
            </div>
 
-           <p className="text-gray-500 text-[10px] font-mono mb-8 text-center max-w-xs leading-relaxed">
+           <p className="text-slate-400 text-[12px] font-mono mb-10 text-center max-w-xs leading-relaxed">
               System Version 2.0.4 // Stable Build <br/>
               Optimized for the next generation of engineers.
            </p>
 
-           <div className="flex items-center gap-6 mb-8 text-[10px] font-mono text-[#3b82f6]/60">
-              <div className="flex items-center gap-2">
-                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                 <span>SYSTEM ONLINE</span>
+           {/* BOTTOM SECTION: Split Left/Right with Divider Line */}
+           <div className="w-full border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+              
+              {/* Left Side: Copyright */}
+              <div className="text-green-400 text-[12px] font-sans tracking-wide order-2 md:order-1">
+                 &copy; {new Date().getFullYear()} AlgoLib. ALL RIGHTS RESERVED.
               </div>
-              <div className="w-px h-3 bg-white/10" />
-              <div className="flex items-center gap-2">
-                 <Eye className="h-3 w-3" />
-                 <span>{visitCount.toLocaleString()} HITS</span>
+
+              {/* Right Side: Status */}
+              <div className="flex items-center gap-6 text-[12px] font-mono order-1 md:order-2">
+                 <div className="flex items-center gap-2 text-green-400">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#4ade80]" />
+                    <span>SYSTEM ONLINE</span>
+                 </div>
+                 
+                 <div className="w-px h-3 bg-white/20 hidden md:block" />
+                 
+                 <div className="flex items-center gap-2 text-[#FFEF00]/80">
+                    <Eye className="h-4 w-4" />
+                    <span>{visitCount.toLocaleString()} HITS</span>
+                 </div>
               </div>
            </div>
 
-           <div className="text-gray-600 text-[10px] font-sans tracking-wide">
-              &copy; {new Date().getFullYear()} AlgoLib. ALL RIGHTS RESERVED.
-           </div>
         </div>
       </footer>
     </div>

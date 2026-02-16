@@ -1,512 +1,543 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, RotateCcw, ArrowRight, Code2, Trash2, CornerDownRight, X, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { 
+  Plus, RotateCcw, ArrowRight, Trash2, 
+  CornerDownRight, X, Play, Pause, StepForward, 
+  Search, Anchor, Zap, Box, MousePointer2, 
+  GitCommit, ChevronsRight, Cpu, Layers, Terminal, AlertCircle, Activity
+} from 'lucide-react';
 
 // --- TYPES ---
 type ListType = 'singly' | 'doubly';
-type NodeData = { id: string; value: number; isNew?: boolean; isDeleting?: boolean; highlight?: boolean };
-type CodeLine = { id: string; text: string; active: boolean };
-
-// --- CODE SNIPPETS (Same as before) ---
-const SNIPPETS = {
-  insertHead: [
-    { id: '1', text: 'Node newNode = new Node(val);', active: false },
-    { id: '2', text: 'newNode.next = head;', active: false },
-    { id: '3', text: 'head = newNode;', active: false },
-  ],
-  insertIndex: [
-    { id: '1', text: 'Node newNode = new Node(val);', active: false },
-    { id: '2', text: 'Node ptr = head;', active: false },
-    { id: '3', text: 'for(int i=0; i<index-1; i++) ptr=ptr.next;', active: false },
-    { id: '4', text: 'newNode.next = ptr.next;', active: false },
-    { id: '5', text: 'ptr.next = newNode;', active: false },
-  ],
-  deleteHead: [
-    { id: '1', text: 'if (head == null) return;', active: false },
-    { id: '2', text: 'Node temp = head;', active: false },
-    { id: '3', text: 'head = head.next;', active: false },
-    { id: '4', text: 'delete temp;', active: false },
-  ],
-  deleteIndex: [
-    { id: '1', text: 'Node ptr = head;', active: false },
-    { id: '2', text: 'for(int i=0; i<index-1; i++) ptr=ptr.next;', active: false },
-    { id: '3', text: 'Node toDelete = ptr.next;', active: false },
-    { id: '4', text: 'ptr.next = toDelete.next;', active: false },
-    { id: '5', text: 'delete toDelete;', active: false },
-  ]
+type NodeData = { 
+  id: string; 
+  value: number; 
+  isNew?: boolean; 
+  isDeleting?: boolean; 
+  highlight?: boolean; 
 };
 
+type CodeLine = { id: string; text: string; explanation: string; active: boolean };
+type VariableState = { name: string; value: string; color: string };
+
+// --- ADVANCED ALGORITHM MATRIX ---
+const SNIPPETS = {
+  singly: {
+    insertHead: [
+      { id: '1', text: 'Node temp = new Node(val);', explanation: 'Allocating memory for a new node in the Heap.', active: false },
+      { id: '2', text: 'temp.next = head;', explanation: 'Pointing the new node to the current Head of the list.', active: false },
+      { id: '3', text: 'head = temp;', explanation: 'Updating the Head pointer to reference our new node.', active: false },
+    ],
+    insertIndex: [
+      { id: '1', text: 'Node temp = new Node(val);', explanation: 'Creating the new node to be inserted.', active: false },
+      { id: '2', text: 'Node ptr = head;', explanation: 'Initializing a traversal pointer (ptr) at the start.', active: false },
+      { id: '3', text: 'while(i < index-1) ptr = ptr.next;', explanation: 'Advancing ptr to the node BEFORE the insertion point.', active: false },
+      { id: '4', text: 'temp.next = ptr.next;', explanation: 'Connecting new node to the rest of the chain.', active: false },
+      { id: '5', text: 'ptr.next = temp;', explanation: 'Linking the previous node to our new node.', active: false },
+    ],
+    deleteHead: [
+      { id: '1', text: 'if (head == null) return;', explanation: 'Checking if the list is empty (Underflow protection).', active: false },
+      { id: '2', text: 'Node junk = head;', explanation: 'Storing the current head to free its memory later.', active: false },
+      { id: '3', text: 'head = head.next;', explanation: 'Moving the Head pointer to the second node.', active: false },
+      { id: '4', text: 'delete junk;', explanation: 'Deallocating the memory of the removed node.', active: false },
+    ],
+    deleteIndex: [
+      { id: '1', text: 'Node ptr = head;', explanation: 'Starting traversal from Head.', active: false },
+      { id: '2', text: 'while(i < index-1) ptr = ptr.next;', explanation: 'Navigating to the predecessor of the target node.', active: false },
+      { id: '3', text: 'Node junk = ptr.next;', explanation: 'Identifying the node to be deleted.', active: false },
+      { id: '4', text: 'ptr.next = junk.next;', explanation: 'Bypassing the junk node (changing the link).', active: false },
+      { id: '5', text: 'delete junk;', explanation: 'Freeing the memory of the deleted node.', active: false },
+    ]
+  },
+  doubly: {
+    insertHead: [
+      { id: '1', text: 'Node temp = new Node(val);', explanation: 'Allocating memory for new Doubly Node.', active: false },
+      { id: '2', text: 'temp.next = head;', explanation: 'Setting forward pointer to current Head.', active: false },
+      { id: '3', text: 'if(head != null) head.prev = temp;', explanation: 'Updating back-pointer of old Head.', active: false },
+      { id: '4', text: 'head = temp;', explanation: 'Moving Head pointer to the new node.', active: false },
+    ],
+    insertIndex: [
+      { id: '1', text: 'Node temp = new Node(val);', explanation: 'Creating new Doubly Node.', active: false },
+      { id: '2', text: 'Node ptr = head;', explanation: 'Initializing traversal.', active: false },
+      { id: '3', text: 'while(i < index-1) ptr = ptr.next;', explanation: 'Moving to the insertion point.', active: false },
+      { id: '4', text: 'temp.next = ptr.next;', explanation: 'Linking forward to the next node.', active: false },
+      { id: '5', text: 'if(ptr.next) ptr.next.prev = temp;', explanation: 'Linking backward from the next node.', active: false },
+      { id: '6', text: 'ptr.next = temp; temp.prev = ptr;', explanation: 'Linking previous node to new node (both ways).', active: false },
+    ],
+    deleteHead: [
+      { id: '1', text: 'Node junk = head;', explanation: 'Marking Head for deletion.', active: false },
+      { id: '2', text: 'head = head.next;', explanation: 'Shifting Head forward.', active: false },
+      { id: '3', text: 'if(head) head.prev = null;', explanation: 'Severing the backward link of the new Head.', active: false },
+      { id: '4', text: 'delete junk;', explanation: 'Deallocating memory.', active: false },
+    ],
+    deleteIndex: [
+      { id: '1', text: 'Node ptr = head;', explanation: 'Starting traversal.', active: false },
+      { id: '2', text: 'while(i < index-1) ptr = ptr.next;', explanation: 'Finding predecessor node.', active: false },
+      { id: '3', text: 'Node junk = ptr.next;', explanation: 'Targeting node for deletion.', active: false },
+      { id: '4', text: 'ptr.next = junk.next;', explanation: 'Linking forward around junk.', active: false },
+      { id: '5', text: 'if(junk.next) junk.next.prev = ptr;', explanation: 'Linking backward around junk.', active: false },
+      { id: '6', text: 'delete junk;', explanation: 'Freeing memory.', active: false },
+    ]
+  }
+};
+
+// --- BACKGROUND COMPONENT ---
+const CyberGrid = () => (
+  <div className="absolute inset-0 z-0 pointer-events-none">
+    <div className="absolute inset-0 bg-[#020205]" />
+    <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,245,255,0.05),transparent_70%)]" />
+  </div>
+);
+
 const LinkedListVisualizer = () => {
-  // --- STATE ---
   const [listType, setListType] = useState<ListType>('singly');
   const [nodes, setNodes] = useState<NodeData[]>([
-    { id: '1', value: 10 }, 
-    { id: '2', value: 20 }, 
-    { id: '3', value: 30 },
-    { id: '4', value: 40 }
+    { id: 'A1', value: 10 }, { id: 'B2', value: 20 }, { id: 'C3', value: 30 }
   ]);
   
-  // Animation States
-  const [phantom, setPhantom] = useState<NodeData | null>(null);
-  const [phantomPos, setPhantomPos] = useState({ x: 0, index: 0 });
-  const [scannerIndex, setScannerIndex] = useState<number | null>(null);
-  const [message, setMessage] = useState<string>('Ready');
+  // Animation & Control
+  const [isPaused, setIsPaused] = useState(true); 
   const [isAnimating, setIsAnimating] = useState(false);
-  const [codeLines, setCodeLines] = useState<CodeLine[]>(SNIPPETS.insertHead);
+  const [speed, setSpeed] = useState(1);
+  const [message, setMessage] = useState('SYSTEM_IDLE');
+  const [codeLines, setCodeLines] = useState<CodeLine[]>([]);
+  const [variables, setVariables] = useState<VariableState[]>([]);
+  
+  // Visual Actors
+  const [phantom, setPhantom] = useState<NodeData | null>(null);
+  const [seekerIndex, setSeekerIndex] = useState<number | null>(null);
+  
+  const stepTrigger = useRef<() => void>(() => {});
+  const inputValRef = useRef(45);
+  const inputIdxRef = useRef(1);
 
-  // Inputs
-  const [inputValue, setInputValue] = useState(45);
-  const [inputIndex, setInputIndex] = useState(1);
+  // --- ENGINE LOGIC ---
+  const resolveStep = () => { if (stepTrigger.current) stepTrigger.current(); };
 
-  const isDoubly = listType === 'doubly';
-
-  // --- ACTIONS ---
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  const highlightCode = (lineId: string, snippet: CodeLine[]) => {
+  const waitStep = async (lineId: string, snippet: CodeLine[], vars: VariableState[] = []) => {
+    const currentLine = snippet.find(l => l.id === lineId);
+    setMessage(currentLine ? currentLine.explanation : 'Processing...');
     setCodeLines(snippet.map(line => ({ ...line, active: line.id === lineId })));
-  };
-
-  const generateRandomValue = () => Math.floor(Math.random() * 99) + 1;
-
-  // --- INSERTION LOGIC (Same as before) ---
-  const insertHead = async () => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    const snippet = SNIPPETS.insertHead;
-    setCodeLines(snippet);
-
-    const newNode = { id: Math.random().toString(), value: inputValue, isNew: true };
-    setMessage('Allocating memory for new node...');
-    highlightCode('1', snippet);
-    setPhantom(newNode);
-    setPhantomPos({ x: 0, index: -1 }); 
-    await sleep(800);
-
-    setMessage('Pointing newNode.next -> HEAD');
-    highlightCode('2', snippet);
-    await sleep(800);
-
-    setMessage('Updating HEAD to point to newNode');
-    highlightCode('3', snippet);
-    setPhantom(null);
-    setNodes([newNode, ...nodes]);
-    await sleep(500);
-    setNodes(prev => prev.map(n => ({ ...n, isNew: false })));
-    setMessage('Insertion Complete!');
-    highlightCode('', snippet);
-    setInputValue(generateRandomValue());
-    setIsAnimating(false);
-  };
-
-  const insertAtIndex = async () => {
-    if (isAnimating) return;
-    const idx = Math.max(0, Math.min(inputIndex, nodes.length));
-    if (idx === 0) return insertHead();
-    setIsAnimating(true);
-    const snippet = SNIPPETS.insertIndex;
-    setCodeLines(snippet);
-    const newNode = { id: Math.random().toString(), value: inputValue, isNew: true };
-    setMessage('Allocating memory for new node...');
-    highlightCode('1', snippet);
-    setPhantom(newNode);
-    setPhantomPos({ x: idx * 120, index: idx }); 
-    await sleep(1000);
-    setMessage('Initializing traversal pointer (ptr) at HEAD');
-    highlightCode('2', snippet);
-    setScannerIndex(0);
-    await sleep(600);
-    highlightCode('3', snippet);
-    for (let i = 0; i < idx - 1; i++) {
-        setMessage(`Traversing... Moving ptr to index ${i+1}`);
-        setScannerIndex(i + 1);
-        await sleep(500);
+    if (vars.length > 0) setVariables(vars);
+    
+    if (isPaused) {
+      await new Promise<void>((resolve) => { stepTrigger.current = resolve; });
+    } else {
+      await new Promise(r => setTimeout(r, 1500 / speed));
     }
-    setMessage('Linking newNode.next -> ptr.next');
-    highlightCode('4', snippet);
-    await sleep(800);
-    setMessage('Linking ptr.next -> newNode');
-    highlightCode('5', snippet);
-    setScannerIndex(null);
-    setPhantom(null);
+  };
+
+  // --- OPERATIONS ---
+  const handleInsert = async (atHead: boolean) => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    
+    const idx = atHead ? 0 : Math.max(0, Math.min(inputIdxRef.current, nodes.length));
+    const currentSnippets = listType === 'singly' ? SNIPPETS.singly : SNIPPETS.doubly;
+    const snippet = idx === 0 ? currentSnippets.insertHead : currentSnippets.insertIndex;
+    
+    const newNodeId = Math.floor(Math.random()*90 + 10).toString();
+    const newNode = { id: newNodeId, value: inputValRef.current, isNew: true };
+
+    // 1. ALLOCATE
+    setPhantom(newNode);
+    await waitStep('1', snippet, [{ name: 'temp', value: `${newNode.value}`, color: '#00f5ff' }]);
+
+    if (idx === 0) {
+        // 2. LINK HEAD
+        await waitStep('2', snippet);
+        if (listType === 'doubly') await waitStep('3', snippet);
+        await waitStep(listType === 'doubly' ? '4' : '3', snippet, [{ name: 'head', value: newNode.id, color: '#fbbf24' }]);
+    } else {
+        // 2. TRAVERSE
+        await waitStep('2', snippet, [{ name: 'ptr', value: 'HEAD', color: '#00ff88' }]);
+        setSeekerIndex(0);
+        
+        for (let i = 0; i < idx - 1; i++) {
+            await waitStep('3', snippet, [
+                { name: 'ptr', value: nodes[i+1]?.id || 'NULL', color: '#00ff88' },
+                { name: 'i', value: `${i}`, color: '#94a3b8' }
+            ]);
+            setSeekerIndex(i + 1);
+        }
+        
+        // 3. RE-LINK
+        await waitStep('4', snippet);
+        await waitStep('5', snippet);
+        if (listType === 'doubly') await waitStep('6', snippet);
+    }
+
+    // FINALIZE
     const newArr = [...nodes];
     newArr.splice(idx, 0, newNode);
     setNodes(newArr);
-    await sleep(800);
-    setNodes(prev => prev.map(n => ({ ...n, isNew: false })));
-    setMessage('Insertion Complete!');
-    highlightCode('', snippet);
-    setInputValue(generateRandomValue());
-    setIsAnimating(false);
-  };
-
-  // --- DELETION LOGIC (Same as before) ---
-  const deleteHead = async () => {
-      if (isAnimating || nodes.length === 0) return;
-      setIsAnimating(true);
-      const snippet = SNIPPETS.deleteHead;
-      setCodeLines(snippet);
-      setMessage('Checking if HEAD exists...');
-      highlightCode('1', snippet);
-      await sleep(600);
-      setMessage('Marking HEAD for deletion...');
-      highlightCode('2', snippet);
-      setNodes(prev => prev.map((n, i) => i === 0 ? { ...n, isDeleting: true } : n));
-      await sleep(1000);
-      setMessage('Moving HEAD pointer to HEAD.next');
-      highlightCode('3', snippet);
-      await sleep(800);
-      setMessage('Deallocating memory...');
-      highlightCode('4', snippet);
-      setNodes(prev => prev.slice(1)); 
-      await sleep(500);
-      setMessage('Node Deleted Successfully');
-      highlightCode('', snippet);
-      setIsAnimating(false);
-  };
-
-  const deleteAtIndex = async () => {
-      if (isAnimating || nodes.length === 0) return;
-      const idx = Math.max(0, Math.min(inputIndex, nodes.length - 1));
-      if (idx === 0) return deleteHead();
-      setIsAnimating(true);
-      const snippet = SNIPPETS.deleteIndex;
-      setCodeLines(snippet);
-      setMessage('Initializing traversal pointer (ptr)...');
-      highlightCode('1', snippet);
-      setScannerIndex(0);
-      await sleep(600);
-      highlightCode('2', snippet);
-      for (let i = 0; i < idx - 1; i++) {
-          setMessage(`Traversing... Moving ptr to index ${i+1}`);
-          setScannerIndex(i + 1);
-          await sleep(500);
-      }
-      setMessage(`Found target node at Index ${idx}`);
-      highlightCode('3', snippet);
-      setNodes(prev => prev.map((n, i) => i === idx ? { ...n, isDeleting: true } : n));
-      await sleep(1000);
-      setMessage('Re-linking: ptr.next = toDelete.next');
-      highlightCode('4', snippet);
-      await sleep(1000);
-      setMessage('Deallocating memory (delete toDelete)...');
-      highlightCode('5', snippet);
-      setScannerIndex(null);
-      const newArr = [...nodes];
-      newArr.splice(idx, 1);
-      setNodes(newArr);
-      await sleep(500);
-      setMessage('Node Deleted Successfully');
-      highlightCode('', snippet);
-      setIsAnimating(false);
-  };
-
-  const reset = () => {
-    setNodes([{ id: '1', value: 10 }, { id: '2', value: 20 }, { id: '3', value: 30 }]);
     setPhantom(null);
-    setScannerIndex(null);
+    setSeekerIndex(null);
+    
+    await new Promise(r => setTimeout(r, 800 / speed));
+    setNodes(prev => prev.map(n => ({ ...n, isNew: false })));
+    
     setIsAnimating(false);
-    setMessage('Ready');
-    highlightCode('', SNIPPETS.insertHead);
+    setMessage("MEMORY_UPDATED_SUCCESSFULLY");
+    setCodeLines([]);
+    setVariables([]);
+  };
+
+  const handleDelete = async (atHead: boolean) => {
+    if (isAnimating || nodes.length === 0) return;
+    setIsAnimating(true);
+    
+    const idx = atHead ? 0 : Math.max(0, Math.min(inputIdxRef.current, nodes.length - 1));
+    const currentSnippets = listType === 'singly' ? SNIPPETS.singly : SNIPPETS.doubly;
+    const snippet = idx === 0 ? currentSnippets.deleteHead : currentSnippets.deleteIndex;
+
+    if (idx === 0) {
+        await waitStep('1', snippet);
+        setNodes(prev => prev.map((n, i) => i === 0 ? { ...n, isDeleting: true } : n));
+        await waitStep('2', snippet, [{ name: 'junk', value: nodes[0].id, color: '#ef4444' }]);
+        await waitStep('3', snippet, [{ name: 'head', value: nodes[1]?.id || 'NULL', color: '#fbbf24' }]);
+        if (listType === 'doubly') await waitStep('3', snippet); 
+        await waitStep(listType === 'doubly' ? '4' : '4', snippet);
+    } else {
+        await waitStep('1', snippet, [{ name: 'ptr', value: 'HEAD', color: '#00ff88' }]);
+        setSeekerIndex(0);
+        for (let i = 0; i < idx - 1; i++) {
+            await waitStep('2', snippet, [
+                { name: 'ptr', value: nodes[i+1]?.id || 'NULL', color: '#00ff88' },
+                { name: 'i', value: `${i}`, color: '#94a3b8' }
+            ]);
+            setSeekerIndex(i + 1);
+        }
+        setNodes(prev => prev.map((n, i) => i === idx ? { ...n, isDeleting: true } : n));
+        await waitStep('3', snippet, [{ name: 'junk', value: nodes[idx].id, color: '#ef4444' }]);
+        await waitStep('4', snippet);
+        await waitStep('5', snippet);
+        if (listType === 'doubly') await waitStep('6', snippet);
+    }
+
+    const newArr = [...nodes];
+    newArr.splice(idx, 1);
+    setNodes(newArr);
+    setSeekerIndex(null);
+    setIsAnimating(false);
+    setMessage("MEMORY_FREED");
+    setCodeLines([]);
+    setVariables([]);
   };
 
   return (
-    // --- MAIN WRAPPER ---
-    // Tablet (md): flex-col (Stack)
-    // Desktop (lg): flex-row (Side-by-Side)
-    <div className="w-full h-full flex flex-col lg:flex-row bg-neutral-950 overflow-hidden font-sans">
+    <div className="w-full h-full flex flex-col bg-[#020205] overflow-hidden font-sans text-white">
+      <CyberGrid />
       
-      {/* --- CONTROLS PANEL --- 
-          - Tablet: w-full, max-height restricted to 40% (canvas gets 60%), scrollable
-          - Desktop: w-80, h-full, border-r
+      {/* REMOVED NAVBAR: 
+         The parent 'Visualizer.tsx' already renders the Navbar.
+         Including it here causes the double/mashed-up UI.
       */}
-      <div className="
-        w-full lg:w-80 
-        h-auto max-h-[40%] lg:max-h-full lg:h-full
-        flex-shrink-0
-        bg-neutral-900 border-b lg:border-b-0 lg:border-r border-white/10 
-        flex flex-col 
-        z-20 shadow-2xl relative
-        overflow-y-auto custom-scrollbar
-      ">
+
+      <div className="flex-1 flex overflow-hidden relative z-10">
         
-        <div className="p-4 space-y-4">
-            {/* Type Selector */}
-            <div>
-                <div className="flex items-center gap-2 mb-2 text-neutral-400">
-                    <Code2 size={16} className="text-blue-500" />
-                    <span className="text-[10px] font-mono uppercase tracking-widest">Structure Type</span>
-                </div>
-                <div className="flex bg-black/40 p-1 rounded-lg border border-white/5">
-                    {(['singly', 'doubly'] as ListType[]).map(type => (
-                        <button
-                            key={type}
-                            onClick={() => { setListType(type); reset(); }}
-                            disabled={isAnimating}
-                            className={`flex-1 py-1.5 rounded text-[10px] font-bold uppercase transition-all ${
-                                listType === type 
-                                ? 'bg-blue-600 text-white shadow-lg' 
-                                : 'text-neutral-500 hover:text-neutral-300'
-                            }`}
-                        >
-                            {type}
-                        </button>
-                    ))}
-                </div>
+        {/* --- LEFT: COMMAND CENTER --- */}
+        <div className="w-96 bg-[#0a0a14]/90 backdrop-blur-xl border-r border-white/10 flex flex-col shadow-2xl h-full">
+            
+            {/* Header */}
+            <div className="p-6 border-b border-white/5 bg-gradient-to-r from-[#00f5ff]/5 to-transparent">
+               <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center gap-2">
+                  <Cpu className="text-[#00f5ff]" /> LINKED_LIST_OS
+               </h2>
+               <p className="text-[10px] text-[#00f5ff]/60 font-mono mt-1">MEMORY VISUALIZATION KERNEL v4.0</p>
             </div>
 
-            {/* INPUTS */}
-            <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-black/20 border border-white/5">
-                <div className="flex flex-col gap-1">
-                    <label className="text-[9px] font-mono text-neutral-500 uppercase">Value</label>
-                    <input 
-                        type="number" 
-                        value={inputValue}
-                        onChange={(e) => setInputValue(parseInt(e.target.value) || 0)}
-                        disabled={isAnimating}
-                        className="w-full bg-neutral-800 border border-neutral-700 rounded p-1.5 text-sm text-white focus:border-blue-500 outline-none transition-colors font-mono"
-                    />
-                </div>
-                <div className="flex flex-col gap-1">
-                    <label className="text-[9px] font-mono text-neutral-500 uppercase">Index</label>
-                    <input 
-                        type="number" 
-                        value={inputIndex}
-                        onChange={(e) => setInputIndex(parseInt(e.target.value) || 0)}
-                        disabled={isAnimating}
-                        className="w-full bg-neutral-800 border border-neutral-700 rounded p-1.5 text-sm text-white focus:border-blue-500 outline-none transition-colors font-mono"
-                    />
-                </div>
-            </div>
-
-            {/* ACTIONS */}
-            <div className="space-y-2">
-                {/* Insertion Group */}
-                <div className="grid grid-cols-2 gap-2">
-                    <button 
-                        onClick={insertHead} disabled={isAnimating}
-                        className="py-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg font-bold text-[10px] uppercase flex flex-col items-center justify-center gap-1 transition-all"
-                    >
-                        <CornerDownRight size={14} /> Insert Head
-                    </button>
-                    <button 
-                        onClick={insertAtIndex} disabled={isAnimating}
-                        className="py-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg font-bold text-[10px] uppercase flex flex-col items-center justify-center gap-1 transition-all"
-                    >
-                        <ArrowRight size={14} /> Insert Index
-                    </button>
-                </div>
-
-                {/* Deletion Group */}
-                <div className="grid grid-cols-2 gap-2">
-                    <button 
-                        onClick={deleteHead} disabled={isAnimating || nodes.length === 0}
-                        className="py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg font-bold text-[10px] uppercase flex flex-col items-center justify-center gap-1 transition-all"
-                    >
-                        <X size={14} /> Delete Head
-                    </button>
-                    <button 
-                        onClick={deleteAtIndex} disabled={isAnimating || nodes.length === 0}
-                        className="py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg font-bold text-[10px] uppercase flex flex-col items-center justify-center gap-1 transition-all"
-                    >
-                        <Trash2 size={14} /> Delete Index
-                    </button>
-                </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                 
-                <button 
-                    onClick={reset} disabled={isAnimating}
-                    className="w-full py-1.5 bg-neutral-800 text-neutral-400 hover:bg-neutral-700 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
-                >
-                    <RotateCcw size={14} /> Reset List
-                </button>
-            </div>
+                {/* 1. Mode Selection */}
+                <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Architecture</label>
+                    <div className="flex bg-black/40 p-1 rounded-xl border border-white/10">
+                        {(['singly', 'doubly'] as ListType[]).map(type => (
+                            <button
+                                key={type}
+                                onClick={() => { setListType(type); setNodes([{id:'A1', value:10}, {id:'B2', value:20}]); }}
+                                disabled={isAnimating}
+                                className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all duration-300 ${
+                                    listType === type ? 'bg-[#00f5ff] text-black shadow-lg shadow-[#00f5ff]/20' : 'text-gray-500 hover:text-white'
+                                }`}
+                            >
+                                {type}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-            {/* Code Panel (Takes remaining height in desktop, or fixed height in tablet stack) */}
-            <div className="bg-black/60 rounded-xl p-3 border border-white/10 font-mono text-[9px] overflow-y-auto custom-scrollbar min-h-[120px] max-h-[200px] lg:max-h-[300px]">
-                <div className="space-y-1">
-                    {codeLines.map((line) => (
-                        <div 
-                            key={line.id} 
-                            className={`px-2 py-1 rounded transition-all duration-300 border-l-2 ${
-                                line.active 
-                                    ? 'bg-blue-500/20 text-blue-300 border-blue-400' 
-                                    : 'text-neutral-500 border-transparent'
+                {/* 2. Playback Controls */}
+                <div className="bg-white/[0.03] p-4 rounded-2xl border border-white/5 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Process Control</span>
+                        <div className={`px-2 py-0.5 rounded text-[9px] font-black border ${isPaused ? 'border-yellow-500 text-yellow-500' : 'border-green-500 text-green-500'}`}>
+                            {isPaused ? 'MANUAL' : 'AUTO'}
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setIsPaused(!isPaused)} 
+                            className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-bold text-xs border ${
+                                !isPaused 
+                                ? 'bg-[#00f5ff]/10 border-[#00f5ff]/50 text-[#00f5ff]' 
+                                : 'bg-black/50 border-white/10 text-gray-400 hover:text-white'
                             }`}
                         >
-                        <span className="opacity-50 mr-2">{line.id}</span>
-                        <span>{line.text}</span>
+                            {isPaused ? <Play size={16} fill="currentColor"/> : <Pause size={16} fill="currentColor"/>}
+                            {isPaused ? 'RESUME' : 'PAUSE'}
+                        </button>
+                        <button 
+                            disabled={!isPaused || !isAnimating} 
+                            onClick={resolveStep}
+                            className="flex-1 py-3 bg-[#00f5ff] text-black rounded-xl disabled:opacity-20 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 font-black text-xs hover:shadow-[0_0_15px_#00f5ff] hover:scale-[1.02]"
+                        >
+                            <StepForward size={16} /> STEP
+                        </button>
+                    </div>
+                </div>
+
+                {/* 3. Operations Deck */}
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-gray-500 uppercase ml-1">Payload (Val)</label>
+                            <input 
+                                type="number" defaultValue={45} onChange={(e) => inputValRef.current = parseInt(e.target.value) || 0}
+                                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-[#00f5ff] focus:border-[#00f5ff] outline-none font-mono"
+                            />
                         </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-      </div>
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-gray-500 uppercase ml-1">Address (Idx)</label>
+                            <input 
+                                type="number" defaultValue={1} onChange={(e) => inputIdxRef.current = parseInt(e.target.value) || 0}
+                                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-[#00f5ff] focus:border-[#00f5ff] outline-none font-mono"
+                            />
+                        </div>
+                    </div>
 
-      {/* --- CANVAS --- 
-          - Tablet: flex-1 (Fills bottom 60%)
-          - Desktop: flex-1 (Fills right side)
-      */}
-      <div className="flex-1 relative bg-[#050505] flex flex-col items-center justify-center p-8 overflow-hidden min-h-0">
-        
-        {/* EXPLANATORY TOAST */}
-        <AnimatePresence>
-            {isAnimating && (
-                <motion.div 
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="absolute top-4 lg:top-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2 bg-neutral-900/90 backdrop-blur-md border border-blue-500/30 rounded-full shadow-[0_0_30px_rgba(0,0,0,0.5)]"
-                >
-                    <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-blue-500 animate-pulse" />
-                    <span className="text-[10px] lg:text-xs font-mono font-bold text-blue-200 tracking-wide whitespace-nowrap">{message}</span>
-                </motion.div>
-            )}
-        </AnimatePresence>
-
-        {/* Grid */}
-        <div className="absolute inset-0 opacity-20 pointer-events-none" 
-             style={{ 
-                 backgroundImage: 'linear-gradient(#1a1a1a 1px, transparent 1px), linear-gradient(90deg, #1a1a1a 1px, transparent 1px)', 
-                 backgroundSize: '40px 40px' 
-             }}>
-        </div>
-
-        {/* PHANTOM NODE */}
-        <AnimatePresence>
-          {phantom && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0, y: -150, x: -50 }}
-              animate={{ 
-                  opacity: 1, 
-                  scale: 1, 
-                  y: -100, 
-                  x: phantomPos.index === -1 ? -150 : (phantomPos.index * 120) - (nodes.length * 60)
-              }}
-              exit={{ opacity: 0, scale: 0 }}
-              className="absolute z-50 flex flex-col items-center"
-            >
-                {/* NEW TAG */}
-                <div className="mb-1 px-1.5 py-0.5 bg-green-500/20 border border-green-500 rounded text-[9px] font-bold text-green-400 uppercase tracking-widest">
-                    NEW
-                </div>
-              <div className="w-20 h-14 bg-green-900/20 border-2 border-green-500 rounded-lg flex items-center justify-center font-bold text-green-400 shadow-[0_0_30px_rgba(34,197,94,0.4)] backdrop-blur-sm relative">
-                {phantom.value}
-                <div className="absolute -right-3 w-6 h-6 bg-neutral-900 border border-green-500/50 rounded flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                </div>
-              </div>
-              <motion.div initial={{ height: 0 }} animate={{ height: 40 }} className="w-[2px] bg-gradient-to-b from-green-500 to-transparent mt-1" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* MAIN LIST */}
-        <div className="flex items-center gap-10 z-10 px-10 relative max-w-full overflow-x-auto pb-20 pt-20 custom-scrollbar">
-          <AnimatePresence mode="popLayout">
-            {nodes.map((node, i) => {
-              const isScannerHere = scannerIndex === i;
-              const isHead = i === 0;
-
-              return (
-                <motion.div
-                  layout
-                  key={node.id}
-                  initial={{ opacity: 0, scale: 0.5, x: -50 }}
-                  animate={{ 
-                      opacity: 1, 
-                      scale: node.isDeleting ? 0.9 : 1, 
-                      x: 0,
-                      filter: node.isDeleting ? 'grayscale(100%)' : 'none'
-                  }}
-                  exit={{ opacity: 0, scale: 0, y: 50, transition: { duration: 0.5 } }}
-                  className="relative flex items-center group"
-                >
-                  {/* TAGS CONTAINER */}
-                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
-                      {isHead && (
-                          <div className="px-1.5 py-0.5 bg-yellow-500/20 border border-yellow-500 rounded text-[8px] font-bold text-yellow-500 uppercase tracking-wider shadow-[0_0_10px_rgba(234,179,8,0.3)]">
-                              HEAD
-                          </div>
-                      )}
-                      {node.isDeleting && (
-                          <div className="px-1.5 py-0.5 bg-red-500/20 border border-red-500 rounded text-[8px] font-bold text-red-500 uppercase tracking-wider animate-pulse">
-                              DELETE
-                          </div>
-                      )}
-                  </div>
-
-                  {/* Node Body */}
-                  <div className={`
-                     w-20 h-14 rounded-lg border-2 flex flex-col items-center justify-center relative z-20 transition-all duration-300
-                     ${node.isNew 
-                        ? 'bg-green-900/20 border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]' 
-                        : node.isDeleting
-                            ? 'bg-red-900/20 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.5)] animate-shake'
-                            : isScannerHere 
-                                ? 'bg-blue-900/20 border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.5)] scale-110' 
-                                : 'bg-neutral-900 border-neutral-700 text-neutral-300'}
-                  `}>
-                    <span className={`font-bold text-lg ${node.isDeleting ? 'text-red-500' : 'text-white'}`}>
-                        {node.value}
-                    </span>
-                    <div className="absolute -bottom-6 text-[9px] text-neutral-500 font-mono">
-                       idx:{i}
+                    <div className="grid grid-cols-2 gap-3">
+                        <button onClick={() => handleInsert(true)} disabled={isAnimating} className="p-4 bg-[#00f5ff]/5 border border-[#00f5ff]/20 hover:border-[#00f5ff]/50 hover:bg-[#00f5ff]/10 rounded-xl text-[#00f5ff] transition-all flex flex-col items-center gap-2 disabled:opacity-30 group">
+                            <CornerDownRight size={20} className="group-hover:translate-x-1 transition-transform"/>
+                            <span className="text-[10px] font-black uppercase">Push Head</span>
+                        </button>
+                        <button onClick={() => handleInsert(false)} disabled={isAnimating} className="p-4 bg-[#00f5ff]/5 border border-[#00f5ff]/20 hover:border-[#00f5ff]/50 hover:bg-[#00f5ff]/10 rounded-xl text-[#00f5ff] transition-all flex flex-col items-center gap-2 disabled:opacity-30 group">
+                            <Plus size={20} className="group-hover:scale-110 transition-transform"/>
+                            <span className="text-[10px] font-black uppercase">Insert At</span>
+                        </button>
+                        <button onClick={() => handleDelete(true)} disabled={isAnimating} className="p-4 bg-red-500/5 border border-red-500/20 hover:border-red-500/50 hover:bg-red-500/10 rounded-xl text-red-500 transition-all flex flex-col items-center gap-2 disabled:opacity-30 group">
+                            <X size={20} className="group-hover:rotate-90 transition-transform"/>
+                            <span className="text-[10px] font-black uppercase">Pop Head</span>
+                        </button>
+                        <button onClick={() => handleDelete(false)} disabled={isAnimating} className="p-4 bg-red-500/5 border border-red-500/20 hover:border-red-500/50 hover:bg-red-500/10 rounded-xl text-red-500 transition-all flex flex-col items-center gap-2 disabled:opacity-30 group">
+                            <Trash2 size={20} className="group-hover:scale-110 transition-transform"/>
+                            <span className="text-[10px] font-black uppercase">Delete At</span>
+                        </button>
                     </div>
                     
-                    <div className={`absolute -right-4 w-8 h-8 rounded border flex items-center justify-center z-30 bg-neutral-900
-                        ${node.isDeleting ? 'border-red-500' : 'border-neutral-600'}
-                    `}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${node.isDeleting ? 'bg-red-500' : 'bg-neutral-400'}`} />
+                    <button onClick={() => setNodes([])} className="w-full py-3 border border-white/5 hover:border-white/20 rounded-xl text-[10px] font-bold text-gray-500 hover:text-white transition-all flex items-center justify-center gap-2">
+                        <RotateCcw size={14}/> FORMAT_MEMORY
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {/* --- RIGHT: HOLOGRAPHIC CANVAS --- */}
+        <div className="flex-1 relative flex flex-col overflow-hidden">
+            
+            {/* 1. Code & Variables Panel (Floating) */}
+            <div className="absolute top-6 right-6 z-40 w-80 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[50vh]">
+                <div className="px-4 py-3 bg-white/5 border-b border-white/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-white">
+                        <Terminal size={14} className="text-[#00f5ff]"/>
+                        <span className="text-[10px] font-black uppercase tracking-widest">Execution_Trace</span>
                     </div>
+                </div>
+                
+                {/* Variable Scope */}
+                {variables.length > 0 && (
+                    <div className="px-4 py-2 border-b border-white/5 bg-[#00f5ff]/5 flex flex-wrap gap-3">
+                        {variables.map((v, i) => (
+                            <div key={i} className="text-[10px] font-mono">
+                                <span className="text-gray-400">{v.name}:</span> <span style={{ color: v.color }} className="font-bold">{v.value}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Code Lines */}
+                <div className="p-4 space-y-2 overflow-y-auto custom-scrollbar">
+                    {codeLines.length > 0 ? codeLines.map((line) => (
+                        <motion.div 
+                            initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                            key={line.id} 
+                            className={`text-[10px] font-mono flex gap-3 transition-colors duration-300 ${line.active ? 'text-white' : 'text-gray-600 opacity-50'}`}
+                        >
+                            <span className="shrink-0 w-4 text-right opacity-30">{line.id}</span>
+                            <div className="flex flex-col">
+                                <span className={line.active ? 'font-bold text-[#00f5ff]' : ''}>{line.text}</span>
+                            </div>
+                        </motion.div>
+                    )) : (
+                        <div className="flex flex-col items-center justify-center h-20 text-gray-700 gap-2">
+                            <Zap size={20} className="opacity-20"/>
+                            <span className="text-[10px] font-mono italic">AWAITING_OPCODE...</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 2. Message Toast (Bottom Fixed) */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 w-auto">
+               <motion.div 
+                 key={message}
+                 initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                 className="px-8 py-4 bg-[#0a0a14] border border-[#00f5ff]/30 rounded-full shadow-[0_0_40px_rgba(0,0,0,0.5)] flex items-center gap-4 min-w-[300px]"
+               >
+                  <div className={`p-2 rounded-full ${isAnimating ? 'bg-[#00f5ff]/10 text-[#00f5ff] animate-pulse' : 'bg-gray-800 text-gray-500'}`}>
+                     <Activity size={18} />
                   </div>
+                  <div className="flex flex-col">
+                      <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">System Status</span>
+                      <span className="text-sm font-medium text-white">{message}</span>
+                  </div>
+               </motion.div>
+            </div>
 
-                  {/* SCANNER PROBE */}
-                  {isScannerHere && (
-                      <motion.div layoutId="scanner" className="absolute -inset-4 border-2 border-blue-500 rounded-xl opacity-50 animate-ping pointer-events-none" />
-                  )}
-                  {isScannerHere && (
-                      <motion.div 
-                         initial={{ opacity: 0, y: -20 }}
-                         animate={{ opacity: 1, y: -45 }}
-                         className="absolute top-0 left-1/2 -translate-x-1/2 z-40"
-                      >
-                         <div className="px-1.5 py-0.5 bg-blue-600 text-white text-[9px] font-bold rounded shadow-lg border border-blue-400">PTR</div>
-                      </motion.div>
-                  )}
+            {/* 3. The Main Stage */}
+            <div className="flex-1 relative flex flex-col">
+                
+                {/* Memory Pool (Creation Zone) */}
+                <div className="h-1/3 w-full border-b border-white/5 bg-white/[0.01] relative flex items-center justify-center">
+                    <div className="absolute top-4 left-6 flex items-center gap-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest">
+                        <Box size={14} className="text-[#00f5ff]"/> 
+                        <span>Heap_Allocator (0x0000)</span>
+                    </div>
+                    
+                    <AnimatePresence>
+                        {phantom && (
+                            <motion.div 
+                                initial={{ scale: 0, opacity: 0 }} 
+                                animate={{ scale: 1, opacity: 1 }} 
+                                exit={{ y: 200, opacity: 0, scale: 0.5, transition: { duration: 0.5 } }}
+                                className="relative flex flex-col items-center"
+                            >
+                                <div className="px-3 py-1 bg-[#00f5ff] text-black text-[9px] font-black rounded-full mb-3 shadow-[0_0_20px_#00f5ff]">NEW_NODE</div>
+                                <div className="w-24 h-24 rounded-2xl bg-[#0a0a14] border-2 border-[#00f5ff] flex items-center justify-center shadow-[0_0_50px_rgba(0,245,255,0.2)]">
+                                    <span className="text-3xl font-black text-white">{phantom.value}</span>
+                                    <div className="absolute top-2 left-3 text-[9px] font-mono text-gray-500">0x{phantom.id}</div>
+                                </div>
+                                <motion.div 
+                                    animate={{ y: [0, 10, 0] }} 
+                                    transition={{ repeat: Infinity, duration: 1.5 }}
+                                    className="absolute -bottom-10 text-[#00f5ff]"
+                                >
+                                    <ArrowRight size={24} className="rotate-90" />
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
 
-                  {/* Connection Line */}
-                  { i < nodes.length - 1 && (
-                      <div className="w-10 h-[2px] bg-neutral-700 relative mx-2">
-                          {node.isDeleting && (
-                              <motion.div 
-                                initial={{ width: 0 }} 
-                                animate={{ width: '100%' }} 
-                                className="absolute inset-0 bg-red-500 z-20" 
-                              />
-                          )}
-                          <div className="absolute right-0 -top-[3px] w-2 h-2 border-t-2 border-r-2 border-neutral-700 rotate-45" />
-                      </div>
-                  )}
+                {/* Linked List Chain */}
+                <div className="flex-1 flex items-center overflow-x-auto px-20 custom-scrollbar relative">
+                    
+                    {/* HEAD Anchor */}
+                    <div className="relative mr-16 flex flex-col items-center gap-3 group">
+                        <div className="w-16 h-16 rounded-full bg-yellow-500/10 border-2 border-yellow-500 flex items-center justify-center shadow-[0_0_30px_rgba(234,179,8,0.3)] relative z-10">
+                            <Anchor className="text-yellow-500 w-8 h-8" />
+                        </div>
+                        <span className="text-[10px] font-black text-yellow-500 tracking-widest">HEAD</span>
+                        
+                        {/* Connecting Cable */}
+                        {nodes.length > 0 && (
+                            <svg className="absolute top-8 left-16 w-16 h-2 z-0 overflow-visible">
+                                <motion.line 
+                                    x1="0" y1="0" x2="100%" y2="0" 
+                                    stroke="#eab308" strokeWidth="2" 
+                                    initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1 }}
+                                />
+                                <circle cx="100%" cy="0" r="3" fill="#eab308" />
+                            </svg>
+                        )}
+                    </div>
 
-                  {/* Doubly Back-Link */}
-                  {isDoubly && i > 0 && !node.isDeleting && (
-                      <div className="absolute -left-12 bottom-[-10px] w-10 h-[2px] bg-neutral-800">
-                          <div className="absolute left-0 -top-[3px] w-2 h-2 border-b-2 border-l-2 border-neutral-800 rotate-45" />
-                      </div>
-                  )}
+                    <AnimatePresence mode="popLayout">
+                        {nodes.map((node, i) => {
+                            const isSeeker = seekerIndex === i;
+                            
+                            return (
+                                <motion.div 
+                                    layout
+                                    key={node.id}
+                                    initial={{ opacity: 0, scale: 0.8, x: -50 }}
+                                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                                    exit={{ opacity: 0, scale: 0, y: 100 }}
+                                    className="relative flex items-center mr-6 shrink-0"
+                                >
+                                    {/* NODE CONTAINER */}
+                                    <div className={`
+                                        w-28 h-28 rounded-2xl border-2 flex flex-col items-center justify-center relative z-10 transition-all duration-500 bg-[#0a0a14]
+                                        ${node.isDeleting ? 'border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.3)]' : 
+                                          isSeeker ? 'border-green-500 shadow-[0_0_50px_rgba(34,197,94,0.3)]' : 
+                                          'border-white/10'}
+                                    `}>
+                                        <div className="absolute top-3 left-3 text-[9px] font-mono text-gray-600">0x{node.id}</div>
+                                        <span className={`text-3xl font-black ${isSeeker ? 'text-green-400' : 'text-white'}`}>{node.value}</span>
+                                        <div className="absolute -bottom-8 flex flex-col items-center">
+                                            <div className="h-4 w-px bg-white/10" />
+                                            <span className="text-[10px] font-mono text-gray-500">INDEX {i}</span>
+                                        </div>
 
-                  {/* NULL */}
-                  {i === nodes.length - 1 && (
-                      <div className="absolute -right-16 flex items-center gap-2 opacity-50">
-                          <div className="w-8 h-[2px] bg-neutral-700" />
-                          <div className="text-xs font-mono text-red-500">NULL</div>
-                      </div>
-                  )}
+                                        {/* THE SEEKER DRONE */}
+                                        {isSeeker && (
+                                            <motion.div layoutId="seeker" className="absolute -top-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-50">
+                                                <div className="bg-green-500 text-black px-3 py-1 rounded text-[9px] font-black uppercase shadow-lg shadow-green-500/20">
+                                                    PTR (Scanner)
+                                                </div>
+                                                <div className="w-0.5 h-8 bg-green-500" />
+                                                <div className="w-3 h-3 rounded-full border-2 border-green-500 bg-black" />
+                                            </motion.div>
+                                        )}
+                                    </div>
 
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                                    {/* POINTER CONNECTIONS */}
+                                    {i < nodes.length - 1 && (
+                                        <div className="w-20 h-12 flex flex-col justify-center relative mx-2">
+                                            {/* Next Pointer (Top) */}
+                                            <div className="w-full h-px bg-white/20 relative group">
+                                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 border-t-2 border-r-2 border-white/20 rotate-45" />
+                                                {node.isNew && <motion.div initial={{ width: 0 }} animate={{ width: "100%" }} className="absolute inset-0 bg-[#00f5ff] h-0.5 shadow-[0_0_10px_#00f5ff]" />}
+                                            </div>
+                                            
+                                            {/* Prev Pointer (Bottom - Doubly) */}
+                                            {listType === 'doubly' && (
+                                                <div className="w-full h-px bg-purple-500/30 relative mt-3">
+                                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 border-b-2 border-l-2 border-purple-500/50 rotate-45" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* NULL TERMINATOR */}
+                                    {i === nodes.length - 1 && (
+                                        <div className="ml-8 flex items-center gap-3 opacity-30">
+                                            <div className="w-12 h-px bg-white" />
+                                            <div className="w-10 h-10 rounded-lg border border-white/50 flex items-center justify-center">
+                                                <X size={16} />
+                                            </div>
+                                            <span className="text-[10px] font-mono">NULL</span>
+                                        </div>
+                                    )}
+
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
+                </div>
+            </div>
         </div>
       </div>
     </div>
