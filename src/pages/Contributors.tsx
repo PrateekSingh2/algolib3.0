@@ -174,7 +174,7 @@ const Spotlight = () => {
 const contributors = [
   {
     name: "Shiva Agarwal",
-    role: "Tech stack migration, and UI feedback.",
+    role: "Tech stack suggestion, and UI feedback.",
     avatar: "https://ik.imagekit.io/g7e4hyclo/WhatsApp%20Image%202026-02-13%20at%204.09.05%20PM.jpeg",
     linkedin: "https://www.linkedin.com/in/shiva-agrawal-048ba2361?utm_source=share_via&utm_content=profile&utm_medium=member_android",
   },
@@ -225,7 +225,7 @@ const Contributors = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-bold text-white truncate font-mono group-hover:text-[#00ff88] transition-colors">{person.name}</h3>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">{person.role}</p>
+                    <p className="text-[10px] text-gray-500 tracking-wide">{person.role}</p>
                   </div>
                   <a href={person.linkedin} className="p-2 text-gray-600 hover:text-[#00ff88] transition-colors shrink-0">
                     <Linkedin className="h-4 w-4" />
@@ -241,7 +241,7 @@ const Contributors = () => {
                className="inline-block p-8 rounded-2xl bg-[#0a0a1a]/40 border border-dashed border-[#00ff88]/20 backdrop-blur-sm"
              >
                 <p className="text-sm text-gray-400 font-mono mb-2">Initialize connection?</p>
-                <a href="https://mail.google.com/mail/u/0/?view=cm&fs=1&to=v.rajawatprateeksingh@gmail.com&su=Inquiry%20from%20Portfolio&body=Hello%20there,%20I%20saw%20your%20site..." target="_blank" className="text-[#00ff88] font-bold tracking-wide hover:text-[#00f5ff] transition-colors border-b border-[#00ff88]/30 hover:border-[#00f5ff] pb-1">
+                <a href="https://mail.google.com/mail/u/0/?view=cm&fs=1&to=v.rajawatprateeksingh@gmail.com&su=Contribution%20into%20AlgoLib&body=Hello%20there,%20I%20saw%20your%20site..." target="_blank" className="text-[#00ff88] font-bold tracking-wide hover:text-[#00f5ff] transition-colors border-b border-[#00ff88]/30 hover:border-[#00f5ff] pb-1">
                    TRANSMIT_PACKET: contribute@algoverse
                 </a>
              </motion.div>

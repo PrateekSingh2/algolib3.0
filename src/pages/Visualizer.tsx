@@ -3,7 +3,7 @@ import {
   GitCommit, Layers, ArrowRightLeft, BarChart3, 
   Database, Activity, Cpu, Network, Binary, 
   Smartphone, PanelLeftClose, PanelLeftOpen,
-  Info, CheckCircle2, Maximize2, X
+  Info, CheckCircle2, Maximize2, X, BookOpen, ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -68,68 +68,105 @@ const Visualizer = () => {
       {/* --- DESKTOP/TABLET APP (Visible on md+) --- */}
       <div className="hidden md:flex flex-col h-screen w-full text-white font-sans overflow-hidden relative pt-20">
         
-        {/* --- WELCOME POPUP MODAL --- */}
+        {/* --- WELCOME POPUP MODAL (Enhanced) --- */}
         <AnimatePresence>
           {showWelcome && (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+              className="absolute inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
             >
               <motion.div 
-                initial={{ scale: 0.9, y: 20 }}
+                initial={{ scale: 0.95, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.9, y: 20 }}
-                className="w-full max-w-md bg-[#0a0a1a] border border-[#00f5ff]/30 rounded-2xl shadow-[0_0_50px_rgba(0,245,255,0.15)] overflow-hidden relative"
+                exit={{ scale: 0.95, y: 20 }}
+                className="w-full max-w-2xl bg-[#0a0a1a] border border-[#00f5ff]/30 rounded-2xl shadow-[0_0_60px_rgba(0,245,255,0.1)] overflow-hidden relative flex flex-col"
               >
-                {/* Modal Glow Effects */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-[#00f5ff] shadow-[0_0_20px_#00f5ff]" />
-                <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#00f5ff]/10 blur-3xl rounded-full" />
+                {/* Decoration Lines */}
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#00f5ff] to-transparent opacity-50" />
+                <div className="absolute -top-32 -right-32 w-64 h-64 bg-[#00f5ff]/5 blur-3xl rounded-full pointer-events-none" />
 
-                {/* Header */}
-                <div className="p-6 pb-2 relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-lg bg-[#00f5ff]/10 border border-[#00f5ff]/20 text-[#00f5ff]">
-                      <Cpu size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-white font-mono tracking-tight">SYSTEM INITIALIZED</h2>
-                      <p className="text-[10px] text-[#00f5ff] uppercase tracking-widest font-mono opacity-70">
-                        AlgoViz Engine v2.0.4
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="text-gray-400 text-sm leading-relaxed border-l-2 border-white/10 pl-3 mb-6">
-                    Welcome to the interactive algorithm simulation deck. Visualize complex data structures including Linked Lists, Trees, and Sorting algorithms in real-time.
-                  </p>
-
-                  {/* THE DARK NOTE */}
-                  <div className="bg-[#050510] rounded-xl border border-white/5 p-4 mb-2 flex gap-4 items-start group">
-                     <div className="shrink-0 p-2 rounded-md bg-[#1a1a2e] text-white group-hover:text-[#00f5ff] transition-colors mt-0.5">
-                        <PanelLeftClose size={20} />
-                     </div>
-                     <div>
-                        <h4 className="text-white text-xs font-bold font-mono mb-1 flex items-center gap-2">
-                           <Maximize2 size={10} className="text-[#00f5ff]" />
-                           VIEWPORT OPTIMIZATION
-                        </h4>
-                        <p className="text-[11px] text-gray-500 leading-relaxed">
-                           <span className="text-gray-300 font-semibold">Pro Tip:</span> Close the side navigation panel using the toggle button to extend the holographic canvas for a clearer view.
-                        </p>
-                     </div>
-                  </div>
+                {/* --- MODAL HEADER --- */}
+                <div className="p-8 pb-4 border-b border-white/5 flex items-center justify-between">
+                   <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-xl bg-[#00f5ff]/10 border border-[#00f5ff]/20 text-[#00f5ff] shadow-[0_0_15px_rgba(0,245,255,0.2)]">
+                        <Cpu size={28} />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-white font-mono tracking-tight">SYSTEM INITIALIZED</h2>
+                        <div className="flex items-center gap-2 mt-1">
+                           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                           <p className="text-[10px] text-[#00f5ff] uppercase tracking-widest font-mono opacity-80">
+                             AlgoViz Engine v2.5.0
+                           </p>
+                        </div>
+                      </div>
+                   </div>
                 </div>
 
-                {/* Footer / Action */}
-                <div className="p-4 bg-white/5 border-t border-white/5 flex justify-end">
+                {/* --- MODAL BODY --- */}
+                <div className="p-8 space-y-6">
+                   <p className="text-gray-300 text-sm leading-relaxed max-w-lg">
+                     Welcome to the interactive algorithm simulation deck. This engine allows you to visualize complex data structures including Linked Lists, Stack, Queue, Trees, Sorting algorithms and Graphs in real-time.
+                   </p>
+
+                   {/* Layout Grid for Tips */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Tip 1: Viewport */}
+                      <div className="bg-[#050510] p-4 rounded-xl border border-white/5 flex gap-3 items-start">
+                         <Maximize2 size={18} className="text-[#00f5ff] shrink-0 mt-0.5" />
+                         <div>
+                            <h4 className="text-white text-xs font-bold mb-1">Maximize View</h4>
+                            <p className="text-[11px] text-gray-500 leading-relaxed">
+                               Close the side navigation panel to extend the holographic canvas.
+                            </p>
+                         </div>
+                      </div>
+
+                      {/* Tip 2: Performance */}
+                      <div className="bg-[#050510] p-4 rounded-xl border border-white/5 flex gap-3 items-start">
+                         <Activity size={18} className="text-[#9d00ff] shrink-0 mt-0.5" />
+                         <div>
+                            <h4 className="text-white text-xs font-bold mb-1">Real-Time Ops</h4>
+                            <p className="text-[11px] text-gray-500 leading-relaxed">
+                               Simulations run at 60fps. Use the speed slider to slow down execution.
+                            </p>
+                         </div>
+                      </div>
+                   </div>
+
+                   {/* --- DOCUMENTATION ALERT (Highlight) --- */}
+                   <div className="relative overflow-hidden rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 flex gap-4 items-center group hover:bg-yellow-500/10 transition-colors">
+                      <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      
+                      <div className="p-3 bg-yellow-500/10 rounded-lg text-yellow-500 shrink-0 relative z-10">
+                         <BookOpen size={24} />
+                      </div>
+                      <div className="relative z-10 flex-1">
+                         <h4 className="text-yellow-500 font-bold text-sm mb-1 font-mono uppercase tracking-wide flex items-center gap-2">
+                            New User Detected?
+                         </h4>
+                         <p className="text-gray-400 text-xs leading-relaxed">
+                            If you are unsure how to control the visualizers or interpret the data, please refer to the system manual first.
+                         </p>
+                      </div>
+                      <a href="/docs" className="relative z-10 px-4 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 text-xs font-bold rounded border border-yellow-500/20 transition-all flex items-center gap-2">
+                         <span>DOCS</span>
+                         <ArrowRight size={14} />
+                      </a>
+                   </div>
+                </div>
+
+                {/* --- MODAL FOOTER --- */}
+                <div className="p-6 border-t border-white/5 bg-black/20 flex justify-end">
                   <button 
                     onClick={() => setShowWelcome(false)}
-                    className="flex items-center gap-2 px-6 py-2 bg-[#00f5ff] hover:bg-[#00c2cc] text-black font-bold text-sm rounded-lg transition-all shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:shadow-[0_0_30px_rgba(0,245,255,0.5)] active:scale-95"
+                    className="group relative flex items-center gap-3 px-8 py-3 bg-[#00f5ff] hover:bg-[#00c2cc] text-black font-bold text-sm rounded-xl transition-all shadow-[0_0_20px_rgba(0,245,255,0.2)] hover:shadow-[0_0_30px_rgba(0,245,255,0.4)] overflow-hidden"
                   >
-                    <CheckCircle2 size={16} />
-                    <span>OK, LAUNCH</span>
+                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                    <span className="relative z-10">Ok, Continue</span>
+                    <CheckCircle2 size={18} className="relative z-10" />
                   </button>
                 </div>
 

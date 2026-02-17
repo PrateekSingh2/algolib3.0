@@ -189,7 +189,7 @@ const MainTitle = () => {
       {/* "Algorithms" - Blue/Purple Gradient */}
       <span className="relative inline-block">
         <span className="absolute -inset-1 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 opacity-20 blur-xl" />
-        <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-yellow-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]">
+        <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-orange-300 drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]">
           Algorithms
         </span>
       </span>
