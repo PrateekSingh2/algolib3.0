@@ -210,7 +210,7 @@ const Developer = () => {
             </div>
             
             <h1 className="text-3xl md:text-6xl font-black text-white tracking-tighter mb-4 drop-shadow-[0_0_15px_rgba(0,245,255,0.3)]">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00f5ff] to-[#9d00ff]">SYSTEM ARCHITECTS</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#E36917] to-[#174FE3]">SYSTEM ARCHITECTS</span>
             </h1>
             <p className="text-gray-400 font-light tracking-wide text-xs md:text-sm uppercase max-w-md mx-auto">
                The minds currently operating the AlgoLib Core

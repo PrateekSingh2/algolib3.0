@@ -4,7 +4,7 @@ import {
   Plus, RotateCcw, ArrowRight, Trash2, 
   CornerDownRight, X, Play, Pause, StepForward, 
   Search, Anchor, Zap, Box, MousePointer2, 
-  GitCommit, ChevronsRight, Cpu, Layers, Terminal, AlertCircle, Activity
+  GitCommit, ChevronsRight, Cpu, Layers, Terminal, Activity
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -96,6 +96,10 @@ const LinkedListVisualizer = () => {
     { id: 'A1', value: 10 }, { id: 'B2', value: 20 }, { id: 'C3', value: 30 }
   ]);
   
+  // Input State (Controlled for auto-update)
+  const [inputValue, setInputValue] = useState<number>(45);
+  const [inputIndex, setInputIndex] = useState<number>(1);
+  
   // Animation & Control
   const [isPaused, setIsPaused] = useState(true); 
   const [isAnimating, setIsAnimating] = useState(false);
@@ -109,8 +113,15 @@ const LinkedListVisualizer = () => {
   const [seekerIndex, setSeekerIndex] = useState<number | null>(null);
   
   const stepTrigger = useRef<() => void>(() => {});
-  const inputValRef = useRef(45);
-  const inputIdxRef = useRef(1);
+
+  // Initialize with random value
+  useEffect(() => {
+    generateRandom();
+  }, []);
+
+  const generateRandom = () => {
+    setInputValue(Math.floor(Math.random() * 90) + 10);
+  };
 
   // --- ENGINE LOGIC ---
   const resolveStep = () => { if (stepTrigger.current) stepTrigger.current(); };
@@ -133,12 +144,12 @@ const LinkedListVisualizer = () => {
     if (isAnimating) return;
     setIsAnimating(true);
     
-    const idx = atHead ? 0 : Math.max(0, Math.min(inputIdxRef.current, nodes.length));
+    const idx = atHead ? 0 : Math.max(0, Math.min(inputIndex, nodes.length));
     const currentSnippets = listType === 'singly' ? SNIPPETS.singly : SNIPPETS.doubly;
     const snippet = idx === 0 ? currentSnippets.insertHead : currentSnippets.insertIndex;
     
-    const newNodeId = Math.floor(Math.random()*90 + 10).toString();
-    const newNode = { id: newNodeId, value: inputValRef.current, isNew: true };
+    const newNodeId = Math.floor(Math.random()*9000 + 1000).toString();
+    const newNode = { id: newNodeId, value: inputValue, isNew: true };
 
     // 1. ALLOCATE
     setPhantom(newNode);
@@ -182,13 +193,14 @@ const LinkedListVisualizer = () => {
     setMessage("MEMORY_UPDATED_SUCCESSFULLY");
     setCodeLines([]);
     setVariables([]);
+    generateRandom(); // Auto-generate next value
   };
 
   const handleDelete = async (atHead: boolean) => {
     if (isAnimating || nodes.length === 0) return;
     setIsAnimating(true);
     
-    const idx = atHead ? 0 : Math.max(0, Math.min(inputIdxRef.current, nodes.length - 1));
+    const idx = atHead ? 0 : Math.max(0, Math.min(inputIndex, nodes.length - 1));
     const currentSnippets = listType === 'singly' ? SNIPPETS.singly : SNIPPETS.doubly;
     const snippet = idx === 0 ? currentSnippets.deleteHead : currentSnippets.deleteIndex;
 
@@ -230,11 +242,6 @@ const LinkedListVisualizer = () => {
     <div className="w-full h-full flex flex-col bg-[#020205] overflow-hidden font-sans text-white">
       <CyberGrid />
       
-      {/* REMOVED NAVBAR: 
-         The parent 'Visualizer.tsx' already renders the Navbar.
-         Including it here causes the double/mashed-up UI.
-      */}
-
       <div className="flex-1 flex overflow-hidden relative z-10">
         
         {/* --- LEFT: COMMAND CENTER --- */}
@@ -245,7 +252,7 @@ const LinkedListVisualizer = () => {
                <h2 className="text-xl font-black italic tracking-tighter text-white flex items-center gap-2">
                   <Cpu className="text-[#00f5ff]" /> LINKED_LIST_OS
                </h2>
-               <p className="text-[10px] text-[#00f5ff]/60 font-mono mt-1">MEMORY VISUALIZATION KERNEL v4.0</p>
+               <p className="text-[10px] text-[#00f5ff]/60 font-mono mt-1">MEMORY VISUALIZATION KERNEL v4.1</p>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
@@ -304,15 +311,24 @@ const LinkedListVisualizer = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                             <label className="text-[9px] font-bold text-gray-500 uppercase ml-1">Payload (Val)</label>
-                            <input 
-                                type="number" defaultValue={45} onChange={(e) => inputValRef.current = parseInt(e.target.value) || 0}
-                                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-[#00f5ff] focus:border-[#00f5ff] outline-none font-mono"
-                            />
+                            <div className="flex gap-2">
+                                <input 
+                                    type="number" 
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(parseInt(e.target.value) || 0)}
+                                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-[#00f5ff] focus:border-[#00f5ff] outline-none font-mono"
+                                />
+                                <button onClick={generateRandom} className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 text-gray-400">
+                                    <RotateCcw size={16} />
+                                </button>
+                            </div>
                         </div>
                         <div className="space-y-1">
                             <label className="text-[9px] font-bold text-gray-500 uppercase ml-1">Address (Idx)</label>
                             <input 
-                                type="number" defaultValue={1} onChange={(e) => inputIdxRef.current = parseInt(e.target.value) || 0}
+                                type="number" 
+                                value={inputIndex}
+                                onChange={(e) => setInputIndex(parseInt(e.target.value) || 0)}
                                 className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-[#00f5ff] focus:border-[#00f5ff] outline-none font-mono"
                             />
                         </div>

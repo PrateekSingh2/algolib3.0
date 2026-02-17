@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { 
   GitCommit, Layers, ArrowRightLeft, BarChart3, 
   Database, Activity, Cpu, Network, Binary, 
-  Smartphone, PanelLeftClose, PanelLeftOpen 
+  Smartphone, PanelLeftClose, PanelLeftOpen,
+  Info, CheckCircle2, Maximize2, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
 // Assumes you have these files.
 import LinkedListVisualizer from './LinkedListVisualizer';
 import StackVisualizer from './StackVisualizer';
@@ -24,6 +26,9 @@ const AlienBackground = () => (
 const Visualizer = () => {
   const [activeTab, setActiveTab] = useState('ll');
   const [isNavOpen, setIsNavOpen] = useState(true);
+  
+  // State for the Welcome Popup
+  const [showWelcome, setShowWelcome] = useState(true);
 
   const MENU = [
     { id: 'll', label: 'LINKED_LIST', icon: <GitCommit size={16} />, component: <LinkedListVisualizer /> },
@@ -62,6 +67,78 @@ const Visualizer = () => {
 
       {/* --- DESKTOP/TABLET APP (Visible on md+) --- */}
       <div className="hidden md:flex flex-col h-screen w-full text-white font-sans overflow-hidden relative pt-20">
+        
+        {/* --- WELCOME POPUP MODAL --- */}
+        <AnimatePresence>
+          {showWelcome && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="w-full max-w-md bg-[#0a0a1a] border border-[#00f5ff]/30 rounded-2xl shadow-[0_0_50px_rgba(0,245,255,0.15)] overflow-hidden relative"
+              >
+                {/* Modal Glow Effects */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-[#00f5ff] shadow-[0_0_20px_#00f5ff]" />
+                <div className="absolute -top-20 -right-20 w-40 h-40 bg-[#00f5ff]/10 blur-3xl rounded-full" />
+
+                {/* Header */}
+                <div className="p-6 pb-2 relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 rounded-lg bg-[#00f5ff]/10 border border-[#00f5ff]/20 text-[#00f5ff]">
+                      <Cpu size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white font-mono tracking-tight">SYSTEM INITIALIZED</h2>
+                      <p className="text-[10px] text-[#00f5ff] uppercase tracking-widest font-mono opacity-70">
+                        AlgoViz Engine v2.0.4
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-gray-400 text-sm leading-relaxed border-l-2 border-white/10 pl-3 mb-6">
+                    Welcome to the interactive algorithm simulation deck. Visualize complex data structures including Linked Lists, Trees, and Sorting algorithms in real-time.
+                  </p>
+
+                  {/* THE DARK NOTE */}
+                  <div className="bg-[#050510] rounded-xl border border-white/5 p-4 mb-2 flex gap-4 items-start group">
+                     <div className="shrink-0 p-2 rounded-md bg-[#1a1a2e] text-white group-hover:text-[#00f5ff] transition-colors mt-0.5">
+                        <PanelLeftClose size={20} />
+                     </div>
+                     <div>
+                        <h4 className="text-white text-xs font-bold font-mono mb-1 flex items-center gap-2">
+                           <Maximize2 size={10} className="text-[#00f5ff]" />
+                           VIEWPORT OPTIMIZATION
+                        </h4>
+                        <p className="text-[11px] text-gray-500 leading-relaxed">
+                           <span className="text-gray-300 font-semibold">Pro Tip:</span> Close the side navigation panel using the toggle button to extend the holographic canvas for a clearer view.
+                        </p>
+                     </div>
+                  </div>
+                </div>
+
+                {/* Footer / Action */}
+                <div className="p-4 bg-white/5 border-t border-white/5 flex justify-end">
+                  <button 
+                    onClick={() => setShowWelcome(false)}
+                    className="flex items-center gap-2 px-6 py-2 bg-[#00f5ff] hover:bg-[#00c2cc] text-black font-bold text-sm rounded-lg transition-all shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:shadow-[0_0_30px_rgba(0,245,255,0.5)] active:scale-95"
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>OK, LAUNCH</span>
+                  </button>
+                </div>
+
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+
         <div className="flex flex-1 overflow-hidden px-4 pb-4">
           
           {/* --- LEFT CONTROL PANEL (SIDEBAR) --- */}
@@ -75,7 +152,7 @@ const Visualizer = () => {
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="flex flex-col z-20 shrink-0 overflow-hidden"
           >
-            <div className="w-64 flex flex-col h-full"> {/* Inner Container fixed width to prevent content squashing */}
+            <div className="w-64 flex flex-col h-full">
                 
                 {/* Panel Header */}
                 <div className="p-4 mb-4 rounded-tl-xl rounded-br-xl bg-[#0a0a1a]/80 border border-[#00f5ff]/30 backdrop-blur-md relative overflow-hidden group">

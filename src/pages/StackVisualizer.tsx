@@ -22,17 +22,44 @@ const SNIPPETS = {
   ]
 };
 
+// Cyberpunk Color Palette
+const COLORS = [
+    '#00f5ff', // Cyan
+    '#ff00ff', // Magenta
+    '#00ff88', // Neon Green
+    '#facc15', // Yellow
+    '#9d00ff', // Purple
+    '#ff5500', // Orange
+];
+
 const StackVisualizer = () => {
-  const [stack, setStack] = useState<{id: string, val: number}[]>([{id: 'init', val: 10}, {id: 'init2', val: 20}]);
+  // State now includes color
+  const [stack, setStack] = useState<{id: string, val: number, color: string}[]>([
+      {id: 'init', val: 10, color: '#00f5ff'}, 
+      {id: 'init2', val: 20, color: '#ff00ff'}
+  ]);
+  
+  const [inputValue, setInputValue] = useState<number>(45);
+
+  // Animation & Control
   const [isPaused, setIsPaused] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [message, setMessage] = useState('SYSTEM_IDLE');
   const [codeLines, setCodeLines] = useState<any[]>([]);
-  const [phantom, setPhantom] = useState<{id: string, val: number} | null>(null);
-  const [poppedNode, setPoppedNode] = useState<{id: string, val: number} | null>(null);
+  
+  // Visual Actors
+  const [phantom, setPhantom] = useState<{id: string, val: number, color: string} | null>(null);
+  const [poppedNode, setPoppedNode] = useState<{id: string, val: number, color: string} | null>(null);
 
   const stepTrigger = useRef<() => void>(() => {});
-  const inputValRef = useRef(45);
+
+  useEffect(() => {
+    generateRandom();
+  }, []);
+
+  const generateRandom = () => {
+    setInputValue(Math.floor(Math.random() * 90) + 10);
+  };
 
   const resolveStep = () => { if(stepTrigger.current) stepTrigger.current(); };
 
@@ -47,7 +74,10 @@ const StackVisualizer = () => {
   const handlePush = async () => {
     if (isAnimating || stack.length >= 7) return;
     setIsAnimating(true);
-    const newVal = { id: Math.random().toString(), val: inputValRef.current };
+    
+    // Assign random color to new node
+    const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+    const newVal = { id: Math.random().toString(), val: inputValue, color: randomColor };
     const snippet = SNIPPETS.push;
 
     setPhantom(newVal);
@@ -60,6 +90,7 @@ const StackVisualizer = () => {
     setMessage('PUSH_COMPLETE');
     setIsAnimating(false);
     setCodeLines([]);
+    generateRandom();
   };
 
   const handlePop = async () => {
@@ -71,12 +102,12 @@ const StackVisualizer = () => {
     
     const nodeToPop = stack[stack.length - 1];
     setPoppedNode(nodeToPop);
-    setStack(prev => prev.slice(0, -1)); // Remove from main state immediately for visual pop
+    setStack(prev => prev.slice(0, -1)); 
     
     await waitStep('2', snippet);
     
     await waitStep('3', snippet);
-    setPoppedNode(null); // Disappear
+    setPoppedNode(null); 
     
     setMessage('POP_COMPLETE');
     setIsAnimating(false);
@@ -94,7 +125,7 @@ const StackVisualizer = () => {
             </div>
          </div>
          
-         <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+         <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
             {/* CONTROLS */}
             <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-3">
                <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase">
@@ -115,17 +146,27 @@ const StackVisualizer = () => {
             <div className="space-y-4">
                 <div className="space-y-1">
                    <label className="text-[10px] font-bold text-gray-500 uppercase">Value</label>
-                   <input type="number" defaultValue={45} onChange={(e) => inputValRef.current = Number(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-sm text-[#00f5ff] focus:border-[#00f5ff] outline-none font-mono" />
+                   <div className="flex gap-2">
+                       <input 
+                           type="number" 
+                           value={inputValue}
+                           onChange={(e) => setInputValue(Number(e.target.value))}
+                           className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-sm text-[#00f5ff] focus:border-[#00f5ff] outline-none font-mono" 
+                       />
+                       <button onClick={generateRandom} className="p-2 bg-white/5 border border-white/10 rounded hover:bg-white/10 text-gray-400 transition-colors">
+                           <RotateCcw size={16} />
+                       </button>
+                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                   <button onClick={handlePush} disabled={isAnimating || stack.length >= 7} className="py-3 bg-[#00f5ff]/10 hover:bg-[#00f5ff]/20 text-[#00f5ff] border border-[#00f5ff]/30 rounded font-bold text-xs flex flex-col items-center gap-1 disabled:opacity-30">
+                   <button onClick={handlePush} disabled={isAnimating || stack.length >= 7} className="py-3 bg-[#00f5ff]/10 hover:bg-[#00f5ff]/20 text-[#00f5ff] border border-[#00f5ff]/30 rounded font-bold text-xs flex flex-col items-center gap-1 disabled:opacity-30 transition-all">
                       <ArrowDown size={16} /> PUSH
                    </button>
-                   <button onClick={handlePop} disabled={isAnimating || stack.length === 0} className="py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded font-bold text-xs flex flex-col items-center gap-1 disabled:opacity-30">
+                   <button onClick={handlePop} disabled={isAnimating || stack.length === 0} className="py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded font-bold text-xs flex flex-col items-center gap-1 disabled:opacity-30 transition-all">
                       <ArrowUp size={16} /> POP
                    </button>
                 </div>
-                <button onClick={() => setStack([])} className="w-full py-2 bg-white/5 hover:bg-white/10 rounded text-[10px] font-bold text-gray-400">RESET MEMORY</button>
+                <button onClick={() => setStack([])} className="w-full py-2 bg-white/5 hover:bg-white/10 rounded text-[10px] font-bold text-gray-400 transition-all">RESET MEMORY</button>
             </div>
 
             {/* CODE */}
@@ -156,7 +197,8 @@ const StackVisualizer = () => {
                   {phantom && (
                      <motion.div 
                         initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ y: 200, opacity: 0 }}
-                        className="w-12 h-12 bg-[#00f5ff] rounded flex items-center justify-center text-black font-black text-lg shadow-[0_0_20px_#00f5ff]"
+                        className="w-12 h-12 rounded flex items-center justify-center text-black font-black text-lg shadow-lg"
+                        style={{ backgroundColor: phantom.color, boxShadow: `0 0 20px ${phantom.color}` }}
                      >
                         {phantom.val}
                      </motion.div>
@@ -177,16 +219,24 @@ const StackVisualizer = () => {
                      initial={{ y: -300, opacity: 0, scale: 0.5 }}
                      animate={{ y: 0, opacity: 1, scale: 1 }}
                      exit={{ x: 100, opacity: 0, scale: 0.5 }}
-                     className="w-full h-12 bg-[#1a1a2e] border border-[#00f5ff]/30 rounded flex items-center justify-between px-4 relative group"
+                     className="w-full h-12 bg-[#1a1a2e] border rounded flex items-center justify-between px-4 relative group"
+                     style={{ borderColor: item.color, boxShadow: `0 0 10px ${item.color}20` }}
                   >
-                     <span className="font-mono text-white font-bold">{item.val}</span>
+                     <span className="font-mono font-bold" style={{ color: item.color }}>{item.val}</span>
                      <span className="text-[8px] font-mono text-gray-600">0x{i}</span>
                      
                      {/* TOP POINTER */}
                      {i === stack.length - 1 && (
                         <motion.div layoutId="top-ptr" className="absolute -right-24 flex items-center gap-2">
-                           <div className="text-[10px] font-black text-[#00f5ff] bg-[#00f5ff]/10 px-2 py-1 rounded border border-[#00f5ff]/30">TOP</div>
-                           <div className="w-8 h-px bg-[#00f5ff]" />
+                           <div 
+                              className="text-[10px] font-black px-2 py-1 rounded border"
+                              style={{ 
+                                  color: item.color, 
+                                  backgroundColor: `${item.color}10`,
+                                  borderColor: `${item.color}30`
+                              }}
+                           >TOP</div>
+                           <div className="w-8 h-px" style={{ backgroundColor: item.color }} />
                         </motion.div>
                      )}
                   </motion.div>
@@ -199,7 +249,12 @@ const StackVisualizer = () => {
                   <motion.div
                      initial={{ x: 0, y: 0, opacity: 1 }}
                      animate={{ x: 200, y: -50, opacity: 0, rotate: 45 }}
-                     className="absolute top-0 w-48 h-12 bg-red-500/20 border border-red-500 rounded flex items-center justify-center text-red-500 font-bold shadow-[0_0_30px_rgba(239,68,68,0.4)] z-50"
+                     className="absolute top-0 w-48 h-12 bg-[#1a1a2e] border rounded flex items-center justify-center font-bold shadow-xl z-50"
+                     style={{ 
+                         borderColor: poppedNode.color, 
+                         color: poppedNode.color,
+                         boxShadow: `0 0 30px ${poppedNode.color}40`
+                     }}
                   >
                      {poppedNode.val} (FREED)
                   </motion.div>

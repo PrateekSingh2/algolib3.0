@@ -196,7 +196,7 @@ const Contributors = () => {
       <div className="pt-32 pb-16 px-4 relative z-40">
         <div className="container mx-auto max-w-5xl">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-16">
-            <h1 className="text-4xl font-black text-white mb-2 tracking-tighter flex items-center justify-center gap-3 drop-shadow-[0_0_15px_rgba(0,255,136,0.3)]">
+            <h1 className="text-4xl font-black mb-2 tracking-tighter flex items-center justify-center gap-3 text-transparent bg-clip-text bg-gradient-to-r from-[#0808CC] to-[#08CC3C] drop-shadow-[0_0_15px_rgba(0,255,136,0.3)]">
                <Network className="w-8 h-8 text-[#00ff88]" />
                Contributors Network
             </h1>

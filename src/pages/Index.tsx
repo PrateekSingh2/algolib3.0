@@ -189,7 +189,7 @@ const MainTitle = () => {
       {/* "Algorithms" - Blue/Purple Gradient */}
       <span className="relative inline-block">
         <span className="absolute -inset-1 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 opacity-20 blur-xl" />
-        <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500 drop-shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+        <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-yellow-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]">
           Algorithms
         </span>
       </span>
@@ -269,22 +269,22 @@ const HologramCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
         className="h-full relative group"
       >
         <Link to={`/view/${algo.id}`} className="block h-full cursor-none">
-          <div className="h-full relative bg-[#0a0a1a]/80 border border-white/5 backdrop-blur-[2px] rounded-xl overflow-hidden transition-all duration-300 group-hover:border-[#3b82f6]/40 group-hover:shadow-[0_0_30px_-10px_rgba(59,130,246,0.3)]">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#3b82f6]/10 via-transparent to-[#8b5cf6]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+          <div className="h-full relative bg-[#0a0a1a]/80 border border-white/5 backdrop-blur-[2px] rounded-xl overflow-hidden transition-all duration-500 group-hover:border-[#3b82f6]/100 group-hover:shadow-[0_0_30px_-10px_rgba(59,130,246,0.3)]">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#3b82f6]/10 via-transparent to-[#8b5cf6]/10 opacity-100 group-hover:opacity-500 transition-opacity duration-50 pointer-events-none" />
             <div className="absolute top-0 left-0 w-full h-[1px] bg-[#3b82f6] shadow-[0_0_15px_#3b82f6] -translate-y-full group-hover:animate-scan-line z-20 opacity-60" />
             <div className="p-6 flex flex-col h-full relative z-10 transform-style-3d">
               <div className="flex justify-between items-start mb-4 translate-z-10">
-                 <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#3b82f6]/10 border border-[#3b82f6]/20">
-                    <Terminal className="h-3 w-3 text-[#3b82f6]" />
-                    <span className="text-[10px] font-mono text-[#3b82f6] tracking-widest font-bold">{algo.id.slice(0,4).toUpperCase()}</span>
+                 <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#3b82f6]/10 border border-[#3b82f6]/60">
+                    <Terminal className="h-3 w-3 text-[#ffff00]" />
+                    <span className="text-[10px] font-mono text-[#ffa500] tracking-widest font-bold">{algo.id.slice(0,4).toUpperCase()}</span>
                  </div>
                  <ArrowRight className="h-4 w-4 text-[#3b82f6] -translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
               </div>
               <h3 className="text-xl font-bold text-gray-100 group-hover:text-[#3b82f6] transition-colors font-mono tracking-tight mb-2 translate-z-20">{algo.title}</h3>
               <p className="text-xs text-gray-400 mb-6 line-clamp-2 leading-relaxed font-sans group-hover:text-gray-300 transition-colors translate-z-10">{algo.description}</p>
               <div className="mt-auto flex flex-wrap gap-2 translate-z-10">
-                 <span className="px-2 py-1 text-[10px] font-mono border border-[#3b82f6]/20 text-[#3b82f6] bg-[#3b82f6]/5 rounded-sm">{algo.category}</span>
-                 {algo.tags?.slice(0, 2).map((tag) => (<span key={tag} className="px-2 py-1 text-[10px] font-mono border border-white/10 text-gray-500 rounded-sm">#{tag}</span>))}
+                 <span className="px-2 py-1 text-[10px] font-mono border border-[#ffff00]/50 text-[#fffff] bg-[#3b82f6]/5 rounded-sm">{algo.category}</span>
+                 {algo.tags?.slice(0, 2).map((tag) => (<span key={tag} className="px-2 py-1 text-[10px] font-mono border border-white/20 text-yellow-400 rounded-sm">#{tag}</span>))}
               </div>
             </div>
           </div>
@@ -304,7 +304,7 @@ const Index = () => {
   const [showAllCategories, setShowAllCategories] = useState(false);
   
   const INITIAL_GRID_COUNT = 9;
-  const INITIAL_CATEGORY_COUNT = 8;
+  const INITIAL_CATEGORY_COUNT = 6;
 
   useEffect(() => {
     const initializeData = async () => {
@@ -372,13 +372,13 @@ const Index = () => {
             
             <motion.div 
               whileHover={{ scale: 1.05 }}
-              className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-[#3b82f6]/20 bg-[#3b82f6]/5 mb-10 backdrop-blur-sm group"
+              className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-[#3b82f6]/50 bg-[#3b82f6]/5 mb-10 backdrop-blur-sm group"
             >
               <div className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3b82f6] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#3b82f6]"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#ffa500]"></span>
               </div>
-              <span className="text-[11px] font-mono font-bold tracking-[0.3em] text-[#3b82f6] group-hover:text-white transition-colors">
+              <span className="text-[12px] font-regular tracking-[0.2em] text-[#ffafff] group-hover:text-yellow-300 transition-colors">
                 For & By Developers
               </span>
             </motion.div>
@@ -386,10 +386,10 @@ const Index = () => {
             <MainTitle />
             
             <div className="h-12 mb-12 flex justify-center items-center">
-              <p className="text-sm sm:text-base text-gray-400 font-mono tracking-wide max-w-2xl mx-auto">
+              <p className="text-sm sm:text-base text-yellow-700 font-mono tracking-wide max-w-2xl mx-auto">
                  <span className="text-[#3b82f6] mr-2">{'>'}</span>
                  <TypewriterText 
-                    text="Initiating neural handshake... accessing algorithmic archives... visualization engine ready." 
+                    text="Loading algorithmic archives... visualization engine ready." 
                     delay={0.5} 
                  />
               </p>
@@ -397,14 +397,14 @@ const Index = () => {
             
             <div className="relative max-w-lg mx-auto mt-8 group z-[100]">
               <div className="absolute -inset-1 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500 group-hover:opacity-40" />
-              <div className="relative flex items-center bg-[#050510] rounded-xl border border-white/10 group-focus-within:border-[#3b82f6]/50 px-5 py-4 shadow-2xl">
-                 <Command className="h-5 w-5 text-gray-500 group-focus-within:text-[#3b82f6] mr-4" />
+              <div className="relative flex items-center bg-[#050510] rounded-xl border border-white/20 group-focus-within:border-[#3b82f6]/50 px-5 py-4 shadow-2xl">
+                 <Command className="h-5 w-5 text-green-700 group-focus-within:text-[#ffa500] mr-4" />
                  <input
                   type="text"
                   placeholder="SEARCH DATABASE..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-transparent text-white placeholder:text-gray-600 focus:outline-none font-mono text-sm tracking-wider cursor-none"
+                  className="w-full bg-transparent text-white placeholder:text-green-600 focus:outline-none font-mono text-sm tracking-wider cursor-none"
                 />
               </div>
               
@@ -443,14 +443,14 @@ const Index = () => {
             <div className="flex flex-wrap justify-center gap-3">
                 <button 
                   onClick={() => setSelectedCategory(null)} 
-                  className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${!selectedCategory ? "text-[#3b82f6] border border-[#3b82f6]" : "text-gray-500 border border-white/5 hover:border-white/20"}`}
+                  className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${!selectedCategory ? "text-[#3b82f6] border border-[#3b82f6]" : "text-gray-400 border border-white/20 hover:border-white/20"}`}
                 >
                   <div className={`absolute inset-0 bg-[#3b82f6]/10 transition-transform duration-300 ${!selectedCategory ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`} />
                   <span className="relative z-10">[ ALL_SYSTEMS ]</span>
                 </button>
                 
                 {visibleCategories.map((cat) => (
-                    <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)} className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${selectedCategory === cat ? "text-[#8b5cf6] border border-[#8b5cf6]" : "text-gray-500 border border-white/5 hover:border-white/20"}`}>
+                    <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)} className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${selectedCategory === cat ? "text-[#8b5cf6] border border-[#8b5cf6]" : "text-gray-400 border border-white/30 hover:border-white/40"}`}>
                         <div className={`absolute inset-0 bg-[#8b5cf6]/10 transition-transform duration-300 ${selectedCategory === cat ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`} />
                         <span className="relative z-10">{cat.toUpperCase()}</span>
                     </button>
@@ -459,7 +459,7 @@ const Index = () => {
                 {categories.length > INITIAL_CATEGORY_COUNT && (
                     <button 
                         onClick={() => setShowAllCategories(!showAllCategories)} 
-                        className="px-4 py-2 rounded-lg text-[10px] font-mono border border-dashed border-[#3b82f6]/30 text-[#3b82f6]/70 hover:bg-[#3b82f6]/5 hover:text-[#3b82f6] flex items-center gap-2 transition-all cursor-none"
+                        className="px-4 py-2 rounded-lg text-[10px] font-mono border border-dashed border-[#3b82f6]/80 text-[#3b82f6]/100 hover:bg-[#3b82f6]/5 hover:text-[#ffa500] flex items-center gap-2 transition-all cursor-none"
                     >
                         {showAllCategories ? <Minus className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
                     </button>
@@ -518,13 +518,13 @@ const Index = () => {
         <div className="container mx-auto px-6 relative z-10 flex flex-col items-center">
            {/* TOP SECTION: Logo & Text */}
            <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="h-6 w-6 text-[#3b82f6]" />
+              <Sparkles className="h-7 w-7 text-[#3b82f6]" />
               <span className="text-lg font-bold tracking-tight text-white text-[24px]">
                   Algo<span className="text-[#3b82f6]">Lib</span>
               </span>
            </div>
 
-           <p className="text-slate-400 text-[12px] font-mono mb-10 text-center max-w-xs leading-relaxed">
+           <p className="text-slate-300 text-[12px] font-mono mb-10 text-center max-w-xs leading-relaxed">
               System Version 2.0.4 // Stable Build <br/>
               Optimized for the next generation of engineers.
            </p>
@@ -534,7 +534,7 @@ const Index = () => {
               
               {/* Left Side: Copyright */}
               <div className="text-green-400 text-[12px] font-sans tracking-wide order-2 md:order-1">
-                 &copy; {new Date().getFullYear()} AlgoLib. ALL RIGHTS RESERVED.
+                 &copy; {new Date().getFullYear()} AlgoLib | ALL RIGHTS RESERVED.
               </div>
 
               {/* Right Side: Status */}
