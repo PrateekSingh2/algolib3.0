@@ -12,7 +12,6 @@ import {
   ArrowRight, Eye, ChevronDown, Hash, 
   Command, Terminal, Plus, Minus, Cpu, Sparkles 
 } from "lucide-react";
-// Ensure incrementVisitCount and getVisitCount are exported from your lib file
 import { 
   fetchAlgorithms, 
   getVisitCount, 
@@ -21,8 +20,9 @@ import {
   type Algorithm 
 } from "@/lib/algorithms";
 import Navbar from "@/components/Navbar";
+import { Preloader } from "@/components/Preloader";
 
-// --- 1. INTERACTIVE CYBER-NETWORK BACKGROUND ---
+// --- 1. CLEAN CYBER-NETWORK BACKGROUND ---
 const CyberSpaceBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -47,7 +47,6 @@ const CyberSpaceBackground = () => {
 
     const PARTICLE_COUNT = width < 768 ? 40 : 100;
     const CONNECT_DISTANCE = 140;
-    const MOUSE_DISTANCE = 250;
 
     class Particle {
       x: number;
@@ -112,26 +111,15 @@ const CyberSpaceBackground = () => {
         p.update();
         p.draw();
 
-        // Mouse Interaction
         const dxMouse = mouseX - p.x;
         const dyMouse = mouseY - p.y;
         const distMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
 
-        if (distMouse < MOUSE_DISTANCE) {
-           ctx.beginPath();
-           ctx.strokeStyle = `rgba(59, 130, 246, ${1 - distMouse / MOUSE_DISTANCE})`;
-           ctx.lineWidth = 1;
-           ctx.moveTo(p.x, p.y);
-           ctx.lineTo(mouseX, mouseY);
-           ctx.stroke();
-           
-           if (distMouse < 60) {
-              p.vx -= dxMouse * 0.0008;
-              p.vy -= dyMouse * 0.0008;
-           }
+        if (distMouse < 80) {
+           p.vx -= dxMouse * 0.0005;
+           p.vy -= dyMouse * 0.0005;
         }
 
-        // Particle Connections
         for (let j = index + 1; j < particles.length; j++) {
           const p2 = particles[j];
           const dx = p.x - p2.x;
@@ -175,21 +163,18 @@ const CyberSpaceBackground = () => {
   );
 };
 
-// --- 2. STATIC BRANDING TITLE (NO ANIMATION) ---
+// --- 2. MAIN TITLE ---
 const MainTitle = () => {
   return (
-    <h1 className="text-6xl sm:text-8xl font-black tracking-tighter mb-8 leading-none select-none cursor-default flex flex-col sm:block items-center justify-center gap-2 sm:gap-4">
-      {/* "Master" - Solid White */}
-      <span className="inline-block relative sm:mr-4">
-        <span className="relative z-10 text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
+    <h1 className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tighter mb-8 leading-none select-none cursor-default flex flex-col items-center justify-center gap-2 sm:gap-6">
+      <span className="inline-block relative">
+        <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-orange-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">
           Master
         </span>
       </span>
-      
-      {/* "Algorithms" - Blue/Purple Gradient */}
       <span className="relative inline-block">
-        <span className="absolute -inset-1 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 opacity-20 blur-xl" />
-        <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-orange-300 drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]">
+        <span className="absolute -inset-2 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-orange-500 opacity-25 blur-2xl" />
+        <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-orange-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">
           Algorithms
         </span>
       </span>
@@ -270,7 +255,7 @@ const HologramCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
       >
         <Link to={`/view/${algo.id}`} className="block h-full cursor-none">
           <div className="h-full relative bg-[#0a0a1a]/80 border border-white/5 backdrop-blur-[2px] rounded-xl overflow-hidden transition-all duration-500 group-hover:border-[#3b82f6]/100 group-hover:shadow-[0_0_30px_-10px_rgba(59,130,246,0.3)]">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#3b82f6]/10 via-transparent to-[#8b5cf6]/10 opacity-100 group-hover:opacity-500 transition-opacity duration-50 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#3b82f6]/1 via-transparent to-[#8b5cf6]/10 opacity-100 group-hover:opacity-500 transition-opacity duration-50 pointer-events-none" />
             <div className="absolute top-0 left-0 w-full h-[1px] bg-[#3b82f6] shadow-[0_0_15px_#3b82f6] -translate-y-full group-hover:animate-scan-line z-20 opacity-60" />
             <div className="p-6 flex flex-col h-full relative z-10 transform-style-3d">
               <div className="flex justify-between items-start mb-4 translate-z-10">
@@ -283,8 +268,8 @@ const HologramCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
               <h3 className="text-xl font-bold text-gray-100 group-hover:text-[#3b82f6] transition-colors font-mono tracking-tight mb-2 translate-z-20">{algo.title}</h3>
               <p className="text-xs text-gray-400 mb-6 line-clamp-2 leading-relaxed font-sans group-hover:text-gray-300 transition-colors translate-z-10">{algo.description}</p>
               <div className="mt-auto flex flex-wrap gap-2 translate-z-10">
-                 <span className="px-2 py-1 text-[10px] font-mono border border-[#ffff00]/50 text-[#fffff] bg-[#3b82f6]/5 rounded-sm">{algo.category}</span>
-                 {algo.tags?.slice(0, 2).map((tag) => (<span key={tag} className="px-2 py-1 text-[10px] font-mono border border-white/20 text-yellow-400 rounded-sm">#{tag}</span>))}
+                 <span className="px-2 py-1 text-[10px] font-mono border border-[#ffff00]/50 text-yellow-200 bg-[#3b82f6]/5 rounded-sm">{algo.category}</span>
+                 {algo.tags?.slice(0, 2).map((tag) => (<span key={tag} className="px-2 py-1 text-[10px] font-mono border border-white/20 text-gray-400 rounded-sm">#{tag}</span>))}
               </div>
             </div>
           </div>
@@ -299,40 +284,45 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [visitCount, setVisitCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  
+  // --- SESSION PRELOADER LOGIC ---
+  // Initialize state based on whether "algolib_preloader_shown" exists in sessionStorage
+  const [isLoading, setIsLoading] = useState(() => {
+    return !sessionStorage.getItem("algolib_preloader_shown");
+  });
+  
   const [isGridExpanded, setIsGridExpanded] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
   
   const INITIAL_GRID_COUNT = 9;
   const INITIAL_CATEGORY_COUNT = 6;
 
+  // --- PRELOADER COMPLETION HANDLER ---
+  const handlePreloaderComplete = () => {
+    setIsLoading(false);
+    sessionStorage.setItem("algolib_preloader_shown", "true");
+  };
+
   useEffect(() => {
     const initializeData = async () => {
       try {
-        // 1. Fetch Algorithms First
         const algos = await fetchAlgorithms();
         setAlgorithms(algos);
 
-        // 2. VIEW COUNT LOGIC
         const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
         const sessionKey = "algolib_session_active";
         const hasVisitedSession = sessionStorage.getItem(sessionKey);
 
-        // LOGIC: Only increment if NOT localhost AND NOT visited in this session
         if (!isLocalhost && !hasVisitedSession) {
            await incrementVisitCount();
-           // Mark session as visited so subsequent navigations/refreshes don't count
            sessionStorage.setItem(sessionKey, "true");
         }
 
-        // 3. Always fetch the latest count to display
         const count = await getVisitCount();
         setVisitCount(count);
 
       } catch (error) {
         console.error("Initialization failed", error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -340,6 +330,13 @@ const Index = () => {
   }, []);
 
   useEffect(() => { setIsGridExpanded(false); }, [selectedCategory, search]);
+
+  const scrollToGrid = () => {
+    const gridSection = document.getElementById("algorithm-grid");
+    if (gridSection) {
+      gridSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   const categories = useMemo(() => getCategories(algorithms), [algorithms]);
   const visibleCategories = showAllCategories ? categories : categories.slice(0, INITIAL_CATEGORY_COUNT);
@@ -357,205 +354,219 @@ const Index = () => {
   const suggestions = filtered.slice(0, 5);
 
   return (
-    <div className="min-h-screen overflow-x-hidden text-white font-sans relative selection:bg-[#3b82f6]/30 flex flex-col">
-      <CyberSpaceBackground />
-      <Spotlight />
-      
-      <div className="relative z-[200]">
-        <Navbar />
-      </div>
-
-      {/* --- HERO SECTION --- */}
-      <section className="relative pt-36 pb-12 px-4 z-50">
-        <div className="container mx-auto text-center max-w-5xl">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, ease: "easeOut" }}>
-            
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-[#3b82f6]/50 bg-[#3b82f6]/5 mb-10 backdrop-blur-sm group"
+    <>
+      {/* --- PRELOADER GATE --- */}
+      <AnimatePresence mode="wait">
+        {isLoading ? (
+            <Preloader key="loader" onComplete={handlePreloaderComplete} />
+        ) : (
+            <motion.div
+                key="content"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="min-h-screen overflow-x-hidden text-white font-sans relative selection:bg-[#3b82f6]/30 flex flex-col"
             >
-              <div className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3b82f6] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#ffa500]"></span>
-              </div>
-              <span className="text-[12px] font-regular tracking-[0.2em] text-[#ffafff] group-hover:text-yellow-300 transition-colors">
-                For & By Developers
-              </span>
-            </motion.div>
-
-            <MainTitle />
-            
-            <div className="h-12 mb-12 flex justify-center items-center">
-              <p className="text-sm sm:text-base text-yellow-700 font-mono tracking-wide max-w-2xl mx-auto">
-                 <span className="text-[#3b82f6] mr-2">{'>'}</span>
-                 <TypewriterText 
-                    text="Loading algorithmic archives... visualization engine ready." 
-                    delay={0.5} 
-                 />
-              </p>
-            </div>
-            
-            <div className="relative max-w-lg mx-auto mt-8 group z-[100]">
-              <div className="absolute -inset-1 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500 group-hover:opacity-40" />
-              <div className="relative flex items-center bg-[#050510] rounded-xl border border-white/20 group-focus-within:border-[#3b82f6]/50 px-5 py-4 shadow-2xl">
-                 <Command className="h-5 w-5 text-green-700 group-focus-within:text-[#ffa500] mr-4" />
-                 <input
-                  type="text"
-                  placeholder="SEARCH DATABASE..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-transparent text-white placeholder:text-green-600 focus:outline-none font-mono text-sm tracking-wider cursor-none"
-                />
-              </div>
-              
-              <AnimatePresence>
-                {search.length > 0 && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -10 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    exit={{ opacity: 0, y: -10 }} 
-                    className="absolute top-full left-0 right-0 mt-3 bg-[#0a0a1a]/95 backdrop-blur-xl border border-[#3b82f6]/20 rounded-xl overflow-hidden shadow-2xl z-[101]"
-                  >
-                    {suggestions.length > 0 ? suggestions.map((algo, i) => (
-                      <Link key={algo.id} to={`/view/${algo.id}`}>
-                         <div className="flex items-center justify-between px-5 py-3 hover:bg-[#3b82f6]/10 border-b border-white/5 last:border-0 group/item">
-                            <div className="flex items-center gap-3">
-                                <Cpu className="h-4 w-4 text-gray-500 group-hover/item:text-[#3b82f6]" />
-                                <span className="text-sm font-mono text-gray-300 group-hover/item:text-white transition-colors">{algo.title}</span>
-                            </div>
-                            <ArrowRight className="h-3 w-3 text-[#3b82f6] opacity-0 group-hover/item:opacity-100 -translate-x-2 group-hover/item:translate-x-0 transition-all" />
-                         </div>
-                      </Link>
-                    )) : (
-                      <div className="px-5 py-4 text-xs font-mono text-gray-500">NO MATCHING PROTOCOLS FOUND</div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* --- FILTERS --- */}
-      <section className="px-4 pb-8 relative z-20">
-         <div className="container mx-auto max-w-6xl">
-            <div className="flex flex-wrap justify-center gap-3">
-                <button 
-                  onClick={() => setSelectedCategory(null)} 
-                  className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${!selectedCategory ? "text-[#3b82f6] border border-[#3b82f6]" : "text-gray-400 border border-white/20 hover:border-white/20"}`}
-                >
-                  <div className={`absolute inset-0 bg-[#3b82f6]/10 transition-transform duration-300 ${!selectedCategory ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`} />
-                  <span className="relative z-10">[ ALL_SYSTEMS ]</span>
-                </button>
+                <CyberSpaceBackground />
+                <Spotlight />
                 
-                {visibleCategories.map((cat) => (
-                    <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)} className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${selectedCategory === cat ? "text-[#8b5cf6] border border-[#8b5cf6]" : "text-gray-400 border border-white/30 hover:border-white/40"}`}>
-                        <div className={`absolute inset-0 bg-[#8b5cf6]/10 transition-transform duration-300 ${selectedCategory === cat ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`} />
-                        <span className="relative z-10">{cat.toUpperCase()}</span>
-                    </button>
-                ))}
+                <div className="fixed top-0 left-0 w-full z-[200]">
+                    <Navbar />
+                </div>
 
-                {categories.length > INITIAL_CATEGORY_COUNT && (
-                    <button 
-                        onClick={() => setShowAllCategories(!showAllCategories)} 
-                        className="px-4 py-2 rounded-lg text-[10px] font-mono border border-dashed border-[#3b82f6]/80 text-[#3b82f6]/100 hover:bg-[#3b82f6]/5 hover:text-[#ffa500] flex items-center gap-2 transition-all cursor-none"
+                {/* --- HERO SECTION --- */}
+                <section className="relative min-h-screen flex flex-col items-center justify-center px-4 z-50">
+                    <div className="container mx-auto text-center max-w-5xl">
+                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: "easeOut" }}>
+                        
+                        <motion.div 
+                        whileHover={{ scale: 1.05 }}
+                        className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-[#3b82f6]/50 bg-[#3b82f6]/5 mb-10 backdrop-blur-sm group"
+                        >
+                        <div className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3b82f6] opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#ffa500]"></span>
+                        </div>
+                        <span className="text-[12px] font-regular tracking-[0.2em] text-[#ffafff] group-hover:text-yellow-300 transition-colors">
+                            For & By Developers
+                        </span>
+                        </motion.div>
+
+                        <MainTitle />
+                        
+                        <div className="h-12 mb-10 flex justify-center items-center">
+                        <p className="text-sm sm:text-base text-yellow-700 font-mono tracking-wide max-w-2xl mx-auto">
+                            <span className="text-[#3b82f6] mr-2">{'>'}</span>
+                            <TypewriterText 
+                                text="Loading algorithmic archives... visualization engine ready." 
+                                delay={0.5} 
+                            />
+                        </p>
+                        </div>
+                        
+                        {/* SEARCH BAR */}
+                        <div className="relative max-w-2xl mx-auto mt-6 group z-[100]">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] rounded-2xl blur opacity-25 group-focus-within:opacity-75 transition duration-500 group-hover:opacity-50" />
+                        <div className="relative flex items-center bg-[#050510]/80 backdrop-blur-xl rounded-2xl border border-white/10 px-6 py-5 shadow-2xl transition-all duration-300 group-focus-within:border-[#3b82f6]/50 group-focus-within:shadow-[0_0_40px_-10px_rgba(59,130,246,0.4)]">
+                            <Command className="h-6 w-6 text-green-700 group-focus-within:text-[#3b82f6] mr-5 transition-colors" />
+                            <input
+                            type="text"
+                            placeholder="SEARCH DATABASE..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full bg-transparent text-white placeholder:text-green-700 focus:outline-none font-mono text-base tracking-wider"
+                            />
+                        </div>
+                        
+                        <AnimatePresence>
+                            {search.length > 0 && (
+                            <motion.div 
+                                initial={{ opacity: 0, y: -10 }} 
+                                animate={{ opacity: 1, y: 0 }} 
+                                exit={{ opacity: 0, y: -10 }} 
+                                className="absolute top-full left-0 right-0 mt-3 bg-[#0a0a1a]/95 backdrop-blur-xl border border-[#3b82f6]/20 rounded-xl overflow-hidden shadow-2xl z-[101]"
+                            >
+                                {suggestions.length > 0 ? suggestions.map((algo) => (
+                                <Link key={algo.id} to={`/view/${algo.id}`}>
+                                    <div className="flex items-center justify-between px-5 py-3 hover:bg-[#3b82f6]/10 border-b border-white/5 last:border-0 group/item">
+                                        <div className="flex items-center gap-3">
+                                            <Cpu className="h-4 w-4 text-gray-500 group-hover/item:text-[#3b82f6]" />
+                                            <span className="text-sm font-mono text-gray-300 group-hover/item:text-white transition-colors">{algo.title}</span>
+                                        </div>
+                                        <ArrowRight className="h-3 w-3 text-[#3b82f6] opacity-0 group-hover/item:opacity-100 -translate-x-2 group-hover/item:translate-x-0 transition-all" />
+                                    </div>
+                                </Link>
+                                )) : (
+                                <div className="px-5 py-4 text-xs font-mono text-gray-500">NO MATCHING PROTOCOLS FOUND</div>
+                                )}
+                            </motion.div>
+                            )}
+                        </AnimatePresence>
+                        </div>
+                    </motion.div>
+                    </div>
+
+                    {/* --- SCROLL INDICATOR --- */}
+                    <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1, y: [0, 10, 0] }}
+                    transition={{ delay: 1.5, duration: 2, repeat: Infinity }}
+                    onClick={scrollToGrid}
+                    className="absolute bottom-10 left-0 right-0 mx-auto w-max flex flex-col items-center gap-2 cursor-pointer group z-50"
                     >
-                        {showAllCategories ? <Minus className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                    </button>
-                )}
-            </div>
-         </div>
-      </section>
+                    <span className="text-[10px] font-mono text-gray-500 tracking-[0.3em] group-hover:text-[#3b82f6] transition-colors">SCROLL TO EXPLORE</span>
+                    <div className="w-6 h-10 border border-white/20 rounded-full flex justify-center pt-2 group-hover:border-[#3b82f6]/50 transition-colors">
+                        <motion.div 
+                        animate={{ y: [0, 12, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                        className="w-1 h-1 bg-white rounded-full group-hover:bg-[#3b82f6]" 
+                        />
+                    </div>
+                    </motion.div>
+                </section>
 
-      {/* --- MAIN GRID --- */}
-      <section className="px-4 pb-32 relative z-10 flex-grow">
-        <div className="container mx-auto max-w-7xl">
-          {loading ? (
-             <div className="flex flex-col items-center justify-center pt-20">
-                <div className="w-12 h-12 border-2 border-[#3b82f6] border-t-transparent rounded-full animate-spin mb-6 shadow-[0_0_20px_#3b82f6]" />
-                <div className="text-[#3b82f6] font-mono text-sm tracking-[0.2em] animate-pulse">DECRYPTING...</div>
-             </div>
-          ) : (
-            <>
-              <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <AnimatePresence mode="popLayout">
-                  {displayedAlgorithms.map((algo, index) => (
-                     <HologramCard key={algo.id} algo={algo} index={index} />
-                  ))}
-                </AnimatePresence>
-              </motion.div>
+                {/* --- CONTENT SECTION --- */}
+                <div id="algorithm-grid" className="relative z-10 bg-[#020205] pt-20">
+                    <section className="px-4 pb-12 relative z-20">
+                        <div className="container mx-auto max-w-6xl">
+                            <div className="flex flex-wrap justify-center gap-3">
+                                <button 
+                                    onClick={() => setSelectedCategory(null)} 
+                                    className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${!selectedCategory ? "text-[#3b82f6] border border-[#3b82f6]" : "text-gray-400 border border-white/20 hover:border-white/20"}`}
+                                >
+                                    <div className={`absolute inset-0 bg-[#3b82f6]/10 transition-transform duration-300 ${!selectedCategory ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`} />
+                                    <span className="relative z-10">[ ALL_SYSTEMS ]</span>
+                                </button>
+                                
+                                {visibleCategories.map((cat) => (
+                                    <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)} className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${selectedCategory === cat ? "text-[#8b5cf6] border border-[#8b5cf6]" : "text-gray-400 border border-white/30 hover:border-white/40"}`}>
+                                        <div className={`absolute inset-0 bg-[#8b5cf6]/10 transition-transform duration-300 ${selectedCategory === cat ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`} />
+                                        <span className="relative z-10">{cat.toUpperCase()}</span>
+                                    </button>
+                                ))}
 
-              {filtered.length === 0 && (
-                <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl bg-white/5 backdrop-blur-sm">
-                  <Hash className="h-10 w-10 text-gray-600 mx-auto mb-4" />
-                  <div className="text-gray-400 font-mono text-sm">VOID DETECTED: NO DATA</div>
+                                {categories.length > INITIAL_CATEGORY_COUNT && (
+                                    <button 
+                                        onClick={() => setShowAllCategories(!showAllCategories)} 
+                                        className="px-4 py-2 rounded-lg text-[10px] font-mono border border-dashed border-[#3b82f6]/80 text-[#3b82f6]/100 hover:bg-[#3b82f6]/5 hover:text-[#ffa500] flex items-center gap-2 transition-all cursor-none"
+                                    >
+                                        {showAllCategories ? <Minus className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="px-4 pb-32 relative z-10 flex-grow">
+                        <div className="container mx-auto max-w-7xl">
+                        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <AnimatePresence mode="popLayout">
+                            {displayedAlgorithms.map((algo, index) => (
+                                <HologramCard key={algo.id} algo={algo} index={index} />
+                            ))}
+                            </AnimatePresence>
+                        </motion.div>
+
+                        {filtered.length === 0 && (
+                            <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl bg-white/5 backdrop-blur-sm">
+                            <Hash className="h-10 w-10 text-gray-600 mx-auto mb-4" />
+                            <div className="text-gray-400 font-mono text-sm">VOID DETECTED: NO DATA</div>
+                            </div>
+                        )}
+
+                        {filtered.length > displayedAlgorithms.length && (
+                            <div className="flex justify-center mt-24">
+                            <button 
+                                onClick={() => setIsGridExpanded(true)} 
+                                className="group relative px-10 py-4 bg-[#3b82f6]/5 border border-[#3b82f6]/30 hover:border-[#3b82f6] transition-all duration-300 rounded-sm overflow-hidden cursor-none"
+                            >
+                                <div className="absolute inset-0 bg-[#3b82f6]/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                                <span className="relative flex items-center gap-3 text-xs font-mono font-bold text-[#3b82f6] tracking-[0.25em]">
+                                INITIALIZE FULL DUMP <ChevronDown className="h-4 w-4 animate-bounce" />
+                                </span>
+                            </button>
+                            </div>
+                        )}
+                        </div>
+                    </section>
+
+                    <footer className="relative border-t border-white/10 bg-[#020205] pt-16 pb-8 overflow-hidden z-20">
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-[#3b82f6]/50 to-transparent" />
+                        <div className="container mx-auto px-6 relative z-10 flex flex-col items-center">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Sparkles className="h-7 w-7 text-[#3b82f6]" />
+                                <span className="text-lg font-bold tracking-tight text-white text-[24px]">
+                                    Algo<span className="text-[#3b82f6]">Lib</span>
+                                </span>
+                            </div>
+
+                            <p className="text-slate-300 text-[12px] font-mono mb-10 text-center max-w-xs leading-relaxed">
+                                System Version 2.0.4 // Stable Build <br/>
+                                Optimized for the next generation of engineers.
+                            </p>
+
+                            <div className="w-full border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                                <div className="text-green-400 text-[12px] font-sans tracking-wide order-2 md:order-1">
+                                &copy; {new Date().getFullYear()} AlgoLib | ALL RIGHTS RESERVED.
+                                </div>
+                                <div className="flex items-center gap-6 text-[12px] font-mono order-1 md:order-2">
+                                <div className="flex items-center gap-2 text-green-400">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#4ade80]" />
+                                    <span>SYSTEM ONLINE</span>
+                                </div>
+                                <div className="w-px h-3 bg-white/20 hidden md:block" />
+                                <div className="flex items-center gap-2 text-[#FFEF00]/80">
+                                    <Eye className="h-4 w-4" />
+                                    <span>{visitCount.toLocaleString()} HITS</span>
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                    </footer>
                 </div>
-              )}
-
-              {filtered.length > displayedAlgorithms.length && (
-                <div className="flex justify-center mt-24">
-                  <button 
-                    onClick={() => setIsGridExpanded(true)} 
-                    className="group relative px-10 py-4 bg-[#3b82f6]/5 border border-[#3b82f6]/30 hover:border-[#3b82f6] transition-all duration-300 rounded-sm overflow-hidden cursor-none"
-                  >
-                    <div className="absolute inset-0 bg-[#3b82f6]/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                    <span className="relative flex items-center gap-3 text-xs font-mono font-bold text-[#3b82f6] tracking-[0.25em]">
-                       INITIALIZE FULL DUMP <ChevronDown className="h-4 w-4 animate-bounce" />
-                    </span>
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* --- REFINED CLASSY FOOTER --- */}
-      <footer className="relative border-t border-white/10 bg-[#020205] pt-16 pb-8 overflow-hidden z-20">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-[#3b82f6]/50 to-transparent" />
-        
-        <div className="container mx-auto px-6 relative z-10 flex flex-col items-center">
-           {/* TOP SECTION: Logo & Text */}
-           <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="h-7 w-7 text-[#3b82f6]" />
-              <span className="text-lg font-bold tracking-tight text-white text-[24px]">
-                  Algo<span className="text-[#3b82f6]">Lib</span>
-              </span>
-           </div>
-
-           <p className="text-slate-300 text-[12px] font-mono mb-10 text-center max-w-xs leading-relaxed">
-              System Version 2.0.4 // Stable Build <br/>
-              Optimized for the next generation of engineers.
-           </p>
-
-           {/* BOTTOM SECTION: Split Left/Right with Divider Line */}
-           <div className="w-full border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-              
-              {/* Left Side: Copyright */}
-              <div className="text-green-400 text-[12px] font-sans tracking-wide order-2 md:order-1">
-                 &copy; {new Date().getFullYear()} AlgoLib | ALL RIGHTS RESERVED.
-              </div>
-
-              {/* Right Side: Status */}
-              <div className="flex items-center gap-6 text-[12px] font-mono order-1 md:order-2">
-                 <div className="flex items-center gap-2 text-green-400">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#4ade80]" />
-                    <span>SYSTEM ONLINE</span>
-                 </div>
-                 
-                 <div className="w-px h-3 bg-white/20 hidden md:block" />
-                 
-                 <div className="flex items-center gap-2 text-[#FFEF00]/80">
-                    <Eye className="h-4 w-4" />
-                    <span>{visitCount.toLocaleString()} HITS</span>
-                 </div>
-              </div>
-           </div>
-
-        </div>
-      </footer>
-    </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

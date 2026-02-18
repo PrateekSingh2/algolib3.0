@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
-// --- 1. REUSABLE BACKGROUND COMPONENTS ---
+// --- 1. REUSABLE BACKGROUND COMPONENTS (No Mouse Lines) ---
 const CyberSpaceBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -32,7 +32,6 @@ const CyberSpaceBackground = () => {
 
     const PARTICLE_COUNT = width < 768 ? 40 : 80;
     const CONNECT_DISTANCE = 140;
-    const MOUSE_DISTANCE = 250;
 
     class Particle {
       x: number;
@@ -95,17 +94,17 @@ const CyberSpaceBackground = () => {
       particles.forEach((p, index) => {
         p.update();
         p.draw();
+        
+        // Mouse Repel Physics (Optional)
         const dxMouse = mouseX - p.x;
         const dyMouse = mouseY - p.y;
         const distMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
-        if (distMouse < MOUSE_DISTANCE) {
-           ctx.beginPath();
-           ctx.strokeStyle = `rgba(59, 130, 246, ${1 - distMouse / MOUSE_DISTANCE})`;
-           ctx.lineWidth = 1;
-           ctx.moveTo(p.x, p.y);
-           ctx.lineTo(mouseX, mouseY);
-           ctx.stroke();
+        if (distMouse < 80) {
+           p.vx -= dxMouse * 0.0005;
+           p.vy -= dyMouse * 0.0005;
         }
+
+        // Connections
         for (let j = index + 1; j < particles.length; j++) {
           const p2 = particles[j];
           const dx = p.x - p2.x;

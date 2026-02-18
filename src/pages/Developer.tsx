@@ -3,7 +3,7 @@ import { motion, useMotionTemplate, useMotionValue, useSpring } from "framer-mot
 import { Github, Linkedin } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
-// --- CYBERSPACE BACKGROUND (Reused from Index) ---
+// --- CYBERSPACE BACKGROUND (No Mouse Lines) ---
 const CyberSpaceBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -28,7 +28,6 @@ const CyberSpaceBackground = () => {
 
     const PARTICLE_COUNT = width < 768 ? 40 : 80;
     const CONNECT_DISTANCE = 140;
-    const MOUSE_DISTANCE = 250;
 
     class Particle {
       x: number;
@@ -93,23 +92,14 @@ const CyberSpaceBackground = () => {
         p.update();
         p.draw();
 
-        // Mouse Interaction
+        // Mouse Repel Physics (Optional)
         const dxMouse = mouseX - p.x;
         const dyMouse = mouseY - p.y;
         const distMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
 
-        if (distMouse < MOUSE_DISTANCE) {
-           ctx.beginPath();
-           ctx.strokeStyle = `rgba(59, 130, 246, ${1 - distMouse / MOUSE_DISTANCE})`;
-           ctx.lineWidth = 1;
-           ctx.moveTo(p.x, p.y);
-           ctx.lineTo(mouseX, mouseY);
-           ctx.stroke();
-           
-           if (distMouse < 60) {
-              p.vx -= dxMouse * 0.0008;
-              p.vy -= dyMouse * 0.0008;
-           }
+        if (distMouse < 80) {
+           p.vx -= dxMouse * 0.0008;
+           p.vy -= dyMouse * 0.0008;
         }
 
         // Particle Connections

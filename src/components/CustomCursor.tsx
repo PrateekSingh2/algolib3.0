@@ -1,101 +1,222 @@
-import { useEffect, useState } from "react";
-import { motion, useMotionValue, useSpring } from "framer-motion";
+import { FC, useEffect, useRef, useState } from "react";
+import { motion, useSpring } from "framer-motion";
 
-const CustomCursor = () => {
-  const cursorX = useMotionValue(-100);
-  const cursorY = useMotionValue(-100);
-  
-  // We use two different springs for a "trailing" effect
-  // 1. The Dot (Fast & Precise)
-  const dotSpringConfig = { damping: 25, stiffness: 700 };
-  
-  // 2. The Ring (Smooth & Flowy)
-  const ringSpringConfig = { damping: 20, stiffness: 300, mass: 0.5 };
+interface Position {
+  x: number;
+  y: number;
+}
 
-  const dotX = useSpring(cursorX, dotSpringConfig);
-  const dotY = useSpring(cursorY, dotSpringConfig);
-  const ringX = useSpring(cursorX, ringSpringConfig);
-  const ringY = useSpring(cursorY, ringSpringConfig);
+export interface SmoothCursorProps {
+  cursor?: React.ReactNode;
+  springConfig?: {
+    damping: number;
+    stiffness: number;
+    mass: number;
+    restDelta: number;
+  };
+}
 
-  const [isHovering, setIsHovering] = useState(false);
-  const [isClicking, setIsClicking] = useState(false);
+const DefaultCursorSVG: FC = () => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={20}
+      height={22}
+      viewBox="0 0 50 54"
+      fill="none"
+      // Removed the scale style to rely on explicit width/height for sizing
+    >
+      <g filter="url(#filter0_d_91_7928)">
+        <path
+          d="M42.6817 41.1495L27.5103 6.79925C26.7269 5.02557 24.2082 5.02558 23.3927 6.79925L7.59814 41.1495C6.75833 42.9759 8.52712 44.8902 10.4125 44.1954L24.3757 39.0496C24.8829 38.8627 25.4385 38.8627 25.9422 39.0496L39.8121 44.1954C41.6849 44.8902 43.4884 42.9759 42.6817 41.1495Z"
+          fill="black"
+        />
+        <path
+          d="M43.7146 40.6933L28.5431 6.34306C27.3556 3.65428 23.5772 3.69516 22.3668 6.32755L6.57226 40.6778C5.3134 43.4156 7.97238 46.298 10.803 45.2549L24.7662 40.109C25.0221 40.0147 25.2999 40.0156 25.5494 40.1082L39.4193 45.254C42.2261 46.2953 44.9254 43.4347 43.7146 40.6933Z"
+          stroke="white"
+          strokeWidth={2.25825}
+        />
+      </g>
+      <defs>
+        <filter
+          id="filter0_d_91_7928"
+          x={0.602397}
+          y={0.952444}
+          width={49.0584}
+          height={52.428}
+          filterUnits="userSpaceOnUse"
+          colorInterpolationFilters="sRGB"
+        >
+          <feFlood floodOpacity={0} result="BackgroundImageFix" />
+          <feColorMatrix
+            in="SourceAlpha"
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+            result="hardAlpha"
+          />
+          <feOffset dy={2.25825} />
+          <feGaussianBlur stdDeviation={2.25825} />
+          <feComposite in2="hardAlpha" operator="out" />
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.08 0"
+          />
+          <feBlend
+            mode="normal"
+            in2="BackgroundImageFix"
+            result="effect1_dropShadow_91_7928"
+          />
+          <feBlend
+            mode="normal"
+            in="SourceGraphic"
+            in2="effect1_dropShadow_91_7928"
+            result="shape"
+          />
+        </filter>
+      </defs>
+    </svg>
+  );
+};
+
+const CustomCursor = ({
+  cursor = <DefaultCursorSVG />,
+  springConfig = {
+    damping: 45,
+    stiffness: 400,
+    mass: 1,
+    restDelta: 0.001,
+  },
+}: SmoothCursorProps) => {
+  const [isMoving, setIsMoving] = useState(false);
+  const lastMousePos = useRef<Position>({ x: 0, y: 0 });
+  const velocity = useRef<Position>({ x: 0, y: 0 });
+  const lastUpdateTime = useRef(Date.now());
+  const previousAngle = useRef(0);
+  const accumulatedRotation = useRef(0);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const cursorX = useSpring(0, springConfig);
+  const cursorY = useSpring(0, springConfig);
+  const rotation = useSpring(0, {
+    ...springConfig,
+    damping: 60,
+    stiffness: 300,
+  });
+  const scale = useSpring(1, {
+    ...springConfig,
+    stiffness: 500,
+    damping: 35,
+  });
 
   useEffect(() => {
-    const moveCursor = (e: MouseEvent) => {
-      cursorX.set(e.clientX);
-      cursorY.set(e.clientY);
+    const updateVelocity = (currentPos: Position) => {
+      const currentTime = Date.now();
+      const deltaTime = currentTime - lastUpdateTime.current;
+
+      if (deltaTime > 0) {
+        velocity.current = {
+          x: (currentPos.x - lastMousePos.current.x) / deltaTime,
+          y: (currentPos.y - lastMousePos.current.y) / deltaTime,
+        };
+      }
+
+      lastUpdateTime.current = currentTime;
+      lastMousePos.current = currentPos;
     };
 
-    const handleMouseDown = () => setIsClicking(true);
-    const handleMouseUp = () => setIsClicking(false);
+    const smoothMouseMove = (e: MouseEvent) => {
+      const currentPos = { x: e.clientX, y: e.clientY };
+      updateVelocity(currentPos);
 
-    // Check if hovering over clickable elements
-    const handleMouseOver = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === "BUTTON" ||
-        target.tagName === "A" ||
-        target.closest("button") ||
-        target.closest("a") ||
-        target.tagName === "INPUT" ||
-        target.style.cursor === "pointer"
-      ) {
-        setIsHovering(true);
-      } else {
-        setIsHovering(false);
+      const speed = Math.sqrt(
+        Math.pow(velocity.current.x, 2) + Math.pow(velocity.current.y, 2)
+      );
+
+      cursorX.set(currentPos.x);
+      cursorY.set(currentPos.y);
+
+      if (speed > 0.1) {
+        const currentAngle =
+          Math.atan2(velocity.current.y, velocity.current.x) * (180 / Math.PI) +
+          90;
+
+        let angleDiff = currentAngle - previousAngle.current;
+        if (angleDiff > 180) angleDiff -= 360;
+        if (angleDiff < -180) angleDiff += 360;
+        accumulatedRotation.current += angleDiff;
+        rotation.set(accumulatedRotation.current);
+        previousAngle.current = currentAngle;
+
+        scale.set(0.95);
+        setIsMoving(true);
+
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        
+        timeoutRef.current = setTimeout(() => {
+          scale.set(1);
+          setIsMoving(false);
+        }, 150);
       }
     };
 
-    window.addEventListener("mousemove", moveCursor);
-    window.addEventListener("mousedown", handleMouseDown);
-    window.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("mouseover", handleMouseOver);
+    let rafId: number;
+    const throttledMouseMove = (e: MouseEvent) => {
+      if (rafId) return;
+
+      rafId = requestAnimationFrame(() => {
+        smoothMouseMove(e);
+        rafId = 0;
+      });
+    };
+
+    // Hide system cursor globally
+    document.body.style.cursor = "none";
+    
+    // Optional: Add a style tag to force it even more aggressively
+    const style = document.createElement('style');
+    style.innerHTML = '* { cursor: none !important; }';
+    style.id = 'cursor-style';
+    document.head.appendChild(style);
+
+    window.addEventListener("mousemove", throttledMouseMove);
 
     return () => {
-      window.removeEventListener("mousemove", moveCursor);
-      window.removeEventListener("mousedown", handleMouseDown);
-      window.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("mouseover", handleMouseOver);
+      window.removeEventListener("mousemove", throttledMouseMove);
+      
+      // Cleanup
+      document.body.style.cursor = "auto";
+      const styleEl = document.getElementById('cursor-style');
+      if (styleEl) styleEl.remove();
+
+      if (rafId) cancelAnimationFrame(rafId);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [cursorX, cursorY]);
+  }, [cursorX, cursorY, rotation, scale]);
 
   return (
-    <>
-      {/* Outer Ring */}
-      <motion.div
-        className="fixed top-0 left-0 border border-[#00f5ff] rounded-full pointer-events-none z-[9999] mix-blend-difference hidden md:block"
-        style={{
-          x: ringX,
-          y: ringY,
-          translateX: "-50%", // Center the div on the cursor
-          translateY: "-50%",
-        }}
-        animate={{
-          width: isHovering ? 48 : 32, // Expands on hover
-          height: isHovering ? 48 : 32,
-          scale: isClicking ? 0.8 : 1, // Shrinks on click
-          opacity: isHovering ? 0.8 : 0.5,
-          borderColor: isClicking ? "#9d00ff" : "#00f5ff"
-        }}
-        transition={{ type: "spring", damping: 20, stiffness: 300 }}
-      />
-
-      {/* Center Dot */}
-      <motion.div 
-        className="fixed top-0 left-0 bg-[#00f5ff] rounded-full pointer-events-none z-[9999] mix-blend-difference hidden md:block"
-        style={{
-          x: dotX,
-          y: dotY,
-          translateX: "-50%",
-          translateY: "-50%",
-        }}
-        animate={{
-          width: isHovering ? 8 : 4,
-          height: isHovering ? 8 : 4,
-          backgroundColor: isClicking ? "#9d00ff" : "#00f5ff"
-        }}
-      />
-    </>
+    <motion.div
+      style={{
+        position: "fixed",
+        left: cursorX,
+        top: cursorY,
+        translateX: "-50%",
+        translateY: "-50%",
+        rotate: rotation,
+        scale: scale,
+        zIndex: 9999, // High Z-Index to stay on top
+        pointerEvents: "none",
+        willChange: "transform",
+      }}
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{
+        type: "spring",
+        stiffness: 400,
+        damping: 30,
+      }}
+    >
+      {cursor}
+    </motion.div>
   );
 };
 
