@@ -108,7 +108,7 @@ const Visualizer = () => {
                 {/* --- MODAL BODY --- */}
                 <div className="p-8 space-y-6">
                    <p className="text-gray-300 text-sm leading-relaxed max-w-lg">
-                     Welcome to the interactive algorithm simulation deck. This engine allows you to visualize complex data structures including Linked Lists, Stack, Queue, Trees, Sorting algorithms and Graphs in real-time.
+                     Welcome to the interactive algorithm simulation deck.
                    </p>
 
                    {/* Layout Grid for Tips */}

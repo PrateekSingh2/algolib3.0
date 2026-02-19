@@ -163,21 +163,30 @@ const CyberSpaceBackground = () => {
   );
 };
 
-// --- 2. MAIN TITLE ---
+// --- 2. MAIN TITLE (UPDATED) ---
 const MainTitle = () => {
   return (
-    <h1 className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tighter mb-8 leading-none select-none cursor-default flex flex-col items-center justify-center gap-2 sm:gap-6">
+    // Reduced size from 9xl to 7xl for a cleaner, less bulky look
+    <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter mb-8 leading-[1.1] select-none cursor-default flex flex-col items-center justify-center gap-1 sm:gap-3 text-center px-4">
+      
+      {/* Line 1: Cool Colors (The Visualizer Side) */}
       <span className="inline-block relative">
-        <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-orange-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-          Master
+        <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 drop-shadow-[0_0_10px_rgba(6,182,212,0.4)]">
+          Visualize Logic.
         </span>
       </span>
+
+      {/* Line 2: Warm/Action Colors (The Snippet Side) */}
       <span className="relative inline-block">
-        <span className="absolute -inset-2 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-orange-500 opacity-25 blur-2xl" />
-        <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-orange-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-          Algorithms
+        {/* Subtle glow behind the text to make it pop against the black background */}
+        <span className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-blue-600/20 via-orange-500/20 to-purple-600/20 blur-2xl" />
+        
+        {/* The Blue-to-Orange gradient you liked */}
+        <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-orange-400 drop-shadow-[0_0_20px_rgba(249,115,22,0.4)]">
+          Execute Code.
         </span>
       </span>
+      
     </h1>
   );
 };
