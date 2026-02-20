@@ -3,7 +3,6 @@
   AlgoLib 3.0
   <br>
 </h1>
----
 
 ## ⚡ About
 
