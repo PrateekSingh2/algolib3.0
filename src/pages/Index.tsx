@@ -241,7 +241,7 @@ const HologramCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
         <div className="algo-3d-card pt-[50px] border-[3px] border-[#04c1fa]/30 [transform-style:preserve-3d] shadow-[0_30px_30px_-10px_rgba(0,0,0,0.5)] rounded-[10px] w-full h-full relative flex flex-col">
           
           {/* Inner Content Box (Safe background color overlay, NO BACKDROP BLUR) */}
-          <div className="bg-[rgba(4, 193, 250, 0.37)] transition-all duration-500 pt-[60px] pb-[25px] px-[25px] [transform-style:preserve-3d] flex-grow flex flex-col rounded-b-[7px] border-t border-[#04c1fa]/20">
+          <div className="bg-[#020617]/80 transition-all duration-500 pt-[60px] pb-[25px] px-[25px] [transform-style:preserve-3d] flex-grow flex flex-col rounded-b-[7px] border-t border-[#04c1fa]/20">
             
             {/* 3D TITLE */}
             <span className="inline-block text-white text-2xl font-black transition-transform duration-500 [transform:translateZ(50px)] hover:[transform:translateZ(60px)]">
@@ -263,7 +263,7 @@ const HologramCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
           </div>
 
           {/* 3D FLOATING BADGE (Top Right) */}
-          <div className="absolute top-[30px] right-[30px] h-[60px] w-[60px] bg-[#020617] border border-[#04c1fa] p-[10px] flex flex-col items-center justify-center shadow-[0_17px_10px_-10px_rgba(0,0,0,0.5)] rounded-[10px] z-20 transition-transform duration-500 [transform:translateZ(80px)] hover:[transform:translateZ(100px)]">
+          <div className="absolute top-[30px] right-[30px] h-[60px] w-[60px] bg-cyan-900 border border-[#04c1fa] p-[10px] flex flex-col items-center justify-center shadow-[0_17px_10px_-10px_rgba(0,0,0,0.5)] rounded-[10px] z-20 transition-transform duration-500 [transform:translateZ(80px)] hover:[transform:translateZ(100px)]">
             <span className="text-[#04c1fa] text-[9px] font-bold text-center block w-full truncate uppercase tracking-widest">
               {algo.category?.slice(0,4) || "SYS"}
             </span>
