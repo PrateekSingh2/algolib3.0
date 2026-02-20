@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="[YOUR_IMAGE_LINK_HERE.png](https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-02-20%20193936.png)" alt="AlgoLib Home Preview" width="100%">
+  <img src="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-02-20%20193936.png" alt="AlgoLib Home Preview" width="100%">
 </p>
 
 ---
