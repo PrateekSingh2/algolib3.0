@@ -33,7 +33,7 @@ const Navbar = () => {
         - Mobile: tighter padding
         - Desktop: spacious padding
       */}
-      <div className="relative flex items-center gap-1 sm:gap-2 p-1.5 rounded-full bg-[#03030c]/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] ring-1 ring-white/5">
+      <div className="relative flex items-center gap-4 sm:gap-2 p-1.5 rounded-full bg-[#03030c]/60 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.3)] ring-1 ring-white/5">
         
         {/* --- LOGO SECTION --- */}
         <Link 
@@ -58,7 +58,7 @@ const Navbar = () => {
         </Link>
 
         {/* --- NAVIGATION PILLS --- */}
-        <ul className="flex items-center gap-0.5 sm:gap-1">
+        <ul className="flex items-center gap-3 sm:gap-1">
           {navLinks.map((tab) => {
             const isActive = location.pathname === tab.path;
             const isHovered = hoveredTab === tab.name;

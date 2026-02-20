@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef } from "react";
 import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
 import { Linkedin, Network } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
-// --- CYBERSPACE BACKGROUND (No Mouse Lines) ---
+// --- CYBERSPACE BACKGROUND ---
 const CyberSpaceBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -58,8 +58,8 @@ const CyberSpaceBackground = () => {
 
       draw() {
         if (!ctx) return;
-        ctx.fillStyle = "rgba(0, 255, 136, 0.2)"; // Green tint for contributors
-        ctx.strokeStyle = "rgba(0, 255, 136, 0.2)";
+        ctx.fillStyle = "rgba(0, 245, 255, 0.3)";
+        ctx.strokeStyle = "rgba(0, 245, 255, 0.3)";
         ctx.lineWidth = 1;
 
         if (this.type === "square") {
@@ -92,7 +92,6 @@ const CyberSpaceBackground = () => {
         p.update();
         p.draw();
 
-        // Mouse Repel Physics (Optional - keeps particles moving but no lines)
         const dxMouse = mouseX - p.x;
         const dyMouse = mouseY - p.y;
         const distMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
@@ -102,7 +101,6 @@ const CyberSpaceBackground = () => {
            p.vy -= dyMouse * 0.0008;
         }
 
-        // Particle Connections
         for (let j = index + 1; j < particles.length; j++) {
           const p2 = particles[j];
           const dx = p.x - p2.x;
@@ -111,7 +109,7 @@ const CyberSpaceBackground = () => {
 
           if (dist < CONNECT_DISTANCE) {
             ctx.beginPath();
-            ctx.strokeStyle = `rgba(0, 255, 136, ${0.1 * (1 - dist / CONNECT_DISTANCE)})`;
+            ctx.strokeStyle = `rgba(100, 100, 255, ${0.1 * (1 - dist / CONNECT_DISTANCE)})`;
             ctx.lineWidth = 0.5;
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
@@ -139,7 +137,7 @@ const CyberSpaceBackground = () => {
 
   return (
     <div className="fixed inset-0 -z-10 bg-[#020205]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_#0a1a0f_0%,_#020205_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_#050514_0%,_#020205_100%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:50px_50px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-20 transform perspective-500 rotate-x-12 scale-110 pointer-events-none" />
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
     </div>
@@ -157,7 +155,7 @@ const Spotlight = () => {
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [mouseX, mouseY]);
-  const background = useMotionTemplate`radial-gradient(600px circle at ${mouseX}px ${mouseY}px, rgba(0, 255, 136, 0.05), transparent 40%)`;
+  const background = useMotionTemplate`radial-gradient(600px circle at ${mouseX}px ${mouseY}px, rgba(59, 130, 246, 0.05), transparent 40%)`;
   return <motion.div className="pointer-events-none fixed inset-0 z-30 transition-opacity duration-300" style={{ background }} />;
 };
 
@@ -178,7 +176,7 @@ const contributors = [
 
 const Contributors = () => {
   return (
-    <div className="min-h-screen relative overflow-hidden text-white selection:bg-[#00ff88]/30">
+    <div className="min-h-screen relative overflow-hidden text-white selection:bg-[#9d00ff]/30">
       <CyberSpaceBackground />
       <Spotlight />
       <Navbar />

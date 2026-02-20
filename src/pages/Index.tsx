@@ -4,13 +4,11 @@ import {
   motion, 
   AnimatePresence, 
   useMotionTemplate, 
-  useMotionValue, 
-  useSpring, 
-  useTransform
+  useMotionValue
 } from "framer-motion";
 import { 
   ArrowRight, Eye, ChevronDown, Hash, 
-  Command, Terminal, Plus, Minus, Cpu, Sparkles 
+  Command, Plus, Minus, Cpu, Sparkles 
 } from "lucide-react";
 import { 
   fetchAlgorithms, 
@@ -163,30 +161,22 @@ const CyberSpaceBackground = () => {
   );
 };
 
-// --- 2. MAIN TITLE (UPDATED) ---
+// --- 2. MAIN TITLE ---
 const MainTitle = () => {
   return (
-    // Reduced size from 9xl to 7xl for a cleaner, less bulky look
     <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tighter mb-8 leading-[1.1] select-none cursor-default flex flex-col items-center justify-center gap-1 sm:gap-3 text-center px-4">
-      
-      {/* Line 1: Cool Colors (The Visualizer Side) */}
       <span className="inline-block relative">
         <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 drop-shadow-[0_0_10px_rgba(6,182,212,0.4)]">
           Visualize Logic.
         </span>
       </span>
 
-      {/* Line 2: Warm/Action Colors (The Snippet Side) */}
       <span className="relative inline-block">
-        {/* Subtle glow behind the text to make it pop against the black background */}
         <span className="absolute -inset-4 rounded-3xl bg-gradient-to-r from-blue-600/20 via-orange-500/20 to-purple-600/20 blur-2xl" />
-        
-        {/* The Blue-to-Orange gradient you liked */}
         <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-orange-400 drop-shadow-[0_0_20px_rgba(249,115,22,0.4)]">
           Execute Code.
         </span>
       </span>
-      
     </h1>
   );
 };
@@ -231,59 +221,59 @@ const TypewriterText = ({ text, delay = 0 }: { text: string, delay?: number }) =
   );
 };
 
+// --- TRUE 3D "TRICKY LIONFISH" CARD ---
 const HologramCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
-  const floatDuration = useMemo(() => 4 + Math.random() * 4, []);
-  const floatDelay = useMemo(() => Math.random() * 2, []);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const mouseX = useSpring(x, { stiffness: 400, damping: 90 });
-  const mouseY = useSpring(y, { stiffness: 400, damping: 90 });
-
-  function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
-    const { left, top, width, height } = currentTarget.getBoundingClientRect();
-    x.set((clientX - left) / width - 0.5);
-    y.set((clientY - top) / height - 0.5);
-  }
-  function handleMouseLeave() { x.set(0); y.set(0); }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.4, delay: index * 0.05 }}
-      className="perspective-1000 will-change-transform"
+      // PERSPECTIVE ROOT: Crucial for 3D depth mapping
+      className="w-full max-w-[340px] mx-auto p-5 [perspective:1000px] group h-full"
     >
-      <motion.div
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{ rotateX: useTransform(mouseY, [-0.5, 0.5], [6, -6]), rotateY: useTransform(mouseX, [-0.5, 0.5], [-6, 6]), transformStyle: "preserve-3d" }}
-        animate={{ y: [0, -8, 0] }}
-        transition={{ y: { duration: floatDuration, repeat: Infinity, ease: "easeInOut", delay: floatDelay } }}
-        className="h-full relative group"
-      >
-        <Link to={`/view/${algo.id}`} className="block h-full cursor-none">
-          <div className="h-full relative bg-[#0a0a1a]/80 border border-white/5 backdrop-blur-[2px] rounded-xl overflow-hidden transition-all duration-500 group-hover:border-[#3b82f6]/100 group-hover:shadow-[0_0_30px_-10px_rgba(59,130,246,0.3)]">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#3b82f6]/1 via-transparent to-[#8b5cf6]/10 opacity-100 group-hover:opacity-500 transition-opacity duration-50 pointer-events-none" />
-            <div className="absolute top-0 left-0 w-full h-[1px] bg-[#3b82f6] shadow-[0_0_15px_#3b82f6] -translate-y-full group-hover:animate-scan-line z-20 opacity-60" />
-            <div className="p-6 flex flex-col h-full relative z-10 transform-style-3d">
-              <div className="flex justify-between items-start mb-4 translate-z-10">
-                 <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#3b82f6]/10 border border-[#3b82f6]/60">
-                    <Terminal className="h-3 w-3 text-[#ffff00]" />
-                    <span className="text-[10px] font-mono text-[#ffa500] tracking-widest font-bold">{algo.id.slice(0,4).toUpperCase()}</span>
-                 </div>
-                 <ArrowRight className="h-4 w-4 text-[#3b82f6] -translate-x-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-100 group-hover:text-[#3b82f6] transition-colors font-mono tracking-tight mb-2 translate-z-20">{algo.title}</h3>
-              <p className="text-xs text-gray-400 mb-6 line-clamp-2 leading-relaxed font-sans group-hover:text-gray-300 transition-colors translate-z-10">{algo.description}</p>
-              <div className="mt-auto flex flex-wrap gap-2 translate-z-10">
-                 <span className="px-2 py-1 text-[10px] font-mono border border-[#ffff00]/50 text-yellow-200 bg-[#3b82f6]/5 rounded-sm">{algo.category}</span>
-                 {algo.tags?.slice(0, 2).map((tag) => (<span key={tag} className="px-2 py-1 text-[10px] font-mono border border-white/20 text-gray-400 rounded-sm">#{tag}</span>))}
-              </div>
+      {/* CRITICAL 3D PRESERVATION: 
+        Link MUST have [transform-style:preserve-3d], otherwise it flattens the child space 
+      */}
+      <Link to={`/view/${algo.id}`} className="block h-full cursor-pointer [transform-style:preserve-3d]">
+        
+        {/* The Main Rotating Card Body */}
+        <div className="algo-3d-card pt-[50px] border-[3px] border-[#04c1fa]/30 [transform-style:preserve-3d] shadow-[0_30px_30px_-10px_rgba(0,0,0,0.5)] rounded-[10px] w-full h-full relative flex flex-col">
+          
+          {/* Inner Content Box (Safe background color overlay, NO BACKDROP BLUR) */}
+          <div className="bg-[rgba(4, 193, 250, 0.37)] transition-all duration-500 pt-[60px] pb-[25px] px-[25px] [transform-style:preserve-3d] flex-grow flex flex-col rounded-b-[7px] border-t border-[#04c1fa]/20">
+            
+            {/* 3D TITLE */}
+            <span className="inline-block text-white text-2xl font-black transition-transform duration-500 [transform:translateZ(50px)] hover:[transform:translateZ(60px)]">
+              {algo.title}
+            </span>
+            
+            {/* 3D DESCRIPTION */}
+            <p className="mt-3 text-[12px] text-gray-200 transition-transform duration-500 [transform:translateZ(30px)] hover:[transform:translateZ(60px)] line-clamp-3">
+              {algo.description}
+            </p>
+            
+            {/* 3D TAGS ARRAY */}
+            <div className="mt-4 pt-2 border-t border-white/10 flex gap-2 flex-wrap transition-transform duration-500 [transform:translateZ(30px)] hover:[transform:translateZ(60px)]">
+                {algo.tags?.slice(0, 2).map(tag => (
+                   <span key={tag} className="text-[10px] border border-white/20 bg-[#020617]/50 text-white px-2 py-1 rounded-sm">#{tag}</span>
+                ))}
             </div>
+
           </div>
-        </Link>
-      </motion.div>
+
+          {/* 3D FLOATING BADGE (Top Right) */}
+          <div className="absolute top-[30px] right-[30px] h-[60px] w-[60px] bg-[#020617] border border-[#04c1fa] p-[10px] flex flex-col items-center justify-center shadow-[0_17px_10px_-10px_rgba(0,0,0,0.5)] rounded-[10px] z-20 transition-transform duration-500 [transform:translateZ(80px)] hover:[transform:translateZ(100px)]">
+            <span className="text-[#04c1fa] text-[9px] font-bold text-center block w-full truncate uppercase tracking-widest">
+              {algo.category?.slice(0,4) || "SYS"}
+            </span>
+            <span className="text-[#04c1fa] text-[20px] font-black block leading-none">
+              {algo.id.slice(0, 2).toUpperCase()}
+            </span>
+          </div>
+
+        </div>
+      </Link>
     </motion.div>
   );
 };
@@ -295,7 +285,6 @@ const Index = () => {
   const [visitCount, setVisitCount] = useState(0);
   
   // --- SESSION PRELOADER LOGIC ---
-  // Initialize state based on whether "algolib_preloader_shown" exists in sessionStorage
   const [isLoading, setIsLoading] = useState(() => {
     return !sessionStorage.getItem("algolib_preloader_shown");
   });
@@ -306,7 +295,6 @@ const Index = () => {
   const INITIAL_GRID_COUNT = 9;
   const INITIAL_CATEGORY_COUNT = 6;
 
-  // --- PRELOADER COMPLETION HANDLER ---
   const handlePreloaderComplete = () => {
     setIsLoading(false);
     sessionStorage.setItem("algolib_preloader_shown", "true");
@@ -364,7 +352,24 @@ const Index = () => {
 
   return (
     <>
-      {/* --- PRELOADER GATE --- */}
+      {/* GLOBAL STYLES FOR THE 3D CYBERPUNK BACKGROUND 
+         We manage background animation and rotation directly in CSS to ensure flawless 3D performance
+      */}
+      <style>{`
+        .algo-3d-card {
+          background: linear-gradient(135deg, #0000 18.75%, #0f172a 0 31.25%, #0000 0),
+                      repeating-linear-gradient(45deg, #0f172a -6.25% 6.25%, #020617 0 18.75%);
+          background-size: 60px 60px;
+          background-position: 0 0, 0 0;
+          background-color: #000000;
+          transition: all 0.5s ease-in-out;
+        }
+        .group:hover .algo-3d-card {
+          background-position: -100px 100px, -100px 100px;
+          transform: rotate3d(0.5, 1, 0, 30deg);
+        }
+      `}</style>
+
       <AnimatePresence mode="wait">
         {isLoading ? (
             <Preloader key="loader" onComplete={handlePreloaderComplete} />
@@ -507,7 +512,7 @@ const Index = () => {
 
                     <section className="px-4 pb-32 relative z-10 flex-grow">
                         <div className="container mx-auto max-w-7xl">
-                        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
                             <AnimatePresence mode="popLayout">
                             {displayedAlgorithms.map((algo, index) => (
                                 <HologramCard key={algo.id} algo={algo} index={index} />

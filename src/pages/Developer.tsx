@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { motion, useMotionTemplate, useMotionValue, useSpring } from "framer-motion";
+import { useEffect, useRef } from "react";
+import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
 import { Github, Linkedin } from "lucide-react";
 import Navbar from "@/components/Navbar";
 
-// --- CYBERSPACE BACKGROUND (No Mouse Lines) ---
+// --- CYBERSPACE BACKGROUND ---
 const CyberSpaceBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -92,7 +92,6 @@ const CyberSpaceBackground = () => {
         p.update();
         p.draw();
 
-        // Mouse Repel Physics (Optional)
         const dxMouse = mouseX - p.x;
         const dyMouse = mouseY - p.y;
         const distMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
@@ -102,7 +101,6 @@ const CyberSpaceBackground = () => {
            p.vy -= dyMouse * 0.0008;
         }
 
-        // Particle Connections
         for (let j = index + 1; j < particles.length; j++) {
           const p2 = particles[j];
           const dx = p.x - p2.x;
@@ -167,7 +165,8 @@ const Developer = () => {
     {
       name: "Prateek Singh",
       role: "ARCHITECT",
-      bio: "Core system architecture, Visualizer Engine, and Backend logic circuits.",
+      status: "Developer",
+      bio: "Core system architecture, Visualizer Engine, UI/UX and Backend logic circuits.",
       avatar: "https://ik.imagekit.io/g7e4hyclo/photo.jpg",
       github: "https://github.com/prateeksingh2",
       linkedin: "https://www.linkedin.com/in/rajawatprateeksingh",
@@ -175,7 +174,8 @@ const Developer = () => {
     {
       name: "Shivansh Sahu",
       role: "INTERFACE_DESIGN",
-      bio: "Holographic UI/UX, Motion Physics, and Mobile Responsiveness.",
+      status: "Co-Developer",
+      bio: "Holographic UI/UX designing, Motion Physics, and Mobile Responsiveness.",
       avatar: "https://ik.imagekit.io/g7e4hyclo/co-photo.jpg",
       github: "https://github.com/shivanshmax-Monster",
       linkedin: "https://www.linkedin.com/in/shivansh-sahu-523a5a391",
@@ -185,13 +185,13 @@ const Developer = () => {
   return (
     <div className="min-h-screen relative overflow-hidden text-white selection:bg-[#9d00ff]/30">
       
-      {/* 1. ANIMATED BACKGROUNDS */}
+      {/* ANIMATED BACKGROUNDS */}
       <CyberSpaceBackground />
       <Spotlight />
       
       <Navbar />
 
-      <div className="pt-28 md:pt-36 pb-16 px-4 relative z-40">
+      <div className="pt-28 md:pt-31 pb-16 px-4 relative z-40">
         <div className="container mx-auto max-w-5xl">
           
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="text-center mb-16">
@@ -214,46 +214,81 @@ const Developer = () => {
                  initial={{ opacity: 0, y: 30 }} 
                  animate={{ opacity: 1, y: 0 }} 
                  transition={{ delay: i * 0.2, duration: 0.6 }}
+                 className="relative w-full max-w-[400px] mx-auto overflow-hidden rounded-[2rem] p-[2px] group shadow-2xl"
                >
-                  <motion.div
-                    animate={{ y: [0, -10, 0] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: i * 0.5 }}
-                    className="relative group bg-[#0a0a1a]/40 border border-white/10 hover:border-[#9d00ff]/50 transition-all duration-500 rounded-2xl p-6 md:p-8 overflow-hidden backdrop-blur-md hover:shadow-[0_0_30px_-5px_rgba(157,0,255,0.3)]"
-                  >
-                     {/* Scanning Light Effect */}
-                     <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#9d00ff] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                     <div className="absolute inset-0 bg-gradient-to-br from-[#00f5ff]/5 via-transparent to-[#9d00ff]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  {/* --- UIVERSE EXACT MATCH: TWO OPPOSITE ROTATING LINES --- */}
+                  <div className="absolute -top-[50%] -bottom-[50%] -left-[50%] -right-[50%] m-auto h-[200%] w-[160px] animate-spin [animation-duration:5s] bg-[linear-gradient(90deg,transparent,#00f5ff,#00f5ff,#00f5ff,#00f5ff,transparent)] group-hover:bg-[linear-gradient(90deg,transparent,#9d00ff,#9d00ff,#9d00ff,#9d00ff,transparent)] transition-colors duration-500 z-0" />
 
-                     <div className="flex flex-col items-center text-center relative z-10">
-                        <div className="relative w-24 h-24 mb-6">
-                           <div className="absolute inset-0 border border-dashed border-[#00f5ff]/30 rounded-full animate-[spin_10s_linear_infinite]" />
-                           <div className="absolute inset-[-4px] border border-dotted border-[#9d00ff]/30 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
-                           <img 
-                              src={member.avatar} 
-                              alt={member.name} 
-                              className="w-full h-full rounded-full object-cover border-2 border-white/10 relative z-10 grayscale group-hover:grayscale-0 transition-all duration-500" 
-                           />
-                        </div>
+                  {/* --- INNER CARD CONTAINER --- */}
+                  <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[calc(2rem-2px)] bg-[#0a0a1a] z-10">
+                    
+                    {/* --- TOP HEADER (Banner Area) --- */}
+                    <div className="relative h-[160px] w-full bg-[#0d1b2a]">
+                      
+                      {/* Avatar Centered in Banner */}
+                      <div className="absolute inset-0 flex items-center justify-center pt-6 z-20">
+                         <div className="relative w-28 h-28 sm:w-32 sm:h-32 shadow-[0_0_20px_rgba(0,245,255,0.2)] rounded-full">
+                            <div className="absolute inset-0 border-2 border-dashed border-[#00f5ff]/40 rounded-full animate-[spin_10s_linear_infinite]" />
+                            <div className="absolute inset-[-6px] border-2 border-dotted border-[#9d00ff]/40 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
+                            <img 
+                               src={member.avatar} 
+                               alt={member.name} 
+                               className="w-full h-full rounded-full object-cover relative z-10 grayscale group-hover:grayscale-0 transition-all duration-500 border-2 border-[#0a0a1a]" 
+                            />
+                         </div>
+                      </div>
 
-                        <h3 className="text-xl font-bold text-white mb-2 tracking-tight group-hover:text-[#00f5ff] transition-colors">{member.name}</h3>
-                        <span className="text-[10px] font-mono text-[#00f5ff] mb-4 bg-[#00f5ff]/10 px-3 py-1 rounded border border-[#00f5ff]/20">
-                           {member.role}
+                      {/* Dark Mask for the "Folder Tab" Cutout Effect */}
+                      <div className="absolute left-0 top-0 flex h-[50px] w-max max-w-[65%] items-center rounded-br-[24px] bg-[#0a0a1a] px-5 py-2 z-10">
+                        <span className="inline-block text-[10px] sm:text-xs font-mono font-bold tracking-widest text-[#00f5ff] group-hover:text-blue-400 transition-colors duration-300">
+                          {member.role}
                         </span>
-                        
-                        <p className="text-sm text-gray-400 mb-6 font-light leading-relaxed">
-                           {member.bio}
-                        </p>
-
-                        <div className="flex gap-4">
-                           <a href={member.github} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 hover:text-[#00f5ff] transition-colors border border-white/5 hover:border-[#00f5ff]/30">
-                              <Github className="h-5 w-5" />
-                           </a>
-                           <a href={member.linkedin} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 hover:text-[#00f5ff] transition-colors border border-white/5 hover:border-[#00f5ff]/30">
-                              <Linkedin className="h-5 w-5" />
-                           </a>
+                        {/* The "Negative Border Radius" Connecting Curve */}
+                        <div className="absolute -right-[20px] bottom-0 h-[20px] w-[20px] bg-[#0a0a1a]">
+                          <div className="h-full w-full rounded-tl-[20px] bg-[#0d1b2a]" />
                         </div>
-                     </div>
-                  </motion.div>
+                      </div>
+
+                      {/* Social Icons (Top Right) */}
+                      <div className="absolute right-5 top-4 flex items-center gap-3 z-10">
+                        <a href={member.github} className="text-gray-400 hover:text-[#00f5ff] transition-colors" target="_blank" rel="noreferrer">
+                          <Github size={18} />
+                        </a>
+                        <a href={member.linkedin} className="text-gray-400 hover:text-[#00f5ff] transition-colors" target="_blank" rel="noreferrer">
+                          <Linkedin size={18} />
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* --- BOTTOM CONTENT SECTION --- */}
+                    <div className="flex flex-col items-center px-6 pb-8 pt-5 text-center z-10 relative bg-[#0a0a1a]">
+                      
+                      {/* Name */}
+                      <h3 className="mb-1 text-xl font-bold tracking-tight text-white group-hover:text-[#00f5ff] transition-colors mt-4">
+                        {member.name}
+                      </h3>
+                      
+                      {/* Bio */}
+                      <p className="text-sm text-gray-400 font-light leading-relaxed mb-1 h-[60px] flex items-center justify-center">
+                        {member.bio}
+                      </p>
+
+                      {/* Themed Stats Row */}
+                      <div className="flex w-full items-center justify-between border-t border-white/5 pt-5">
+                        
+                        <div className="flex flex-1 flex-col items-center gap-1 border-r border-white/5">
+                          <span className="text-sm font-medium text-gray-300">{member.status}</span>
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Role</span>
+                        </div>
+                        
+                        <div className="flex flex-1 flex-col items-center gap-1">
+                          <span className="text-sm font-medium text-[#00f5ff]">100%</span>
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Uptime</span>
+                        </div>
+                        
+                      </div>
+                    </div>
+                  </div>
                </motion.div>
             ))}
           </div>

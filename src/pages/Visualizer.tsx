@@ -61,7 +61,7 @@ const Visualizer = () => {
           </h2>
           
           <p className="text-gray-400 text-xs font-mono leading-relaxed max-w-xs mb-8">
-            The Algorithm Visualizer engine requires high-performance rendering and a larger viewport canvas.
+            The Algorithm Visualizer engine requires a larger viewport canvas.<br/><br/>This screen is too small for it...
           </p>
       </div>
 
