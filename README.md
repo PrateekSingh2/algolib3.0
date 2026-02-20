@@ -3,25 +3,17 @@
   AlgoLib 3.0
   <br>
 </h1>
+---
 
-<h4 align="center">Welcome to your AlgoLib-3.0 project!</h4>
-<h5 align="center">Visualize Logic. Execute Code.</h5>
+## ⚡ About
 
-<p align="center">
-  <a href="#about">About</a> •
-  <a href="#technologies">Technologies</a> •
-  <a href="#local-development">Local Development</a>
-</p>
+**AlgoLib 3.0** is a next-generation interactive algorithm visualizer and logic execution platform. Built by and for developers, it provides an immersive, 3D holographic interface to explore, understand, and visualize complex data structures and logic circuits.
 
 <p align="center">
   <img src="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-02-20%20193936.png" alt="AlgoLib Home Page Preview" width="100%" style="border-radius: 10px; box-shadow: 0 0 20px rgba(0,245,255,0.2);">
 </p>
 
 ---
-
-## ⚡ About
-
-**AlgoLib 3.0** is a next-generation interactive algorithm visualizer and logic execution platform. Built by and for developers, it provides an immersive, 3D holographic interface to explore, understand, and visualize complex data structures and logic circuits.
 
 ## 🛠 What technologies are used for this project?
 
