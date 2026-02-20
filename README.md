@@ -52,10 +52,7 @@ npm i
 npm run dev
 ```
 
+---
 <p align="center">
 <i>&copy; 2026 AlgoLib | ALL RIGHTS RESERVED.</i>
 
-
-
-<span style="color: #4ade80;">● SYSTEM ONLINE</span>
-</p>
