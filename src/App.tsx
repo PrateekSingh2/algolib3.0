@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import CustomCursor from "@/components/CustomCursor"; // Import the cursor
 import Docs from "./pages/Docs";
 import Admin from "./pages/Admin";
+import Community from "./components/Community";
 
 const queryClient = new QueryClient();
 
@@ -26,12 +27,16 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/hq" element={<Admin />} />
           <Route path="/docs" element={<Docs />} />
           <Route path="/view/:id" element={<SnippetView />} />
           <Route path="/visualizer" element={<Visualizer />} />
           <Route path="/developer" element={<Developer />} />
           <Route path="/contributors" element={<Contributors />} />
+          
+          {/* Added the Community route here */}
+          <Route path="/discussion" element={<Community />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

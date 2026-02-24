@@ -1,13 +1,50 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { 
+  collection, query, orderBy, onSnapshot, deleteDoc, doc 
+} from "firebase/firestore";
+import { auth, firestoreDB, loginWithGoogle, logout } from "../lib/firebase"; 
 import { 
   Lock, Terminal, Clock, HardDrive, Copy, Check, 
   Cpu, Hash, ShieldCheck, Save, RefreshCw, 
   AlertCircle, X, Code, FileJson, CloudLightning, 
   Settings, Loader2, Edit3, ShieldAlert, Fingerprint, 
-  ChevronRight, Unlock, RefreshCcw, Eye, EyeOff
+  ChevronRight, Unlock, Search, Users, Activity,
+  LayoutDashboard, Database, ChevronUp, MessageSquare, AlertTriangle, Trash2
 } from "lucide-react";
 import Navbar from '@/components/Navbar';
+
+// ==========================================
+// SECURITY: DEFINE YOUR ADMIN EMAILS HERE
+// ==========================================
+const ADMIN_EMAILS = [
+  "prateeksinghrajawat2006@gmail.com", // REPLACE WITH YOUR ACTUAL EMAIL
+  "your.email@gmail.com"
+];
+
+// --- Types ---
+interface ReplyType {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string;
+  content: string;
+  createdAt: number; 
+  isAccepted?: boolean; 
+}
+
+interface Post {
+  id: string;
+  title: string;
+  body: string;
+  authorName: string;
+  authorId: string;
+  upvotes: string[];
+  downvotes?: string[];
+  replies: ReplyType[];
+  createdAt: any; 
+}
 
 // --- 1. NEURAL BACKGROUND (Unchanged - Core Aesthetic) ---
 const NeuralBackground = () => {
@@ -66,106 +103,20 @@ const NeuralBackground = () => {
   return <canvas ref={canvasRef} className="fixed inset-0 -z-10 bg-[#020205]" />;
 };
 
-// --- 2. CAPTCHA GENERATOR COMPONENT ---
-const CaptchaCanvas = ({ onGenerate }: { onGenerate: (code: string) => void }) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    
-    const generateCaptcha = () => {
-        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789#@%";
-        let code = "";
-        for (let i = 0; i < 6; i++) {
-            code += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return code;
-    };
-
-    const drawCaptcha = (code: string) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        // Clear
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Background Noise
-        ctx.fillStyle = '#050510';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Add interference lines
-        for (let i = 0; i < 7; i++) {
-            ctx.strokeStyle = `rgba(0, 245, 255, ${Math.random() * 0.5})`;
-            ctx.lineWidth = Math.random() * 2;
-            ctx.beginPath();
-            ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
-            ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
-            ctx.stroke();
-        }
-
-        // Draw Text
-        ctx.font = 'bold 24px "Courier New", monospace';
-        ctx.textBaseline = 'middle';
-        
-        const letterSpace = canvas.width / 7;
-        for(let i=0; i<code.length; i++) {
-            ctx.save();
-            ctx.translate(20 + i * letterSpace, canvas.height/2);
-            ctx.rotate((Math.random() - 0.5) * 0.4); // Random rotation
-            ctx.fillStyle = '#00f5ff';
-            ctx.shadowColor = "#00f5ff";
-            ctx.shadowBlur = 5;
-            ctx.fillText(code[i], 0, 0);
-            ctx.restore();
-        }
-    };
-
-    const refresh = () => {
-        const newCode = generateCaptcha();
-        drawCaptcha(newCode);
-        onGenerate(newCode);
-    };
-
-    useEffect(() => {
-        refresh();
-    }, []);
-
-    return (
-        <div className="flex items-center gap-3">
-            <canvas 
-                ref={canvasRef} 
-                width={200} 
-                height={50} 
-                className="rounded border border-[#00f5ff]/30 bg-black/40 cursor-pointer hover:border-[#00f5ff] transition-colors"
-                onClick={refresh}
-                title="Click to refresh captcha"
-            />
-            <button 
-                type="button" 
-                onClick={refresh} 
-                className="p-2 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-            >
-                <RefreshCcw size={18} />
-            </button>
-        </div>
-    );
-};
-
 const COMPLEXITY_PRESETS = ["O(1)", "O(log n)", "O(n)", "O(n log n)", "O(n²)", "O(2ⁿ)"];
 
 const Admin = () => {
   // --- AUTH STATE ---
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [captchaInput, setCaptchaInput] = useState("");
-  const [captchaCode, setCaptchaCode] = useState(""); // The real code
-  const [loginState, setLoginState] = useState<'idle' | 'checking' | 'error' | 'success'>('idle');
-  const [errorMessage, setErrorMessage] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-  // --- EDITOR STATE ---
+  // --- TAB STATE ---
+  const [activeTab, setActiveTab] = useState<"forge" | "moderation">("forge");
+
+  // --- EDITOR STATE (Original Logic) ---
   const [mode, setMode] = useState<"create" | "edit">("create");
-  const [activeTab, setActiveTab] = useState<"java" | "cpp">("java");
+  const [activeCodeTab, setActiveCodeTab] = useState<"java" | "cpp">("java");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   
@@ -174,7 +125,7 @@ const Admin = () => {
     spaceComplexity: "O(1)", description: "", codeJava: "", codeCpp: ""
   });
 
-  // --- UI STATE ---
+  // --- UI STATE (Original Logic) ---
   const [jsonOutput, setJsonOutput] = useState("");
   const [copied, setCopied] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
@@ -189,40 +140,49 @@ const Admin = () => {
   const [gistConfig, setGistConfig] = useState({ id: "", token: "" });
   const [existingAlgos, setExistingAlgos] = useState<any[]>([]);
 
+  // --- MODERATION STATE ---
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  // ==========================================
+  // INITIALIZATION & EFFECTS
+  // ==========================================
+  
+  // Load Gist Config
   useEffect(() => {
     const savedConfig = localStorage.getItem("algolib_gist_config");
     if(savedConfig) setGistConfig(JSON.parse(savedConfig));
   }, []);
 
-  // --- LOGIN HANDLER ---
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage("");
-    setLoginState('checking');
-    
-    // Simulate network/verification delay
-    await new Promise(r => setTimeout(r, 1500));
+  // Firebase Auth Check
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser && currentUser.email && ADMIN_EMAILS.includes(currentUser.email)) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+      setIsAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
-    // 1. Check Captcha
-    if (captchaInput.toUpperCase() !== captchaCode) {
-        setLoginState('error');
-        setErrorMessage("SECURITY_CHECK_FAILED: INVALID_CAPTCHA");
-        setTimeout(() => setLoginState('idle'), 2000);
-        return;
-    }
+  // Fetch Community Posts (Only if Admin)
+  useEffect(() => {
+    if (!isAdmin) return;
+    const q = query(collection(firestoreDB, "community_posts"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)));
+    });
+    return () => unsubscribe();
+  }, [isAdmin]);
 
-    // 2. Check Credentials
-    if (username === "algolib" && password === "dQk028<7@") {
-      setLoginState('success');
-      setTimeout(() => setIsAuthenticated(true), 1200);
-    } else {
-      setLoginState('error');
-      setErrorMessage("ACCESS_DENIED: INVALID_CREDENTIALS");
-      setTimeout(() => setLoginState('idle'), 2000);
-    }
-  };
 
-  // --- GIST OPERATIONS ---
+  // ==========================================
+  // GIST DATA FORGE LOGIC (Original)
+  // ==========================================
   const fetchFromGist = async () => {
     if(!gistConfig.id) return alert("Please configure Gist ID in settings first.");
     setIsLoading(true);
@@ -303,182 +263,65 @@ const Admin = () => {
   const generateJSON = () => { setJsonOutput(JSON.stringify({ ...formData, tags }, null, 2)); };
 
 
-  // --- LOGIN SCREEN COMPONENT ---
-  if (!isAuthenticated) {
+  // ==========================================
+  // MODERATION LOGIC
+  // ==========================================
+  const handleDeletePost = async (postId: string) => {
+    if (!window.confirm("ADMIN ACTION: Are you absolutely sure you want to take down this post? This action is permanent and cannot be undone.")) return;
+    setIsDeleting(postId);
+    try {
+      await deleteDoc(doc(firestoreDB, "community_posts", postId));
+    } catch (error) {
+      console.error("Error taking down post:", error);
+      alert("Failed to delete post.");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  const filteredPosts = posts.filter(post => 
+    post.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    post.authorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.body.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalPosts = posts.length;
+  const totalReplies = posts.reduce((acc, post) => acc + (post.replies?.length || 0), 0);
+  const totalInteractions = posts.reduce((acc, post) => acc + (post.upvotes?.length || 0) + (post.downvotes?.length || 0), 0) + totalReplies;
+
+
+  // ==========================================
+  // RENDERING: AUTHENTICATION SCREENS
+  // ==========================================
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#030308] flex flex-col items-center justify-center text-[#00f5ff] font-mono gap-4">
+        <Loader2 size={40} className="animate-spin" />
+        <p className="tracking-widest">VERIFYING SECURE PROTOCOLS...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
         <NeuralBackground />
-        
-        {/* Decorative Grid Overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none" />
-
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }} 
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md relative z-10"
-        >
-            {/* Holographic Container */}
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md relative z-10">
             <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-[#00f5ff]/20 p-1 rounded-2xl shadow-[0_0_100px_rgba(0,245,255,0.1)] overflow-hidden">
-                
-                {/* Scanning Light Effect */}
-                <motion.div 
-                    animate={{ top: ["0%", "100%", "0%"] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#00f5ff]/50 to-transparent z-20 shadow-[0_0_10px_#00f5ff]"
-                />
-
-                <div className="bg-[#050510]/90 rounded-xl p-8 border border-white/5 relative">
-                    
-                    {/* Header */}
-                    <div className="flex flex-col items-center mb-8">
-                        <motion.div 
-                            animate={loginState === 'success' ? { scale: [1, 1.2, 1], rotate: 360 } : {}}
-                            className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 border-2 relative ${
-                                loginState === 'error' ? 'border-red-500 bg-red-500/10' : 
-                                loginState === 'success' ? 'border-[#00ff88] bg-[#00ff88]/10' : 
-                                'border-[#00f5ff]/30 bg-[#00f5ff]/5'
-                            }`}
-                        >
-                            <AnimatePresence mode="wait">
-                                {loginState === 'checking' ? (
-                                    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}>
-                                        <Loader2 className="animate-spin text-[#00f5ff]" size={32} />
-                                    </motion.div>
-                                ) : loginState === 'success' ? (
-                                    <motion.div initial={{opacity:0, scale:0.5}} animate={{opacity:1, scale:1}}>
-                                        <Unlock className="text-[#00ff88]" size={32} />
-                                    </motion.div>
-                                ) : loginState === 'error' ? (
-                                    <motion.div 
-                                        initial={{x:0}} 
-                                        animate={{x: [-10, 10, -10, 10, 0]}} 
-                                        transition={{duration: 0.4}}
-                                    >
-                                        <ShieldAlert className="text-red-500" size={32} />
-                                    </motion.div>
-                                ) : (
-                                    <Lock className="text-[#00f5ff]" size={32} />
-                                )}
-                            </AnimatePresence>
-                            
-                            {/* Orbit rings */}
-                            {loginState === 'checking' && (
-                                <div className="absolute inset-0 rounded-full border border-t-[#00f5ff] border-r-transparent border-b-[#00f5ff] border-l-transparent animate-spin" />
-                            )}
-                        </motion.div>
-                        
-                        <div className="text-center">
-                            <h2 className="text-2xl font-black tracking-widest text-white uppercase font-mono">
-                                {loginState === 'success' ? <span className="text-[#00ff88]">ACCESS_GRANTED</span> : "SECURE_GATE"}
-                            </h2>
-                            <p className="text-[10px] font-mono text-gray-500 tracking-[0.3em] mt-2">
-                                BIOMETRIC_ENCRYPTION_LAYER
-                            </p>
-                        </div>
+                <motion.div animate={{ top: ["0%", "100%", "0%"] }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }} className="absolute left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#00f5ff]/50 to-transparent z-20 shadow-[0_0_10px_#00f5ff]" />
+                <div className="bg-[#050510]/90 rounded-xl p-8 border border-white/5 relative text-center">
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#00f5ff]/30 bg-[#00f5ff]/5">
+                        <Lock className="text-[#00f5ff]" size={32} />
                     </div>
-
-                    {/* Form */}
-                    <form onSubmit={handleLogin} className="space-y-6 relative z-30">
-                        <div className="space-y-4">
-                            <div className="space-y-1 group">
-                                <label className="text-[9px] text-[#00f5ff]/70 font-mono uppercase tracking-widest pl-1">Identity</label>
-                                <div className="relative">
-                                    <Terminal size={14} className="absolute left-3 top-3.5 text-gray-500 group-focus-within:text-[#00f5ff] transition-colors" />
-                                    <input 
-                                        type="text" 
-                                        placeholder="usr_admin" 
-                                        value={username} 
-                                        disabled={loginState === 'checking' || loginState === 'success'}
-                                        onChange={(e) => setUsername(e.target.value)} 
-                                        className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-3 outline-none focus:border-[#00f5ff] text-white font-mono text-sm shadow-inner transition-all hover:bg-black/60 focus:bg-black/80" 
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1 group">
-                                <label className="text-[9px] text-[#00f5ff]/70 font-mono uppercase tracking-widest pl-1">Passcode</label>
-                                <div className="relative">
-                                    <Fingerprint size={14} className="absolute left-3 top-3.5 text-gray-500 group-focus-within:text-[#00f5ff] transition-colors" />
-                                    <input 
-                                        type={showPassword ? "text" : "password"} 
-                                        placeholder="••••••••" 
-                                        value={password} 
-                                        disabled={loginState === 'checking' || loginState === 'success'}
-                                        onChange={(e) => setPassword(e.target.value)} 
-                                        className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-10 py-3 outline-none focus:border-[#00f5ff] text-white font-mono text-sm shadow-inner transition-all hover:bg-black/60 focus:bg-black/80" 
-                                    />
-                                    <button 
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-3.5 text-gray-500 hover:text-white"
-                                    >
-                                        {showPassword ? <EyeOff size={14}/> : <Eye size={14}/>}
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* CAPTCHA SECTION */}
-                            <div className="space-y-2 pt-2 border-t border-white/5">
-                                <label className="text-[9px] text-[#00f5ff]/70 font-mono uppercase tracking-widest pl-1">Human Verification Protocol</label>
-                                <div className="flex flex-col gap-3">
-                                    <CaptchaCanvas onGenerate={setCaptchaCode} />
-                                    
-                                    <div className="relative">
-                                        <ShieldCheck size={14} className="absolute left-3 top-3.5 text-gray-500" />
-                                        <input 
-                                            type="text" 
-                                            placeholder="ENTER_PROTOCOL_CODE" 
-                                            value={captchaInput} 
-                                            disabled={loginState === 'checking' || loginState === 'success'}
-                                            onChange={(e) => setCaptchaInput(e.target.value)} 
-                                            className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-3 outline-none focus:border-[#00f5ff] text-white font-mono text-sm uppercase tracking-widest" 
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Error Message */}
-                        <AnimatePresence>
-                            {errorMessage && (
-                                <motion.div 
-                                    initial={{ opacity: 0, height: 0 }} 
-                                    animate={{ opacity: 1, height: 'auto' }} 
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="text-red-500 text-[10px] font-mono text-center bg-red-500/10 p-2 rounded border border-red-500/20 flex items-center justify-center gap-2"
-                                >
-                                    <AlertCircle size={12} /> {errorMessage}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {/* Submit Button */}
-                        <button 
-                            type="submit" 
-                            disabled={loginState === 'checking' || loginState === 'success'}
-                            className={`w-full py-3.5 rounded-lg font-bold text-sm tracking-wider uppercase transition-all duration-300 relative overflow-hidden group ${
-                                loginState === 'success' 
-                                ? 'bg-[#00ff88] text-black shadow-[0_0_20px_#00ff88]' 
-                                : 'bg-[#00f5ff] hover:bg-[#00d0db] text-black shadow-[0_0_20px_rgba(0,245,255,0.4)] hover:shadow-[0_0_30px_rgba(0,245,255,0.6)]'
-                            }`}
-                        >
-                            <span className="relative z-10 flex items-center justify-center gap-2">
-                                {loginState === 'checking' ? (
-                                    <>
-                                        <Loader2 size={16} className="animate-spin" /> VERIFYING...
-                                    </>
-                                ) : loginState === 'success' ? (
-                                    <>
-                                        <Check size={16} /> UNLOCKED
-                                    </>
-                                ) : (
-                                    <>
-                                        AUTHENTICATE <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                                    </>
-                                )}
-                            </span>
-                        </button>
-                    </form>
+                    <h2 className="text-2xl font-black tracking-widest text-white uppercase font-mono">SECURE_GATE</h2>
+                    <p className="text-[10px] font-mono text-gray-500 tracking-[0.3em] mt-2 mb-8">BIOMETRIC_ENCRYPTION_LAYER</p>
+                    <button 
+                        onClick={loginWithGoogle} 
+                        className="w-full bg-[#00f5ff] hover:bg-[#00d0db] text-black font-bold py-3.5 rounded-lg text-sm tracking-wider uppercase transition-all shadow-[0_0_20px_rgba(0,245,255,0.4)]"
+                    >
+                        AUTHENTICATE WITH GOOGLE
+                    </button>
                 </div>
             </div>
         </motion.div>
@@ -486,16 +329,44 @@ const Admin = () => {
     );
   }
 
-  // --- MAIN ADMIN APP ---
+  if (user && !isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+        <NeuralBackground />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none" />
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-md relative z-10">
+            <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-red-500/30 p-1 rounded-2xl shadow-[0_0_100px_rgba(220,38,38,0.15)] overflow-hidden">
+                <div className="bg-[#050510]/90 rounded-xl p-8 border border-white/5 relative text-center">
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/50 bg-red-500/10">
+                        <ShieldAlert className="text-red-500" size={32} />
+                    </div>
+                    <h2 className="text-2xl font-black tracking-widest text-red-500 uppercase font-mono">ACCESS_DENIED</h2>
+                    <p className="text-[10px] font-mono text-gray-400 mt-2 mb-8">UNAUTHORIZED SIGNATURE: <span className="text-white">{user.email}</span></p>
+                    <button 
+                        onClick={logout} 
+                        className="w-full bg-transparent border border-red-500 text-red-500 hover:bg-red-500 hover:text-black font-bold py-3.5 rounded-lg text-sm tracking-wider uppercase transition-all"
+                    >
+                        TERMINATE SESSION
+                    </button>
+                </div>
+            </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // RENDERING: MAIN ADMIN APP
+  // ==========================================
   return (
     <div className="min-h-screen text-white font-sans overflow-x-hidden">
       <NeuralBackground />
       <Navbar />
       
-      {/* --- PURGE MODAL (Visual Update) --- */}
+      {/* --- MODALS (Original logic) --- */}
       <AnimatePresence>
         {showPurgeModal && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
                 <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="w-full max-w-sm bg-[#1a0505] border border-red-500/50 rounded-2xl p-6 shadow-[0_0_50px_rgba(220,38,38,0.2)]">
                     <div className="flex flex-col items-center text-center mb-6">
                         <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/30">
@@ -511,12 +382,9 @@ const Admin = () => {
                 </motion.div>
             </motion.div>
         )}
-      </AnimatePresence>
 
-      {/* --- CONFIG MODAL (Visual Update) --- */}
-      <AnimatePresence>
         {showConfigModal && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
                 <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="w-full max-w-md bg-[#0a0a1a] border border-[#00f5ff]/30 rounded-2xl p-6 shadow-[0_0_50px_rgba(0,245,255,0.15)] relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#00f5ff] to-transparent opacity-50" />
                     <div className="flex justify-between items-center mb-6">
@@ -547,12 +415,9 @@ const Admin = () => {
                 </motion.div>
             </motion.div>
         )}
-      </AnimatePresence>
 
-      {/* --- LOAD/EDIT MODAL (Visual Update) --- */}
-      <AnimatePresence>
         {showLoadModal && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
                 <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="w-full max-w-3xl h-[80vh] bg-[#0a0a1a] border border-[#00f5ff]/30 rounded-2xl p-6 shadow-[0_0_60px_rgba(0,245,255,0.1)] flex flex-col relative">
                      <div className="absolute top-0 right-0 p-4 opacity-20 pointer-events-none"><CloudLightning size={100} /></div>
                     <div className="flex justify-between items-center mb-6 relative z-10">
@@ -594,181 +459,328 @@ const Admin = () => {
         )}
       </AnimatePresence>
 
-      <main className="pt-32 pb-20 px-4 container mx-auto max-w-7xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+      <main className="pt-32 pb-20 px-4 container mx-auto max-w-7xl relative z-10">
+        
+        {/* --- GLOBAL HEADER & TABS --- */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/10 pb-4">
            <div>
-               <div className="flex items-center gap-4 mb-2">
+               <div className="flex items-center gap-4 mb-3">
                   <div className="p-2 bg-[#00ff88]/10 rounded-lg border border-[#00ff88]/30">
                     <ShieldCheck className="text-[#00ff88] w-6 h-6" />
                   </div>
-                  <h1 className="text-4xl font-black tracking-tighter text-white">DATA_FORGE</h1>
+                  <h1 className="text-4xl font-black tracking-tighter text-white">SYSTEM_CORE</h1>
                </div>
-               <div className="flex items-center gap-3 pl-1">
-                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase border ${mode === 'create' ? 'bg-[#00f5ff]/10 border-[#00f5ff] text-[#00f5ff]' : 'bg-orange-500/10 border-orange-500 text-orange-500'}`}>
-                       MODE: {mode}
-                   </span>
-                   {statusMsg && (
-                       <span className="flex items-center gap-2 text-[#00ff88] text-xs font-mono animate-in slide-in-from-left fade-in">
-                           <Check size={12}/> {statusMsg}
-                       </span>
-                   )}
+               <div className="flex flex-wrap gap-2">
+                   <button 
+                     onClick={() => setActiveTab("forge")}
+                     className={`px-4 py-2 font-mono text-xs font-bold tracking-widest uppercase transition-all rounded-lg ${activeTab === 'forge' ? 'bg-[#00f5ff]/20 text-[#00f5ff] border border-[#00f5ff]/50' : 'bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-white/20'}`}
+                   >
+                     DATA_FORGE
+                   </button>
+                   <button 
+                     onClick={() => setActiveTab("moderation")}
+                     className={`px-4 py-2 font-mono text-xs font-bold tracking-widest uppercase transition-all rounded-lg ${activeTab === 'moderation' ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-white/20'}`}
+                   >
+                     Community Moderation
+                   </button>
                </div>
            </div>
            
-           <div className="flex gap-3 bg-[#0a0a1a] p-1.5 rounded-xl border border-white/10">
-               <button onClick={() => setShowConfigModal(true)} className="p-2 bg-white/5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors" title="Settings"><Settings size={18} /></button>
-               
-               <div className="w-px bg-white/10 mx-1 my-1"></div>
-
+           <div className="flex items-center gap-4 bg-[#0a0a1a] p-2 rounded-xl border border-white/10">
+               <span className="text-xs font-mono text-gray-400 hidden sm:block">AUTH: <span className="text-[#00ff88]">{user?.email}</span></span>
+               <div className="w-px h-6 bg-white/10 hidden sm:block"></div>
                <button 
-                  onClick={() => {
-                      fetchFromGist().then((data) => {
-                          if(data) setShowLoadModal(true);
-                      });
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#00f5ff]/5 border border-[#00f5ff]/20 text-[#00f5ff] rounded-lg hover:bg-[#00f5ff]/10 transition-all text-xs font-bold font-mono tracking-wide"
+                  onClick={logout}
+                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all rounded text-xs font-bold font-mono tracking-wide"
                >
-                   <CloudLightning size={14} /> LOAD_DATA
-               </button>
-
-               <button 
-                  onClick={() => setShowPurgeModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-500/5 border border-red-500/20 text-red-500 text-xs font-bold font-mono tracking-wide hover:bg-red-500/10 transition-all rounded-lg"
-               >
-                   <RefreshCw size={14} /> PURGE
+                   <Lock size={14} /> LOGOUT
                </button>
            </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-8">
-           {/* --- FORM SECTION --- */}
-           <div className={`space-y-6 bg-[#0a0a1a]/80 backdrop-blur-xl border p-8 rounded-3xl relative transition-all shadow-2xl ${mode === 'edit' ? 'border-orange-500/30 shadow-[0_0_30px_rgba(249,115,22,0.1)]' : 'border-[#00f5ff]/20 shadow-[0_0_30px_rgba(0,245,255,0.05)]'}`}>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="space-y-2 group">
-                    <label className="text-[10px] font-mono text-[#00f5ff] uppercase tracking-widest flex items-center gap-2 opacity-70 group-focus-within:opacity-100 transition-opacity">Protocol ID <span className="text-red-500">*</span></label>
-                    <div className="relative">
-                        <Hash size={14} className={`absolute left-3 top-3.5 transition-colors ${mode === 'edit' ? 'text-gray-600' : 'text-gray-500 group-focus-within:text-[#00f5ff]'}`} />
-                        <input disabled={mode === 'edit'} value={formData.id} onChange={(e) => setFormData({...formData, id: e.target.value})} className={`w-full bg-black/40 border rounded-lg pl-10 pr-4 py-3 outline-none font-mono text-sm transition-all ${mode === 'edit' ? 'border-orange-500/20 text-gray-500 cursor-not-allowed' : 'border-white/10 focus:border-[#00f5ff] text-white focus:bg-black/60'}`} placeholder="algo_unique_id" />
-                    </div>
-                 </div>
-                 <div className="space-y-2 group">
-                    <label className="text-[10px] font-mono text-[#00f5ff] uppercase tracking-widest opacity-70 group-focus-within:opacity-100 transition-opacity">Category</label>
-                    <input value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-[#00f5ff] text-sm text-white focus:bg-black/60 transition-all" placeholder="e.g. Dynamic Programming" />
-                 </div>
-              </div>
-
-              <div className="space-y-2 group">
-                 <label className="text-[10px] font-mono text-[#00f5ff] uppercase tracking-widest flex items-center gap-2 opacity-70 group-focus-within:opacity-100 transition-opacity">Algorithm Title <span className="text-red-500">*</span></label>
-                 <input value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-[#00f5ff] text-sm font-bold text-white focus:bg-black/60 transition-all" placeholder="e.g. Dijkstra's Shortest Path" />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-mono text-purple-400 uppercase tracking-widest flex items-center gap-2"><Clock size={12}/> Time Complexity</label>
-                    <div className="flex gap-2 mb-2 overflow-x-auto pb-1 custom-scrollbar">
-                        {COMPLEXITY_PRESETS.map(c => (
-                            <button key={c} onClick={() => setFormData({...formData, timeComplexity: c})} className="px-2 py-1 rounded bg-purple-900/20 border border-purple-500/30 text-[10px] text-purple-300 hover:bg-purple-500/20 whitespace-nowrap transition-colors">{c}</button>
-                        ))}
-                    </div>
-                    <input value={formData.timeComplexity} onChange={(e) => setFormData({...formData, timeComplexity: e.target.value})} className="w-full bg-black/40 border border-purple-900/30 rounded-lg px-4 py-2 outline-none focus:border-purple-500 font-mono text-sm text-white transition-colors" />
-                 </div>
-                 
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-mono text-purple-400 uppercase tracking-widest flex items-center gap-2"><HardDrive size={12}/> Space Complexity</label>
-                    <div className="h-[27px] w-full"></div> {/* Spacer to align inputs */}
-                    <input value={formData.spaceComplexity} onChange={(e) => setFormData({...formData, spaceComplexity: e.target.value})} className="w-full bg-black/40 border border-purple-900/30 rounded-lg px-4 py-2 outline-none focus:border-purple-500 font-mono text-sm text-white transition-colors" />
-                 </div>
-              </div>
-
-              <div className="space-y-2">
-                 <label className="text-[10px] font-mono text-[#00f5ff] uppercase tracking-widest flex items-center gap-2 opacity-70"><Hash size={12}/> Tags</label>
-                 <div className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 focus-within:border-[#00f5ff] flex flex-wrap gap-2 transition-all min-h-[50px]">
-                    {tags.map(tag => (
-                        <span key={tag} className="flex items-center gap-1 bg-[#00f5ff]/20 text-[#00f5ff] px-2 py-1 rounded text-xs font-mono border border-[#00f5ff]/30">
-                            #{tag} <X size={10} className="cursor-pointer hover:text-white" onClick={() => removeTag(tag)} />
+        {/* ========================================== */}
+        {/* TAB 1: DATA FORGE (ORIGINAL UI)            */}
+        {/* ========================================== */}
+        {activeTab === "forge" && (
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                
+                {/* Status Bar */}
+                <div className="flex items-center justify-between bg-black/40 border border-white/10 p-3 rounded-xl">
+                    <div className="flex items-center gap-3">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase border ${mode === 'create' ? 'bg-[#00f5ff]/10 border-[#00f5ff] text-[#00f5ff]' : 'bg-orange-500/10 border-orange-500 text-orange-500'}`}>
+                            MODE: {mode}
                         </span>
-                    ))}
-                    <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={addTag} placeholder={tags.length === 0 ? "Press Enter to add tags..." : ""} className="bg-transparent outline-none flex-1 text-sm text-gray-300 min-w-[80px]" />
-                 </div>
-              </div>
-
-              <div className="space-y-2">
-                 <label className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Description</label>
-                 <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-[#00f5ff] text-sm leading-relaxed text-gray-300 focus:text-white transition-all resize-none" />
-              </div>
-
-              <div className="space-y-0">
-                 <div className="flex items-center justify-between border-b border-white/10 pb-0">
-                    <label className="text-[10px] font-mono text-gray-400 uppercase tracking-widest flex items-center gap-2 pb-2">Implementation Sequence</label>
-                    <div className="flex">
-                        <button onClick={() => setActiveTab("java")} className={`px-4 py-2 text-[10px] font-bold rounded-t-lg transition-all border-t border-l border-r ${activeTab === 'java' ? 'bg-[#00ff88]/10 text-[#00ff88] border-[#00ff88]/30' : 'border-transparent text-gray-500 hover:text-white'}`}>JAVA</button>
-                        <button onClick={() => setActiveTab("cpp")} className={`px-4 py-2 text-[10px] font-bold rounded-t-lg transition-all border-t border-l border-r ${activeTab === 'cpp' ? 'bg-[#8b5cf6]/10 text-[#8b5cf6] border-[#8b5cf6]/30' : 'border-transparent text-gray-500 hover:text-white'}`}>C++</button>
+                        {statusMsg && (
+                            <span className="flex items-center gap-2 text-[#00ff88] text-xs font-mono animate-in slide-in-from-left fade-in">
+                                <Check size={12}/> {statusMsg}
+                            </span>
+                        )}
                     </div>
-                 </div>
-                 <div className="relative">
-                     {activeTab === 'java' ? (
-                         <textarea value={formData.codeJava} onChange={(e) => setFormData({...formData, codeJava: e.target.value})} rows={12} className="w-full bg-[#050510] border-b border-l border-r border-[#00ff88]/30 rounded-b-lg rounded-tr-lg px-4 py-4 outline-none focus:bg-black/80 text-[11px] font-mono text-green-100 leading-relaxed custom-scrollbar transition-all" placeholder="// Java Implementation..." />
-                     ) : (
-                         <textarea value={formData.codeCpp} onChange={(e) => setFormData({...formData, codeCpp: e.target.value})} rows={12} className="w-full bg-[#050510] border-b border-l border-r border-[#8b5cf6]/30 rounded-b-lg rounded-tr-lg px-4 py-4 outline-none focus:bg-black/80 text-[11px] font-mono text-purple-100 leading-relaxed custom-scrollbar transition-all" placeholder="// C++ Implementation..." />
-                     )}
-                 </div>
-              </div>
-
-              <div className="flex gap-4 pt-4 border-t border-white/5">
-                  <button onClick={generateJSON} className="flex-1 py-4 bg-[#00f5ff]/5 border border-[#00f5ff]/20 text-[#00f5ff] font-bold uppercase rounded-xl hover:bg-[#00f5ff]/10 hover:border-[#00f5ff]/50 transition-all flex items-center justify-center gap-2 text-xs tracking-widest">
-                     <Code size={16} /> Generate JSON Packet
-                  </button>
-                  
-                  <button onClick={saveToGist} disabled={isLoading} className={`flex-1 py-4 font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg text-xs tracking-widest ${mode === 'edit' ? 'bg-orange-500 hover:bg-orange-600 text-black shadow-orange-500/20' : 'bg-[#00f5ff] hover:bg-[#00c2cc] text-black shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:shadow-[0_0_30px_rgba(0,245,255,0.5)]'}`}>
-                     {isLoading ? <Loader2 className="animate-spin" size={16}/> : <Save size={16} />}
-                     {mode === 'edit' ? 'Update Repository' : 'Commit to Database'}
-                  </button>
-              </div>
-           </div>
-
-           {/* --- OUTPUT SECTION --- */}
-           <div className="flex flex-col gap-6">
-              <div className="bg-[#0a0a1a]/80 backdrop-blur-md border border-white/10 rounded-3xl p-6 flex-1 flex flex-col min-h-[500px] shadow-xl relative overflow-hidden group sticky top-24">
-                 
-                 {/* Decorative top bar */}
-                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#00f5ff]/30 to-transparent" />
-
-                 <div className="flex items-center justify-between mb-4 relative z-10">
-                    <div className="flex items-center gap-2">
-                       <FileJson size={14} className="text-[#00f5ff]" />
-                       <span className="text-[10px] font-bold font-mono text-white tracking-widest uppercase">JSON_STREAM_OUTPUT</span>
+                    <div className="flex gap-2">
+                        <button onClick={() => setShowConfigModal(true)} className="p-1.5 bg-white/5 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors" title="Settings"><Settings size={16} /></button>
+                        <button 
+                            onClick={() => { fetchFromGist().then((data) => { if(data) setShowLoadModal(true); }); }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-[#00f5ff]/5 border border-[#00f5ff]/20 text-[#00f5ff] rounded hover:bg-[#00f5ff]/10 transition-all text-[10px] font-bold font-mono"
+                        >
+                            <CloudLightning size={12} /> LOAD
+                        </button>
+                        <button 
+                            onClick={() => setShowPurgeModal(true)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-red-500/5 border border-red-500/20 text-red-500 text-[10px] font-bold font-mono hover:bg-red-500/10 transition-all rounded"
+                        >
+                            <RefreshCw size={12} /> Reset
+                        </button>
                     </div>
-                    {jsonOutput && (
-                      <button 
-                        onClick={() => { navigator.clipboard.writeText(jsonOutput); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                        className="px-3 py-1.5 rounded bg-[#00f5ff]/10 text-[#00f5ff] text-[10px] font-mono border border-[#00f5ff]/30 hover:bg-[#00f5ff] hover:text-black transition-all flex items-center gap-2 font-bold"
-                      >
-                         {copied ? <Check size={10}/> : <Copy size={10}/>} {copied ? "COPIED" : "COPY_DATA"}
-                      </button>
-                    )}
-                 </div>
+                </div>
 
-                 <div className="flex-1 bg-black/60 rounded-xl border border-white/5 p-6 overflow-auto custom-scrollbar relative z-10 font-mono text-[11px] leading-relaxed shadow-inner">
-                    {jsonOutput ? (
-                      <pre className="text-blue-300 whitespace-pre-wrap">{jsonOutput},</pre>
-                    ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-center opacity-30 gap-4">
-                         <div className="p-4 rounded-full bg-white/5 border border-white/5">
-                            <Terminal size={32} className="text-gray-400" />
-                         </div>
-                         <p className="italic font-mono text-xs max-w-[200px] text-gray-500">
-                            [STATUS: IDLE] <br/> Awaiting data forge inputs to generate stream.
-                         </p>
-                      </div>
-                    )}
-                 </div>
-              </div>
-           </div>
-        </div>
+                <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-8">
+                    {/* --- FORM SECTION --- */}
+                    <div className={`space-y-6 bg-[#0a0a1a]/80 backdrop-blur-xl border p-8 rounded-3xl relative transition-all shadow-2xl ${mode === 'edit' ? 'border-orange-500/30 shadow-[0_0_30px_rgba(249,115,22,0.1)]' : 'border-[#00f5ff]/20 shadow-[0_0_30px_rgba(0,245,255,0.05)]'}`}>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2 group">
+                                <label className="text-[10px] font-mono text-[#00f5ff] uppercase tracking-widest flex items-center gap-2 opacity-70 group-focus-within:opacity-100 transition-opacity">Protocol ID <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <Hash size={14} className={`absolute left-3 top-3.5 transition-colors ${mode === 'edit' ? 'text-gray-600' : 'text-gray-500 group-focus-within:text-[#00f5ff]'}`} />
+                                    <input disabled={mode === 'edit'} value={formData.id} onChange={(e) => setFormData({...formData, id: e.target.value})} className={`w-full bg-black/40 border rounded-lg pl-10 pr-4 py-3 outline-none font-mono text-sm transition-all ${mode === 'edit' ? 'border-orange-500/20 text-gray-500 cursor-not-allowed' : 'border-white/10 focus:border-[#00f5ff] text-white focus:bg-black/60'}`} placeholder="algo_unique_id" />
+                                </div>
+                            </div>
+                            <div className="space-y-2 group">
+                                <label className="text-[10px] font-mono text-[#00f5ff] uppercase tracking-widest opacity-70 group-focus-within:opacity-100 transition-opacity">Category</label>
+                                <input value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-[#00f5ff] text-sm text-white focus:bg-black/60 transition-all" placeholder="e.g. Dynamic Programming" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2 group">
+                            <label className="text-[10px] font-mono text-[#00f5ff] uppercase tracking-widest flex items-center gap-2 opacity-70 group-focus-within:opacity-100 transition-opacity">Algorithm Title <span className="text-red-500">*</span></label>
+                            <input value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-[#00f5ff] text-sm font-bold text-white focus:bg-black/60 transition-all" placeholder="e.g. Dijkstra's Shortest Path" />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-mono text-purple-400 uppercase tracking-widest flex items-center gap-2"><Clock size={12}/> Time Complexity</label>
+                                <div className="flex gap-2 mb-2 overflow-x-auto pb-1 custom-scrollbar">
+                                    {COMPLEXITY_PRESETS.map(c => (
+                                        <button key={c} onClick={() => setFormData({...formData, timeComplexity: c})} className="px-2 py-1 rounded bg-purple-900/20 border border-purple-500/30 text-[10px] text-purple-300 hover:bg-purple-500/20 whitespace-nowrap transition-colors">{c}</button>
+                                    ))}
+                                </div>
+                                <input value={formData.timeComplexity} onChange={(e) => setFormData({...formData, timeComplexity: e.target.value})} className="w-full bg-black/40 border border-purple-900/30 rounded-lg px-4 py-2 outline-none focus:border-purple-500 font-mono text-sm text-white transition-colors" />
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-mono text-purple-400 uppercase tracking-widest flex items-center gap-2"><HardDrive size={12}/> Space Complexity</label>
+                                <div className="h-[27px] w-full"></div>
+                                <input value={formData.spaceComplexity} onChange={(e) => setFormData({...formData, spaceComplexity: e.target.value})} className="w-full bg-black/40 border border-purple-900/30 rounded-lg px-4 py-2 outline-none focus:border-purple-500 font-mono text-sm text-white transition-colors" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-mono text-[#00f5ff] uppercase tracking-widest flex items-center gap-2 opacity-70"><Hash size={12}/> Tags</label>
+                            <div className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 focus-within:border-[#00f5ff] flex flex-wrap gap-2 transition-all min-h-[50px]">
+                                {tags.map(tag => (
+                                    <span key={tag} className="flex items-center gap-1 bg-[#00f5ff]/20 text-[#00f5ff] px-2 py-1 rounded text-xs font-mono border border-[#00f5ff]/30">
+                                        #{tag} <X size={10} className="cursor-pointer hover:text-white" onClick={() => removeTag(tag)} />
+                                    </span>
+                                ))}
+                                <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={addTag} placeholder={tags.length === 0 ? "Press Enter to add tags..." : ""} className="bg-transparent outline-none flex-1 text-sm text-gray-300 min-w-[80px]" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Description</label>
+                            <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-[#00f5ff] text-sm leading-relaxed text-gray-300 focus:text-white transition-all resize-none" />
+                        </div>
+
+                        <div className="space-y-0">
+                            <div className="flex items-center justify-between border-b border-white/10 pb-0">
+                                <label className="text-[10px] font-mono text-gray-400 uppercase tracking-widest flex items-center gap-2 pb-2">Implementation Sequence</label>
+                                <div className="flex">
+                                    <button onClick={() => setActiveCodeTab("java")} className={`px-4 py-2 text-[10px] font-bold rounded-t-lg transition-all border-t border-l border-r ${activeCodeTab === 'java' ? 'bg-[#00ff88]/10 text-[#00ff88] border-[#00ff88]/30' : 'border-transparent text-gray-500 hover:text-white'}`}>JAVA</button>
+                                    <button onClick={() => setActiveCodeTab("cpp")} className={`px-4 py-2 text-[10px] font-bold rounded-t-lg transition-all border-t border-l border-r ${activeCodeTab === 'cpp' ? 'bg-[#8b5cf6]/10 text-[#8b5cf6] border-[#8b5cf6]/30' : 'border-transparent text-gray-500 hover:text-white'}`}>C++</button>
+                                </div>
+                            </div>
+                            <div className="relative">
+                                {activeCodeTab === 'java' ? (
+                                    <textarea value={formData.codeJava} onChange={(e) => setFormData({...formData, codeJava: e.target.value})} rows={12} className="w-full bg-[#050510] border-b border-l border-r border-[#00ff88]/30 rounded-b-lg rounded-tr-lg px-4 py-4 outline-none focus:bg-black/80 text-[11px] font-mono text-green-100 leading-relaxed custom-scrollbar transition-all" placeholder="// Java Implementation..." />
+                                ) : (
+                                    <textarea value={formData.codeCpp} onChange={(e) => setFormData({...formData, codeCpp: e.target.value})} rows={12} className="w-full bg-[#050510] border-b border-l border-r border-[#8b5cf6]/30 rounded-b-lg rounded-tr-lg px-4 py-4 outline-none focus:bg-black/80 text-[11px] font-mono text-purple-100 leading-relaxed custom-scrollbar transition-all" placeholder="// C++ Implementation..." />
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4 pt-4 border-t border-white/5">
+                            <button onClick={generateJSON} className="flex-1 py-4 bg-[#00f5ff]/5 border border-[#00f5ff]/20 text-[#00f5ff] font-bold uppercase rounded-xl hover:bg-[#00f5ff]/10 hover:border-[#00f5ff]/50 transition-all flex items-center justify-center gap-2 text-xs tracking-widest">
+                                <Code size={16} /> Generate JSON Packet
+                            </button>
+                            
+                            <button onClick={saveToGist} disabled={isLoading} className={`flex-1 py-4 font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg text-xs tracking-widest ${mode === 'edit' ? 'bg-orange-500 hover:bg-orange-600 text-black shadow-orange-500/20' : 'bg-[#00f5ff] hover:bg-[#00c2cc] text-black shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:shadow-[0_0_30px_rgba(0,245,255,0.5)]'}`}>
+                                {isLoading ? <Loader2 className="animate-spin" size={16}/> : <Save size={16} />}
+                                {mode === 'edit' ? 'Update Repository' : 'Commit to Database'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* --- OUTPUT SECTION --- */}
+                    <div className="flex flex-col gap-6">
+                        <div className="bg-[#0a0a1a]/80 backdrop-blur-md border border-white/10 rounded-3xl p-6 flex-1 flex flex-col min-h-[500px] shadow-xl relative overflow-hidden group lg:sticky lg:top-24">
+                            
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#00f5ff]/30 to-transparent" />
+
+                            <div className="flex items-center justify-between mb-4 relative z-10">
+                                <div className="flex items-center gap-2">
+                                    <FileJson size={14} className="text-[#00f5ff]" />
+                                    <span className="text-[10px] font-bold font-mono text-white tracking-widest uppercase">JSON_STREAM_OUTPUT</span>
+                                </div>
+                                {jsonOutput && (
+                                <button 
+                                    onClick={() => { navigator.clipboard.writeText(jsonOutput); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                                    className="px-3 py-1.5 rounded bg-[#00f5ff]/10 text-[#00f5ff] text-[10px] font-mono border border-[#00f5ff]/30 hover:bg-[#00f5ff] hover:text-black transition-all flex items-center gap-2 font-bold"
+                                >
+                                    {copied ? <Check size={10}/> : <Copy size={10}/>} {copied ? "COPIED" : "COPY_DATA"}
+                                </button>
+                                )}
+                            </div>
+
+                            <div className="flex-1 bg-black/60 rounded-xl border border-white/5 p-6 overflow-auto custom-scrollbar relative z-10 font-mono text-[11px] leading-relaxed shadow-inner">
+                                {jsonOutput ? (
+                                <pre className="text-blue-300 whitespace-pre-wrap">{jsonOutput},</pre>
+                                ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center opacity-30 gap-4">
+                                    <div className="p-4 rounded-full bg-white/5 border border-white/5">
+                                        <Terminal size={32} className="text-gray-400" />
+                                    </div>
+                                    <p className="italic font-mono text-xs max-w-[200px] text-gray-500">
+                                        [STATUS: IDLE] <br/> Awaiting data forge inputs to generate stream.
+                                    </p>
+                                </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        )}
+
+        {/* ========================================== */}
+        {/* TAB 2: COMMUNITY MODERATION                */}
+        {/* ========================================== */}
+        {activeTab === "moderation" && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
+                
+                {/* Moderation Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex items-center gap-4 shadow-lg">
+                        <div className="p-3 bg-[#00f5ff]/10 text-[#00f5ff] rounded-xl border border-[#00f5ff]/20"><MessageSquare size={24} /></div>
+                        <div>
+                            <p className="text-[10px] text-gray-400 font-mono uppercase tracking-widest mb-1">Total Discussions</p>
+                            <h3 className="text-2xl font-black text-white">{totalPosts}</h3>
+                        </div>
+                    </div>
+                    <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex items-center gap-4 shadow-lg">
+                        <div className="p-3 bg-purple-500/10 text-purple-400 rounded-xl border border-purple-500/20"><Users size={24} /></div>
+                        <div>
+                            <p className="text-[10px] text-gray-400 font-mono uppercase tracking-widest mb-1">Total Replies</p>
+                            <h3 className="text-2xl font-black text-white">{totalReplies}</h3>
+                        </div>
+                    </div>
+                    <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex items-center gap-4 shadow-lg">
+                        <div className="p-3 bg-[#00ff88]/10 text-[#00ff88] rounded-xl border border-[#00ff88]/20"><Activity size={24} /></div>
+                        <div>
+                            <p className="text-[10px] text-gray-400 font-mono uppercase tracking-widest mb-1">Global Interactions</p>
+                            <h3 className="text-2xl font-black text-white">{totalInteractions}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Moderation Data Table */}
+                <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-red-500/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col relative">
+                    
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
+
+                    {/* Toolbar */}
+                    <div className="p-6 border-b border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4 bg-black/40">
+                        <h2 className="font-bold text-lg flex items-center gap-2 font-mono text-red-400 tracking-widest">
+                            <AlertTriangle size={20} /> LIVE_FEED_OVERVIEW
+                        </h2>
+                        
+                        <div className="relative w-full sm:w-80 group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-red-400 transition-colors" size={16} />
+                            <input 
+                                type="text" 
+                                placeholder="Search violations, authors..." 
+                                className="w-full bg-[#050510] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-red-500/50 transition-colors text-white placeholder:text-gray-600 font-mono"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[800px]">
+                            <thead>
+                                <tr className="bg-black/60 border-b border-white/5 text-gray-500 text-[10px] uppercase tracking-widest font-mono">
+                                    <th className="p-5 font-semibold w-1/3">Post Signature</th>
+                                    <th className="p-5 font-semibold">Author Matrix</th>
+                                    <th className="p-5 font-semibold text-center">Metrics</th>
+                                    <th className="p-5 font-semibold">Timestamp</th>
+                                    <th className="p-5 font-semibold text-right">Execute Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 bg-[#0a0a1a]/50">
+                                {filteredPosts.length > 0 ? (
+                                    filteredPosts.map((post) => (
+                                        <tr key={post.id} className="hover:bg-white/5 transition-colors group">
+                                            <td className="p-5">
+                                                <p className="font-bold text-white mb-1 line-clamp-1 group-hover:text-[#00f5ff] transition-colors">{post.title}</p>
+                                                <p className="text-xs text-gray-500 line-clamp-1 font-mono">{post.body}</p>
+                                            </td>
+                                            <td className="p-5">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-sm text-gray-300">{post.authorName}</span>
+                                                </div>
+                                                <span className="text-[10px] text-gray-600 font-mono mt-1 block tracking-wider">ID:{post.authorId.substring(0, 8)}</span>
+                                            </td>
+                                            <td className="p-5">
+                                                <div className="flex items-center justify-center gap-4 text-xs font-mono text-gray-400">
+                                                    <span className="flex items-center gap-1"><ChevronUp size={14} className="text-[#00f5ff]" /> {post.upvotes?.length || 0}</span>
+                                                    <span className="flex items-center gap-1"><MessageSquare size={12} className="text-purple-400" /> {post.replies?.length || 0}</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-5 text-gray-500 font-mono text-[10px] uppercase tracking-wider">
+                                                {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : "SYS_NOW"}
+                                            </td>
+                                            <td className="p-5 text-right">
+                                                <button
+                                                    onClick={() => handleDeletePost(post.id)}
+                                                    disabled={isDeleting === post.id}
+                                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 hover:border-red-500 transition-all disabled:opacity-50 tracking-widest uppercase font-mono"
+                                                >
+                                                    {isDeleting === post.id ? <><Loader2 size={14} className="animate-spin" /> EXECUTING...</> : <><Trash2 size={14} /> Take down</>}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={5} className="p-20 text-center">
+                                            <div className="flex flex-col items-center justify-center text-gray-600">
+                                                <ShieldCheck size={48} className="mb-4 text-[#00ff88]/20" />
+                                                <p className="font-mono text-sm tracking-widest text-gray-400">DATABASE QUERY RETURNED EMPTY.</p>
+                                                <p className="text-xs mt-2 font-mono">No community violations detected.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </motion.div>
+        )}
+
       </main>
     </div>
   );
 };
-
 export default Admin;

@@ -1,7 +1,9 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, get, set, runTransaction } from "firebase/database";
+// NEW: Import Auth and Firestore
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
-// Use import.meta.env to access the variables securely
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -13,8 +15,37 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase once here
 const app = initializeApp(firebaseConfig);
+
+// EXISTING: Realtime Database (for your counter API)
 const db = getDatabase(app);
 
-export { db, ref, get, set, runTransaction };
+// NEW: Auth & Firestore (for the Community section)
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+const firestoreDB = getFirestore(app);
+
+// NEW: Auth helper functions
+const loginWithGoogle = async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    console.log("Logged in successfully:", result.user.displayName);
+  } catch (error: any) {
+    console.error("Full Auth Error:", error);
+    alert(`Sign-in failed: ${error.message} (Code: ${error.code})`);
+  }
+};
+
+const logout = async () => {
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error("Error logging out:", error);
+  }
+};
+
+// Export both the old counter tools and the new community tools
+export { 
+  db, ref, get, set, runTransaction, 
+  auth, googleProvider, firestoreDB, loginWithGoogle, logout 
+};

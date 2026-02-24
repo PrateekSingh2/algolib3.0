@@ -7,7 +7,7 @@ import {
   Users, 
   Zap,
   BookOpen, 
-  Sparkles
+  MessageCircle
 } from "lucide-react";
 import { useState } from "react";
 
@@ -19,7 +19,8 @@ const Navbar = () => {
     { name: "Home", path: "/", icon: Home },
     { name: "Visualizer", path: "/visualizer", icon: Cpu },
     { name: "Developer", path: "/developer", icon: Terminal },
-    { name: "Network", path: "/contributors", icon: Users },
+    { name: "Contributors", path: "/contributors", icon: Users },
+    { name: "Discussion", path: "/discussion", icon: MessageCircle },
   ];
 
   return (
