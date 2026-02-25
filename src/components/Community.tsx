@@ -4,9 +4,9 @@ import {
   collection, query, orderBy, onSnapshot, addDoc, 
   serverTimestamp, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove 
 } from "firebase/firestore";
-import { auth, firestoreDB, loginWithGoogle, logout } from "../lib/firebase"; 
+import { auth, firestoreDB } from "../lib/firebase"; 
 import { 
-  MessageSquare, ChevronUp, ChevronDown, PlusCircle, LogOut,
+  MessageSquare, ChevronUp, ChevronDown, PlusCircle,
   Image as ImageIcon, Reply, Loader2, CheckCircle2, Trophy, Search,
   Edit2, Trash2, X, Save
 } from "lucide-react";
@@ -129,7 +129,6 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
   const [isMagnified, setIsMagnified] = useState(false);
   const [magPos, setMagPos] = useState({ x: '50%', y: '50%' });
 
-  // Post Editing States
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ title: post.title, body: post.body, tags: post.tags.join(", ") });
   const [isUpdating, setIsUpdating] = useState(false);
@@ -138,7 +137,7 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
   const isAuthor = user?.uid === post.authorId;
 
   const handleVote = async (type: 'up' | 'down') => {
-    if (!user) return loginWithGoogle();
+    if (!user) return;
     
     const postDocRef = doc(firestoreDB, "community_posts", post.id);
     const hasUpvoted = post.upvotes?.includes(user.uid);
@@ -165,11 +164,8 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
   const handleDeletePost = async () => {
     if (!isAuthor) return;
     if (window.confirm("Are you sure you want to delete this discussion? This action cannot be undone.")) {
-      try {
-        await deleteDoc(doc(firestoreDB, "community_posts", post.id));
-      } catch (error) {
-        console.error("Error deleting post:", error);
-      }
+      try { await deleteDoc(doc(firestoreDB, "community_posts", post.id)); } 
+      catch (error) { console.error("Error deleting post:", error); }
     }
   };
 
@@ -240,27 +236,17 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
       
       {/* LEFT COLUMN: Voting */}
       <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-start min-w-[50px] pt-1 mb-4 sm:mb-0 border-b sm:border-b-0 border-[#1F2032] pb-4 sm:pb-0">
-        
         <div className="flex flex-row sm:flex-col items-center gap-3 sm:gap-1">
-          <button 
-            onClick={() => handleVote('up')}
-            className={`p-1.5 rounded-full transition-colors ${post.upvotes?.includes(user?.uid || "") ? 'text-[#00d2ff] bg-[#00d2ff]/10' : 'text-slate-500 hover:text-white hover:bg-[#1F2032]'}`}
-          >
+          <button onClick={() => handleVote('up')} className={`p-1.5 rounded-full transition-colors ${post.upvotes?.includes(user?.uid || "") ? 'text-[#00d2ff] bg-[#00d2ff]/10' : 'text-slate-500 hover:text-white hover:bg-[#1F2032]'}`}>
             <ChevronUp size={24} strokeWidth={post.upvotes?.includes(user?.uid || "") ? 3 : 2} />
           </button>
-          
           <span className={`font-mono text-lg font-bold ${score > 0 ? 'text-[#00d2ff]' : score < 0 ? 'text-[#ff0080]' : 'text-slate-300'}`}>
             {score}
           </span>
-          
-          <button 
-            onClick={() => handleVote('down')}
-            className={`p-1.5 rounded-full transition-colors ${post.downvotes?.includes(user?.uid || "") ? 'text-[#ff0080] bg-[#ff0080]/10' : 'text-slate-500 hover:text-white hover:bg-[#1F2032]'}`}
-          >
+          <button onClick={() => handleVote('down')} className={`p-1.5 rounded-full transition-colors ${post.downvotes?.includes(user?.uid || "") ? 'text-[#ff0080] bg-[#ff0080]/10' : 'text-slate-500 hover:text-white hover:bg-[#1F2032]'}`}>
             <ChevronDown size={24} strokeWidth={post.downvotes?.includes(user?.uid || "") ? 3 : 2} />
           </button>
         </div>
-
         <div className="flex flex-row sm:flex-col items-center gap-1.5 sm:mt-6 text-slate-500" title={`${post.replies?.length || 0} Replies`}>
           <MessageSquare size={18} className="opacity-70" />
           <span className="font-mono text-sm sm:text-xs">{post.replies?.length || 0}</span>
@@ -269,8 +255,6 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
 
       {/* RIGHT COLUMN: Content */}
       <div className="flex-1 min-w-0">
-        
-        {/* Header: User Info & Author Actions */}
         <div className="flex justify-between items-start mb-3">
           <div className="flex items-center gap-2">
             <img src={post.authorAvatar} alt="author" className="w-6 h-6 rounded-full object-cover border border-[#2A2B3D]" />
@@ -279,47 +263,30 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
             <span className="text-slate-500 text-xs">{post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Recently"}</span>
           </div>
 
-          {/* Edit / Delete Buttons (Visible only to the Author) */}
           {isAuthor && !isEditing && (
             <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-              <button onClick={() => setIsEditing(true)} className="text-slate-400 hover:text-[#00d2ff] p-1.5 rounded-lg hover:bg-[#1F2032] transition-colors" title="Edit Post">
-                <Edit2 size={16} />
-              </button>
-              <button onClick={handleDeletePost} className="text-slate-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-[#1F2032] transition-colors" title="Delete Post">
-                <Trash2 size={16} />
-              </button>
+              <button onClick={() => setIsEditing(true)} className="text-slate-400 hover:text-[#00d2ff] p-1.5 rounded-lg hover:bg-[#1F2032] transition-colors" title="Edit Post"><Edit2 size={16} /></button>
+              <button onClick={handleDeletePost} className="text-slate-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-[#1F2032] transition-colors" title="Delete Post"><Trash2 size={16} /></button>
             </div>
           )}
         </div>
 
-        {/* --- Post Content or Edit Form --- */}
         {isEditing ? (
           <div className="space-y-3 mb-5 bg-[#07080C] p-4 rounded-xl border border-[#3a7bd5]/40 shadow-inner">
             <input 
-              type="text" 
-              value={editForm.title} 
-              onChange={e => setEditForm({...editForm, title: e.target.value})} 
-              className="w-full bg-transparent text-white font-bold text-xl border-b border-[#1F2032] pb-2 px-1 focus:outline-none focus:border-[#3a7bd5]"
-              placeholder="Post Title"
+              type="text" value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} 
+              className="w-full bg-transparent text-white font-bold text-xl border-b border-[#1F2032] pb-2 px-1 focus:outline-none focus:border-[#3a7bd5]" placeholder="Post Title"
             />
             <textarea 
-              value={editForm.body} 
-              onChange={e => setEditForm({...editForm, body: e.target.value})} 
-              rows={5}
-              className="w-full bg-transparent text-slate-300 text-sm font-mono border border-[#1F2032] rounded-lg p-3 focus:outline-none focus:border-[#3a7bd5] resize-y"
-              placeholder="Post Details"
+              value={editForm.body} onChange={e => setEditForm({...editForm, body: e.target.value})} rows={5}
+              className="w-full bg-transparent text-slate-300 text-sm font-mono border border-[#1F2032] rounded-lg p-3 focus:outline-none focus:border-[#3a7bd5] resize-y" placeholder="Post Details"
             />
             <input 
-              type="text" 
-              value={editForm.tags} 
-              onChange={e => setEditForm({...editForm, tags: e.target.value})} 
-              className="w-full bg-[#11121C] text-[#00d2ff] text-sm font-mono border border-[#1F2032] rounded-lg px-3 py-2 focus:outline-none focus:border-[#3a7bd5]"
-              placeholder="Tags (comma separated)"
+              type="text" value={editForm.tags} onChange={e => setEditForm({...editForm, tags: e.target.value})} 
+              className="w-full bg-[#11121C] text-[#00d2ff] text-sm font-mono border border-[#1F2032] rounded-lg px-3 py-2 focus:outline-none focus:border-[#3a7bd5]" placeholder="Tags (comma separated)"
             />
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setIsEditing(false)} className="px-4 py-1.5 text-sm text-slate-400 hover:text-white flex items-center gap-1 transition-colors">
-                <X size={14} /> Cancel
-              </button>
+              <button onClick={() => setIsEditing(false)} className="px-4 py-1.5 text-sm text-slate-400 hover:text-white flex items-center gap-1 transition-colors"><X size={14} /> Cancel</button>
               <button onClick={handleUpdatePost} disabled={isUpdating} className="px-4 py-1.5 bg-[#3a7bd5] hover:bg-[#00d2ff] text-white text-sm font-bold rounded-lg flex items-center gap-1 transition-colors disabled:opacity-50">
                 {isUpdating ? <Loader2 size={14} className="animate-spin"/> : <Save size={14}/>} Save Changes
               </button>
@@ -328,21 +295,11 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
         ) : (
           <>
             <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 pr-4 leading-snug">{post.title}</h3>
-            
             <div className="relative mb-5">
-              <div className={`text-slate-300 text-sm sm:text-base whitespace-pre-wrap leading-relaxed font-sans ${!isExpanded && isLongPost ? 'max-h-[140px] overflow-hidden' : ''}`}>
-                {post.body}
-              </div>
-              
-              {!isExpanded && isLongPost && (
-                <div className="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-t from-[#0B0C15]/90 to-transparent pointer-events-none"></div>
-              )}
-              
+              <div className={`text-slate-300 text-sm sm:text-base whitespace-pre-wrap leading-relaxed font-sans ${!isExpanded && isLongPost ? 'max-h-[140px] overflow-hidden' : ''}`}>{post.body}</div>
+              {!isExpanded && isLongPost && <div className="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-t from-[#0B0C15]/90 to-transparent pointer-events-none"></div>}
               {isLongPost && (
-                <button 
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-[#00d2ff] font-medium hover:text-white text-sm mt-2 flex items-center gap-1 transition-colors relative z-10"
-                >
+                <button onClick={() => setIsExpanded(!isExpanded)} className="text-[#00d2ff] font-medium hover:text-white text-sm mt-2 flex items-center gap-1 transition-colors relative z-10">
                   {isExpanded ? "Show Less" : "See More..."}
                 </button>
               )}
@@ -350,80 +307,43 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
           </>
         )}
 
-        {/* Magnifiable Image */}
         {post.imageUrl && !isEditing && (
           <div 
             className={`mb-6 bg-[#07080C] border border-[#1F2032] rounded-xl overflow-hidden relative inline-block w-full max-w-lg ${isMagnified ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
-            onClick={() => setIsMagnified(!isMagnified)}
-            onMouseMove={handleImageMouseMove}
-            onMouseLeave={() => setIsMagnified(false)}
+            onClick={() => setIsMagnified(!isMagnified)} onMouseMove={handleImageMouseMove} onMouseLeave={() => setIsMagnified(false)}
           >
-            <img 
-              src={post.imageUrl} 
-              alt="Context" 
-              style={{ transform: isMagnified ? 'scale(2.5)' : 'scale(1)', transformOrigin: `${magPos.x} ${magPos.y}` }}
-              className="max-h-[300px] sm:max-h-[400px] w-full object-contain rounded-lg transition-transform duration-200 ease-out" 
-            />
-            {!isMagnified && (
-              <div className="absolute top-3 right-3 bg-black/80 text-white text-xs px-2.5 py-1.5 rounded-md backdrop-blur-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block">
-                Click to Magnify
-              </div>
-            )}
+            <img src={post.imageUrl} alt="Context" style={{ transform: isMagnified ? 'scale(2.5)' : 'scale(1)', transformOrigin: `${magPos.x} ${magPos.y}` }} className="max-h-[300px] sm:max-h-[400px] w-full object-contain rounded-lg transition-transform duration-200 ease-out" />
+            {!isMagnified && <div className="absolute top-3 right-3 bg-black/80 text-white text-xs px-2.5 py-1.5 rounded-md backdrop-blur-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block">Click to Magnify</div>}
           </div>
         )}
         
-        {/* Footer: Tags & Reply Action */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t border-[#1F2032]">
           <div className="flex flex-wrap gap-2">
-            {post.tags?.map((tag, idx) => (
-              <span key={idx} className="bg-[#18192A] text-slate-400 hover:text-[#00d2ff] transition-colors cursor-pointer border border-[#1F2032] text-xs px-3 py-1.5 rounded-md font-mono">
-                #{tag}
-              </span>
-            ))}
+            {post.tags?.map((tag, idx) => <span key={idx} className="bg-[#18192A] text-slate-400 hover:text-[#00d2ff] transition-colors cursor-pointer border border-[#1F2032] text-xs px-3 py-1.5 rounded-md font-mono">#{tag}</span>)}
           </div>
-          
-          <button 
-            onClick={() => user ? setShowReplyBox(!showReplyBox) : loginWithGoogle()}
-            className="w-full sm:w-auto text-sm font-semibold text-[#00d2ff] hover:text-white bg-[#00d2ff]/10 hover:bg-[#00d2ff]/20 flex justify-center items-center gap-2 transition-colors px-4 py-2 rounded-lg"
-          >
+          <button onClick={() => setShowReplyBox(!showReplyBox)} className="w-full sm:w-auto text-sm font-semibold text-[#00d2ff] hover:text-white bg-[#00d2ff]/10 hover:bg-[#00d2ff]/20 flex justify-center items-center gap-2 transition-colors px-4 py-2 rounded-lg">
             <Reply size={16} /> {showReplyBox ? "Cancel" : "Reply"}
           </button>
         </div>
 
-        {/* Reply Input Box */}
         {showReplyBox && (
           <div className="mt-5 bg-[#07080C] p-2 rounded-xl border border-[#3a7bd5]/40 focus-within:border-[#00d2ff] transition-colors shadow-inner">
             <textarea 
-              rows={3}
-              placeholder="Write your answer..."
+              rows={3} placeholder="Write your answer..." value={replyContent} onChange={(e) => setReplyContent(e.target.value)}
               className="w-full bg-transparent text-slate-200 border-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-0 resize-y"
-              value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
             />
             <div className="flex justify-end pt-2">
-              <button 
-                onClick={handleReplySubmit}
-                disabled={isSubmittingReply || !replyContent.trim()}
-                className="bg-[#3a7bd5] hover:bg-[#00d2ff] text-white px-5 py-2 rounded-lg text-sm font-bold disabled:opacity-50 transition-colors flex items-center gap-2"
-              >
+              <button onClick={handleReplySubmit} disabled={isSubmittingReply || !replyContent.trim()} className="bg-[#3a7bd5] hover:bg-[#00d2ff] text-white px-5 py-2 rounded-lg text-sm font-bold disabled:opacity-50 transition-colors flex items-center gap-2">
                 {isSubmittingReply ? <><Loader2 size={16} className="animate-spin" /> Posting...</> : "Post Answer"}
               </button>
             </div>
           </div>
         )}
 
-        {/* Nested Replies */}
         {post.replies && post.replies.length > 0 && (
           <div className="mt-6 space-y-3 pl-3 sm:pl-6 border-l-2 border-[#1F2032]">
             {[...post.replies].sort((a, b) => (b.isAccepted ? 1 : 0) - (a.isAccepted ? 1 : 0)).map((reply) => (
-              <div 
-                key={reply.id} 
-                className={`text-sm p-4 rounded-xl transition-colors ${
-                  reply.isAccepted 
-                    ? "bg-[#00ff87]/5 border border-[#00ff87]/20 shadow-sm" 
-                    : "bg-[#11121C] border border-[#1F2032]"
-                }`}
-              >
+              <div key={reply.id} className={`text-sm p-4 rounded-xl transition-colors ${reply.isAccepted ? "bg-[#00ff87]/5 border border-[#00ff87]/20 shadow-sm" : "bg-[#11121C] border border-[#1F2032]"}`}>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-2">
                   <div className="flex items-center gap-2">
                     <img src={reply.authorAvatar} alt="" className="w-5 h-5 rounded-full border border-[#2A2B3D]" />
@@ -434,13 +354,8 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
                   
                   {(isAuthor || reply.isAccepted) && (
                     <button 
-                      onClick={() => handleToggleAcceptReply(reply.id)}
-                      disabled={!isAuthor}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
-                        reply.isAccepted 
-                          ? "text-[#00ff87] bg-[#00ff87]/10" 
-                          : "text-slate-500 hover:bg-[#1F2032] hover:text-slate-300"
-                      } ${!isAuthor && "cursor-default"}`}
+                      onClick={() => handleToggleAcceptReply(reply.id)} disabled={!isAuthor}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${reply.isAccepted ? "text-[#00ff87] bg-[#00ff87]/10" : "text-slate-500 hover:bg-[#1F2032] hover:text-slate-300"} ${!isAuthor && "cursor-default"}`}
                     >
                       <CheckCircle2 size={14} className={reply.isAccepted ? "text-[#00ff87]" : ""} />
                       {reply.isAccepted ? "Accepted" : "Accept"}
@@ -506,7 +421,7 @@ export default function Community() {
 
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return alert("Please log in to post.");
+    if (!user) return;
     setIsPublishing(true);
     
     try {
@@ -556,7 +471,6 @@ export default function Community() {
 
   return (
     <div className="min-h-screen bg-[#030308] text-white font-sans relative flex flex-col">
-      
       <BackgroundParticles />
 
       <div className="relative z-50">
@@ -581,62 +495,27 @@ export default function Community() {
           )}
         </div>
 
-        {/* RIGHT COLUMN: Sidebar */}
+        {/* RIGHT COLUMN: Cleaned Up Sidebar */}
         <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-32 h-fit order-1 lg:order-2">
           
-          {user ? (
-            <div className="bg-[#0B0C15]/90 backdrop-blur-md border border-[#1F2032] rounded-2xl p-4 shadow-lg flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img src={user.photoURL || ""} alt="avatar" className="w-11 h-11 rounded-full border-2 border-slate-700 object-cover" />
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-slate-200">{user.displayName}</span>
-                  <span className="text-xs text-[#00ff87] font-mono mt-0.5">Logged In</span>
-                </div>
-              </div>
-              <button 
-                onClick={logout} 
-                className="text-slate-500 hover:text-red-400 transition-colors bg-[#11121C] p-2.5 rounded-xl border border-[#1F2032]" 
-                title="Logout"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          ) : (
-            <div className="bg-[#0B0C15]/90 backdrop-blur-md border border-[#1F2032] rounded-2xl p-5 shadow-lg text-center">
-              <p className="text-sm text-slate-400 mb-3 font-medium">Join the discussion</p>
-              <button 
-                onClick={loginWithGoogle} 
-                className="w-full flex items-center justify-center gap-3 bg-white text-black px-4 py-3 rounded-xl hover:bg-gray-200 font-bold text-sm shadow-[0_0_15px_rgba(255,255,255,0.2)] transition-all"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                </svg>
-                Sign in with Google
-              </button>
-            </div>
-          )}
-
+          {/* A. Make Post Button */}
           <button 
-            onClick={() => user ? setShowCreateModal(true) : loginWithGoogle()}
+            onClick={() => setShowCreateModal(true)}
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#00d2ff] to-[#3a7bd5] text-white px-6 py-4 rounded-2xl hover:opacity-90 transition shadow-[0_0_15px_rgba(0,210,255,0.2)] font-bold text-sm"
           >
-            <PlusCircle size={18} /> Make Post
+            <PlusCircle size={18} /> Create Post
           </button>
 
+          {/* B. Search Box */}
           <div className="relative shadow-lg rounded-2xl">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
             <input 
-              type="text" 
-              placeholder="Search discussions..." 
+              type="text" placeholder="Search discussions..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#11121C] border border-[#2A2B3D] rounded-2xl pl-11 pr-4 py-3.5 text-sm focus:outline-none focus:border-[#3a7bd5] focus:ring-1 focus:ring-[#3a7bd5] transition-all text-white placeholder:text-slate-500 shadow-inner"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
+          {/* C. Leaderboard */}
           <div className="bg-[#0B0C15]/90 backdrop-blur-md border border-[#1F2032] rounded-2xl overflow-hidden shadow-xl hidden sm:block">
             <div className="bg-[#11121C] p-3.5 border-b border-[#1F2032] flex items-center gap-2">
               <Trophy size={16} className="text-[#ff9900]" />
@@ -658,9 +537,7 @@ export default function Community() {
                   </div>
                 ))
               ) : (
-                <div className="p-6 text-center text-xs text-slate-500 font-mono">
-                  No solvers yet.
-                </div>
+                <div className="p-6 text-center text-xs text-slate-500 font-mono">No solvers yet.</div>
               )}
             </div>
           </div>
@@ -678,19 +555,15 @@ export default function Community() {
             <form onSubmit={handleCreatePost} className="space-y-5">
               <div>
                 <input 
-                  type="text" required
-                  placeholder="Title: e.g., Optimizing Graph Traversal"
+                  type="text" required placeholder="Title: e.g., Optimizing Graph Traversal" value={newPost.title} onChange={e => setNewPost({...newPost, title: e.target.value})}
                   className="w-full bg-[#11121C] border border-[#2A2B3D] text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#3a7bd5] focus:ring-1 focus:ring-[#3a7bd5] transition-all placeholder:text-slate-600 font-medium"
-                  value={newPost.title} onChange={e => setNewPost({...newPost, title: e.target.value})}
                 />
               </div>
               
               <div>
                 <textarea 
-                  required rows={6}
-                  placeholder="Details: paste your code or describe the issue..."
+                  required rows={6} placeholder="Details: paste your code or describe the issue..." value={newPost.body} onChange={e => setNewPost({...newPost, body: e.target.value})}
                   className="w-full bg-[#11121C] border border-[#2A2B3D] text-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#3a7bd5] focus:ring-1 focus:ring-[#3a7bd5] transition-all resize-y placeholder:text-slate-600"
-                  value={newPost.body} onChange={e => setNewPost({...newPost, body: e.target.value})}
                 ></textarea>
               </div>
 
@@ -710,24 +583,16 @@ export default function Community() {
 
               <div>
                 <input 
-                  type="text" required
-                  placeholder="Tags: python, dp, arrays (comma separated)"
+                  type="text" required placeholder="Tags: python, dp, arrays (comma separated)" value={newPost.tags} onChange={e => setNewPost({...newPost, tags: e.target.value})}
                   className="w-full bg-[#11121C] border border-[#2A2B3D] text-[#00d2ff] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#3a7bd5] focus:ring-1 focus:ring-[#3a7bd5] transition-all font-mono placeholder:text-slate-600"
-                  value={newPost.tags} onChange={e => setNewPost({...newPost, tags: e.target.value})}
                 />
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-[#1F2032] mt-8">
-                <button 
-                  type="button" onClick={() => setShowCreateModal(false)} disabled={isPublishing}
-                  className="px-6 py-3 sm:py-2.5 text-sm font-bold text-slate-400 hover:text-white transition-colors w-full sm:w-auto"
-                >
+                <button type="button" onClick={() => setShowCreateModal(false)} disabled={isPublishing} className="px-6 py-3 sm:py-2.5 text-sm font-bold text-slate-400 hover:text-white transition-colors w-full sm:w-auto">
                   Cancel
                 </button>
-                <button 
-                  type="submit" disabled={isPublishing}
-                  className="px-6 py-3 sm:py-2.5 text-sm font-bold bg-gradient-to-r from-[#00d2ff] to-[#3a7bd5] hover:opacity-90 text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,210,255,0.3)] w-full sm:w-auto"
-                >
+                <button type="submit" disabled={isPublishing} className="px-6 py-3 sm:py-2.5 text-sm font-bold bg-gradient-to-r from-[#00d2ff] to-[#3a7bd5] hover:opacity-90 text-white rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,210,255,0.3)] w-full sm:w-auto">
                   {isPublishing ? <><Loader2 size={18} className="animate-spin" /> Publishing...</> : "Publish Post"}
                 </button>
               </div>

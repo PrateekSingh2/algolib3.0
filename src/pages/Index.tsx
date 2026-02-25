@@ -7,19 +7,18 @@ import {
   useMotionValue
 } from "framer-motion";
 import { 
-  ArrowRight, Eye, ChevronDown, Hash, 
-  Command, Plus, Minus, Cpu, Sparkles 
+  ArrowRight, ChevronDown, Hash, 
+  Command, Plus, Minus, Cpu 
 } from "lucide-react";
 import { 
   fetchAlgorithms, 
-  getVisitCount, 
-  incrementVisitCount, 
   getCategories, 
   type Algorithm 
 } from "@/lib/algorithms";
 import Navbar from "@/components/Navbar";
 import GlobalRibbon from '@/components/GlobalRibbon';
 import { Preloader } from "@/components/Preloader";
+import Footer from "@/components/Footer"; 
 
 // --- 1. CLEAN CYBER-NETWORK BACKGROUND ---
 const CyberSpaceBackground = () => {
@@ -233,37 +232,21 @@ const HologramCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
       // PERSPECTIVE ROOT: Crucial for 3D depth mapping
       className="w-full max-w-[340px] mx-auto p-5 [perspective:1000px] group h-full"
     >
-      {/* CRITICAL 3D PRESERVATION: 
-        Link MUST have [transform-style:preserve-3d], otherwise it flattens the child space 
-      */}
       <Link to={`/view/${algo.id}`} className="block h-full cursor-pointer [transform-style:preserve-3d]">
-        
-        {/* The Main Rotating Card Body */}
         <div className="algo-3d-card pt-[50px] border-[3px] border-[#04c1fa]/30 [transform-style:preserve-3d] shadow-[0_30px_30px_-10px_rgba(0,0,0,0.5)] rounded-[10px] w-full h-full relative flex flex-col">
-          
-          {/* Inner Content Box (Safe background color overlay, NO BACKDROP BLUR) */}
           <div className="bg-[#020617]/80 transition-all duration-500 pt-[60px] pb-[25px] px-[25px] [transform-style:preserve-3d] flex-grow flex flex-col rounded-b-[7px] border-t border-[#04c1fa]/20">
-            
-            {/* 3D TITLE */}
             <span className="inline-block text-white text-2xl font-black transition-transform duration-500 [transform:translateZ(50px)] hover:[transform:translateZ(60px)]">
               {algo.title}
             </span>
-            
-            {/* 3D DESCRIPTION */}
             <p className="mt-3 text-[12px] text-gray-200 transition-transform duration-500 [transform:translateZ(30px)] hover:[transform:translateZ(60px)] line-clamp-3">
               {algo.description}
             </p>
-            
-            {/* 3D TAGS ARRAY */}
             <div className="mt-4 pt-2 border-t border-white/10 flex gap-2 flex-wrap transition-transform duration-500 [transform:translateZ(30px)] hover:[transform:translateZ(60px)]">
                 {algo.tags?.slice(0, 2).map(tag => (
                    <span key={tag} className="text-[10px] border border-white/20 bg-[#020617]/50 text-white px-2 py-1 rounded-sm">#{tag}</span>
                 ))}
             </div>
-
           </div>
-
-          {/* 3D FLOATING BADGE (Top Right) */}
           <div className="absolute top-[30px] right-[30px] h-[60px] w-[60px] bg-cyan-900 border border-[#04c1fa] p-[10px] flex flex-col items-center justify-center shadow-[0_17px_10px_-10px_rgba(0,0,0,0.5)] rounded-[10px] z-20 transition-transform duration-500 [transform:translateZ(80px)] hover:[transform:translateZ(100px)]">
             <span className="text-[#04c1fa] text-[9px] font-bold text-center block w-full truncate uppercase tracking-widest">
               {algo.category?.slice(0,4) || "SYS"}
@@ -272,7 +255,6 @@ const HologramCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
               {algo.id.slice(0, 2).toUpperCase()}
             </span>
           </div>
-
         </div>
       </Link>
     </motion.div>
@@ -283,7 +265,6 @@ const Index = () => {
   const [algorithms, setAlgorithms] = useState<Algorithm[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [visitCount, setVisitCount] = useState(0);
   
   // --- SESSION PRELOADER LOGIC ---
   const [isLoading, setIsLoading] = useState(() => {
@@ -306,19 +287,7 @@ const Index = () => {
       try {
         const algos = await fetchAlgorithms();
         setAlgorithms(algos);
-
-        const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-        const sessionKey = "algolib_session_active";
-        const hasVisitedSession = sessionStorage.getItem(sessionKey);
-
-        if (!isLocalhost && !hasVisitedSession) {
-           await incrementVisitCount();
-           sessionStorage.setItem(sessionKey, "true");
-        }
-
-        const count = await getVisitCount();
-        setVisitCount(count);
-
+        // The increment logic has been completely moved to App.tsx!
       } catch (error) {
         console.error("Initialization failed", error);
       }
@@ -353,9 +322,7 @@ const Index = () => {
 
   return (
     <>
-      {/* GLOBAL STYLES FOR THE 3D CYBERPUNK BACKGROUND 
-         We manage background animation and rotation directly in CSS to ensure flawless 3D performance
-      */}
+      {/* GLOBAL STYLES FOR THE 3D CYBERPUNK BACKGROUND */}
       <style>{`
         .algo-3d-card {
           background: linear-gradient(135deg, #0000 18.75%, #0f172a 0 31.25%, #0000 0),
@@ -481,7 +448,7 @@ const Index = () => {
                 </section>
 
                 {/* --- CONTENT SECTION --- */}
-                <div id="algorithm-grid" className="relative z-10 bg-[#020205] pt-20">
+                <div id="algorithm-grid" className="relative z-10 bg-[#020205] pt-20 flex-grow flex flex-col">
                     <section className="px-4 pb-12 relative z-20">
                         <div className="container mx-auto max-w-6xl">
                             <div className="flex flex-wrap justify-center gap-3">
@@ -545,39 +512,8 @@ const Index = () => {
                         </div>
                     </section>
 
-                    <footer className="relative border-t border-white/10 bg-[#020205] pt-16 pb-8 overflow-hidden z-20">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-[#3b82f6]/50 to-transparent" />
-                        <div className="container mx-auto px-6 relative z-10 flex flex-col items-center">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Sparkles className="h-7 w-7 text-[#3b82f6]" />
-                                <span className="text-lg font-bold tracking-tight text-white text-[24px]">
-                                    Algo<span className="text-[#3b82f6]">Lib</span>
-                                </span>
-                            </div>
-
-                            <p className="text-slate-300 text-[12px] font-mono mb-10 text-center max-w-xs leading-relaxed">
-                                System Version 2.0.4 // Stable Build <br/>
-                                Optimized for the next generation of engineers.
-                            </p>
-
-                            <div className="w-full border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                                <div className="text-green-400 text-[12px] font-sans tracking-wide order-2 md:order-1">
-                                &copy; {new Date().getFullYear()} AlgoLib | ALL RIGHTS RESERVED.
-                                </div>
-                                <div className="flex items-center gap-6 text-[12px] font-mono order-1 md:order-2">
-                                <div className="flex items-center gap-2 text-green-400">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#4ade80]" />
-                                    <span>SYSTEM ONLINE</span>
-                                </div>
-                                <div className="w-px h-3 bg-white/20 hidden md:block" />
-                                <div className="flex items-center gap-2 text-[#FFEF00]/80">
-                                    <Eye className="h-4 w-4" />
-                                    <span>{visitCount.toLocaleString()} HITS</span>
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                    </footer>
+                    {/* NEW ISOLATED FOOTER */}
+                    <Footer />
                 </div>
             </motion.div>
         )}
