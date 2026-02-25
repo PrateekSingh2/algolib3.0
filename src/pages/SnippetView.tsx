@@ -8,6 +8,7 @@ import "prismjs/components/prism-cpp";
 import "prismjs/components/prism-java";
 import { fetchAlgorithms, type Algorithm } from "@/lib/algorithms";
 import Navbar from "@/components/Navbar";
+import GlobalRibbon from "@/components/GlobalRibbon";
 
 // --- 1. ALIEN UNIVERSE BACKGROUND ---
 const AlienUniverseBackground = () => {
@@ -233,6 +234,7 @@ const SnippetView = () => {
       <style>{customPrismStyles}</style>
       <AlienUniverseBackground />
       <Navbar />
+      <GlobalRibbon />
 
       <main className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-[1600px] mx-auto">

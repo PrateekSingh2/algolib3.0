@@ -18,6 +18,7 @@ import {
   type Algorithm 
 } from "@/lib/algorithms";
 import Navbar from "@/components/Navbar";
+import GlobalRibbon from '@/components/GlobalRibbon';
 import { Preloader } from "@/components/Preloader";
 
 // --- 1. CLEAN CYBER-NETWORK BACKGROUND ---
@@ -385,6 +386,7 @@ const Index = () => {
                 
                 <div className="fixed top-0 left-0 w-full z-[200]">
                     <Navbar />
+                    <GlobalRibbon />
                 </div>
 
                 {/* --- HERO SECTION --- */}

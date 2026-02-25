@@ -7,6 +7,7 @@ import {
   Info, AlertCircle, X, MousePointer, Settings, RefreshCw, Share2, Map
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import GlobalRibbon from "@/components/GlobalRibbon";
 
 // --- 1. UTILITY COMPONENTS ---
 
@@ -579,6 +580,7 @@ const Docs = () => {
     <div className="min-h-screen text-gray-200 font-sans selection:bg-[#00f5ff]/30">
       <CyberSpaceBackground />
       <Navbar />
+      <GlobalRibbon />
       
       {/* Top Reading Progress */}
       <motion.div style={{ scaleX }} className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#00f5ff] to-[#9d00ff] z-50 origin-left" />

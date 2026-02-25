@@ -11,6 +11,7 @@ import {
   Edit2, Trash2, X, Save
 } from "lucide-react";
 import Navbar from "./Navbar"; 
+import GlobalRibbon from "./GlobalRibbon";
 
 // --- Types ---
 interface ReplyType {
@@ -560,6 +561,7 @@ export default function Community() {
 
       <div className="relative z-50">
         <Navbar />
+        <GlobalRibbon />
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-32 pb-20 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 relative z-10 flex-1">

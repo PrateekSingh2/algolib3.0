@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { 
-  collection, query, orderBy, onSnapshot, deleteDoc, doc 
+  collection, query, orderBy, onSnapshot, deleteDoc, doc, setDoc
 } from "firebase/firestore";
 import { auth, firestoreDB, loginWithGoogle, logout } from "../lib/firebase"; 
 import { 
@@ -11,7 +11,8 @@ import {
   AlertCircle, X, Code, FileJson, CloudLightning, 
   Settings, Loader2, Edit3, ShieldAlert, Fingerprint, 
   ChevronRight, Unlock, Search, Users, Activity,
-  LayoutDashboard, Database, ChevronUp, MessageSquare, AlertTriangle, Trash2
+  LayoutDashboard, Database, ChevronUp, MessageSquare, AlertTriangle, Trash2,
+  Megaphone, Radio, ExternalLink, Eye
 } from "lucide-react";
 import Navbar from '@/components/Navbar';
 
@@ -20,7 +21,7 @@ import Navbar from '@/components/Navbar';
 // ==========================================
 const ADMIN_EMAILS = [
   "prateeksinghrajawat2006@gmail.com", // REPLACE WITH YOUR ACTUAL EMAIL
-  "your.email@gmail.com"
+  "shivanshmax@gmail.com"
 ];
 
 // --- Types ---
@@ -46,7 +47,7 @@ interface Post {
   createdAt: any; 
 }
 
-// --- 1. NEURAL BACKGROUND (Unchanged - Core Aesthetic) ---
+// --- 1. NEURAL BACKGROUND (Core Aesthetic) ---
 const NeuralBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -112,9 +113,9 @@ const Admin = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // --- TAB STATE ---
-  const [activeTab, setActiveTab] = useState<"forge" | "moderation">("forge");
+  const [activeTab, setActiveTab] = useState<"forge" | "moderation" | "broadcast">("forge");
 
-  // --- EDITOR STATE (Original Logic) ---
+  // --- EDITOR STATE ---
   const [mode, setMode] = useState<"create" | "edit">("create");
   const [activeCodeTab, setActiveCodeTab] = useState<"java" | "cpp">("java");
   const [tags, setTags] = useState<string[]>([]);
@@ -125,7 +126,7 @@ const Admin = () => {
     spaceComplexity: "O(1)", description: "", codeJava: "", codeCpp: ""
   });
 
-  // --- UI STATE (Original Logic) ---
+  // --- UI STATE ---
   const [jsonOutput, setJsonOutput] = useState("");
   const [copied, setCopied] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
@@ -144,6 +145,13 @@ const Admin = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  // --- BROADCAST STATE ---
+  const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [broadcastType, setBroadcastType] = useState<"info" | "warning" | "critical">("info");
+  const [broadcastActive, setBroadcastActive] = useState(false);
+  const [broadcastLink, setBroadcastLink] = useState("");
+  const [isSavingBroadcast, setIsSavingBroadcast] = useState(false);
 
   // ==========================================
   // INITIALIZATION & EFFECTS
@@ -169,19 +177,58 @@ const Admin = () => {
     return () => unsubscribe();
   }, []);
 
-  // Fetch Community Posts (Only if Admin)
+  // Fetch Community Posts & Broadcast Settings (Only if Admin)
   useEffect(() => {
     if (!isAdmin) return;
-    const q = query(collection(firestoreDB, "community_posts"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    
+    // Fetch Posts
+    const qPosts = query(collection(firestoreDB, "community_posts"), orderBy("createdAt", "desc"));
+    const unsubPosts = onSnapshot(qPosts, (snapshot) => {
       setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)));
     });
-    return () => unsubscribe();
+
+    // Fetch Broadcast Settings
+    const unsubBroadcast = onSnapshot(doc(firestoreDB, "system_settings", "announcement"), (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            setBroadcastMsg(data.message || "");
+            setBroadcastType(data.type || "info");
+            setBroadcastActive(data.active || false);
+            setBroadcastLink(data.link || "");
+        }
+    });
+
+    return () => {
+        unsubPosts();
+        unsubBroadcast();
+    };
   }, [isAdmin]);
 
+  // ==========================================
+  // BROADCAST LOGIC
+  // ==========================================
+  const handleSaveBroadcast = async () => {
+    setIsSavingBroadcast(true);
+    try {
+        await setDoc(doc(firestoreDB, "system_settings", "announcement"), {
+            message: broadcastMsg,
+            type: broadcastType,
+            active: broadcastActive,
+            link: broadcastLink,
+            updatedAt: new Date()
+        });
+        setStatusMsg("Broadcast Status Updated");
+        setTimeout(() => setStatusMsg(""), 3000);
+    } catch (error) {
+        console.error("Failed to update broadcast", error);
+        alert("Failed to update broadcast settings.");
+    } finally {
+        setIsSavingBroadcast(false);
+    }
+  };
 
   // ==========================================
-  // GIST DATA FORGE LOGIC (Original)
+  // GIST DATA FORGE LOGIC
   // ==========================================
   const fetchFromGist = async () => {
     if(!gistConfig.id) return alert("Please configure Gist ID in settings first.");
@@ -363,7 +410,7 @@ const Admin = () => {
       <NeuralBackground />
       <Navbar />
       
-      {/* --- MODALS (Original logic) --- */}
+      {/* --- MODALS --- */}
       <AnimatePresence>
         {showPurgeModal && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
@@ -479,9 +526,15 @@ const Admin = () => {
                    </button>
                    <button 
                      onClick={() => setActiveTab("moderation")}
-                     className={`px-4 py-2 font-mono text-xs font-bold tracking-widest uppercase transition-all rounded-lg ${activeTab === 'moderation' ? 'bg-red-500/20 text-red-400 border border-red-500/50' : 'bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-white/20'}`}
+                     className={`px-4 py-2 font-mono text-xs font-bold tracking-widest uppercase transition-all rounded-lg ${activeTab === 'moderation' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' : 'bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-white/20'}`}
                    >
                      Community Moderation
+                   </button>
+                   <button 
+                     onClick={() => setActiveTab("broadcast")}
+                     className={`px-4 py-2 font-mono text-xs font-bold tracking-widest uppercase transition-all rounded-lg flex items-center gap-2 ${activeTab === 'broadcast' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50' : 'bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-white/20'}`}
+                   >
+                     <Megaphone size={14} /> Global_Broadcast
                    </button>
                </div>
            </div>
@@ -499,7 +552,7 @@ const Admin = () => {
         </motion.div>
 
         {/* ========================================== */}
-        {/* TAB 1: DATA FORGE (ORIGINAL UI)            */}
+        {/* TAB 1: DATA FORGE                          */}
         {/* ========================================== */}
         {activeTab === "forge" && (
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
@@ -779,8 +832,122 @@ const Admin = () => {
             </motion.div>
         )}
 
+        {/* ========================================== */}
+        {/* TAB 3: GLOBAL BROADCAST NOTIFICATIONS      */}
+        {/* ========================================== */}
+        {activeTab === "broadcast" && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8 max-w-4xl mx-auto">
+                
+                {/* Live Preview Section */}
+                <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl relative">
+                    <div className="p-4 border-b border-white/5 bg-black/40 flex items-center gap-2 text-gray-400">
+                        <Eye size={16} /> <span className="text-xs font-mono tracking-widest uppercase">Live Ribbon Preview</span>
+                    </div>
+                    
+                    {/* Simulated Browser View */}
+                    <div className="bg-[#050510] h-48 relative border-t border-white/5">
+                        {/* Fake Navbar */}
+                        <div className="h-14 border-b border-white/10 flex items-center px-6 gap-4">
+                            <div className="w-8 h-8 bg-[#00f5ff]/20 rounded-lg border border-[#00f5ff]/50"></div>
+                            <div className="w-24 h-4 bg-white/10 rounded"></div>
+                            <div className="w-16 h-4 bg-white/10 rounded ml-auto"></div>
+                        </div>
+
+                        {/* RIBBON PREVIEW */}
+                        {broadcastActive ? (
+                            <div className={`w-full py-2.5 px-4 text-center text-sm font-bold flex items-center justify-center gap-3 transition-colors ${
+                                broadcastType === 'info' ? 'bg-[#00ff88] text-black' : 
+                                broadcastType === 'warning' ? 'bg-[#ffcc00] text-black' : 
+                                'bg-[#ff3333] text-black'
+                            }`}>
+                                {broadcastType === 'warning' || broadcastType === 'critical' ? (
+                                    <AlertTriangle size={18} strokeWidth={2.5} />
+                                ) : (
+                                    <Megaphone size={18} strokeWidth={2.5} />
+                                )}
+                                <span>{broadcastMsg || "Your announcement message will appear here..."}</span>
+                                {broadcastLink && (
+                                    <span className="flex items-center gap-1 underline underline-offset-2 opacity-80 hover:opacity-100 cursor-pointer font-black">
+                                        Details <ExternalLink size={14} strokeWidth={2.5}/>
+                                    </span>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="absolute inset-0 top-14 flex items-center justify-center text-gray-600 font-mono text-xs border-t border-dashed border-gray-800">
+                                [BROADCAST INACTIVE - RIBBON HIDDEN]
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Configuration Form */}
+                <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-orange-500/20 p-8 rounded-3xl shadow-[0_0_30px_rgba(249,115,22,0.05)] space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                            <h2 className="text-xl font-bold font-mono text-white flex items-center gap-2">
+                                <Radio className="text-orange-500" /> SIGNAL_TRANSMITTER
+                            </h2>
+                            <p className="text-xs text-gray-500 font-mono tracking-widest">Broadcast global notifications to all connected clients.</p>
+                        </div>
+                        
+                        {/* Master Toggle */}
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" className="sr-only peer" checked={broadcastActive} onChange={(e) => setBroadcastActive(e.target.checked)} />
+                            <div className="w-14 h-7 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-orange-500"></div>
+                            <span className="ml-3 text-sm font-bold font-mono text-gray-300 uppercase tracking-widest">{broadcastActive ? 'TRANSMITTING' : 'OFFLINE'}</span>
+                        </label>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t border-white/5">
+                        <div className="space-y-2 group">
+                            <label className="text-[10px] font-mono text-orange-400 uppercase tracking-widest opacity-70 group-focus-within:opacity-100 transition-opacity">Transmission Message</label>
+                            <input 
+                                value={broadcastMsg} 
+                                onChange={(e) => setBroadcastMsg(e.target.value)} 
+                                className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-orange-500 text-sm text-white focus:bg-black/60 transition-all" 
+                                placeholder="e.g. Scheduled maintenance at 00:00 UTC. System may be temporarily unavailable." 
+                                maxLength={120}
+                            />
+                            <div className="text-right text-[10px] text-gray-500 font-mono">{broadcastMsg.length}/120 chars</div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-mono text-orange-400 uppercase tracking-widest">Severity Level</label>
+                                <div className="flex gap-2 bg-black/40 p-1 rounded-lg border border-white/10">
+                                    <button onClick={() => setBroadcastType("info")} className={`flex-1 py-2 text-xs font-bold rounded transition-colors ${broadcastType === 'info' ? 'bg-[#00ff88]/20 text-[#00ff88]' : 'text-gray-500 hover:text-white'}`}>INFO</button>
+                                    <button onClick={() => setBroadcastType("warning")} className={`flex-1 py-2 text-xs font-bold rounded transition-colors ${broadcastType === 'warning' ? 'bg-[#ffcc00]/20 text-[#ffcc00]' : 'text-gray-500 hover:text-white'}`}>WARNING</button>
+                                    <button onClick={() => setBroadcastType("critical")} className={`flex-1 py-2 text-xs font-bold rounded transition-colors ${broadcastType === 'critical' ? 'bg-[#ff3333]/20 text-[#ff3333]' : 'text-gray-500 hover:text-white'}`}>CRITICAL</button>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-2 group">
+                                <label className="text-[10px] font-mono text-orange-400 uppercase tracking-widest opacity-70 group-focus-within:opacity-100 transition-opacity">Redirect URL (Optional)</label>
+                                <input 
+                                    value={broadcastLink} 
+                                    onChange={(e) => setBroadcastLink(e.target.value)} 
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-orange-500 text-sm text-white focus:bg-black/60 transition-all font-mono" 
+                                    placeholder="https://..." 
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={handleSaveBroadcast} 
+                        disabled={isSavingBroadcast} 
+                        className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-black font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_30px_rgba(249,115,22,0.5)] text-xs tracking-widest mt-6"
+                    >
+                        {isSavingBroadcast ? <Loader2 className="animate-spin" size={16}/> : <Radio size={16} />}
+                        UPDATE TRANSMISSION PROTOCOL
+                    </button>
+                </div>
+            </motion.div>
+        )}
+
       </main>
     </div>
   );
 };
+
 export default Admin;

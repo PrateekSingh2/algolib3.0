@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
 import { Github, Linkedin } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import GlobalRibbon from "@/components/GlobalRibbon";
 
 // --- CYBERSPACE BACKGROUND ---
 const CyberSpaceBackground = () => {
@@ -190,6 +191,7 @@ const Developer = () => {
       <Spotlight />
       
       <Navbar />
+      <GlobalRibbon />
 
       <div className="pt-28 md:pt-31 pb-16 px-4 relative z-40">
         <div className="container mx-auto max-w-5xl">

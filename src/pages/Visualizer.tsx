@@ -15,6 +15,7 @@ import SortingVisualizer from './SortingVisualizer';
 import BSTVisualizer from './BSTVisualizer';
 import GraphVisualizer from './GraphVisualizer';
 import Navbar from '@/components/Navbar';
+import GlobalRibbon from '@/components/GlobalRibbon';
 
 // Reuse the Alien Background
 const AlienBackground = () => (
@@ -46,6 +47,7 @@ const Visualizer = () => {
       {/* --- NAVBAR (Fixed Top, High Z-Index) --- */}
       <div className='fixed top-0 left-0 right-0 z-[200]'>
         <Navbar />
+        <GlobalRibbon />
       </div>
 
       {/* --- MOBILE WARNING SCREEN (Visible only on < md) --- */}

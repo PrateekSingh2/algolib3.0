@@ -24,7 +24,6 @@ const DefaultCursorSVG: FC = () => {
       height={22}
       viewBox="0 0 50 54"
       fill="none"
-      // Removed the scale style to rely on explicit width/height for sizing
     >
       <g filter="url(#filter0_d_91_7928)">
         <path
@@ -81,9 +80,9 @@ const DefaultCursorSVG: FC = () => {
 const CustomCursor = ({
   cursor = <DefaultCursorSVG />,
   springConfig = {
-    damping: 45,
-    stiffness: 400,
-    mass: 1,
+    damping: 30,      // Reduced drag
+    stiffness: 1200,  // Very high stiffness to snap to the mouse instantly
+    mass: 0.1,        // Very low mass eliminates the momentum/overshoot effect
     restDelta: 0.001,
   },
 }: SmoothCursorProps) => {
@@ -97,15 +96,17 @@ const CustomCursor = ({
 
   const cursorX = useSpring(0, springConfig);
   const cursorY = useSpring(0, springConfig);
+  
+  // Kept rotation and scale springs slightly softer than position for visual flair
   const rotation = useSpring(0, {
-    ...springConfig,
-    damping: 60,
-    stiffness: 300,
+    damping: 40,
+    stiffness: 400,
+    mass: 0.5,
   });
   const scale = useSpring(1, {
-    ...springConfig,
-    stiffness: 500,
-    damping: 35,
+    damping: 30,
+    stiffness: 600,
+    mass: 0.1,
   });
 
   useEffect(() => {
@@ -124,7 +125,7 @@ const CustomCursor = ({
       lastMousePos.current = currentPos;
     };
 
-    const smoothMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: MouseEvent) => {
       const currentPos = { x: e.clientX, y: e.clientY };
       updateVelocity(currentPos);
 
@@ -132,6 +133,7 @@ const CustomCursor = ({
         Math.pow(velocity.current.x, 2) + Math.pow(velocity.current.y, 2)
       );
 
+      // Directly set the spring values without rAF throttling for zero input lag
       cursorX.set(currentPos.x);
       cursorY.set(currentPos.y);
 
@@ -144,6 +146,7 @@ const CustomCursor = ({
         if (angleDiff > 180) angleDiff -= 360;
         if (angleDiff < -180) angleDiff += 360;
         accumulatedRotation.current += angleDiff;
+        
         rotation.set(accumulatedRotation.current);
         previousAngle.current = currentAngle;
 
@@ -159,36 +162,23 @@ const CustomCursor = ({
       }
     };
 
-    let rafId: number;
-    const throttledMouseMove = (e: MouseEvent) => {
-      if (rafId) return;
-
-      rafId = requestAnimationFrame(() => {
-        smoothMouseMove(e);
-        rafId = 0;
-      });
-    };
-
     // Hide system cursor globally
     document.body.style.cursor = "none";
     
-    // Optional: Add a style tag to force it even more aggressively
     const style = document.createElement('style');
     style.innerHTML = '* { cursor: none !important; }';
     style.id = 'cursor-style';
     document.head.appendChild(style);
 
-    window.addEventListener("mousemove", throttledMouseMove);
+    window.addEventListener("mousemove", handleMouseMove);
 
     return () => {
-      window.removeEventListener("mousemove", throttledMouseMove);
+      window.removeEventListener("mousemove", handleMouseMove);
       
-      // Cleanup
       document.body.style.cursor = "auto";
       const styleEl = document.getElementById('cursor-style');
       if (styleEl) styleEl.remove();
 
-      if (rafId) cancelAnimationFrame(rafId);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [cursorX, cursorY, rotation, scale]);
@@ -199,11 +189,11 @@ const CustomCursor = ({
         position: "fixed",
         left: cursorX,
         top: cursorY,
-        translateX: "-50%",
-        translateY: "-50%",
+        x: "-50%", // Switched to Framer Motion's shorthand for translation
+        y: "-50%",
         rotate: rotation,
         scale: scale,
-        zIndex: 9999, // High Z-Index to stay on top
+        zIndex: 9999,
         pointerEvents: "none",
         willChange: "transform",
       }}
