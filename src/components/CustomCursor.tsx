@@ -80,13 +80,14 @@ const DefaultCursorSVG: FC = () => {
 const CustomCursor = ({
   cursor = <DefaultCursorSVG />,
   springConfig = {
-    damping: 30,      // Reduced drag
-    stiffness: 1200,  // Very high stiffness to snap to the mouse instantly
-    mass: 0.1,        // Very low mass eliminates the momentum/overshoot effect
+    damping: 30,
+    stiffness: 1200,
+    mass: 0.1,
     restDelta: 0.001,
   },
 }: SmoothCursorProps) => {
   const [isMoving, setIsMoving] = useState(false);
+  const [isMobile, setIsMobile] = useState(false); // Mobile detection state
   const lastMousePos = useRef<Position>({ x: 0, y: 0 });
   const velocity = useRef<Position>({ x: 0, y: 0 });
   const lastUpdateTime = useRef(Date.now());
@@ -97,7 +98,6 @@ const CustomCursor = ({
   const cursorX = useSpring(0, springConfig);
   const cursorY = useSpring(0, springConfig);
   
-  // Kept rotation and scale springs slightly softer than position for visual flair
   const rotation = useSpring(0, {
     damping: 40,
     stiffness: 400,
@@ -109,7 +109,26 @@ const CustomCursor = ({
     mass: 0.1,
   });
 
+  // Effect to handle mobile/touch detection
   useEffect(() => {
+    const checkDevice = () => {
+      const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+      const isSmallScreen = window.innerWidth < 768;
+      setIsMobile(isTouchDevice || isSmallScreen);
+    };
+
+    checkDevice();
+    window.addEventListener("resize", checkDevice);
+    
+    return () => {
+      window.removeEventListener("resize", checkDevice);
+    };
+  }, []);
+
+  useEffect(() => {
+    // If it's a mobile or touch device, do not run the cursor logic
+    if (isMobile) return;
+
     const updateVelocity = (currentPos: Position) => {
       const currentTime = Date.now();
       const deltaTime = currentTime - lastUpdateTime.current;
@@ -133,7 +152,6 @@ const CustomCursor = ({
         Math.pow(velocity.current.x, 2) + Math.pow(velocity.current.y, 2)
       );
 
-      // Directly set the spring values without rAF throttling for zero input lag
       cursorX.set(currentPos.x);
       cursorY.set(currentPos.y);
 
@@ -181,7 +199,10 @@ const CustomCursor = ({
 
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [cursorX, cursorY, rotation, scale]);
+  }, [cursorX, cursorY, rotation, scale, isMobile]);
+
+  // If mobile, render nothing
+  if (isMobile) return null;
 
   return (
     <motion.div
@@ -189,7 +210,7 @@ const CustomCursor = ({
         position: "fixed",
         left: cursorX,
         top: cursorY,
-        x: "-50%", // Switched to Framer Motion's shorthand for translation
+        x: "-50%",
         y: "-50%",
         rotate: rotation,
         scale: scale,

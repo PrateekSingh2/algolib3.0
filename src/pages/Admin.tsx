@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { 
-  collection, query, orderBy, onSnapshot, deleteDoc, doc, setDoc
+  collection, query, orderBy, onSnapshot, deleteDoc, doc, setDoc, updateDoc
 } from "firebase/firestore";
 import { auth, firestoreDB, loginWithGoogle, logout } from "../lib/firebase"; 
 import { 
@@ -145,6 +145,7 @@ const Admin = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null); // NEW: Track expanded post to show replies
 
   // --- BROADCAST STATE ---
   const [broadcastMsg, setBroadcastMsg] = useState("");
@@ -321,6 +322,30 @@ const Admin = () => {
     } catch (error) {
       console.error("Error taking down post:", error);
       alert("Failed to delete post.");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  // NEW: Function to delete a specific reply
+  const handleDeleteReply = async (postId: string, replyId: string) => {
+    if (!window.confirm("ADMIN ACTION: Are you sure you want to take down this specific reply?")) return;
+    setIsDeleting(`reply-${replyId}`);
+    try {
+      const postTarget = posts.find(p => p.id === postId);
+      if (!postTarget || !postTarget.replies) return;
+      
+      const updatedReplies = postTarget.replies.filter(r => r.id !== replyId);
+      
+      await updateDoc(doc(firestoreDB, "community_posts", postId), {
+        replies: updatedReplies
+      });
+      
+      setStatusMsg("Reply Successfully Removed");
+      setTimeout(() => setStatusMsg(""), 3000);
+    } catch (error) {
+      console.error("Error taking down reply:", error);
+      alert("Failed to delete reply.");
     } finally {
       setIsDeleting(null);
     }
@@ -775,7 +800,7 @@ const Admin = () => {
                                 <tr className="bg-black/60 border-b border-white/5 text-gray-500 text-[10px] uppercase tracking-widest font-mono">
                                     <th className="p-5 font-semibold w-1/3">Post Signature</th>
                                     <th className="p-5 font-semibold">Author Matrix</th>
-                                    <th className="p-5 font-semibold text-center">Metrics</th>
+                                    <th className="p-5 font-semibold text-center">Metrics & Replies</th>
                                     <th className="p-5 font-semibold">Timestamp</th>
                                     <th className="p-5 font-semibold text-right">Execute Action</th>
                                 </tr>
@@ -783,36 +808,84 @@ const Admin = () => {
                             <tbody className="divide-y divide-white/5 bg-[#0a0a1a]/50">
                                 {filteredPosts.length > 0 ? (
                                     filteredPosts.map((post) => (
-                                        <tr key={post.id} className="hover:bg-white/5 transition-colors group">
-                                            <td className="p-5">
-                                                <p className="font-bold text-white mb-1 line-clamp-1 group-hover:text-[#00f5ff] transition-colors">{post.title}</p>
-                                                <p className="text-xs text-gray-500 line-clamp-1 font-mono">{post.body}</p>
-                                            </td>
-                                            <td className="p-5">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-sm text-gray-300">{post.authorName}</span>
-                                                </div>
-                                                <span className="text-[10px] text-gray-600 font-mono mt-1 block tracking-wider">ID:{post.authorId.substring(0, 8)}</span>
-                                            </td>
-                                            <td className="p-5">
-                                                <div className="flex items-center justify-center gap-4 text-xs font-mono text-gray-400">
-                                                    <span className="flex items-center gap-1"><ChevronUp size={14} className="text-[#00f5ff]" /> {post.upvotes?.length || 0}</span>
-                                                    <span className="flex items-center gap-1"><MessageSquare size={12} className="text-purple-400" /> {post.replies?.length || 0}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-5 text-gray-500 font-mono text-[10px] uppercase tracking-wider">
-                                                {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : "SYS_NOW"}
-                                            </td>
-                                            <td className="p-5 text-right">
-                                                <button
-                                                    onClick={() => handleDeletePost(post.id)}
-                                                    disabled={isDeleting === post.id}
-                                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 hover:border-red-500 transition-all disabled:opacity-50 tracking-widest uppercase font-mono"
-                                                >
-                                                    {isDeleting === post.id ? <><Loader2 size={14} className="animate-spin" /> EXECUTING...</> : <><Trash2 size={14} /> Take down</>}
-                                                </button>
-                                            </td>
-                                        </tr>
+                                        <React.Fragment key={post.id}>
+                                            <tr className="hover:bg-white/5 transition-colors group">
+                                                <td className="p-5">
+                                                    <p className="font-bold text-white mb-1 line-clamp-1 group-hover:text-[#00f5ff] transition-colors">{post.title}</p>
+                                                    <p className="text-xs text-gray-500 line-clamp-1 font-mono">{post.body}</p>
+                                                </td>
+                                                <td className="p-5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-sm text-gray-300">{post.authorName}</span>
+                                                    </div>
+                                                    <span className="text-[10px] text-gray-600 font-mono mt-1 block tracking-wider">ID:{post.authorId.substring(0, 8)}</span>
+                                                </td>
+                                                <td className="p-5">
+                                                    <div className="flex items-center justify-center gap-4 text-xs font-mono text-gray-400">
+                                                        <span className="flex items-center gap-1" title="Upvotes"><ChevronUp size={14} className="text-[#00f5ff]" /> {post.upvotes?.length || 0}</span>
+                                                        <button 
+                                                            onClick={() => post.replies?.length > 0 && setExpandedPostId(expandedPostId === post.id ? null : post.id)}
+                                                            className={`flex items-center gap-1 px-2 py-1 rounded transition-all ${post.replies?.length > 0 ? 'hover:bg-purple-500/20 cursor-pointer' : 'opacity-50 cursor-default'} ${expandedPostId === post.id ? 'bg-purple-500/20 text-purple-300' : 'text-purple-400'}`}
+                                                            title="Toggle Replies"
+                                                        >
+                                                            <MessageSquare size={12} /> {post.replies?.length || 0}
+                                                            {post.replies?.length > 0 && <ChevronRight size={12} className={`transition-transform duration-300 ${expandedPostId === post.id ? 'rotate-90' : ''}`} />}
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td className="p-5 text-gray-500 font-mono text-[10px] uppercase tracking-wider">
+                                                    {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : "SYS_NOW"}
+                                                </td>
+                                                <td className="p-5 text-right">
+                                                    <button
+                                                        onClick={() => handleDeletePost(post.id)}
+                                                        disabled={isDeleting === post.id}
+                                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-red-500 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/30 hover:border-red-500 transition-all disabled:opacity-50 tracking-widest uppercase font-mono"
+                                                    >
+                                                        {isDeleting === post.id ? <><Loader2 size={14} className="animate-spin" /> EXECUTING...</> : <><Trash2 size={14} /> Take down</>}
+                                                    </button>
+                                                </td>
+                                            </tr>
+
+                                            {/* Sub-row for expanded replies */}
+                                            {expandedPostId === post.id && post.replies && post.replies.length > 0 && (
+                                                <tr className="bg-black/80 border-b border-white/5 relative">
+                                                    <td colSpan={5} className="p-0">
+                                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500/50" />
+                                                        <div className="p-6 pl-12 space-y-3 bg-[linear-gradient(to_right,rgba(168,85,247,0.05)_0%,transparent_100%)]">
+                                                            <h4 className="text-[10px] text-purple-400 font-mono tracking-widest uppercase mb-4 flex items-center gap-2">
+                                                                <MessageSquare size={12} /> {post.replies.length} Embedded Transmissions
+                                                            </h4>
+                                                            {post.replies.map(reply => (
+                                                                <div key={reply.id} className="flex items-start justify-between bg-black/60 border border-white/10 rounded-xl p-4 hover:border-purple-500/30 transition-colors">
+                                                                    <div className="flex items-start gap-4 flex-1">
+                                                                        <img src={reply.authorAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${reply.authorName}`} alt="avatar" className="w-8 h-8 rounded-lg bg-gray-800 border border-white/10" />
+                                                                        <div className="flex-1 pr-6">
+                                                                            <p className="text-xs font-bold text-gray-300 font-mono flex items-center gap-2">
+                                                                                {reply.authorName} <span className="text-[10px] text-gray-600 font-normal">ID:{reply.authorId.substring(0,6)}</span>
+                                                                            </p>
+                                                                            <p className="text-sm text-gray-400 mt-2 leading-relaxed">{reply.content}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => handleDeleteReply(post.id, reply.id)}
+                                                                        disabled={isDeleting === `reply-${reply.id}`}
+                                                                        className="flex-shrink-0 p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/30 group"
+                                                                        title="Take down specific reply"
+                                                                    >
+                                                                        {isDeleting === `reply-${reply.id}` ? (
+                                                                            <Loader2 size={16} className="animate-spin text-red-500" />
+                                                                        ) : (
+                                                                            <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
+                                                                        )}
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                     ))
                                 ) : (
                                     <tr>

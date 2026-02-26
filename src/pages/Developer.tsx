@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+'use client'
+import React, { useEffect, useRef } from "react";
 import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
-import { Github, Linkedin } from "lucide-react";
+import { Github, Linkedin } from "lucide-react"; 
 import Navbar from "@/components/Navbar";
 import GlobalRibbon from "@/components/GlobalRibbon";
 
@@ -162,24 +163,42 @@ const Spotlight = () => {
 };
 
 const Developer = () => {
+  // Data for exactly 5 team members with specific links included
   const teamMembers = [
-    {
-      name: "Prateek Singh",
-      role: "ARCHITECT",
-      status: "Developer",
-      bio: "Core system architecture, Visualizer Engine, UI/UX and Backend logic circuits.",
-      avatar: "https://ik.imagekit.io/g7e4hyclo/photo.jpg",
-      github: "https://github.com/prateeksingh2",
-      linkedin: "https://www.linkedin.com/in/rajawatprateeksingh",
+    { 
+      name: 'Prateek Singh', 
+      role: 'Lead Developer', 
+      imageUrl: 'https://ik.imagekit.io/g7e4hyclo/photo.jpg',
+      github: 'https://github.com/prateeksingh2',
+      linkedin: 'https://www.linkedin.com/in/rajawatprateeksingh'
     },
-    {
-      name: "Shivansh Sahu",
-      role: "INTERFACE_DESIGN",
-      status: "Co-Developer",
-      bio: "Holographic UI/UX designing, Motion Physics, and Mobile Responsiveness.",
-      avatar: "https://ik.imagekit.io/g7e4hyclo/co-photo.jpg",
-      github: "https://github.com/shivanshmax-Monster",
-      linkedin: "https://www.linkedin.com/in/shivansh-sahu-523a5a391",
+    { 
+      name: 'Shivansh Sahu', 
+      role: 'Co-Developer Lead', 
+      imageUrl: 'https://ik.imagekit.io/g7e4hyclo/co-photo.jpg',
+      github: 'https://github.com/shivanshmax-Monster',
+      linkedin: 'https://www.linkedin.com/in/shivansh-sahu-523a5a391'
+    },
+    { 
+      name: 'Shiva Agrawal', 
+      role: 'Testing & UI Review Lead', 
+      imageUrl: 'https://i.postimg.cc/W1rCvYnT/nazmul-hossain.jpg',
+      github: '#',
+      linkedin: 'https://www.linkedin.com/in/shiva-agrawal-048ba2361?utm_source=share_via&utm_content=profile&utm_medium=member_android'
+    },
+    { 
+      name: 'Raushan Gupta', 
+      role: 'Promotional Lead', 
+      imageUrl: 'https://i.pinimg.com/736x/8c/6d/db/8c6ddb5fe6600fcc4b183cb2ee228eb7.jpg',
+      github: '#',
+      linkedin: '#'
+    },
+    { 
+      name: 'Sarvagya Singhai', 
+      role: 'Social Media Lead', 
+      imageUrl: 'https://i.pinimg.com/736x/6f/a3/6a/6fa36aa2c367da06b2a4c8ae1cf9ee02.jpg',
+      github: 'https://github.com/singhaisarvagya8-hue',
+      linkedin: 'https://www.linkedin.com/in/sarvagya-singhai-5058a5381?utm_source=share_via&utm_content=profile&utm_medium=member_android'
     },
   ];
 
@@ -193,106 +212,126 @@ const Developer = () => {
       <Navbar />
       <GlobalRibbon />
 
-      <div className="pt-28 md:pt-31 pb-16 px-4 relative z-40">
-        <div className="container mx-auto max-w-5xl">
+      <div className="pt-28 md:pt-31 pb-24 px-4 relative z-40">
+        <div className="container mx-auto max-w-7xl">
           
+          {/* Header */}
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="text-center mb-16">
             <div className="inline-block mb-4 px-3 py-1 rounded-full border border-[#00f5ff]/30 bg-[#00f5ff]/5 text-[#00f5ff] text-xs font-mono tracking-widest backdrop-blur-md">
                CREW_MANIFEST
             </div>
-            
-            <h1 className="text-3xl md:text-6xl font-black text-white tracking-tighter mb-4 drop-shadow-[0_0_15px_rgba(0,245,255,0.3)]">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#E36917] to-[#174FE3]">SYSTEM ARCHITECTS</span>
+            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter mb-4 drop-shadow-[0_0_15px_rgba(0,245,255,0.3)]">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-400">Our Exceptional Team</span>
             </h1>
-            <p className="text-gray-400 font-light tracking-wide text-xs md:text-sm uppercase max-w-md mx-auto">
-               The minds currently operating the AlgoLib Core
+            <p className="text-gray-400 font-light tracking-wide text-sm md:text-base max-w-xl mx-auto">
+               Meet our outstanding team - a synergy of talent, creativity, and dedication, crafting success together with passion and innovation.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 max-w-4xl mx-auto">
-            {teamMembers.map((member, i) => (
-               <motion.div 
-                 key={member.name}
-                 initial={{ opacity: 0, y: 30 }} 
-                 animate={{ opacity: 1, y: 0 }} 
-                 transition={{ delay: i * 0.2, duration: 0.6 }}
-                 className="relative w-full max-w-[400px] mx-auto overflow-hidden rounded-[2rem] p-[2px] group shadow-2xl"
-               >
-                  {/* --- UIVERSE EXACT MATCH: TWO OPPOSITE ROTATING LINES --- */}
-                  <div className="absolute -top-[50%] -bottom-[50%] -left-[50%] -right-[50%] m-auto h-[200%] w-[160px] animate-spin [animation-duration:5s] bg-[linear-gradient(90deg,transparent,#00f5ff,#00f5ff,#00f5ff,#00f5ff,transparent)] group-hover:bg-[linear-gradient(90deg,transparent,#9d00ff,#9d00ff,#9d00ff,#9d00ff,transparent)] transition-colors duration-500 z-0" />
+          {/* Grid Container */}
+          <div className="flex flex-col items-center gap-8 md:gap-10 max-w-6xl mx-auto">
+            
+            {/* Top Row - First 2 Cards */}
+            <div className="flex flex-wrap justify-center gap-8 md:gap-10 w-full">
+              {teamMembers.slice(0, 2).map((member, i) => (
+                <motion.div 
+                  key={member.name}
+                  initial={{ opacity: 0, y: 30 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: i * 0.15, duration: 0.6 }}
+                  className="relative w-full max-w-[280px] sm:max-w-[300px] overflow-hidden rounded-2xl p-[2px] group shadow-2xl hover:-translate-y-2 transition-transform duration-300"
+                >
+                    {/* --- SPINNING EDGE EFFECT --- */}
+                    <div className="absolute -top-[50%] -bottom-[50%] -left-[50%] -right-[50%] m-auto h-[200%] w-[160px] animate-spin [animation-duration:5s] [animation-play-state:paused] group-hover:[animation-play-state:running] bg-[linear-gradient(90deg,transparent,#00f5ff,#00f5ff,#00f5ff,#00f5ff,transparent)] group-hover:bg-[linear-gradient(90deg,transparent,#9d00ff,#9d00ff,#9d00ff,#9d00ff,transparent)] transition-colors duration-500 z-0" />
 
-                  {/* --- INNER CARD CONTAINER --- */}
-                  <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[calc(2rem-2px)] bg-[#0a0a1a] z-10">
-                    
-                    {/* --- TOP HEADER (Banner Area) --- */}
-                    <div className="relative h-[160px] w-full bg-[#0d1b2a]">
+                    {/* --- INNER CARD CONTENT --- */}
+                    <div className="relative flex flex-col items-center text-center p-8 bg-[#0a0a1a] h-full w-full rounded-[calc(1rem-2px)] z-10">
                       
-                      {/* Avatar Centered in Banner */}
-                      <div className="absolute inset-0 flex items-center justify-center pt-6 z-20">
-                         <div className="relative w-28 h-28 sm:w-32 sm:h-32 shadow-[0_0_20px_rgba(0,245,255,0.2)] rounded-full">
-                            <div className="absolute inset-0 border-2 border-dashed border-[#00f5ff]/40 rounded-full animate-[spin_10s_linear_infinite]" />
-                            <div className="absolute inset-[-6px] border-2 border-dotted border-[#9d00ff]/40 rounded-full animate-[spin_15s_linear_infinite_reverse]" />
-                            <img 
-                               src={member.avatar} 
-                               alt={member.name} 
-                               className="w-full h-full rounded-full object-cover relative z-10 grayscale group-hover:grayscale-0 transition-all duration-500 border-2 border-[#0a0a1a]" 
-                            />
-                         </div>
+                      <div className="relative w-32 h-32 md:w-36 md:h-36 mb-5">
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#00f5ff] via-purple-500 to-[#9d00ff] rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-300 blur-md"></div>
+                        <img
+                          className="relative w-full h-full rounded-full object-cover ring-2 ring-gray-800 group-hover:ring-[#00f5ff] transition-all duration-300"
+                          src={member.imageUrl}
+                          alt={`Portrait of ${member.name}`}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = `https://placehold.co/200x200/0a0a1a/00f5ff?text=${member.name.split(' ').map(n => n[0]).join('')}`;
+                          }}
+                        />
                       </div>
-
-                      {/* Dark Mask for the "Folder Tab" Cutout Effect */}
-                      <div className="absolute left-0 top-0 flex h-[50px] w-max max-w-[65%] items-center rounded-br-[24px] bg-[#0a0a1a] px-5 py-2 z-10">
-                        <span className="inline-block text-[10px] sm:text-xs font-mono font-bold tracking-widest text-[#00f5ff] group-hover:text-blue-400 transition-colors duration-300">
-                          {member.role}
-                        </span>
-                        {/* The "Negative Border Radius" Connecting Curve */}
-                        <div className="absolute -right-[20px] bottom-0 h-[20px] w-[20px] bg-[#0a0a1a]">
-                          <div className="h-full w-full rounded-tl-[20px] bg-[#0d1b2a]" />
-                        </div>
-                      </div>
-
-                      {/* Social Icons (Top Right) */}
-                      <div className="absolute right-5 top-4 flex items-center gap-3 z-30">
-                        <a href={member.github} className="text-gray-400 hover:text-[#00f5ff] transition-colors" target="_blank" rel="noreferrer">
-                          <Github size={18} />
-                        </a>
-                        <a href={member.linkedin} className="text-gray-400 hover:text-[#00f5ff] transition-colors" target="_blank" rel="noreferrer">
-                          <Linkedin size={18} />
-                        </a>
-                      </div>
-                    </div>
-
-                    {/* --- BOTTOM CONTENT SECTION --- */}
-                    <div className="flex flex-col items-center px-6 pb-8 pt-5 text-center z-10 relative bg-[#0a0a1a]">
                       
-                      {/* Name */}
-                      <h3 className="mb-1 text-xl font-bold tracking-tight text-white group-hover:text-[#00f5ff] transition-colors mt-4">
+                      <h3 className="text-xl font-bold text-white mb-2 group-hover:text-[#00f5ff] transition-colors duration-300">
                         {member.name}
                       </h3>
-                      
-                      {/* Bio */}
-                      <p className="text-sm text-gray-400 font-light leading-relaxed mb-1 h-[60px] flex items-center justify-center">
-                        {member.bio}
+                      <p className="text-xs font-medium text-gray-300 mb-6 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full tracking-wider uppercase">
+                        {member.role}
                       </p>
-
-                      {/* Themed Stats Row */}
-                      <div className="flex w-full items-center justify-between border-t border-white/5 pt-5">
-                        
-                        <div className="flex flex-1 flex-col items-center gap-1 border-r border-white/5">
-                          <span className="text-sm font-medium text-gray-300">{member.status}</span>
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Role</span>
-                        </div>
-                        
-                        <div className="flex flex-1 flex-col items-center gap-1">
-                          <span className="text-sm font-medium text-[#00f5ff]">100%</span>
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Uptime</span>
-                        </div>
-                        
+                      
+                      <div className="flex space-x-4 mt-auto">
+                        <a href={member.github} target="_blank" rel="noreferrer" className="p-2.5 text-gray-400 hover:text-white bg-white/5 hover:bg-[#00f5ff]/20 hover:border-[#00f5ff]/50 border border-transparent rounded-full transition-all duration-300 hover:scale-110" aria-label={`${member.name}'s Github profile`}>
+                          <Github size={20} />
+                        </a>
+                        <a href={member.linkedin} target="_blank" rel="noreferrer" className="p-2.5 text-gray-400 hover:text-white bg-white/5 hover:bg-blue-600/30 hover:border-blue-500/50 border border-transparent rounded-full transition-all duration-300 hover:scale-110" aria-label={`${member.name}'s LinkedIn profile`}>
+                          <Linkedin size={20} />
+                        </a>
                       </div>
                     </div>
-                  </div>
-               </motion.div>
-            ))}
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Bottom Row - Remaining 3 Cards */}
+            <div className="flex flex-wrap justify-center gap-8 md:gap-10 w-full">
+              {teamMembers.slice(2).map((member, i) => (
+                <motion.div 
+                  key={member.name}
+                  // We add 2 to the index 'i' so the animation delay continues sequentially after the first two
+                  initial={{ opacity: 0, y: 30 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: (i + 2) * 0.15, duration: 0.6 }}
+                  className="relative w-full max-w-[280px] sm:max-w-[300px] overflow-hidden rounded-2xl p-[2px] group shadow-2xl hover:-translate-y-2 transition-transform duration-300"
+                >
+                    {/* --- SPINNING EDGE EFFECT --- */}
+                    <div className="absolute -top-[50%] -bottom-[50%] -left-[50%] -right-[50%] m-auto h-[200%] w-[160px] animate-spin [animation-duration:5s] [animation-play-state:paused] group-hover:[animation-play-state:running] bg-[linear-gradient(90deg,transparent,#00f5ff,#00f5ff,#00f5ff,#00f5ff,transparent)] group-hover:bg-[linear-gradient(90deg,transparent,#9d00ff,#9d00ff,#9d00ff,#9d00ff,transparent)] transition-colors duration-500 z-0" />
+
+                    {/* --- INNER CARD CONTENT --- */}
+                    <div className="relative flex flex-col items-center text-center p-8 bg-[#0a0a1a] h-full w-full rounded-[calc(1rem-2px)] z-10">
+                      
+                      <div className="relative w-32 h-32 md:w-36 md:h-36 mb-5">
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#00f5ff] via-purple-500 to-[#9d00ff] rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-300 blur-md"></div>
+                        <img
+                          className="relative w-full h-full rounded-full object-cover ring-2 ring-gray-800 group-hover:ring-[#00f5ff] transition-all duration-300"
+                          src={member.imageUrl}
+                          alt={`Portrait of ${member.name}`}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.onerror = null;
+                            target.src = `https://placehold.co/200x200/0a0a1a/00f5ff?text=${member.name.split(' ').map(n => n[0]).join('')}`;
+                          }}
+                        />
+                      </div>
+                      
+                      <h3 className="text-xl font-bold text-white mb-2 group-hover:text-[#00f5ff] transition-colors duration-300">
+                        {member.name}
+                      </h3>
+                      <p className="text-xs font-medium text-gray-300 mb-6 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full tracking-wider uppercase">
+                        {member.role}
+                      </p>
+                      
+                      <div className="flex space-x-4 mt-auto">
+                        <a href={member.github} target="_blank" rel="noreferrer" className="p-2.5 text-gray-400 hover:text-white bg-white/5 hover:bg-[#00f5ff]/20 hover:border-[#00f5ff]/50 border border-transparent rounded-full transition-all duration-300 hover:scale-110" aria-label={`${member.name}'s Github profile`}>
+                          <Github size={20} />
+                        </a>
+                        <a href={member.linkedin} target="_blank" rel="noreferrer" className="p-2.5 text-gray-400 hover:text-white bg-white/5 hover:bg-blue-600/30 hover:border-blue-500/50 border border-transparent rounded-full transition-all duration-300 hover:scale-110" aria-label={`${member.name}'s LinkedIn profile`}>
+                          <Linkedin size={20} />
+                        </a>
+                      </div>
+                    </div>
+                </motion.div>
+              ))}
+            </div>
+
           </div>
         </div>
       </div>

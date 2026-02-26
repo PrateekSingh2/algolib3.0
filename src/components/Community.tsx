@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { 
   collection, query, orderBy, onSnapshot, addDoc, 
-  serverTimestamp, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove 
+  serverTimestamp, doc, updateDoc, deleteDoc, arrayUnion
 } from "firebase/firestore";
 import { auth, firestoreDB } from "../lib/firebase"; 
 import { 
-  MessageSquare, ChevronUp, ChevronDown, PlusCircle,
-  Image as ImageIcon, Reply, Loader2, CheckCircle2, Trophy, Search,
-  Edit2, Trash2, X, Save
+  MessageSquare, PlusCircle, Image as ImageIcon, Reply, Loader2, 
+  CheckCircle2, Trophy, Search, Edit2, Trash2, X, Save,
+  ThumbsUp, ThumbsDown
 } from "lucide-react";
 import Navbar from "./Navbar"; 
 import GlobalRibbon from "./GlobalRibbon";
@@ -22,6 +23,8 @@ interface ReplyType {
   content: string;
   createdAt: number; 
   isAccepted?: boolean; 
+  likes?: string[];    
+  dislikes?: string[]; 
 }
 
 interface Post {
@@ -33,8 +36,8 @@ interface Post {
   authorId: string;
   authorName: string;
   authorAvatar: string;
-  upvotes: string[];
-  downvotes?: string[];
+  likes: string[];     
+  dislikes?: string[]; 
   replies: ReplyType[];
   createdAt: any; 
 }
@@ -120,17 +123,135 @@ const BackgroundParticles = () => {
 };
 
 
+// --- Sub-component: Individual Reply Item ---
+const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: ReplyType, postId: string, postReplies: ReplyType[], isPostAuthor: boolean, user: User | null }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(reply.content);
+  const isReplyAuthor = user?.uid === reply.authorId;
+
+  const handleUpdateReply = async () => {
+    if (!editContent.trim()) return;
+    const updatedReplies = postReplies.map(r => r.id === reply.id ? { ...r, content: editContent } : r);
+    await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: updatedReplies });
+    setIsEditing(false);
+  };
+
+  const handleDeleteReply = async () => {
+    if (window.confirm("Delete this reply?")) {
+      const updatedReplies = postReplies.filter(r => r.id !== reply.id);
+      await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: updatedReplies });
+    }
+  };
+
+  const handleReplyVote = async (type: 'up' | 'down') => {
+    if (!user) return;
+    const hasLiked = reply.likes?.includes(user.uid);
+    const hasDisliked = reply.dislikes?.includes(user.uid);
+    
+    let newLikes = reply.likes || [];
+    let newDislikes = reply.dislikes || [];
+
+    if (type === 'up') {
+      if (hasLiked) newLikes = newLikes.filter(id => id !== user.uid);
+      else { 
+        newLikes = [...newLikes, user.uid]; 
+        newDislikes = newDislikes.filter(id => id !== user.uid); 
+      }
+    } else {
+      if (hasDisliked) newDislikes = newDislikes.filter(id => id !== user.uid);
+      else { 
+        newDislikes = [...newDislikes, user.uid]; 
+        newLikes = newLikes.filter(id => id !== user.uid); 
+      }
+    }
+
+    const updatedReplies = postReplies.map(r => r.id === reply.id ? { ...r, likes: newLikes, dislikes: newDislikes } : r);
+    await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: updatedReplies });
+  };
+
+  const handleToggleAcceptReply = async () => {
+    if (!isPostAuthor) return; 
+    const updatedReplies = postReplies.map(r => r.id === reply.id ? { ...r, isAccepted: !r.isAccepted } : r);
+    await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: updatedReplies });
+  };
+
+  const replyScore = (reply.likes?.length || 0) - (reply.dislikes?.length || 0);
+
+  return (
+    <div className={`text-sm p-4 rounded-xl transition-colors ${reply.isAccepted ? "bg-[#00ff87]/5 border border-[#00ff87]/20 shadow-sm" : "bg-[#11121C] border border-[#1F2032]"}`}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-2">
+        <div className="flex items-center gap-2">
+          <img src={reply.authorAvatar} alt="" className="w-5 h-5 rounded-full border border-[#2A2B3D]" />
+          <span className="font-semibold text-slate-200">{reply.authorName}</span>
+          <span className="text-slate-500 text-xs hidden sm:inline">•</span>
+          <span className="text-slate-500 text-xs">{new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {/* Edit/Delete for reply author */}
+          {isReplyAuthor && !isEditing && (
+            <div className="flex items-center gap-2 border-r border-[#1F2032] pr-3">
+              <button onClick={() => setIsEditing(true)} className="text-slate-400 hover:text-[#00d2ff]" title="Edit Reply"><Edit2 size={14} /></button>
+              <button onClick={handleDeleteReply} className="text-slate-400 hover:text-red-400" title="Delete Reply"><Trash2 size={14} /></button>
+            </div>
+          )}
+
+          {/* Accept button for post author */}
+          {(isPostAuthor || reply.isAccepted) && (
+            <button 
+              onClick={handleToggleAcceptReply} disabled={!isPostAuthor}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${reply.isAccepted ? "text-[#00ff87] bg-[#00ff87]/10" : "text-slate-500 hover:bg-[#1F2032] hover:text-slate-300"} ${!isPostAuthor && "cursor-default"}`}
+            >
+              <CheckCircle2 size={14} className={reply.isAccepted ? "text-[#00ff87]" : ""} />
+              {reply.isAccepted ? "Accepted" : "Accept"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isEditing ? (
+        <div className="mt-2 space-y-2">
+          <textarea 
+            value={editContent} onChange={e => setEditContent(e.target.value)} 
+            className="w-full bg-[#07080C] text-slate-200 border border-[#3a7bd5]/40 rounded-lg p-2 text-sm focus:outline-none resize-y" rows={3}
+          />
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setIsEditing(false)} className="px-3 py-1 text-xs text-slate-400 hover:text-white transition-colors">Cancel</button>
+            <button onClick={handleUpdateReply} className="px-3 py-1 text-xs bg-[#3a7bd5] hover:bg-[#00d2ff] text-white rounded-md transition-colors">Save</button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">{reply.content}</p>
+      )}
+
+      {/* Reply Voting Bar */}
+      <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[#1F2032]">
+        <button onClick={() => handleReplyVote('up')} className={`hover:text-[#00d2ff] transition-colors flex items-center gap-1.5 ${reply.likes?.includes(user?.uid || "") ? 'text-[#00d2ff]' : 'text-slate-500'}`}>
+          <ThumbsUp size={14} className={reply.likes?.includes(user?.uid || "") ? "fill-[#00d2ff]/20" : ""} />
+          <span className="text-xs">{reply.likes?.length || 0}</span>
+        </button>
+        <span className="text-slate-600 text-xs">|</span>
+        <button onClick={() => handleReplyVote('down')} className={`hover:text-[#ff0080] transition-colors flex items-center gap-1.5 ${reply.dislikes?.includes(user?.uid || "") ? 'text-[#ff0080]' : 'text-slate-500'}`}>
+          <ThumbsDown size={14} className={reply.dislikes?.includes(user?.uid || "") ? "fill-[#ff0080]/20" : ""} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
 // --- Sub-component: Individual Post Item ---
 const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showReplyBox, setShowReplyBox] = useState(false);
+  const [showAllReplies, setShowAllReplies] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [isMagnified, setIsMagnified] = useState(false);
   const [magPos, setMagPos] = useState({ x: '50%', y: '50%' });
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ title: post.title, body: post.body, tags: post.tags.join(", ") });
+  const [editForm, setEditForm] = useState({ title: post.title, body: post.body, tags: post.tags?.join(", ") || "" });
   const [isUpdating, setIsUpdating] = useState(false);
 
   const isLongPost = post.body.length > 300 || post.body.split('\n').length > 5;
@@ -139,26 +260,27 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
   const handleVote = async (type: 'up' | 'down') => {
     if (!user) return;
     
-    const postDocRef = doc(firestoreDB, "community_posts", post.id);
-    const hasUpvoted = post.upvotes?.includes(user.uid);
-    const hasDownvoted = post.downvotes?.includes(user.uid);
+    const hasLiked = post.likes?.includes(user.uid);
+    const hasDisliked = post.dislikes?.includes(user.uid);
 
-    let updates: any = {};
+    let newLikes = post.likes || [];
+    let newDislikes = post.dislikes || [];
 
     if (type === 'up') {
-      if (hasUpvoted) updates.upvotes = arrayRemove(user.uid);
-      else {
-        updates.upvotes = arrayUnion(user.uid);
-        if (hasDownvoted) updates.downvotes = arrayRemove(user.uid);
+      if (hasLiked) newLikes = newLikes.filter(id => id !== user.uid);
+      else { 
+        newLikes = [...newLikes, user.uid]; 
+        newDislikes = newDislikes.filter(id => id !== user.uid); 
       }
-    } else if (type === 'down') {
-      if (hasDownvoted) updates.downvotes = arrayRemove(user.uid);
-      else {
-        updates.downvotes = arrayUnion(user.uid);
-        if (hasUpvoted) updates.upvotes = arrayRemove(user.uid);
+    } else {
+      if (hasDisliked) newDislikes = newDislikes.filter(id => id !== user.uid);
+      else { 
+        newDislikes = [...newDislikes, user.uid]; 
+        newLikes = newLikes.filter(id => id !== user.uid); 
       }
     }
-    await updateDoc(postDocRef, updates);
+
+    await updateDoc(doc(firestoreDB, "community_posts", post.id), { likes: newLikes, dislikes: newDislikes });
   };
 
   const handleDeletePost = async () => {
@@ -199,26 +321,19 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
         authorAvatar: user.photoURL || "",
         content: replyContent.trim(),
         createdAt: Date.now(),
-        isAccepted: false
+        isAccepted: false,
+        likes: [],
+        dislikes: []
       };
       await updateDoc(postDocRef, { replies: arrayUnion(newReply) });
       setReplyContent("");
       setShowReplyBox(false);
+      setShowAllReplies(true); // Expand to show new reply
     } catch (error) {
       console.error("Failed to post reply:", error);
     } finally {
       setIsSubmittingReply(false);
     }
-  };
-
-  const handleToggleAcceptReply = async (replyId: string) => {
-    if (!isAuthor) return; 
-    const updatedReplies = post.replies.map(reply => {
-      if (reply.id === replyId) return { ...reply, isAccepted: !reply.isAccepted };
-      return reply;
-    });
-    const postDocRef = doc(firestoreDB, "community_posts", post.id);
-    await updateDoc(postDocRef, { replies: updatedReplies });
   };
 
   const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -229,22 +344,25 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
     setMagPos({ x: `${x}%`, y: `${y}%` });
   };
 
-  const score = (post.upvotes?.length || 0) - (post.downvotes?.length || 0);
+  const score = (post.likes?.length || 0) - (post.dislikes?.length || 0);
 
   return (
-    <div className="bg-[#0B0C15]/90 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-[#1F2032] shadow-xl flex flex-col sm:flex-row gap-5 transition-all hover:border-[#3a7bd5]/40 hover:shadow-[0_0_20px_rgba(58,123,213,0.05)] relative z-10 group">
+    <div 
+      id={post.id} 
+      className="bg-[#0B0C15]/90 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-[#1F2032] shadow-xl flex flex-col sm:flex-row gap-5 transition-all hover:border-[#3a7bd5]/40 hover:shadow-[0_0_20px_rgba(58,123,213,0.05)] relative z-10 group scroll-mt-[120px]"
+    >
       
       {/* LEFT COLUMN: Voting */}
       <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-start min-w-[50px] pt-1 mb-4 sm:mb-0 border-b sm:border-b-0 border-[#1F2032] pb-4 sm:pb-0">
-        <div className="flex flex-row sm:flex-col items-center gap-3 sm:gap-1">
-          <button onClick={() => handleVote('up')} className={`p-1.5 rounded-full transition-colors ${post.upvotes?.includes(user?.uid || "") ? 'text-[#00d2ff] bg-[#00d2ff]/10' : 'text-slate-500 hover:text-white hover:bg-[#1F2032]'}`}>
-            <ChevronUp size={24} strokeWidth={post.upvotes?.includes(user?.uid || "") ? 3 : 2} />
+        <div className="flex flex-row sm:flex-col items-center gap-3 sm:gap-2">
+          <button onClick={() => handleVote('up')} className={`p-2 rounded-xl transition-colors ${post.likes?.includes(user?.uid || "") ? 'text-[#00d2ff] bg-[#00d2ff]/10' : 'text-slate-500 hover:text-white hover:bg-[#1F2032]'}`}>
+            <ThumbsUp size={20} className={post.likes?.includes(user?.uid || "") ? "fill-[#00d2ff]/20" : ""} />
           </button>
           <span className={`font-mono text-lg font-bold ${score > 0 ? 'text-[#00d2ff]' : score < 0 ? 'text-[#ff0080]' : 'text-slate-300'}`}>
             {score}
           </span>
-          <button onClick={() => handleVote('down')} className={`p-1.5 rounded-full transition-colors ${post.downvotes?.includes(user?.uid || "") ? 'text-[#ff0080] bg-[#ff0080]/10' : 'text-slate-500 hover:text-white hover:bg-[#1F2032]'}`}>
-            <ChevronDown size={24} strokeWidth={post.downvotes?.includes(user?.uid || "") ? 3 : 2} />
+          <button onClick={() => handleVote('down')} className={`p-2 rounded-xl transition-colors ${post.dislikes?.includes(user?.uid || "") ? 'text-[#ff0080] bg-[#ff0080]/10' : 'text-slate-500 hover:text-white hover:bg-[#1F2032]'}`}>
+            <ThumbsDown size={20} className={post.dislikes?.includes(user?.uid || "") ? "fill-[#ff0080]/20" : ""} />
           </button>
         </div>
         <div className="flex flex-row sm:flex-col items-center gap-1.5 sm:mt-6 text-slate-500" title={`${post.replies?.length || 0} Replies`}>
@@ -340,31 +458,31 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
           </div>
         )}
 
+        {/* REPLIES SECTION WITH EXPAND/COLLAPSE */}
         {post.replies && post.replies.length > 0 && (
           <div className="mt-6 space-y-3 pl-3 sm:pl-6 border-l-2 border-[#1F2032]">
-            {[...post.replies].sort((a, b) => (b.isAccepted ? 1 : 0) - (a.isAccepted ? 1 : 0)).map((reply) => (
-              <div key={reply.id} className={`text-sm p-4 rounded-xl transition-colors ${reply.isAccepted ? "bg-[#00ff87]/5 border border-[#00ff87]/20 shadow-sm" : "bg-[#11121C] border border-[#1F2032]"}`}>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 sm:mb-2">
-                  <div className="flex items-center gap-2">
-                    <img src={reply.authorAvatar} alt="" className="w-5 h-5 rounded-full border border-[#2A2B3D]" />
-                    <span className="font-semibold text-slate-200">{reply.authorName}</span>
-                    <span className="text-slate-500 text-xs hidden sm:inline">•</span>
-                    <span className="text-slate-500 text-xs">{new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                  </div>
-                  
-                  {(isAuthor || reply.isAccepted) && (
-                    <button 
-                      onClick={() => handleToggleAcceptReply(reply.id)} disabled={!isAuthor}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all ${reply.isAccepted ? "text-[#00ff87] bg-[#00ff87]/10" : "text-slate-500 hover:bg-[#1F2032] hover:text-slate-300"} ${!isAuthor && "cursor-default"}`}
-                    >
-                      <CheckCircle2 size={14} className={reply.isAccepted ? "text-[#00ff87]" : ""} />
-                      {reply.isAccepted ? "Accepted" : "Accept"}
-                    </button>
-                  )}
-                </div>
-                <p className="text-slate-300 whitespace-pre-wrap leading-relaxed">{reply.content}</p>
-              </div>
+            {[...post.replies]
+              .sort((a, b) => (b.isAccepted ? 1 : 0) - (a.isAccepted ? 1 : 0))
+              .slice(0, showAllReplies ? post.replies.length : 2)
+              .map((reply) => (
+                <ReplyItem 
+                  key={reply.id} 
+                  reply={reply} 
+                  postId={post.id} 
+                  postReplies={post.replies} 
+                  isPostAuthor={isAuthor} 
+                  user={user} 
+                />
             ))}
+            
+            {post.replies.length > 2 && (
+              <button 
+                onClick={() => setShowAllReplies(!showAllReplies)} 
+                className="text-[#00d2ff] hover:text-white text-sm font-medium mt-3 inline-block transition-colors"
+              >
+                {showAllReplies ? "Show fewer replies ↑" : `View all ${post.replies.length} replies ↓`}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -383,6 +501,8 @@ export default function Community() {
   const [newPost, setNewPost] = useState({ title: "", body: "", tags: "" });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  
+  const location = useLocation();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, setUser);
@@ -396,6 +516,31 @@ export default function Community() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Handle auto-scrolling to a post when clicking a notification
+  useEffect(() => {
+    if (location.hash && posts.length > 0) {
+      const targetId = location.hash.replace('#', '');
+      const element = document.getElementById(targetId);
+      
+      if (element) {
+        setTimeout(() => {
+          // Calculate position minus 100px so it isn't hidden under the floating navbar
+          const yOffset = -100; 
+          const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+          
+          window.scrollTo({ top: y, behavior: 'smooth' });
+          
+          // Temporary highlight glow
+          element.classList.add('ring-2', 'ring-[#00d2ff]', 'ring-offset-4', 'ring-offset-[#030308]', 'transition-all', 'duration-500', 'shadow-[0_0_30px_rgba(0,210,255,0.4)]');
+          
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-[#00d2ff]', 'ring-offset-4', 'ring-offset-[#030308]', 'shadow-[0_0_30px_rgba(0,210,255,0.4)]');
+          }, 2500);
+        }, 100);
+      }
+    }
+  }, [location.hash, posts]);
 
   const topContributors = useMemo(() => {
     const scores: Record<string, { name: string, avatar: string, score: number }> = {};
@@ -450,7 +595,7 @@ export default function Community() {
         authorId: user.uid,
         authorName: user.displayName || "Developer",
         authorAvatar: user.photoURL || "",
-        upvotes: [], downvotes: [], replies: [], 
+        likes: [], dislikes: [], replies: [], 
         createdAt: serverTimestamp()
       });
       
@@ -495,7 +640,7 @@ export default function Community() {
           )}
         </div>
 
-        {/* RIGHT COLUMN: Cleaned Up Sidebar */}
+        {/* RIGHT COLUMN: Sidebar */}
         <aside className="lg:col-span-4 space-y-5 lg:sticky lg:top-32 h-fit order-1 lg:order-2">
           
           {/* A. Make Post Button */}

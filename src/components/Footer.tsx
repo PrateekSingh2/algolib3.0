@@ -51,7 +51,16 @@ const Footer = () => {
             <ul className="flex flex-col gap-3 text-sm text-slate-400">
               <li><Link to="/developer" className="hover:text-[#00d2ff] transition-colors duration-200">Developer Profile</Link></li>
               <li><Link to="/discussion" className="hover:text-[#00d2ff] transition-colors duration-200">Community Forum</Link></li>
-              <li><Link to="/contributors" className="hover:text-[#00d2ff] transition-colors duration-200">Contributors</Link></li>
+              <li>
+                <a 
+                  href="https://mail.google.com/mail/?view=cm&fs=1&to=prateeksinghrajawat2006@gmail.com&subject=Bug%20Report%20-%20AlgoLib&body=Please%20describe%20the%20bug%20you%20encountered:%0A%0A" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:text-[#00d2ff] transition-colors duration-200"
+                >
+                  Report bug
+                </a>
+              </li>
             </ul>
           </div>
 
