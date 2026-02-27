@@ -19,14 +19,14 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 mb-16">
           
           {/* Brand Column (Takes up half the space on desktop) */}
-          <div className="md:col-span-6 flex flex-col items-start">
+          <div className="md:col-span-6 flex flex-col items-center md:items-start">
             <Link to="/" className="flex items-center gap-2 mb-4 group">
               <Sparkles className="h-6 w-6 text-[#00d2ff] group-hover:animate-pulse" />
               <span className="text-xl font-bold tracking-tight text-white">
                 Algo<span className="text-[#00d2ff]">Lib</span>
               </span>
             </Link>
-            <p className="text-slate-400 text-sm leading-relaxed max-w-sm mb-6">
+            <p className="text-slate-400 text-sm leading-relaxed max-w-sm mb-6 text-center md:text-left">
               The definitive ecosystem for algorithm visualization, code optimization, and architectural discussions.
             </p>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-slate-300">
@@ -36,9 +36,9 @@ const Footer = () => {
           </div>
 
           {/* Links Column 1: Platform */}
-          <div className="md:col-span-3 flex flex-col">
-            <h3 className="text-white font-semibold text-sm tracking-wider uppercase mb-5">Platform</h3>
-            <ul className="flex flex-col gap-3 text-sm text-slate-400">
+          <div className="md:col-span-3 flex flex-col items-center md:items-start">
+            <h3 className="text-white font-semibold text-sm tracking-wider uppercase mb-5 text-center md:text-left">Platform</h3>
+            <ul className="flex flex-col items-center md:items-start gap-3 text-sm text-slate-400">
               <li><Link to="/" className="hover:text-[#00d2ff] transition-colors duration-200">Home</Link></li>
               <li><Link to="/visualizer" className="hover:text-[#00d2ff] transition-colors duration-200">Visualizer</Link></li>
               <li><Link to="/docs" className="hover:text-[#00d2ff] transition-colors duration-200">Documentation</Link></li>
@@ -46,9 +46,9 @@ const Footer = () => {
           </div>
 
           {/* Links Column 2: Ecosystem */}
-          <div className="md:col-span-3 flex flex-col">
-            <h3 className="text-white font-semibold text-sm tracking-wider uppercase mb-5">Ecosystem</h3>
-            <ul className="flex flex-col gap-3 text-sm text-slate-400">
+          <div className="md:col-span-3 flex flex-col items-center md:items-start">
+            <h3 className="text-white font-semibold text-sm tracking-wider uppercase mb-5 text-center md:text-left">Ecosystem</h3>
+            <ul className="flex flex-col items-center md:items-start gap-3 text-sm text-slate-400">
               <li><Link to="/developer" className="hover:text-[#00d2ff] transition-colors duration-200">Developer Profile</Link></li>
               <li><Link to="/discussion" className="hover:text-[#00d2ff] transition-colors duration-200">Community Forum</Link></li>
               <li>
@@ -56,7 +56,7 @@ const Footer = () => {
                   href="https://mail.google.com/mail/?view=cm&fs=1&to=prateeksinghrajawat2006@gmail.com&subject=Bug%20Report%20-%20AlgoLib&body=Please%20describe%20the%20bug%20you%20encountered:%0A%0A" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="hover:text-[#00d2ff] transition-colors duration-200"
+                  className="hover:text-[#00d2ff] transition-colors duration-200 text-center md:text-left"
                 >
                   Report bug
                 </a>
@@ -68,11 +68,11 @@ const Footer = () => {
 
         {/* Bottom Bar: Copyright & System Status */}
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-slate-500 text-sm">
+          <p className="text-slate-500 text-sm text-center md:text-left">
             &copy; {new Date().getFullYear()} AlgoLib. All rights reserved.
           </p>
           
-          <div className="flex items-center gap-6 text-sm font-mono">
+          <div className="flex items-center justify-center gap-6 text-sm font-mono w-full md:w-auto">
             {/* Online Status Indicator */}
             <div className="flex items-center gap-2 text-green-400 bg-green-400/10 px-3 py-1 rounded-full border border-green-400/20">
               <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_#4ade80]" />

@@ -18,7 +18,6 @@ import Index from "./pages/Index";
 import SnippetView from "./pages/SnippetView";
 import Visualizer from "./pages/Visualizer";
 import Developer from "./pages/Developer";
-import Contributors from "./pages/Contributors";
 import NotFound from "./pages/NotFound";
 import CustomCursor from "@/components/CustomCursor";
 import Docs from "./pages/Docs";
@@ -241,7 +240,20 @@ const UnauthenticatedLanding = () => {
         </motion.div>
       </main>
 
-      <Footer />
+      {/* Restricted Footer Wrapper */}
+      <div 
+        onClickCapture={(e) => {
+          const target = e.target as HTMLElement;
+          // Trigger alert if the user clicked a link or a button inside the footer
+          if (target.closest('a') || target.closest('button')) {
+            e.preventDefault();
+            e.stopPropagation();
+            handlePreviewClick();
+          }
+        }}
+      >
+        <Footer />
+      </div>
       
     </div>
   );
@@ -315,7 +327,6 @@ const App = () => {
               <Route path="/view/:id" element={<SnippetView />} />
               <Route path="/visualizer" element={<Visualizer />} />
               <Route path="/developer" element={<Developer />} />
-              <Route path="/contributors" element={<Contributors />} />
               <Route path="/discussion" element={<Community />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

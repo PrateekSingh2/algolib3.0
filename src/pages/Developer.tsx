@@ -183,15 +183,15 @@ const Developer = () => {
       name: 'Shiva Agrawal', 
       role: 'Testing & UI Review Lead', 
       imageUrl: 'https://ik.imagekit.io/g7e4hyclo/WhatsApp%20Image%202026-02-13%20at%204.09.05%20PM.jpeg',
-      github: '#',
+      github: 'https://github.com/shivaaggrawal',
       linkedin: 'https://www.linkedin.com/in/shiva-agrawal-048ba2361?utm_source=share_via&utm_content=profile&utm_medium=member_android'
     },
     { 
       name: 'Raushan Gupta', 
       role: 'Promotional Lead', 
-      imageUrl: 'https://ik.imagekit.io/g7e4hyclo/image.png?updatedAt=1772125115894',
-      github: '#',
-      linkedin: '#'
+      imageUrl: 'https://ik.imagekit.io/g7e4hyclo/WhatsApp%20Image%202026-02-26%20at%2010.28.02%20PM.jpeg',
+      github: 'https://github.com/raushanrewa786-rgb',
+      linkedin: 'https://www.linkedin.com/in/raushan-gupta-b154b0387?utm_source=share_via&utm_content=profile&utm_medium=member_android'
     },
     { 
       name: 'Sarvagya Singhai', 
