@@ -1,96 +1,123 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ArrowDown, ArrowUp, RotateCcw, Layers, Play, Pause, StepForward, 
-  Terminal, Activity, Zap, Box, Trash2, AlertCircle
+  ArrowDown, ArrowUp, ArrowRight, RotateCcw, Layers, Play, Pause, StepForward, 
+  Terminal, Activity, Zap, Box, Trash2, Cpu, Crosshair
 } from 'lucide-react';
 
-// --- SNIPPETS ---
+// --- TYPES & GAME STATE ---
+type StackNode = { id: string; val: number; color: string; isTargeted?: boolean };
+type CodeLine = { id: string; text: string; explanation: string; active: boolean };
+type VariableState = { name: string; value: string; color: string };
+
+// --- HINGLISH EXECUTION MATRIX ---
 const SNIPPETS = {
   push: [
-    { id: '1', text: 'if (top >= MAX) return error;', explanation: 'Checking for Stack Overflow.', active: false },
-    { id: '2', text: 'stack[++top] = value;', explanation: 'Incrementing TOP pointer and inserting value.', active: false },
+    { id: '1', text: 'if (top >= MAX - 1) return OVERFLOW;', explanation: 'Check kiya: Container full toh nahi hai? (Capacity limit)', active: false },
+    { id: '2', text: 'Node temp = new Node(val);', explanation: 'Heap memory (Spawn Zone) mein naya block ready kiya.', active: false },
+    { id: '3', text: 'top++;', explanation: 'TOP pointer ko ek step upar (next empty slot pe) shift kiya.', active: false },
+    { id: '4', text: 'stack[top] = temp;', explanation: 'Naye block ko container mein TOP position par drop kar diya!', active: false }
   ],
   pop: [
-    { id: '1', text: 'if (top < 0) return error;', explanation: 'Checking for Stack Underflow.', active: false },
-    { id: '2', text: 'value = stack[top--];', explanation: 'Accessing value and decrementing TOP pointer.', active: false },
-    { id: '3', text: 'return value;', explanation: 'Returning the popped value.', active: false },
-  ],
-  peek: [
-    { id: '1', text: 'if (top < 0) return null;', explanation: 'Ensuring stack is not empty.', active: false },
-    { id: '2', text: 'return stack[top];', explanation: 'Reading value at TOP without removing it.', active: false },
+    { id: '1', text: 'if (top == -1) return UNDERFLOW;', explanation: 'Check kiya: Container pehle se khali toh nahi hai?', active: false },
+    { id: '2', text: 'Node target = stack[top];', explanation: 'Sabse upar wale block pe target lock kiya.', active: false },
+    { id: '3', text: 'top--;', explanation: 'TOP pointer ko ek step neeche shift kar diya.', active: false },
+    { id: '4', text: 'return target;', explanation: 'Target block ko bahar nikaal ke memory free kar di!', active: false }
   ]
 };
 
-// Cyberpunk Color Palette
-const COLORS = [
-    '#00f5ff', // Cyan
-    '#ff00ff', // Magenta
-    '#00ff88', // Neon Green
-    '#facc15', // Yellow
-    '#9d00ff', // Purple
-    '#ff5500', // Orange
-];
+// Cyberpunk Ammo Colors
+const COLORS = ['#00f5ff', '#ff00ff', '#00ff88', '#facc15', '#9d00ff', '#ff5500'];
+const MAX_CAPACITY = 6;
+
+const CyberGrid = () => (
+  <div className="absolute inset-0 z-0 pointer-events-none">
+    <div className="absolute inset-0 bg-[#09090b]" />
+    <div className="absolute inset-0 bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,245,255,0.05),transparent_70%)]" />
+  </div>
+);
 
 const StackVisualizer = () => {
-  // State now includes color
-  const [stack, setStack] = useState<{id: string, val: number, color: string}[]>([
-      {id: 'init', val: 10, color: '#00f5ff'}, 
-      {id: 'init2', val: 20, color: '#ff00ff'}
+  const [stack, setStack] = useState<StackNode[]>([
+      { id: 'init1', val: 42, color: '#00f5ff' }, 
+      { id: 'init2', val: 88, color: '#ff00ff' }
   ]);
+  const [inputValue, setInputValue] = useState<number>(0);
   
-  const [inputValue, setInputValue] = useState<number>(45);
-
-  // Animation & Control
+  // Engine State
   const [isPaused, setIsPaused] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [message, setMessage] = useState('SYSTEM_IDLE');
-  const [codeLines, setCodeLines] = useState<any[]>([]);
+  const [message, setMessage] = useState('SYSTEM_IDLE: Ready for input');
+  const [codeLines, setCodeLines] = useState<CodeLine[]>([]);
+  const [variables, setVariables] = useState<VariableState[]>([]);
   
-  // Visual Actors
-  const [phantom, setPhantom] = useState<{id: string, val: number, color: string} | null>(null);
-  const [poppedNode, setPoppedNode] = useState<{id: string, val: number, color: string} | null>(null);
+  // HUD Actors
+  const [phantom, setPhantom] = useState<StackNode | null>(null);
+  const [poppedNode, setPoppedNode] = useState<StackNode | null>(null);
 
   const stepTrigger = useRef<() => void>(() => {});
+  
+  // FIX: Ref for Auto-Scrolling the Interpreter
+  const interpreterEndRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => { generateRandom(); }, []);
+
+  // FIX: Auto-scroll Effect whenever codeLines change
   useEffect(() => {
-    generateRandom();
-  }, []);
+    interpreterEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [codeLines]);
 
-  const generateRandom = () => {
-    setInputValue(Math.floor(Math.random() * 90) + 10);
-  };
+  const generateRandom = () => setInputValue(Math.floor(Math.random() * 99) + 1);
 
   const resolveStep = () => { if(stepTrigger.current) stepTrigger.current(); };
 
-  const waitStep = async (lineId: string, snippet: any[]) => {
+  const waitStep = async (lineId: string, snippet: CodeLine[], vars: VariableState[] = []) => {
     const line = snippet.find(l => l.id === lineId);
     setMessage(line ? line.explanation : 'Processing...');
     setCodeLines(snippet.map(l => ({ ...l, active: l.id === lineId })));
-    if (isPaused) await new Promise<void>(r => stepTrigger.current = r);
-    else await new Promise(r => setTimeout(r, 1000));
+    
+    let currentVars = [...vars];
+    if (!currentVars.some(v => v.name === 'TOP')) {
+        currentVars.push({ name: 'TOP', value: `${stack.length - 1}`, color: '#facc15' });
+    }
+    setVariables(currentVars);
+
+    if (isPaused) {
+      await new Promise<void>(r => stepTrigger.current = r);
+    } else {
+      await new Promise(r => setTimeout(r, 1200));
+    }
   };
 
   const handlePush = async () => {
-    if (isAnimating || stack.length >= 7) return;
+    if (isAnimating || stack.length >= MAX_CAPACITY) return;
     setIsAnimating(true);
-    
-    // Assign random color to new node
-    const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-    const newVal = { id: Math.random().toString(), val: inputValue, color: randomColor };
     const snippet = SNIPPETS.push;
+    
+    const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+    const newNode = { id: Math.random().toString(), val: inputValue, color: randomColor };
 
-    setPhantom(newVal);
-    await waitStep('1', snippet);
+    await waitStep('1', snippet, [{ name: 'TOP', value: `${stack.length - 1}`, color: '#facc15' }]);
     
-    await waitStep('2', snippet);
-    setStack(prev => [...prev, newVal]);
+    setPhantom(newNode);
+    await waitStep('2', snippet, [
+        { name: 'TOP', value: `${stack.length - 1}`, color: '#facc15' },
+        { name: 'temp', value: `${newNode.val}`, color: newNode.color }
+    ]);
+    
+    await waitStep('3', snippet, [
+        { name: 'TOP', value: `${stack.length}`, color: '#facc15' },
+        { name: 'temp', value: `${newNode.val}`, color: newNode.color }
+    ]);
+    
     setPhantom(null);
+    setStack(prev => [...prev, newNode]);
+    await waitStep('4', snippet, [{ name: 'TOP', value: `${stack.length}`, color: '#facc15' }]);
     
-    setMessage('PUSH_COMPLETE');
+    setMessage('MISSION_PASSED: Block Pushed');
     setIsAnimating(false);
-    setCodeLines([]);
-    generateRandom();
+    setCodeLines([]); setVariables([]); generateRandom();
   };
 
   const handlePop = async () => {
@@ -98,169 +125,227 @@ const StackVisualizer = () => {
     setIsAnimating(true);
     const snippet = SNIPPETS.pop;
 
-    await waitStep('1', snippet);
+    await waitStep('1', snippet, [{ name: 'TOP', value: `${stack.length - 1}`, color: '#facc15' }]);
     
-    const nodeToPop = stack[stack.length - 1];
-    setPoppedNode(nodeToPop);
-    setStack(prev => prev.slice(0, -1)); 
+    setStack(prev => prev.map((n, i) => i === prev.length - 1 ? { ...n, isTargeted: true } : n));
+    const targetNode = stack[stack.length - 1];
+    await waitStep('2', snippet, [
+        { name: 'TOP', value: `${stack.length - 1}`, color: '#facc15' },
+        { name: 'target', value: `${targetNode.val}`, color: '#ef4444' }
+    ]);
     
-    await waitStep('2', snippet);
+    await waitStep('3', snippet, [
+        { name: 'TOP', value: `${stack.length - 2}`, color: '#facc15' },
+        { name: 'target', value: `${targetNode.val}`, color: '#ef4444' }
+    ]);
     
-    await waitStep('3', snippet);
-    setPoppedNode(null); 
+    setStack(prev => prev.slice(0, -1));
+    setPoppedNode(targetNode);
+    await waitStep('4', snippet, [{ name: 'TOP', value: `${stack.length - 2}`, color: '#facc15' }]);
     
-    setMessage('POP_COMPLETE');
+    setPoppedNode(null);
+    setMessage('TARGET_ELIMINATED: Block Popped');
     setIsAnimating(false);
-    setCodeLines([]);
+    setCodeLines([]); setVariables([]);
   };
 
   return (
-    <div className="w-full h-full flex flex-col lg:flex-row bg-[#020205] overflow-hidden font-sans text-white">
-      {/* SIDEBAR */}
-      <div className="w-full lg:w-80 bg-[#0a0a14] border-r border-white/10 flex flex-col z-30 shadow-2xl">
-         <div className="p-6 border-b border-white/5 bg-gradient-to-r from-[#00f5ff]/5 to-transparent">
-            <div className="flex items-center gap-2 text-[#00f5ff]">
-               <Layers size={20} />
-               <span className="font-black tracking-widest text-sm">STACK_OS</span>
-            </div>
-         </div>
-         
-         <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
-            {/* CONTROLS */}
-            <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-3">
-               <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase">
-                  <span>Control</span>
-                  <span>{isPaused ? 'MANUAL' : 'AUTO'}</span>
-               </div>
-               <div className="flex gap-2">
-                  <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-white/5 hover:bg-white/10 rounded flex justify-center items-center gap-2 text-xs font-bold transition-all">
-                     {isPaused ? <Play size={14} /> : <Pause size={14} />} {isPaused ? 'RESUME' : 'PAUSE'}
-                  </button>
-                  <button onClick={resolveStep} disabled={!isPaused || !isAnimating} className="flex-1 py-2 bg-[#00f5ff] text-black rounded flex justify-center items-center gap-2 text-xs font-bold disabled:opacity-50">
-                     <StepForward size={14} /> STEP
-                  </button>
-               </div>
-            </div>
+    <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden">
+      <CyberGrid />
+      
+      <div className="flex-1 flex relative z-10 overflow-hidden h-full">
+        
+        {/* LEFT: COMMAND CENTER */}
+        <div className="w-[340px] bg-black/80 backdrop-blur-md border-r border-white/10 flex flex-col h-full shadow-2xl shrink-0 z-20">
+          
+          <div className="p-5 border-b border-white/10 bg-gradient-to-r from-cyan-500/10 to-transparent shrink-0">
+             <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-cyan-400">
+                <Layers size={24} /> Stack Engine
+             </h2>
+             <p className="text-xs text-gray-400 mt-1">Hinglish LIFO Visualizer v2.1</p>
+          </div>
 
-            {/* INPUTS */}
-            <div className="space-y-4">
-                <div className="space-y-1">
-                   <label className="text-[10px] font-bold text-gray-500 uppercase">Value</label>
-                   <div className="flex gap-2">
-                       <input 
-                           type="number" 
-                           value={inputValue}
-                           onChange={(e) => setInputValue(Number(e.target.value))}
-                           className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-sm text-[#00f5ff] focus:border-[#00f5ff] outline-none font-mono" 
-                       />
-                       <button onClick={generateRandom} className="p-2 bg-white/5 border border-white/10 rounded hover:bg-white/10 text-gray-400 transition-colors">
-                           <RotateCcw size={16} />
-                       </button>
-                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                   <button onClick={handlePush} disabled={isAnimating || stack.length >= 7} className="py-3 bg-[#00f5ff]/10 hover:bg-[#00f5ff]/20 text-[#00f5ff] border border-[#00f5ff]/30 rounded font-bold text-xs flex flex-col items-center gap-1 disabled:opacity-30 transition-all">
-                      <ArrowDown size={16} /> PUSH
-                   </button>
-                   <button onClick={handlePop} disabled={isAnimating || stack.length === 0} className="py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded font-bold text-xs flex flex-col items-center gap-1 disabled:opacity-30 transition-all">
-                      <ArrowUp size={16} /> POP
-                   </button>
-                </div>
-                <button onClick={() => setStack([])} className="w-full py-2 bg-white/5 hover:bg-white/10 rounded text-[10px] font-bold text-gray-400 transition-all">RESET MEMORY</button>
-            </div>
-
-            {/* CODE */}
-            <div className="bg-black/50 rounded-xl p-3 border border-white/10 min-h-[100px] font-mono text-[10px]">
-               {codeLines.map(l => (
-                  <div key={l.id} className={`${l.active ? 'text-[#00f5ff]' : 'text-gray-600'} transition-colors`}>
-                     {l.text}
-                  </div>
-               ))}
-               {codeLines.length === 0 && <span className="text-gray-700 italic">IDLE...</span>}
-            </div>
-         </div>
-      </div>
-
-      {/* CANVAS */}
-      <div className="flex-1 relative flex flex-col items-center justify-center bg-[#020205] overflow-hidden">
-         {/* STATUS TOAST */}
-         <div className="absolute top-10 z-20 px-6 py-2 bg-[#0a0a14] border border-[#00f5ff]/30 rounded-full shadow-2xl flex items-center gap-3">
-            <Activity size={14} className={isAnimating ? "text-[#00f5ff] animate-pulse" : "text-gray-600"} />
-            <span className="text-xs font-mono font-bold text-white">{message}</span>
-         </div>
-
-         {/* MEMORY FORGE (SPAWN POINT) */}
-         <div className="absolute top-24 right-20 flex flex-col items-center gap-2">
-            <span className="text-[9px] font-mono text-gray-600 uppercase tracking-widest">FORGE</span>
-            <div className="w-16 h-16 border border-dashed border-gray-700 rounded-lg flex items-center justify-center">
-               <AnimatePresence>
-                  {phantom && (
-                     <motion.div 
-                        initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ y: 200, opacity: 0 }}
-                        className="w-12 h-12 rounded flex items-center justify-center text-black font-black text-lg shadow-lg"
-                        style={{ backgroundColor: phantom.color, boxShadow: `0 0 20px ${phantom.color}` }}
-                     >
-                        {phantom.val}
-                     </motion.div>
-                  )}
-               </AnimatePresence>
-            </div>
-         </div>
-
-         {/* STACK CONTAINER */}
-         <div className="relative w-64 min-h-[400px] border-b-4 border-l-4 border-r-4 border-white/20 rounded-b-2xl bg-white/[0.02] flex flex-col-reverse justify-start items-center p-4 gap-2 backdrop-blur-sm">
-            <div className="absolute -left-12 bottom-10 text-[10px] font-mono text-gray-600 -rotate-90 tracking-[0.3em]">LIFO_MEMORY</div>
+          <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar pb-12">
             
-            <AnimatePresence mode="popLayout">
-               {stack.map((item, i) => (
-                  <motion.div
-                     key={item.id}
-                     layout
-                     initial={{ y: -300, opacity: 0, scale: 0.5 }}
-                     animate={{ y: 0, opacity: 1, scale: 1 }}
-                     exit={{ x: 100, opacity: 0, scale: 0.5 }}
-                     className="w-full h-12 bg-[#1a1a2e] border rounded flex items-center justify-between px-4 relative group"
-                     style={{ borderColor: item.color, boxShadow: `0 0 10px ${item.color}20` }}
-                  >
-                     <span className="font-mono font-bold" style={{ color: item.color }}>{item.val}</span>
-                     <span className="text-[8px] font-mono text-gray-600">0x{i}</span>
-                     
-                     {/* TOP POINTER */}
-                     {i === stack.length - 1 && (
-                        <motion.div layoutId="top-ptr" className="absolute -right-24 flex items-center gap-2">
-                           <div 
-                              className="text-[10px] font-black px-2 py-1 rounded border"
-                              style={{ 
-                                  color: item.color, 
-                                  backgroundColor: `${item.color}10`,
-                                  borderColor: `${item.color}30`
-                              }}
-                           >TOP</div>
-                           <div className="w-8 h-px" style={{ backgroundColor: item.color }} />
-                        </motion.div>
-                     )}
-                  </motion.div>
-               ))}
-            </AnimatePresence>
+            <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-400 uppercase">Step Engine</span>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${isPaused ? 'border-amber-500 text-amber-500' : 'border-cyan-500 text-cyan-500'}`}>
+                    {isPaused ? 'MANUAL' : 'AUTO'}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
+                  {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'PLAY' : 'PAUSE'}
+                </button>
+                <button disabled={!isPaused || !isAnimating} onClick={resolveStep} className="flex-1 py-2 bg-cyan-500 text-black rounded flex items-center justify-center gap-2 text-xs font-black hover:bg-cyan-400 disabled:opacity-30 disabled:grayscale transition-all">
+                  <StepForward size={14} /> NEXT STEP
+                </button>
+              </div>
+            </div>
 
-            {/* POPPED ANIMATION */}
-            <AnimatePresence>
-               {poppedNode && (
-                  <motion.div
-                     initial={{ x: 0, y: 0, opacity: 1 }}
-                     animate={{ x: 200, y: -50, opacity: 0, rotate: 45 }}
-                     className="absolute top-0 w-48 h-12 bg-[#1a1a2e] border rounded flex items-center justify-center font-bold shadow-xl z-50"
-                     style={{ 
-                         borderColor: poppedNode.color, 
-                         color: poppedNode.color,
-                         boxShadow: `0 0 30px ${poppedNode.color}40`
-                     }}
-                  >
-                     {poppedNode.val} (FREED)
-                  </motion.div>
-               )}
-            </AnimatePresence>
-         </div>
+            <div className="space-y-4">
+               <div className="flex gap-2">
+                  <div className="flex-1">
+                      <label className="text-[9px] text-gray-500 uppercase font-bold">Payload (Value)</label>
+                      <div className="flex gap-1 mt-1">
+                          <input type="number" value={inputValue} onChange={(e) => setInputValue(Number(e.target.value))} className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-cyan-400 outline-none font-mono text-sm" />
+                          <button onClick={generateRandom} className="px-3 bg-white/5 rounded border border-white/10 hover:bg-white/10"><RotateCcw size={14}/></button>
+                      </div>
+                  </div>
+               </div>
+               
+               <div className="grid grid-cols-2 gap-2 mt-2">
+                  <button onClick={handlePush} disabled={isAnimating || stack.length >= MAX_CAPACITY} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                     <ArrowDown size={16}/> PUSH (Insert)
+                  </button>
+                  <button onClick={handlePop} disabled={isAnimating || stack.length === 0} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                     <ArrowUp size={16}/> POP (Remove)
+                  </button>
+               </div>
+               
+               <button onClick={() => setStack([])} disabled={isAnimating} className="w-full py-2 bg-white/5 hover:bg-red-500/20 hover:text-red-400 border border-white/5 hover:border-red-500/30 rounded text-[10px] font-bold text-gray-500 transition-all flex items-center justify-center gap-2 mt-4">
+                  <Trash2 size={14}/> FORMAT MEMORY
+               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: THE ARENA */}
+        <div className="flex-1 relative flex flex-col p-6 min-w-0 overflow-hidden h-full">
+          
+          {/* Top HUD: Interpreter & Spawn Zone */}
+          <div className="flex gap-6 w-full shrink-0 mb-6 h-[180px]">
+             
+             {/* 1. HINGLISH INTERPRETER */}
+             <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
+                 <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+                    <div className="flex items-center gap-2 text-cyan-400">
+                        <Terminal size={14}/>
+                        <span className="text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
+                    </div>
+                    {variables.map((v, i) => <span key={i} className="text-[10px] font-mono"><span className="text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
+                 </div>
+                 
+                 {/* Auto-scrolling list container */}
+                 <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                    {codeLines.length ? codeLines.map(line => (
+                       <div key={line.id} className={`flex flex-col text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
+                          <div className={`font-mono ${line.active ? 'text-cyan-400' : 'text-gray-400'}`}>{line.text}</div>
+                          {line.active && <div className="text-xs text-amber-400 mt-1 flex items-center gap-2 leading-relaxed"><ArrowRight size={12} className="shrink-0"/> {line.explanation}</div>}
+                       </div>
+                    )) : <div className="text-gray-600 text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14}/> Awaiting Push/Pop sequence...</div>}
+                    
+                    {/* FIX: Invisible element to scroll to */}
+                    <div ref={interpreterEndRef} />
+                 </div>
+             </div>
+
+             {/* 2. THE SPAWN ZONE (HEAP) */}
+             <div className="w-[350px] shrink-0 border border-cyan-500/30 bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner overflow-hidden">
+                <div className="absolute top-3 right-4 flex items-center gap-2 text-[10px] font-mono text-cyan-500 uppercase tracking-widest">
+                    <Box size={14} /> Spawn_Zone
+                </div>
+                
+                <AnimatePresence>
+                   {phantom && (
+                      <motion.div
+                        initial={{ scale: 0, y: -20, opacity: 0 }}
+                        animate={{ scale: 1, y: 0, opacity: 1 }}
+                        exit={{ opacity: 0, scale: 0.8, y: 40 }}
+                        className="w-20 h-20 rounded-xl border-2 flex flex-col items-center justify-center shadow-2xl z-50 relative mt-4"
+                        style={{ borderColor: phantom.color, backgroundColor: `${phantom.color}15`, boxShadow: `0 0 30px ${phantom.color}40` }}
+                      >
+                         <span className="text-[8px] text-white/50 font-mono absolute top-1 left-1">NEW</span>
+                         <span className="text-3xl font-black text-white">{phantom.val}</span>
+                      </motion.div>
+                   )}
+                </AnimatePresence>
+
+                {poppedNode && (
+                     <motion.div
+                        initial={{ scale: 0.5, y: 50, opacity: 0, rotate: -15 }}
+                        animate={{ scale: 1, y: 0, opacity: 1, rotate: 0 }}
+                        exit={{ opacity: 0, scale: 1.5 }}
+                        className="w-full h-full absolute inset-0 flex items-center justify-center bg-red-900/20 backdrop-blur-sm z-40 border-2 border-red-500"
+                      >
+                         <div className="flex flex-col items-center gap-2 text-red-500">
+                             <Trash2 size={32} />
+                             <span className="text-sm font-black tracking-widest">[{poppedNode.val}] DESTROYED</span>
+                         </div>
+                     </motion.div>
+                )}
+
+                {!phantom && !poppedNode && (
+                    <div className="text-cyan-500/30 font-mono text-xs flex items-center gap-2 mt-4">
+                        <Zap size={14} /> Ready to allocate...
+                    </div>
+                )}
+             </div>
+          </div>
+
+          {/* FIX: Central Arena Layout (No more clipping!) */}
+          <div className="flex-1 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col items-center justify-end pb-4 shadow-inner overflow-hidden">
+             
+             {/* Extended height h-[380px] so the 6th node easily clears the top line */}
+             <div className="relative w-72 h-[380px] border-b-4 border-l-4 border-r-4 border-gray-700/50 rounded-b-xl flex flex-col-reverse p-2 bg-gradient-to-t from-cyan-900/10 to-transparent">
+                 
+                 {/* Capacity Line */}
+                 <div className="absolute top-0 left-[-20px] right-[-20px] h-px border-t border-dashed border-red-500/50 flex items-center justify-end">
+                     <span className="text-[9px] text-red-500/80 font-mono bg-black px-1 -translate-y-2">MAX_CAP ({MAX_CAPACITY})</span>
+                 </div>
+
+                 <AnimatePresence>
+                    {stack.map((item, index) => {
+                       const isTop = index === stack.length - 1;
+                       
+                       return (
+                          <motion.div
+                             key={item.id}
+                             layout
+                             initial={{ y: -150, opacity: 0, scale: 0.8 }}
+                             animate={{ y: 0, opacity: 1, scale: 1 }}
+                             exit={{ y: -50, x: 150, opacity: 0, rotate: 15 }} // Ejected Bullet Effect
+                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                             className={`w-full h-12 mb-1 rounded flex items-center justify-between px-4 border-2 relative shrink-0 transition-all ${
+                                 item.isTargeted ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)] z-20 scale-[1.02]' 
+                                 : 'border-white/10 z-10'
+                             }`}
+                             style={{ backgroundColor: `${item.color}15`, borderLeftColor: item.color }}
+                          >
+                             <span className="text-[10px] font-mono text-gray-500 w-8">0x{index}</span>
+                             <span className="text-2xl font-black text-white">{item.val}</span>
+                             <div className="w-8" />
+
+                             {/* THE TOP POINTER */}
+                             {isTop && !item.isTargeted && (
+                                <motion.div layoutId="top-indicator" className="absolute -right-24 flex items-center gap-2 drop-shadow-lg">
+                                    <div className="w-8 h-0.5 bg-amber-500" />
+                                    <div className="bg-amber-500 text-black text-[10px] font-black px-2 py-1 rounded shadow-[0_0_10px_rgba(245,158,11,0.5)] flex items-center gap-1">
+                                       <Crosshair size={12} /> TOP
+                                    </div>
+                                </motion.div>
+                             )}
+                          </motion.div>
+                       )
+                    })}
+                 </AnimatePresence>
+             </div>
+          </div>
+
+          {/* FIX: LIFO_ARRAY_STRUCTURE moved into bottom bar cleanly */}
+          <div className="mt-4 shrink-0 flex justify-between items-center text-xs font-mono text-gray-500">
+             <div className="flex items-center gap-2"><Activity size={14} className={isAnimating ? "text-cyan-500 animate-spin" : ""}/> {message}</div>
+             <div className="text-[10px] uppercase tracking-widest text-gray-600 hidden md:block">LIFO_Array_Structure</div>
+             <div className="flex items-center gap-2">
+                 <span>Elements in Stack:</span>
+                 <span className={`font-black ${stack.length === MAX_CAPACITY ? 'text-red-500' : 'text-cyan-500'}`}>
+                     {stack.length} / {MAX_CAPACITY}
+                 </span>
+             </div>
+          </div>
+
+        </div>
       </div>
     </div>
   );

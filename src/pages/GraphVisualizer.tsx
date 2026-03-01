@@ -1,502 +1,813 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Network, Play, RotateCcw, Plus, MousePointer2, 
-  Move, Share2, Zap, Trash2, Info
+  Network, Play, Pause, StepForward, RotateCcw, Plus, 
+  MousePointer2, Move, Share2, Zap, Trash2, Terminal, 
+  Activity, Maximize2, Minimize2, Map, Navigation, Square, ShieldAlert, Crosshair, ArrowRight
 } from 'lucide-react';
 
-// --- TYPES ---
-type Node = { id: string; x: number; y: number };
-type Edge = { source: string; target: string; weight: number; id: string };
+// --- TYPES & GAME STATE ---
+type GraphNode = { id: string; x: number; y: number };
+type GraphEdge = { source: string; target: string; weight: number; id: string };
 type Mode = 'move' | 'addNode' | 'addEdge';
+type CodeLine = { id: string; text: string; explanation: string; active: boolean };
+
+// --- HINGLISH EXECUTION MATRIX ---
+const SNIPPETS = {
+  bfs: [
+    { id: '1', text: 'queue.push(start);', explanation: 'Start node ko active scanning Queue mein daal diya.', active: false },
+    { id: '2', text: 'current = queue.shift();', explanation: 'Queue se agla target nikala aur uspar Scanner bheja.', active: false },
+    { id: '3', text: 'if (current == target) return PATH;', explanation: 'TARGET MIL GAYA! Shortest path lock kar liya.', active: false },
+    { id: '4', text: 'for neighbor in current.edges:', explanation: 'Current node ke aaspas ke sabhi connected padosiyon ko dekho...', active: false },
+    { id: '5', text: 'if (!visited) queue.push(neighbor);', explanation: 'Naye padosi mile! Inhe bhi aage scan karne ke liye Queue mein daalo.', active: false },
+  ],
+  dfs: [
+    { id: '1', text: 'stack.push(start);', explanation: 'Start node ko active scanning Stack (LIFO) mein daala.', active: false },
+    { id: '2', text: 'current = stack.pop();', explanation: 'Stack se sabse latest target (Deepest path) nikala.', active: false },
+    { id: '3', text: 'if (current == target) return PATH;', explanation: 'TARGET REACHED! DFS path mil gaya.', active: false },
+    { id: '4', text: 'for neighbor in current.edges:', explanation: 'Current node ke padosiyon ko scan karo...', active: false },
+    { id: '5', text: 'if (!visited) stack.push(neighbor);', explanation: 'Naye padosi mile! Inhe Stack mein push karke depth mein jao.', active: false },
+  ],
+  dijkstra: [
+    { id: '1', text: 'dist[start] = 0, others = ∞;', explanation: 'Start node ka distance 0, baaki sabka Infinity set kiya.', active: false },
+    { id: '2', text: 'current = node with min dist;', explanation: 'Unvisited nodes mein se sabse saste (min distance) wale ko chuno.', active: false },
+    { id: '3', text: 'if (current == target) return PATH;', explanation: 'TARGET REACHED! Sabse sasta rasta mil gaya.', active: false },
+    { id: '4', text: 'alt = dist[current] + edge.wt;', explanation: 'Padosi tak pahunchne ka naya (Alternative) cost calculate karo.', active: false },
+    { id: '5', text: 'if (alt < dist[neighbor]) update();', explanation: 'RELAXATION: Naya rasta sasta hai! Cost update karo.', active: false },
+  ],
+  astar: [
+    { id: '1', text: 'g_score[start] = 0, f_score = h(start);', explanation: 'Start node ka actual distance(G) aur anumaan(H) set kiya.', active: false },
+    { id: '2', text: 'current = node with min f_score;', explanation: 'Sabse promising node (lowest F-score) ko pehle explore karo.', active: false },
+    { id: '3', text: 'if (current == target) return PATH;', explanation: 'TARGET REACHED! A* algorithm ne optimal path dhoond liya.', active: false },
+    { id: '4', text: 'alt_g = g_score[current] + edge.wt;', explanation: 'Padosi tak jane ka naya G-score calculate karo.', active: false },
+    { id: '5', text: 'if (alt_g < g_score[neighbor]) update();', explanation: 'Better rasta mil gaya! G-score aur Heuristic F-score dono update karo.', active: false },
+  ]
+};
+
+const CyberGrid = () => (
+  <div className="absolute inset-0 z-0 pointer-events-none">
+    <div className="absolute inset-0 bg-[#09090b]" />
+    <div className="absolute inset-0 bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(157,0,255,0.08),transparent_70%)]" />
+  </div>
+);
 
 const GraphVisualizer = () => {
   // --- STATE ---
-  const [nodes, setNodes] = useState<Node[]>([
-      { id: 'A', x: 250, y: 150 }, { id: 'B', x: 450, y: 100 },
-      { id: 'C', x: 450, y: 350 }, { id: 'D', x: 700, y: 250 },
-      { id: 'E', x: 250, y: 350 }
+  const [nodes, setNodes] = useState<GraphNode[]>([
+      { id: 'A', x: 150, y: 150 }, { id: 'B', x: 400, y: 80 },
+      { id: 'C', x: 350, y: 300 }, { id: 'D', x: 650, y: 200 },
+      { id: 'E', x: 150, y: 400 }, { id: 'F', x: 600, y: 400 },
+      { id: 'G', x: 800, y: 320 }
   ]);
-  const [edges, setEdges] = useState<Edge[]>([
+  const [edges, setEdges] = useState<GraphEdge[]>([
       { source: 'A', target: 'B', weight: 4, id: 'A-B' },
       { source: 'A', target: 'E', weight: 2, id: 'A-E' },
-      { source: 'B', target: 'D', weight: 8, id: 'B-D' },
-      { source: 'C', target: 'D', weight: 3, id: 'C-D' },
-      { source: 'E', target: 'C', weight: 5, id: 'E-C' },
+      { source: 'B', target: 'C', weight: 5, id: 'B-C' },
+      { source: 'B', target: 'D', weight: 10, id: 'B-D' },
+      { source: 'E', target: 'C', weight: 3, id: 'E-C' },
+      { source: 'C', target: 'D', weight: 4, id: 'C-D' },
+      { source: 'C', target: 'F', weight: 8, id: 'C-F' },
+      { source: 'D', target: 'F', weight: 1, id: 'D-F' },
+      { source: 'F', target: 'G', weight: 6, id: 'F-G' },
+      { source: 'D', target: 'G', weight: 3, id: 'D-G' },
   ]);
 
-  // Interaction State
+  // UI & Interaction
   const [mode, setMode] = useState<Mode>('move');
+  const [showHUD, setShowHUD] = useState(true);
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   const [dragStartNode, setDragStartNode] = useState<string | null>(null); 
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 }); 
   const [startNodeId, setStartNodeId] = useState('A');
-  const [targetNodeId, setTargetNodeId] = useState('D');
+  const [targetNodeId, setTargetNodeId] = useState('G');
 
-  // Animation State
-  const [visited, setVisited] = useState<Set<string>>(new Set());
-  const [path, setPath] = useState<string[]>([]); // Final shortest path
-  const [activeEdge, setActiveEdge] = useState<string | null>(null); // Currently traversing edge
+  // Engine Animation State
+  const [engineMode, setEngineMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
+  const [isPaused, setIsPaused] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [log, setLog] = useState<string>('System Ready');
+  const [codeLines, setCodeLines] = useState<CodeLine[]>(SNIPPETS.bfs);
+  const [outputLog, setOutputLog] = useState<string[]>([]);
+  const [message, setMessage] = useState('SYSTEM_IDLE: Map Loaded');
+
+  // Visual Pathfinding Actors
+  const [visited, setVisited] = useState<Set<string>>(new Set());
+  const [path, setPath] = useState<string[]>([]); 
+  const [activeEdge, setActiveEdge] = useState<string | null>(null); 
+  const [activeNode, setActiveNode] = useState<string | null>(null);
+  const [nodeDistances, setNodeDistances] = useState<Record<string, number | null>>({});
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const stepTrigger = useRef<() => void>(() => {});
+  const engineRef = useRef<boolean>(false); 
 
-  // --- HELPERS ---
-  const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+  useEffect(() => { return () => { engineRef.current = false; }; }, []); 
 
-  // Smart ID Generator (A..Z, then AA..ZZ)
   const generateNodeId = (): string => {
-    let index = 0;
-    while (true) {
-        let id = "";
-        let temp = index;
-        
-        do {
-            const remainder = temp % 26;
-            id = String.fromCharCode(65 + remainder) + id;
-            temp = Math.floor(temp / 26) - 1;
-        } while (temp >= 0);
-
-        if (!nodes.some(n => n.id === id)) return id;
-        index++;
-    }
+      let index = 0;
+      while (true) {
+          let id = String.fromCharCode(65 + (index % 26));
+          if (index >= 26) id += Math.floor(index / 26);
+          if (!nodes.some(n => n.id === id)) return id;
+          index++;
+      }
   };
 
-  // --- HANDLERS ---
+  // --- INTERACTION HANDLERS ---
   const handleCanvasClick = (e: React.MouseEvent) => {
-    if (mode === 'addNode' && canvasRef.current) {
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        if (nodes.some(n => Math.hypot(n.x - x, n.y - y) < 50)) return;
-        
-        const id = generateNodeId();
-        setNodes([...nodes, { id, x, y }]);
-        setLog(`Node ${id} added.`);
-    }
+      if (mode === 'addNode' && canvasRef.current && !isAnimating) {
+          const rect = canvasRef.current.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          if (nodes.some(n => Math.hypot(n.x - x, n.y - y) < 60)) return; 
+          const id = generateNodeId();
+          setNodes([...nodes, { id, x, y }]);
+          setOutputLog(prev => [...prev, `> Deployed new node [${id}]`]);
+      }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setMousePos({ x, y });
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setMousePos({ x, y });
 
-    // Dragging Logic
-    if (mode === 'move' && draggingNode) {
-        setNodes(prev => prev.map(n => n.id === draggingNode ? { ...n, x, y } : n));
-    }
+      if (mode === 'move' && draggingNode && !isAnimating) {
+          setNodes(prev => prev.map(n => n.id === draggingNode ? { ...n, x, y } : n));
+      }
   };
 
   const handleGlobalMouseUp = () => {
-    setDraggingNode(null);
-    setDragStartNode(null);
+      setDraggingNode(null);
+      setDragStartNode(null);
   };
 
   const handleNodeMouseDown = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // Prevent canvas click
-    if (mode === 'move') {
-        setDraggingNode(id);
-    } else if (mode === 'addEdge') {
-        setDragStartNode(id);
-    }
+      e.stopPropagation();
+      e.preventDefault(); 
+      if (isAnimating) return;
+      if (mode === 'move') setDraggingNode(id);
+      else if (mode === 'addEdge') setDragStartNode(id);
   };
 
   const handleNodeMouseUp = (e: React.MouseEvent, targetId: string) => {
-    e.stopPropagation(); // Prevent triggering canvas events
-    
-    // FIX: Ensure dragging stops even if mouse is released over a node
-    if (mode === 'move') {
-        setDraggingNode(null);
-    } 
-    else if (mode === 'addEdge' && dragStartNode && dragStartNode !== targetId) {
-        const exists = edges.some(e => 
-            (e.source === dragStartNode && e.target === targetId) || 
-            (e.source === targetId && e.target === dragStartNode)
-        );
-        if (!exists) {
-            const weight = Math.floor(Math.random() * 9) + 1;
-            setEdges([...edges, { 
-                source: dragStartNode, target: targetId, weight, id: `${dragStartNode}-${targetId}`
-            }]);
-            setLog(`Link: ${dragStartNode} <-> ${targetId}`);
-        }
-    }
-    setDragStartNode(null);
+      e.stopPropagation();
+      e.preventDefault();
+      if (mode === 'move') {
+          setDraggingNode(null);
+      } 
+      else if (mode === 'addEdge' && dragStartNode && dragStartNode !== targetId) {
+          const exists = edges.some(e => 
+              (e.source === dragStartNode && e.target === targetId) || 
+              (e.source === targetId && e.target === dragStartNode)
+          );
+          if (!exists) {
+              const weight = Math.floor(Math.random() * 9) + 1;
+              setEdges([...edges, { source: dragStartNode, target: targetId, weight, id: `${dragStartNode}-${targetId}` }]);
+              setOutputLog(prev => [...prev, `> Link Established: [${dragStartNode}] <-> [${targetId}] (Cost: ${weight})`]);
+          }
+      }
+      setDragStartNode(null);
+  };
+
+  // --- ENGINE HELPERS ---
+  const resolveStep = () => { if(stepTrigger.current) stepTrigger.current(); };
+  
+  const handleStop = () => {
+      engineRef.current = false; 
+      setIsAnimating(false);
+      setIsPaused(false);
+      resetVisuals();
+      setMessage('SYSTEM_HALTED');
+      setOutputLog(prev => [...prev, '> ! OPERATION ABORTED BY USER !']);
+      setCodeLines(codeLines.map(l => ({...l, active: false})));
+  };
+
+  const waitStep = async (lineId: string, snippet: CodeLine[]) => {
+      if (!engineRef.current) return false;
+      const line = snippet.find(l => l.id === lineId);
+      setMessage(line ? line.explanation : 'Processing...');
+      setCodeLines(snippet.map(l => ({ ...l, active: l.id === lineId })));
+      
+      if (engineMode === 'MANUAL' || isPaused) {
+          await new Promise<void>(r => { stepTrigger.current = r; });
+      } else {
+          await new Promise(r => setTimeout(r, 1200));
+      }
+      return engineRef.current; 
+  };
+
+  const resetVisuals = () => {
+      setVisited(new Set());
+      setPath([]);
+      setActiveEdge(null);
+      setActiveNode(null);
+      setNodeDistances({});
   };
 
   // --- ALGORITHMS ---
 
   const runBFS = async () => {
-    if (isAnimating) return;
-    resetVisuals();
-    setIsAnimating(true);
-    setLog(`Initializing BFS: ${startNodeId} -> ${targetNodeId}...`);
+      if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
+      resetVisuals();
+      engineRef.current = true;
+      setIsAnimating(true);
+      setShowHUD(true);
+      setCodeLines(SNIPPETS.bfs);
+      setOutputLog([`> Initiating BFS Radar: [${startNodeId}] -> [${targetNodeId}]`]);
 
-    const queue = [startNodeId];
-    const visitedSet = new Set<string>();
-    const parent: Record<string, string | null> = {};
+      const snippet = SNIPPETS.bfs;
+      const queue = [startNodeId];
+      const visitedSet = new Set<string>([startNodeId]);
+      const parent: Record<string, string | null> = { [startNodeId]: null };
+      setVisited(new Set([startNodeId]));
 
-    visitedSet.add(startNodeId);
-    setVisited(new Set([startNodeId]));
-    parent[startNodeId] = null;
+      let found = false;
+      if (!(await waitStep('1', snippet))) return;
 
-    let found = false;
+      while (queue.length > 0) {
+          if (!engineRef.current) return;
+          const current = queue.shift()!;
+          setActiveNode(current);
+          setOutputLog(prev => [...prev, `> Scanning Sector [${current}]`]);
+          if (!(await waitStep('2', snippet))) return;
 
-    while (queue.length > 0) {
-        const current = queue.shift()!;
-        setLog(`Scanning: ${current}`);
-        await sleep(500);
+          if (current === targetNodeId) {
+              found = true;
+              if (!(await waitStep('3', snippet))) return;
+              break;
+          }
 
-        if (current === targetNodeId) {
-            found = true;
-            break;
-        }
+          if (!(await waitStep('4', snippet))) return;
+          const neighbors = edges
+              .filter(e => e.source === current || e.target === current)
+              .map(e => ({ id: e.source === current ? e.target : e.source, edgeId: e.id }));
 
-        const neighbors = edges
-            .filter(e => e.source === current || e.target === current)
-            .map(e => ({ 
-                id: e.source === current ? e.target : e.source, 
-                edgeId: e.id 
-            }));
+          for (const { id, edgeId } of neighbors) {
+              if (!engineRef.current) return;
+              setActiveEdge(edgeId); 
+              await new Promise(r => setTimeout(r, 400)); 
 
-        for (const { id, edgeId } of neighbors) {
-            if (!visitedSet.has(id)) {
-                setActiveEdge(edgeId); 
-                await sleep(200);
-                visitedSet.add(id);
-                parent[id] = current;
-                setVisited(new Set(visitedSet));
-                queue.push(id);
-            }
-        }
-    }
+              if (!visitedSet.has(id)) {
+                  visitedSet.add(id);
+                  parent[id] = current;
+                  setVisited(new Set(visitedSet));
+                  queue.push(id);
+                  setOutputLog(prev => [...prev, `  - Discovered [${id}]`]);
+                  if (!(await waitStep('5', snippet))) return;
+              }
+          }
+      }
 
-    if (found) {
-        const pathStack = [];
-        let curr: string | null = targetNodeId;
-        while (curr !== null) {
-            pathStack.unshift(curr);
-            curr = parent[curr] || null;
-            if (curr === startNodeId) {
-                pathStack.unshift(curr);
-                break;
-            }
-        }
-        setPath(pathStack);
-        setLog(`BFS Path Found: ${pathStack.join(' -> ')}`);
-    } else {
-        setLog('Target Unreachable via BFS.');
-    }
+      if (engineRef.current) finalizePath(found, parent, 'BFS');
+  };
 
-    setActiveEdge(null);
-    setIsAnimating(false);
+  const runDFS = async () => {
+      if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
+      resetVisuals();
+      engineRef.current = true;
+      setIsAnimating(true);
+      setShowHUD(true);
+      setCodeLines(SNIPPETS.dfs);
+      setOutputLog([`> Initiating DFS Dive: [${startNodeId}] -> [${targetNodeId}]`]);
+
+      const snippet = SNIPPETS.dfs;
+      const stack = [startNodeId];
+      const visitedSet = new Set<string>();
+      const parent: Record<string, string | null> = { [startNodeId]: null };
+      
+      let found = false;
+      if (!(await waitStep('1', snippet))) return;
+
+      while (stack.length > 0) {
+          if (!engineRef.current) return;
+          const current = stack.pop()!;
+          
+          if (!visitedSet.has(current)) {
+              visitedSet.add(current);
+              setVisited(new Set(visitedSet));
+              setActiveNode(current);
+              setOutputLog(prev => [...prev, `> Deep Dive into Sector [${current}]`]);
+              if (!(await waitStep('2', snippet))) return;
+
+              if (current === targetNodeId) {
+                  found = true;
+                  if (!(await waitStep('3', snippet))) return;
+                  break;
+              }
+
+              if (!(await waitStep('4', snippet))) return;
+              const neighbors = edges
+                  .filter(e => e.source === current || e.target === current)
+                  .map(e => ({ id: e.source === current ? e.target : e.source, edgeId: e.id }));
+
+              for (const { id, edgeId } of neighbors) {
+                  if (!engineRef.current) return;
+                  setActiveEdge(edgeId);
+                  await new Promise(r => setTimeout(r, 400)); 
+                  
+                  if (!visitedSet.has(id)) {
+                      parent[id] = current;
+                      stack.push(id);
+                      setOutputLog(prev => [...prev, `  - Stacked [${id}] for exploration`]);
+                      if (!(await waitStep('5', snippet))) return;
+                  }
+              }
+          }
+      }
+
+      if (engineRef.current) finalizePath(found, parent, 'DFS');
   };
 
   const runDijkstra = async () => {
-    if (isAnimating) return;
-    resetVisuals();
-    setIsAnimating(true);
-    setLog(`Dijkstra: ${startNodeId} -> ${targetNodeId}`);
+      if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
+      resetVisuals();
+      engineRef.current = true;
+      setIsAnimating(true);
+      setShowHUD(true);
+      setCodeLines(SNIPPETS.dijkstra);
+      setOutputLog([`> Initiating Dijkstra Protocol: [${startNodeId}] -> [${targetNodeId}]`]);
 
-    const distances: Record<string, number> = {};
-    const previous: Record<string, string | null> = {};
-    const unvisited = new Set(nodes.map(n => n.id));
+      const snippet = SNIPPETS.dijkstra;
+      const distances: Record<string, number> = {};
+      const previous: Record<string, string | null> = {};
+      const unvisited = new Set(nodes.map(n => n.id));
 
-    nodes.forEach(n => distances[n.id] = Infinity);
-    distances[startNodeId] = 0;
+      nodes.forEach(n => distances[n.id] = Infinity);
+      distances[startNodeId] = 0;
+      setNodeDistances({ ...distances });
+      if (!(await waitStep('1', snippet))) return;
 
-    while (unvisited.size > 0) {
-        let current: string | null = null;
-        let minInfo = Infinity;
-        
-        unvisited.forEach(id => {
-            if (distances[id] < minInfo) {
-                minInfo = distances[id];
-                current = id;
-            }
-        });
+      while (unvisited.size > 0) {
+          if (!engineRef.current) return;
+          let current: string | null = null;
+          let minInfo = Infinity;
+          
+          unvisited.forEach(id => {
+              if (distances[id] < minInfo) { minInfo = distances[id]; current = id; }
+          });
 
-        if (current === null || distances[current] === Infinity) break;
-        if (current === targetNodeId) break;
+          if (current === null || distances[current] === Infinity) break;
+          
+          setActiveNode(current);
+          unvisited.delete(current);
+          setVisited(prev => new Set(prev).add(current!));
+          setOutputLog(prev => [...prev, `> Active Target [${current}] (Cost: ${distances[current]})`]);
+          if (!(await waitStep('2', snippet))) return;
 
-        unvisited.delete(current);
-        setVisited(prev => new Set(prev).add(current!));
-        setLog(`Analyzing ${current} (Cost: ${distances[current]})`);
-        await sleep(500);
+          if (current === targetNodeId) {
+              if (!(await waitStep('3', snippet))) return;
+              break;
+          }
 
-        const neighbors = edges.filter(e => e.source === current || e.target === current);
-        for (let edge of neighbors) {
-            const neighbor = edge.source === current ? edge.target : edge.source;
-            if (unvisited.has(neighbor)) {
-                setActiveEdge(edge.id);
-                await sleep(200);
-                
-                const alt = distances[current] + edge.weight;
-                if (alt < distances[neighbor]) {
-                    distances[neighbor] = alt;
-                    previous[neighbor] = current;
-                }
-            }
-        }
-    }
+          const neighbors = edges.filter(e => e.source === current || e.target === current);
+          for (let edge of neighbors) {
+              if (!engineRef.current) return;
+              const neighbor = edge.source === current ? edge.target : edge.source;
+              
+              if (unvisited.has(neighbor)) {
+                  setActiveEdge(edge.id);
+                  if (!(await waitStep('4', snippet))) return;
+                  
+                  const alt = distances[current] + edge.weight;
+                  if (alt < distances[neighbor]) {
+                      distances[neighbor] = alt;
+                      previous[neighbor] = current;
+                      setNodeDistances({ ...distances });
+                      setOutputLog(prev => [...prev, `  - Relaxed Edge to [${neighbor}]. New Cost: ${alt}`]);
+                      if (!(await waitStep('5', snippet))) return;
+                  }
+              }
+          }
+      }
 
-    if (previous[targetNodeId] || startNodeId === targetNodeId) {
-        const pathStack = [];
-        let u: string | null = targetNodeId;
-        while (u) {
-            pathStack.unshift(u);
-            u = previous[u] || null;
-            if (u === startNodeId) {
-                pathStack.unshift(u);
-                break;
-            }
-        }
-        setPath(pathStack);
-        setLog(`Shortest Path: ${pathStack.join(' -> ')}`);
-    } else {
-        setLog('Target Unreachable.');
-    }
-
-    setActiveEdge(null);
-    setIsAnimating(false);
+      if (engineRef.current) finalizeCostPath(distances[targetNodeId], previous, 'DIJKSTRA');
   };
 
-  const resetVisuals = () => {
-    setVisited(new Set());
-    setPath([]);
-    setActiveEdge(null);
+  const runAStar = async () => {
+      if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
+      resetVisuals();
+      engineRef.current = true;
+      setIsAnimating(true);
+      setShowHUD(true);
+      setCodeLines(SNIPPETS.astar);
+      setOutputLog([`> Initiating A* Heuristic Protocol: [${startNodeId}] -> [${targetNodeId}]`]);
+
+      const snippet = SNIPPETS.astar;
+      const gScore: Record<string, number> = {};
+      const fScore: Record<string, number> = {};
+      const previous: Record<string, string | null> = {};
+      const openSet = new Set<string>([startNodeId]);
+      
+      const heuristic = (id1: string, id2: string) => {
+          const n1 = nodes.find(n => n.id === id1)!;
+          const n2 = nodes.find(n => n.id === id2)!;
+          return Math.hypot(n1.x - n2.x, n1.y - n2.y) / 50; // Scaling Euclidean distance for weights
+      };
+
+      nodes.forEach(n => { gScore[n.id] = Infinity; fScore[n.id] = Infinity; });
+      gScore[startNodeId] = 0;
+      fScore[startNodeId] = heuristic(startNodeId, targetNodeId);
+      setNodeDistances({ ...gScore });
+      
+      if (!(await waitStep('1', snippet))) return;
+
+      while (openSet.size > 0) {
+          if (!engineRef.current) return;
+          let current: string | null = null;
+          let minF = Infinity;
+          
+          openSet.forEach(id => {
+              if (fScore[id] < minF) { minF = fScore[id]; current = id; }
+          });
+
+          if (current === null) break;
+          
+          setActiveNode(current);
+          openSet.delete(current);
+          setVisited(prev => new Set(prev).add(current!));
+          setOutputLog(prev => [...prev, `> Exploring [${current}] (G:${gScore[current].toFixed(1)}, F:${minF.toFixed(1)})`]);
+          if (!(await waitStep('2', snippet))) return;
+
+          if (current === targetNodeId) {
+              if (!(await waitStep('3', snippet))) return;
+              break;
+          }
+
+          const neighbors = edges.filter(e => e.source === current || e.target === current);
+          for (let edge of neighbors) {
+              if (!engineRef.current) return;
+              const neighbor = edge.source === current ? edge.target : edge.source;
+              
+              setActiveEdge(edge.id);
+              if (!(await waitStep('4', snippet))) return;
+              
+              const tentativeG = gScore[current] + edge.weight;
+              if (tentativeG < gScore[neighbor]) {
+                  previous[neighbor] = current;
+                  gScore[neighbor] = tentativeG;
+                  fScore[neighbor] = tentativeG + heuristic(neighbor, targetNodeId);
+                  if (!openSet.has(neighbor)) openSet.add(neighbor);
+                  
+                  setNodeDistances({ ...gScore });
+                  setOutputLog(prev => [...prev, `  - Optimal neighbor [${neighbor}] found. G-cost: ${tentativeG}`]);
+                  if (!(await waitStep('5', snippet))) return;
+              }
+          }
+      }
+
+      if (engineRef.current) finalizeCostPath(gScore[targetNodeId], previous, 'A*');
   };
 
-  const resetGraph = () => {
-    setNodes([
-        { id: 'A', x: 250, y: 150 }, { id: 'B', x: 450, y: 100 },
-        { id: 'C', x: 450, y: 350 }, { id: 'D', x: 700, y: 250 }
-    ]);
-    setEdges([
-        { source: 'A', target: 'B', weight: 4, id: 'A-B' },
-        { source: 'B', target: 'D', weight: 8, id: 'B-D' },
-        { source: 'C', target: 'D', weight: 3, id: 'C-D' }
-    ]);
-    setLog('System Reset');
-    resetVisuals();
+  const finalizePath = (found: boolean, parent: any, algoName: string) => {
+      if (found) {
+          const pathStack = [];
+          let curr: string | null = targetNodeId;
+          while (curr !== null) {
+              pathStack.unshift(curr);
+              curr = parent[curr] || null;
+          }
+          setPath(pathStack);
+          setOutputLog(prev => [...prev, `> ${algoName} SUCCESS. Path: ${pathStack.join(' ➔ ')}`]);
+          setMessage("TARGET_REACHED");
+      } else {
+          setOutputLog(prev => [...prev, `> Abort: Target Unreachable via ${algoName}.`]);
+          setMessage("404_NOT_FOUND");
+      }
+      setActiveEdge(null); setActiveNode(null); setIsAnimating(false); setCodeLines(codeLines.map(l=>({...l, active:false})));
+  };
+
+  const finalizeCostPath = (finalCost: number, previous: any, algoName: string) => {
+      if (finalCost !== Infinity) {
+          const pathStack = [];
+          let u: string | null = targetNodeId;
+          while (u) {
+              pathStack.unshift(u);
+              u = previous[u] || null;
+          }
+          setPath(pathStack);
+          setOutputLog(prev => [...prev, `> ${algoName} SUCCESS. Optimal Path: ${pathStack.join(' ➔ ')} (Total Cost: ${finalCost.toFixed(1)})`]);
+          setMessage("OPTIMAL_ROUTE_FOUND");
+      } else {
+          setOutputLog(prev => [...prev, `> Abort: Target Unreachable.`]);
+          setMessage("404_NOT_FOUND");
+      }
+      setActiveEdge(null); setActiveNode(null); setIsAnimating(false); setCodeLines(codeLines.map(l=>({...l, active:false})));
   };
 
   return (
-    <div className="w-full h-full flex flex-col lg:flex-row bg-[#050510] overflow-hidden font-sans text-white">
+    <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden select-none">
+      <CyberGrid />
+      
+      <div className="flex-1 flex relative z-10 overflow-hidden h-full">
         
-        {/* --- SIDEBAR --- */}
-        <div className="w-full lg:w-80 h-auto flex-shrink-0 bg-[#0a0a1a] border-r border-[#00f5ff]/20 flex flex-col z-20 shadow-[10px_0_30px_rgba(0,0,0,0.5)]">
+        {/* --- LEFT PANEL: COMMAND CENTER --- */}
+        <div className="w-[360px] bg-black/80 backdrop-blur-md border-r border-white/10 flex flex-col h-full shadow-2xl shrink-0 z-20">
+          
+          <div className="p-5 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-transparent shrink-0">
+             <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-purple-400">
+                <Network size={24} /> Graph Engine
+             </h2>
+             <p className="text-xs text-gray-400 mt-1">Hinglish Routing Visualizer v4.0</p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar pb-12 flex flex-col">
             
-            {/* Header */}
-            <div className="p-6 border-b border-white/5 bg-black/20">
-                <div className="flex items-center gap-3 mb-1">
-                    <div className="p-2 bg-[#00f5ff]/10 rounded-lg border border-[#00f5ff]/30 text-[#00f5ff]">
-                        <Network size={20} />
-                    </div>
-                    <div>
-                        <h2 className="font-bold font-mono tracking-wider text-white">GRAPH_ENGINE</h2>
-                        <div className="text-[10px] text-gray-500 font-mono">NEURAL NET SIMULATION</div>
-                    </div>
+            {/* Interaction Modes */}
+            <div className="space-y-3 shrink-0">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                    <MousePointer2 size={12}/> Interaction Toolkit
+                </label>
+                <div className="grid grid-cols-3 gap-2 p-1 bg-black/40 rounded-xl border border-white/10">
+                    {[
+                        { id: 'move', icon: Move, label: 'Move' }, 
+                        { id: 'addNode', icon: Plus, label: 'Node' },
+                        { id: 'addEdge', icon: Share2, label: 'Link' }
+                    ].map((m) => (
+                        <button key={m.id} onClick={() => setMode(m.id as Mode)} disabled={isAnimating}
+                            className={`flex flex-col items-center justify-center gap-1 py-3 rounded-lg transition-all duration-300 disabled:opacity-30 ${
+                                mode === m.id 
+                                ? 'bg-purple-500 text-black shadow-[0_0_15px_rgba(168,85,247,0.4)]' 
+                                : 'text-gray-500 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                            <m.icon size={16} />
+                            <span className="text-[9px] font-bold font-mono uppercase">{m.label}</span>
+                        </button>
+                    ))}
                 </div>
             </div>
 
-            {/* Controls */}
-            <div className="p-6 flex-1 overflow-y-auto space-y-8 custom-scrollbar">
-                
-                {/* Mode Selection */}
-                <div className="space-y-3">
-                    <label className="text-[10px] font-mono text-[#00f5ff] uppercase tracking-widest flex items-center gap-2">
-                        <MousePointer2 size={12}/> Interaction Mode
-                    </label>
-                    <div className="grid grid-cols-3 gap-2 p-1 bg-black/40 rounded-xl border border-white/10">
-                        {[
-                            { id: 'move', icon: Move, label: 'Move' }, 
-                            { id: 'addNode', icon: Plus, label: 'Add Node' },
-                            { id: 'addEdge', icon: Share2, label: 'Connect' }
-                        ].map((m) => (
-                             <button
-                                key={m.id}
-                                onClick={() => setMode(m.id as Mode)}
-                                className={`flex flex-col items-center justify-center gap-1 py-3 rounded-lg transition-all duration-300 ${
-                                    mode === m.id 
-                                    ? 'bg-[#00f5ff] text-black shadow-[0_0_15px_rgba(0,245,255,0.4)]' 
-                                    : 'text-gray-500 hover:text-white hover:bg-white/5'
-                                }`}
-                             >
-                                <m.icon size={18} />
-                                <span className="text-[9px] font-bold font-mono uppercase">{m.label}</span>
-                             </button>
-                        ))}
-                    </div>
+            {/* Playback Controls (WITH MODE TOGGLE & STOP) */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4 shrink-0">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-400 uppercase">Engine State</span>
+                <div className="flex bg-black/50 rounded-lg p-0.5 border border-white/10">
+                    <button onClick={() => setEngineMode('AUTO')} disabled={isAnimating} className={`px-2 py-1 text-[9px] font-black rounded ${engineMode === 'AUTO' ? 'bg-purple-500 text-black' : 'text-gray-500'}`}>AUTO</button>
+                    <button onClick={() => setEngineMode('MANUAL')} disabled={isAnimating} className={`px-2 py-1 text-[9px] font-black rounded ${engineMode === 'MANUAL' ? 'bg-amber-500 text-black' : 'text-gray-500'}`}>MANUAL</button>
                 </div>
-
-                {/* Algorithm Controls */}
-                <div className="space-y-4 pt-4 border-t border-white/5">
-                     <div className="flex justify-between items-end">
-                        <label className="text-[10px] font-mono text-[#00f5ff] uppercase tracking-widest flex items-center gap-2">
-                            <Zap size={12}/> Run Protocol
-                        </label>
-                     </div>
-                     
-                     <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                             <span className="text-[9px] text-gray-500 font-mono uppercase">Start Node</span>
-                             <select 
-                                value={startNodeId}
-                                onChange={(e) => setStartNodeId(e.target.value)}
-                                className="w-full bg-[#050510] border border-white/10 rounded-lg p-2 text-xs font-mono outline-none focus:border-[#00f5ff]"
-                             >
-                                {nodes.map(n => <option key={n.id} value={n.id}>{n.id}</option>)}
-                             </select>
-                        </div>
-                        <div className="space-y-1">
-                             <span className="text-[9px] text-gray-500 font-mono uppercase">Target Node</span>
-                             <select 
-                                value={targetNodeId}
-                                onChange={(e) => setTargetNodeId(e.target.value)}
-                                className="w-full bg-[#050510] border border-white/10 rounded-lg p-2 text-xs font-mono outline-none focus:border-[#00f5ff]"
-                             >
-                                {nodes.map(n => <option key={n.id} value={n.id}>{n.id}</option>)}
-                             </select>
-                        </div>
-                     </div>
-
-                     <div className="flex gap-2">
-                        <button 
-                            onClick={runBFS} 
-                            disabled={isAnimating}
-                            className="flex-1 py-3 bg-[#9d00ff]/10 border border-[#9d00ff]/50 hover:bg-[#9d00ff]/20 text-[#9d00ff] rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                        >
-                            BFS SCAN
-                        </button>
-                        <button 
-                            onClick={runDijkstra}
-                            disabled={isAnimating} 
-                            className="flex-1 py-3 bg-[#00f5ff]/10 border border-[#00f5ff]/50 hover:bg-[#00f5ff]/20 text-[#00f5ff] rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                        >
-                            DIJKSTRA
-                        </button>
-                     </div>
-                </div>
-
-                {/* Reset */}
-                <button onClick={resetGraph} className="w-full py-3 bg-red-500/5 border border-red-500/20 text-red-500 hover:bg-red-500/10 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all">
-                    <RotateCcw size={14} /> SYSTEM RESET
+              </div>
+              
+              <div className="flex gap-2">
+                <button 
+                   onClick={() => setIsPaused(!isPaused)} 
+                   disabled={!isAnimating || engineMode === 'MANUAL'} 
+                   className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all disabled:opacity-30"
+                >
+                  {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'RESUME' : 'PAUSE'}
                 </button>
+                <button 
+                   onClick={resolveStep} 
+                   disabled={isAnimating && engineMode === 'AUTO' && !isPaused} 
+                   className="flex-1 py-2 bg-purple-500 text-black rounded flex items-center justify-center gap-2 text-xs font-black hover:bg-purple-400 disabled:opacity-30 disabled:grayscale transition-all"
+                >
+                  <StepForward size={14} /> STEP
+                </button>
+              </div>
+
+              {/* THE KILL SWITCH */}
+              <button 
+                  onClick={handleStop} 
+                  disabled={!isAnimating}
+                  className="w-full py-2 mt-2 bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 rounded flex items-center justify-center gap-2 text-[10px] font-black uppercase transition-all disabled:opacity-30"
+              >
+                  <Square size={12} fill="currentColor" /> ABORT OPERATION
+              </button>
             </div>
 
-            {/* Console Log */}
-            <div className="p-4 bg-black/60 border-t border-white/10 font-mono text-[10px]">
-                <div className="flex items-center gap-2 text-gray-500 mb-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" />
-                    SYSTEM_LOG
-                </div>
-                <div className="text-[#00ff88] truncate">{log}</div>
+            {/* Pathfinding Config */}
+            <div className="space-y-4 shrink-0 border-t border-white/5 pt-4">
+               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                   <Navigation size={12}/> Route Planner
+               </label>
+               
+               <div className="grid grid-cols-2 gap-3">
+                   <div className="space-y-1">
+                        <span className="text-[9px] text-gray-500 font-mono uppercase">Start Sector</span>
+                        <select value={startNodeId} onChange={(e) => setStartNodeId(e.target.value)} disabled={isAnimating}
+                           className="w-full bg-[#050510] border border-white/10 rounded-lg p-2 text-xs font-mono text-purple-400 outline-none focus:border-purple-500"
+                        >
+                           {nodes.map(n => <option key={n.id} value={n.id}>{n.id}</option>)}
+                        </select>
+                   </div>
+                   <div className="space-y-1">
+                        <span className="text-[9px] text-gray-500 font-mono uppercase">Target Sector</span>
+                        <select value={targetNodeId} onChange={(e) => setTargetNodeId(e.target.value)} disabled={isAnimating}
+                           className="w-full bg-[#050510] border border-white/10 rounded-lg p-2 text-xs font-mono text-cyan-400 outline-none focus:border-cyan-500"
+                        >
+                           {nodes.map(n => <option key={n.id} value={n.id}>{n.id}</option>)}
+                        </select>
+                   </div>
+               </div>
+               
+               {/* Algorithm Grid */}
+               <div className="grid grid-cols-2 gap-2 mt-2">
+                  <button onClick={runBFS} disabled={isAnimating} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                     <Map size={16}/> BFS
+                  </button>
+                  <button onClick={runDFS} disabled={isAnimating} className="p-3 bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-400 rounded hover:bg-fuchsia-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                     <ShieldAlert size={16}/> DFS
+                  </button>
+                  <button onClick={runDijkstra} disabled={isAnimating} className="p-3 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                     <Zap size={16}/> Dijkstra
+                  </button>
+                  <button onClick={runAStar} disabled={isAnimating} className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                     <Crosshair size={16}/> A* (A-Star)
+                  </button>
+               </div>
             </div>
+
+            {/* Outputs */}
+            <button onClick={() => { setNodes([]); setEdges([]); resetVisuals(); setOutputLog(['> Memory Wiped.']); }} disabled={isAnimating} className="w-full py-2 bg-white/5 hover:bg-red-500/20 hover:text-red-400 border border-white/5 hover:border-red-500/30 rounded text-[10px] font-bold text-gray-500 transition-all flex items-center justify-center gap-2 mt-4 shrink-0">
+               <Trash2 size={14}/> FORMAT GRAPH
+            </button>
+
+            <div className="mt-4 flex-1 min-h-[150px] bg-black/90 border border-purple-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
+                <div className="px-3 py-2 border-b border-purple-500/30 bg-purple-900/20 flex items-center gap-2 shrink-0">
+                    <Terminal size={12} className="text-purple-400" />
+                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest">Operation_Log</span>
+                </div>
+                <div className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[10px] text-gray-300 flex flex-col gap-1">
+                    {outputLog.length === 0 ? (
+                        <span className="text-gray-600 italic mt-1">Awaiting map operations...</span>
+                    ) : (
+                        outputLog.map((log, i) => (
+                           <div key={i} className={`flex items-start ${log.includes('SUCCESS') ? 'text-emerald-400 font-bold' : log.includes('Abort') || log.includes('ABORTED') ? 'text-red-400' : 'text-gray-400'}`}>
+                               <span className="opacity-50 mr-2 shrink-0">{String(i).padStart(2, '0')}</span>
+                               {log}
+                           </div>
+                        ))
+                    )}
+                </div>
+            </div>
+
+          </div>
         </div>
 
-        {/* --- CANVAS WORKSPACE --- */}
-        <div 
-            className="flex-1 relative bg-[#050510] overflow-hidden cursor-crosshair select-none"
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleGlobalMouseUp}
-            onMouseLeave={handleGlobalMouseUp}
-        >
-             {/* Grid Background */}
-             <div className="absolute inset-0 pointer-events-none opacity-20" 
-                  style={{ 
-                      backgroundImage: 'linear-gradient(#1a1a2e 1px, transparent 1px), linear-gradient(90deg, #1a1a2e 1px, transparent 1px)', 
-                      backgroundSize: '40px 40px' 
-                  }} 
-             />
+        {/* --- RIGHT PANEL: THE ARENA --- */}
+        <div className="flex-1 relative flex flex-col min-w-0 overflow-hidden h-full">
+          
+          <button 
+             onClick={() => setShowHUD(!showHUD)}
+             className="absolute top-6 left-6 z-50 p-2 bg-black/90 border border-purple-500/50 rounded-lg text-purple-400 hover:bg-purple-500/20 hover:text-purple-300 transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)] flex items-center gap-2"
+          >
+             {showHUD ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+             <span className="text-[10px] font-black uppercase tracking-widest">{showHUD ? "HIDE HUD" : "SHOW HUD"}</span>
+          </button>
+
+          <AnimatePresence>
+              {showHUD && (
+                  <motion.div 
+                     initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+                     animate={{ height: 160, opacity: 1, marginBottom: 24 }}
+                     exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                     transition={{ duration: 0.4, ease: "easeInOut" }}
+                     className="w-full shrink-0 pl-36 pr-6 pt-6"
+                  >
+                     <div className="w-full h-full bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
+                         <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+                            <div className="flex items-center gap-2 text-purple-400">
+                                <Terminal size={14}/>
+                                <span className="text-[10px] font-black tracking-widest uppercase">Hinglish_Logic_Trace</span>
+                            </div>
+                         </div>
+                         <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                            {codeLines.length ? codeLines.map(line => (
+                               <div key={line.id} className={`flex flex-col text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
+                                  <div className={`font-mono ${line.active ? 'text-purple-400' : 'text-gray-400'}`}>{line.text}</div>
+                                  {line.active && <div className="text-xs text-amber-400 mt-1 flex items-center gap-2 leading-relaxed"><ArrowRight size={12} className="shrink-0"/> {line.explanation}</div>}
+                               </div>
+                            )) : <div className="text-gray-600 text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14}/> Awaiting Pathfinding execution...</div>}
+                         </div>
+                     </div>
+                  </motion.div>
+              )}
+          </AnimatePresence>
+
+          {/* Central Arena: Map Canvas */}
+          <div className="flex-1 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mt-2 mx-6 mb-6">
              
-             {/* Click Area */}
-             <div 
-                ref={canvasRef}
-                className="absolute inset-0 z-0" 
-                onClick={handleCanvasClick}
-             />
-
-             <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
-                 {/* EDGES */}
-                 {edges.map((edge) => {
-                     const start = nodes.find(n => n.id === edge.source)!;
-                     const end = nodes.find(n => n.id === edge.target)!;
-                     if(!start || !end) return null;
-
-                     const isPath = path.includes(edge.source) && path.includes(edge.target) && 
-                                    (path.indexOf(edge.source) === path.indexOf(edge.target) - 1 || path.indexOf(edge.target) === path.indexOf(edge.source) - 1);
-                     const isActive = activeEdge === edge.id;
-
-                     return (
-                         <g key={edge.id}>
-                             <line 
-                                x1={start.x} y1={start.y} x2={end.x} y2={end.y} 
-                                stroke={isPath ? '#00f5ff' : isActive ? '#9d00ff' : '#333'} 
-                                strokeWidth={isPath || isActive ? 3 : 2}
-                                className="transition-all duration-300"
-                             />
-                             <g transform={`translate(${(start.x + end.x)/2}, ${(start.y + end.y)/2})`}>
-                                 <rect x="-10" y="-10" width="20" height="20" fill="#050510" rx="4" />
-                                 <text x="0" y="4" textAnchor="middle" fill={isPath ? '#00f5ff' : '#666'} fontSize="10" className="font-mono font-bold">{edge.weight}</text>
-                             </g>
-                         </g>
-                     );
-                 })}
-                 
-                 {/* Drag Line */}
-                 {mode === 'addEdge' && dragStartNode && (
-                     <line 
-                        x1={nodes.find(n => n.id === dragStartNode)?.x} 
-                        y1={nodes.find(n => n.id === dragStartNode)?.y} 
-                        x2={mousePos.x} y2={mousePos.y} 
-                        stroke="#00f5ff" strokeWidth="2" strokeDasharray="5,5" className="opacity-50"
-                     />
-                 )}
-             </svg>
-
-             {/* NODES */}
-             <AnimatePresence>
-             {nodes.map(node => {
-                 const isVisited = visited.has(node.id);
-                 const isPathNode = path.includes(node.id);
-
-                 return (
-                    <motion.div
-                        key={node.id}
-                        initial={{ scale: 0 }}
-                        animate={{ 
-                            scale: 1, 
-                            backgroundColor: isPathNode ? '#00f5ff' : isVisited ? '#9d00ff' : '#0a0a1a',
-                            borderColor: isPathNode ? '#00f5ff' : isVisited ? '#9d00ff' : '#444'
-                        }}
-                        onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                        onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
-                        className={`absolute w-12 h-12 -ml-6 -mt-6 rounded-full flex items-center justify-center border-2 z-20 cursor-pointer shadow-lg transition-shadow duration-300 group ${mode === 'move' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'}`}
-                        style={{ 
-                            left: node.x, top: node.y,
-                            boxShadow: isPathNode ? '0 0 30px rgba(0,245,255,0.6)' : isVisited ? '0 0 20px rgba(157,0,255,0.4)' : 'none'
-                        }}
-                    >
-                        <span className={`font-bold font-mono text-xs ${isPathNode || isVisited ? 'text-black' : 'text-gray-400 group-hover:text-white'}`}>
-                            {node.id}
-                        </span>
-                    </motion.div>
-                 );
-             })}
-             </AnimatePresence>
-
-             {/* Legend */}
-             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/60 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 text-xs text-gray-400 font-mono pointer-events-none z-30">
-                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#00f5ff]"/> PATH</span>
-                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#9d00ff]"/> VISITED</span>
+             <div className="absolute top-4 right-4 z-30 flex items-center gap-3 px-4 py-1.5 bg-[#0a0a14]/90 backdrop-blur-md border border-white/10 rounded-full shadow-lg pointer-events-none">
+                <Activity size={12} className={isAnimating ? 'text-purple-500 animate-pulse' : 'text-gray-600'} />
+                <span className="text-[10px] font-mono font-bold text-white uppercase tracking-widest">{message}</span>
              </div>
 
+             <div 
+                 className={`flex-1 relative overflow-hidden ${mode === 'move' && !isAnimating ? 'cursor-grab active:cursor-grabbing' : mode === 'addNode' && !isAnimating ? 'cursor-crosshair' : 'cursor-default'}`}
+                 onMouseMove={handleMouseMove}
+                 onMouseUp={handleGlobalMouseUp}
+                 onMouseLeave={handleGlobalMouseUp}
+             >
+                 <div ref={canvasRef} className="absolute inset-0 z-0" onClick={handleCanvasClick} />
+
+                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+                     <AnimatePresence>
+                     {edges.map((edge) => {
+                         const start = nodes.find(n => n.id === edge.source);
+                         const end = nodes.find(n => n.id === edge.target);
+                         if(!start || !end) return null;
+
+                         const isPath = path.includes(edge.source) && path.includes(edge.target) && 
+                                        (path.indexOf(edge.source) === path.indexOf(edge.target) - 1 || path.indexOf(edge.target) === path.indexOf(edge.source) - 1);
+                         const isActive = activeEdge === edge.id;
+
+                         return (
+                             <g key={edge.id}>
+                                 <motion.line 
+                                    initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+                                    x1={start.x} y1={start.y} x2={end.x} y2={end.y} 
+                                    stroke={isPath ? '#00f5ff' : isActive ? '#facc15' : '#3f3f46'} 
+                                    strokeWidth={isPath || isActive ? 4 : 2}
+                                    strokeOpacity={isPath || isActive ? 1 : 0.5}
+                                    className="transition-colors duration-300"
+                                 />
+                                 <g transform={`translate(${(start.x + end.x)/2}, ${(start.y + end.y)/2})`}>
+                                     <rect x="-14" y="-10" width="28" height="20" fill={isPath ? '#00f5ff' : isActive ? '#facc15' : '#18181b'} rx="10" stroke={isPath ? '#00f5ff' : '#3f3f46'} strokeWidth="1"/>
+                                     <text x="0" y="4" textAnchor="middle" fill={isPath || isActive ? '#000' : '#a1a1aa'} fontSize="11" className="font-mono font-bold">{edge.weight}</text>
+                                 </g>
+                             </g>
+                         );
+                     })}
+                     </AnimatePresence>
+                     
+                     {mode === 'addEdge' && dragStartNode && (
+                         <line 
+                            x1={nodes.find(n => n.id === dragStartNode)?.x} 
+                            y1={nodes.find(n => n.id === dragStartNode)?.y} 
+                            x2={mousePos.x} y2={mousePos.y} 
+                            stroke="#a855f7" strokeWidth="3" strokeDasharray="6,6" className="opacity-70"
+                         />
+                     )}
+                 </svg>
+
+                 <AnimatePresence>
+                 {nodes.map(node => {
+                     const isVisited = visited.has(node.id);
+                     const isPathNode = path.includes(node.id);
+                     const isCurrent = activeNode === node.id;
+                     const isStart = node.id === startNodeId;
+                     const isTarget = node.id === targetNodeId;
+                     
+                     const dist = nodeDistances[node.id];
+                     const displayDist = dist === undefined ? '' : dist === Infinity ? '∞' : dist;
+
+                     let borderColor = '#52525b';
+                     let bgColor = '#09090b';
+                     let glow = 'none';
+
+                     if (isCurrent) { borderColor = '#facc15'; bgColor = '#facc1520'; glow = '0 0 30px rgba(250,204,21,0.6)'; }
+                     else if (isPathNode) { borderColor = '#00f5ff'; bgColor = '#00f5ff20'; glow = '0 0 20px rgba(0,245,255,0.4)'; }
+                     else if (isVisited) { borderColor = '#a855f7'; bgColor = '#a855f720'; glow = '0 0 15px rgba(168,85,247,0.3)'; }
+                     else if (isStart) { borderColor = '#22c55e'; }
+                     else if (isTarget) { borderColor = '#ef4444'; }
+
+                     return (
+                        <motion.div
+                            key={node.id}
+                            initial={{ scale: 0 }} animate={{ scale: isCurrent ? 1.2 : 1 }}
+                            onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                            onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
+                            className={`absolute w-14 h-14 -ml-7 -mt-7 rounded-full flex flex-col items-center justify-center border-4 z-20 shadow-xl pointer-events-auto transition-colors duration-300 ${mode === 'addEdge' && !isAnimating ? 'cursor-crosshair' : ''}`}
+                            style={{ 
+                                left: node.x, top: node.y, borderColor: borderColor, backgroundColor: bgColor, boxShadow: glow
+                            }}
+                            draggable={false}
+                        >
+                            <span className={`font-black text-lg pointer-events-none ${isPathNode || isCurrent ? 'text-white' : 'text-gray-300'}`}>
+                                {node.id}
+                            </span>
+                            
+                            {displayDist !== '' && (
+                                <div className="absolute -bottom-6 bg-black border border-white/20 px-2 py-0.5 rounded text-[10px] font-mono font-bold text-gray-300 pointer-events-none">
+                                    {Number.isInteger(displayDist as number) ? displayDist : Number(displayDist).toFixed(1)}
+                                </div>
+                            )}
+
+                            {isStart && <div className="absolute -top-6 text-[9px] font-black text-green-400 pointer-events-none">START</div>}
+                            {isTarget && <div className="absolute -top-6 text-[9px] font-black text-red-400 pointer-events-none">TARGET</div>}
+                            
+                            {isCurrent && (
+                                <>
+                                  <div className="absolute -left-12 top-4 bg-yellow-500 text-black px-1.5 py-0.5 rounded text-[8px] font-black shadow-lg pointer-events-none">SCAN</div>
+                                  <motion.div animate={{ scale: [1, 1.5], opacity: [0.5, 0] }} transition={{ repeat: Infinity, duration: 1 }} className="absolute inset-0 rounded-full border-2 border-yellow-500 pointer-events-none" />
+                                </>
+                            )}
+                        </motion.div>
+                     );
+                 })}
+                 </AnimatePresence>
+
+                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-6 bg-black/80 backdrop-blur-md px-6 py-3 rounded-xl border border-white/10 text-[10px] font-mono font-bold text-gray-400 pointer-events-none z-30 shadow-2xl">
+                    <span className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#facc15] border border-black"/> ACTIVE</span>
+                    <span className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#a855f7] border border-black"/> VISITED</span>
+                    <span className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#00f5ff] border border-black"/> PATH</span>
+                 </div>
+             </div>
+          </div>
+
         </div>
+      </div>
     </div>
   );
 };

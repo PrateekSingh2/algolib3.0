@@ -4,11 +4,12 @@ import {
   motion, 
   AnimatePresence, 
   useMotionTemplate, 
-  useMotionValue
+  useMotionValue,
+  useSpring
 } from "framer-motion";
 import { 
   ArrowRight, ChevronDown, Hash, 
-  Command, Plus, Minus, Cpu 
+  Command, Plus, Minus, Cpu, TerminalSquare 
 } from "lucide-react";
 import { 
   fetchAlgorithms, 
@@ -221,42 +222,105 @@ const TypewriterText = ({ text, delay = 0 }: { text: string, delay?: number }) =
   );
 };
 
-// --- TRUE 3D "TRICKY LIONFISH" CARD ---
-const HologramCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
+// --- NEW PREMIUM TILT CARD COMPONENT ---
+const TiltCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
+  const ref = useRef<HTMLAnchorElement>(null);
+  
+  // Framer Motion Values for 3D
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  // Springs make the tilt buttery smooth and heavy-feeling
+  const springConfig = { damping: 25, stiffness: 120, mass: 0.5 };
+  const rotateX = useSpring(useMotionTemplate`${y}deg` as any, springConfig);
+  const rotateY = useSpring(useMotionTemplate`${x}deg` as any, springConfig);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    
+    const clientX = e.clientX - rect.left;
+    const clientY = e.clientY - rect.top;
+
+    mouseX.set(clientX);
+    mouseY.set(clientY);
+
+    // Calculate rotation (Max 15 degrees tilt for a premium feel)
+    const xPct = (clientX / width - 0.5) * 2;
+    const yPct = (clientY / height - 0.5) * 2;
+    x.set(xPct * 30);
+    y.set(yPct * -30);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  // Dynamic light sheen that follows the mouse
+  const background = useMotionTemplate`radial-gradient(circle at ${mouseX}px ${mouseY}px, rgba(0, 245, 255, 0.15) 0%, transparent 60%)`;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
-      // PERSPECTIVE ROOT: Crucial for 3D depth mapping
-      className="w-full max-w-[340px] mx-auto p-5 [perspective:1000px] group h-full"
+      transition={{ duration: 0.5, delay: index * 0.05, ease: "easeOut" }}
+      className="[perspective:1000px] h-full"
     >
-      <Link to={`/view/${algo.id}`} className="block h-full cursor-pointer [transform-style:preserve-3d]">
-        <div className="algo-3d-card pt-[50px] border-[3px] border-[#04c1fa]/30 [transform-style:preserve-3d] shadow-[0_30px_30px_-10px_rgba(0,0,0,0.5)] rounded-[10px] w-full h-full relative flex flex-col">
-          <div className="bg-[#020617]/80 transition-all duration-500 pt-[60px] pb-[25px] px-[25px] [transform-style:preserve-3d] flex-grow flex flex-col rounded-b-[7px] border-t border-[#04c1fa]/20">
-            <span className="inline-block text-white text-2xl font-black transition-transform duration-500 [transform:translateZ(50px)] hover:[transform:translateZ(60px)]">
-              {algo.title}
-            </span>
-            <p className="mt-3 text-[12px] text-gray-200 transition-transform duration-500 [transform:translateZ(30px)] hover:[transform:translateZ(60px)] line-clamp-3">
-              {algo.description}
-            </p>
-            <div className="mt-4 pt-2 border-t border-white/10 flex gap-2 flex-wrap transition-transform duration-500 [transform:translateZ(30px)] hover:[transform:translateZ(60px)]">
-                {algo.tags?.slice(0, 2).map(tag => (
-                   <span key={tag} className="text-[10px] border border-white/20 bg-[#020617]/50 text-white px-2 py-1 rounded-sm">#{tag}</span>
-                ))}
+      <motion.a
+        ref={ref}
+        href={`/view/${algo.id}`}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+        // Yahan se 'transition-all' hata kar specific transitions daale hain
+        className="relative block h-full w-full rounded-[1.5rem] bg-[#05050A]/80 backdrop-blur-md border border-white/10 transition-colors transition-shadow duration-300 hover:border-[#00f5ff]/50 hover:shadow-[0_20px_50px_-10px_rgba(0,245,255,0.2)] group outline-none will-change-transform"
+      >
+        {/* Inner Glint/Sheen Effect */}
+        <motion.div 
+            className="absolute inset-0 rounded-[1.5rem] z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+            style={{ background }}
+        />
+
+        {/* Content Container (Pushed out in 3D space) */}
+        <div className="relative h-full flex flex-col p-6 z-10 [transform:translateZ(30px)]">
+          
+          {/* Header */}
+          <div className="flex justify-between items-start mb-5">
+            <div className="flex items-center gap-3">
+               <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-gray-400 group-hover:text-[#00f5ff] group-hover:bg-[#00f5ff]/10 group-hover:border-[#00f5ff]/30 transition-all duration-300 shadow-inner">
+                  <TerminalSquare className="w-5 h-5" />
+               </div>
+               <h3 className="text-xl font-bold text-gray-100 tracking-tight group-hover:text-white transition-colors leading-tight">
+                 {algo.title}
+               </h3>
             </div>
           </div>
-          <div className="absolute top-[30px] right-[30px] h-[60px] w-[60px] bg-cyan-900 border border-[#04c1fa] p-[10px] flex flex-col items-center justify-center shadow-[0_17px_10px_-10px_rgba(0,0,0,0.5)] rounded-[10px] z-20 transition-transform duration-500 [transform:translateZ(80px)] hover:[transform:translateZ(100px)]">
-            <span className="text-[#04c1fa] text-[9px] font-bold text-center block w-full truncate uppercase tracking-widest">
-              {algo.category?.slice(0,4) || "SYS"}
-            </span>
-            <span className="text-[#04c1fa] text-[20px] font-black block leading-none">
-              {algo.id.slice(0, 2).toUpperCase()}
-            </span>
+          
+          {/* Description */}
+          <p className="text-sm text-gray-400 leading-relaxed font-sans line-clamp-3 mb-6 flex-grow group-hover:text-gray-300 transition-colors">
+            {algo.description}
+          </p>
+          
+          {/* Footer Tags */}
+          <div className="pt-5 border-t border-white/5 flex gap-2 flex-wrap items-center mt-auto">
+             <span className="px-2.5 py-1 text-[10px] font-bold font-mono uppercase tracking-widest text-[#00f5ff] bg-[#00f5ff]/10 rounded-md border border-[#00f5ff]/20 shadow-[inset_0_0_10px_rgba(0,245,255,0.1)]">
+                {algo.category?.slice(0,8) || "SYS"}
+             </span>
+             {algo.tags?.slice(0, 2).map(tag => (
+                <span key={tag} className="px-2 py-1 text-[10px] font-medium font-mono text-gray-400 bg-white/5 border border-white/5 rounded-md group-hover:text-gray-300 transition-colors">
+                  #{tag}
+                </span>
+             ))}
+             <ArrowRight className="ml-auto w-5 h-5 text-gray-600 group-hover:text-[#00f5ff] group-hover:translate-x-1 transition-all duration-300" />
           </div>
         </div>
-      </Link>
+      </motion.a>
     </motion.div>
   );
 };
@@ -287,7 +351,6 @@ const Index = () => {
       try {
         const algos = await fetchAlgorithms();
         setAlgorithms(algos);
-        // The increment logic has been completely moved to App.tsx!
       } catch (error) {
         console.error("Initialization failed", error);
       }
@@ -322,22 +385,6 @@ const Index = () => {
 
   return (
     <>
-      {/* GLOBAL STYLES FOR THE 3D CYBERPUNK BACKGROUND */}
-      <style>{`
-        .algo-3d-card {
-          background: linear-gradient(135deg, #0000 18.75%, #0f172a 0 31.25%, #0000 0),
-                      repeating-linear-gradient(45deg, #0f172a -6.25% 6.25%, #020617 0 18.75%);
-          background-size: 60px 60px;
-          background-position: 0 0, 0 0;
-          background-color: #000000;
-          transition: all 0.5s ease-in-out;
-        }
-        .group:hover .algo-3d-card {
-          background-position: -100px 100px, -100px 100px;
-          transform: rotate3d(0.5, 1, 0, 30deg);
-        }
-      `}</style>
-
       <AnimatePresence mode="wait">
         {isLoading ? (
             <Preloader key="loader" onComplete={handlePreloaderComplete} />
@@ -481,16 +528,17 @@ const Index = () => {
 
                     <section className="px-4 pb-32 relative z-10 flex-grow">
                         <div className="container mx-auto max-w-7xl">
+                        {/* THE NEW TILT CARDS GRID */}
                         <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
                             <AnimatePresence mode="popLayout">
                             {displayedAlgorithms.map((algo, index) => (
-                                <HologramCard key={algo.id} algo={algo} index={index} />
+                                <TiltCard key={algo.id} algo={algo} index={index} />
                             ))}
                             </AnimatePresence>
                         </motion.div>
 
                         {filtered.length === 0 && (
-                            <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl bg-white/5 backdrop-blur-sm">
+                            <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl bg-white/5 backdrop-blur-sm mt-8">
                             <Hash className="h-10 w-10 text-gray-600 mx-auto mb-4" />
                             <div className="text-gray-400 font-mono text-sm">VOID DETECTED: NO DATA</div>
                             </div>
