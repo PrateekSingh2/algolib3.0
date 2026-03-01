@@ -193,7 +193,7 @@ const QueueVisualizer = () => {
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
-                  {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'PLAY' : 'PAUSE'}
+                  {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
                 </button>
                 <button disabled={!isPaused || !isAnimating} onClick={resolveStep} className="flex-1 py-2 bg-green-500 text-black rounded flex items-center justify-center gap-2 text-xs font-black hover:bg-green-400 disabled:opacity-30 disabled:grayscale transition-all">
                   <StepForward size={14} /> NEXT STEP

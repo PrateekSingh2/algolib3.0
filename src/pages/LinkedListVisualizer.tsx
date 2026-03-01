@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, RotateCcw, ArrowRight, Trash2, 
   CornerDownRight, X, Play, Pause, StepForward, 
-  Cpu, Terminal, Activity, Anchor, Zap, Target, ArrowDownToLine, Box
+  Cpu, Terminal, Activity, Anchor, Zap, Target, ArrowDownToLine, Box,
+  Minimize2, Maximize2
 } from 'lucide-react';
 
 // --- TYPES & GAME STATE ---
@@ -82,6 +83,7 @@ const LinkedListVisualizer = () => {
   
   const [inputValue, setInputValue] = useState<number>(0);
   const [inputIndex, setInputIndex] = useState<number>(1);
+  const [showHUD, setShowHUD] = useState<boolean>(true);
   
   const [isPaused, setIsPaused] = useState(true); 
   const [isAnimating, setIsAnimating] = useState(false);
@@ -207,151 +209,166 @@ const LinkedListVisualizer = () => {
   };
 
   return (
-    // SOLID FIX 1: absolute inset-0 forces the parent container to perfectly match the browser window size.
     <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden">
       <CyberGrid />
       
-      {/* Inner wrapper strictly bounded */}
       <div className="flex-1 flex relative z-10 overflow-hidden h-full">
         
-        {/* LEFT: COMMAND CENTER - Now strictly controls its own scroll */}
-        <div className="w-[340px] bg-black/80 backdrop-blur-md border-r border-white/10 flex flex-col h-full shadow-2xl shrink-0 z-20">
-          
-          <div className="p-5 border-b border-white/10 bg-gradient-to-r from-emerald-500/10 to-transparent shrink-0">
-             <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-emerald-400">
-                <Cpu size={24} /> LinkedList Zone
-             </h2>
-             <p className="text-xs text-gray-400 mt-1">Hinglish Visualizer v5.1.7</p>
-          </div>
-
-          {/* SOLID FIX 2: flex-1 aur overflow-y-auto ispe applied hai with padding bottom */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar pb-12">
-            
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase">Type</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(['singly', 'doubly', 'circular', 'doubly-circular'] as ListType[]).map(type => (
-                  <button key={type} onClick={() => setListType(type)} disabled={isAnimating}
-                    className={`py-2 rounded text-[10px] font-bold uppercase transition-all ${
-                      listType === type ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                    }`}
-                  >
-                    {type.replace('-', ' ')}
-                  </button>
-                ))}
-              </div>
+        {/* LEFT: COMMAND CENTER - Now Always Visible */}
+        <div className="w-[340px] bg-black/80 backdrop-blur-md border-r border-white/10 flex flex-col h-full shadow-2xl shrink-0 z-20 overflow-hidden">
+            <div className="p-5 border-b border-white/10 bg-gradient-to-r from-emerald-500/10 to-transparent shrink-0">
+                <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-emerald-400">
+                    <Cpu size={24} /> LinkedList Zone
+                </h2>
+                <p className="text-xs text-gray-400 mt-1">Hinglish Visualizer v5.3.0</p>
             </div>
 
-            <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-400 uppercase">Step Engine</span>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${isPaused ? 'border-amber-500 text-amber-500' : 'border-emerald-500 text-emerald-500'}`}>
-                    {isPaused ? 'MANUAL' : 'AUTO'}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
-                  {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
-                </button>
-                <button disabled={!isPaused || !isAnimating} onClick={resolveStep} className="flex-1 py-2 bg-emerald-500 text-black rounded flex items-center justify-center gap-2 text-xs font-black hover:bg-emerald-400 disabled:opacity-30 disabled:grayscale transition-all">
-                  <StepForward size={14} /> NEXT STEP
-                </button>
-              </div>
-            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar pb-12">
+                <div className="space-y-2">
+                <label className="text-[10px] font-bold text-gray-500 uppercase">Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                    {(['singly', 'doubly', 'circular', 'doubly-circular'] as ListType[]).map(type => (
+                    <button key={type} onClick={() => setListType(type)} disabled={isAnimating}
+                        className={`py-2 rounded text-[10px] font-bold uppercase transition-all ${
+                        listType === type ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                        }`}
+                    >
+                        {type.replace('-', ' ')}
+                    </button>
+                    ))}
+                </div>
+                </div>
 
-            <div className="space-y-4">
-               <div className="flex gap-2">
-                  <div className="flex-1">
-                      <label className="text-[9px] text-gray-500 uppercase font-bold">Node Value</label>
-                      <div className="flex gap-1 mt-1">
-                          <input type="number" value={inputValue} onChange={(e) => setInputValue(Number(e.target.value))} className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-emerald-400 outline-none font-mono text-sm" />
-                          <button onClick={generateRandom} className="px-3 bg-white/5 rounded border border-white/10 hover:bg-white/10"><RotateCcw size={14}/></button>
-                      </div>
-                  </div>
-                  <div className="w-20">
-                      <label className="text-[9px] text-gray-500 uppercase font-bold">Target Idx</label>
-                      <input type="number" value={inputIndex} onChange={(e) => setInputIndex(Number(e.target.value))} className="w-full mt-1 bg-black/50 border border-white/10 rounded px-3 py-2 text-cyan-400 outline-none font-mono text-sm" />
-                  </div>
-               </div>
-               
-               <div className="grid grid-cols-2 gap-2 mt-2">
-                  <button onClick={() => handleInsert('head')} disabled={isAnimating} className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
-                     <CornerDownRight size={16}/> Insert Beg
-                  </button>
-                  <button onClick={() => handleInsert('end')} disabled={isAnimating} className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
-                     <ArrowDownToLine size={16}/> Insert End
-                  </button>
-                  <button onClick={() => handleInsert('index')} disabled={isAnimating} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 col-span-2">
-                     <Target size={16}/> Insert at specific Index
-                  </button>
-                  
-                  <button onClick={() => handleDelete('head')} disabled={isAnimating} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
-                     <Trash2 size={16}/> Delete Beg
-                  </button>
-                  <button onClick={() => handleDelete('end')} disabled={isAnimating} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
-                     <X size={16}/> Delete End
-                  </button>
-                  <button onClick={() => handleDelete('index')} disabled={isAnimating} className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded hover:bg-rose-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 col-span-2">
-                     <Target size={16}/> Delete at specific Index
-                  </button>
-               </div>
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase">Step Engine</span>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${isPaused ? 'border-amber-500 text-amber-500' : 'border-emerald-500 text-emerald-500'}`}>
+                        {isPaused ? 'MANUAL' : 'AUTO'}
+                    </span>
+                </div>
+                <div className="flex gap-2">
+                    <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
+                    {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
+                    </button>
+                    <button disabled={!isPaused || !isAnimating} onClick={resolveStep} className="flex-1 py-2 bg-emerald-500 text-black rounded flex items-center justify-center gap-2 text-xs font-black hover:bg-emerald-400 disabled:opacity-30 disabled:grayscale transition-all">
+                    <StepForward size={14} /> NEXT STEP
+                    </button>
+                </div>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="flex gap-2">
+                    <div className="flex-1">
+                        <label className="text-[9px] text-gray-500 uppercase font-bold">Node Value</label>
+                        <div className="flex gap-1 mt-1">
+                            <input type="number" value={inputValue} onChange={(e) => setInputValue(Number(e.target.value))} className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-emerald-400 outline-none font-mono text-sm" />
+                            <button onClick={generateRandom} className="px-3 bg-white/5 rounded border border-white/10 hover:bg-white/10"><RotateCcw size={14}/></button>
+                        </div>
+                    </div>
+                    <div className="w-20">
+                        <label className="text-[9px] text-gray-500 uppercase font-bold">Target Idx</label>
+                        <input type="number" value={inputIndex} onChange={(e) => setInputIndex(Number(e.target.value))} className="w-full mt-1 bg-black/50 border border-white/10 rounded px-3 py-2 text-cyan-400 outline-none font-mono text-sm" />
+                    </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <button onClick={() => handleInsert('head')} disabled={isAnimating} className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                        <CornerDownRight size={16}/> Insert Beg
+                    </button>
+                    <button onClick={() => handleInsert('end')} disabled={isAnimating} className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                        <ArrowDownToLine size={16}/> Insert End
+                    </button>
+                    <button onClick={() => handleInsert('index')} disabled={isAnimating} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 col-span-2">
+                        <Target size={16}/> Insert at specific Index
+                    </button>
+                    
+                    <button onClick={() => handleDelete('head')} disabled={isAnimating} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                        <Trash2 size={16}/> Delete Beg
+                    </button>
+                    <button onClick={() => handleDelete('end')} disabled={isAnimating} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                        <X size={16}/> Delete End
+                    </button>
+                    <button onClick={() => handleDelete('index')} disabled={isAnimating} className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded hover:bg-rose-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 col-span-2">
+                        <Target size={16}/> Delete at specific Index
+                    </button>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
 
         {/* RIGHT: THE ARENA */}
         <div className="flex-1 relative flex flex-col p-6 min-w-0 overflow-hidden h-full">
           
-          {/* SOLID FIX 3: SWAPPED Interpreter (Left) aur Spawn Zone (Right) */}
-          <div className="flex gap-6 w-full shrink-0 mb-6 h-[180px]">
-             
-             {/* 1. HINGLISH INTERPRETER (Now on LEFT with flex-1 for max readability) */}
-             <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden">
-                 <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
-                    <div className="flex items-center gap-2 text-emerald-400">
-                        <Terminal size={14}/>
-                        <span className="text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
-                    </div>
-                    {variables.map((v, i) => <span key={i} className="text-[10px] font-mono"><span className="text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
-                 </div>
-                 <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
-                    {codeLines.length ? codeLines.map(line => (
-                       <div key={line.id} className={`flex flex-col text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
-                          <div className={`font-mono ${line.active ? 'text-emerald-400' : 'text-gray-400'}`}>{line.text}</div>
-                          {line.active && <div className="text-xs text-amber-400 mt-1 flex items-center gap-2 leading-relaxed"><ArrowRight size={12} className="shrink-0"/> {line.explanation}</div>}
-                       </div>
-                    )) : <div className="text-gray-600 text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14}/> Waiting for player action...</div>}
-                 </div>
-             </div>
-
-             {/* 2. THE SPAWN ZONE (Now on RIGHT with fixed width) */}
-             <div className="w-[350px] shrink-0 border border-emerald-500/30 bg-emerald-900/20 rounded-xl relative flex items-center justify-center shadow-inner overflow-hidden">
-                <div className="absolute top-3 right-4 flex items-center gap-2 text-[10px] font-mono text-emerald-500 uppercase tracking-widest">
-                    <Box size={14} /> Spawn_Zone (Heap)
-                </div>
-                
-                <AnimatePresence>
-                   {phantom && (
-                      <motion.div
-                        initial={{ scale: 0, y: -20, opacity: 0 }}
-                        animate={{ scale: 1, y: 0, opacity: 1 }}
-                        exit={{ opacity: 0, scale: 0.8, y: 40 }}
-                        className="w-24 h-24 rounded-xl border-2 border-dashed border-emerald-400 flex flex-col items-center justify-center bg-emerald-500/10 shadow-[0_0_30px_rgba(16,185,129,0.3)] z-50 relative mt-4"
-                      >
-                         <span className="text-xs text-emerald-400 font-mono absolute top-2 left-2">0x{phantom.id}</span>
-                         <span className="text-3xl font-black text-white">{phantom.value}</span>
-                         <div className="absolute -bottom-6 bg-emerald-500 text-black px-2 py-1 rounded text-[10px] font-bold shadow-lg whitespace-nowrap">WAITING TO LINK...</div>
-                      </motion.div>
-                   )}
-                </AnimatePresence>
-
-                {!phantom && (
-                    <div className="text-emerald-500/30 font-mono text-xs flex items-center gap-2 mt-4">
-                        <Zap size={14} /> Memory Pool Empty
-                    </div>
-                )}
-             </div>
+          {/* Top Bar with HUD Toggle Button - MOVED TO START */}
+          <div className="flex justify-start mb-4 shrink-0">
+             <button 
+                onClick={() => setShowHUD(!showHUD)}
+                className="px-4 py-2 bg-[#050505] border-[1.5px] border-emerald-500/80 rounded-full text-emerald-400 font-black text-xs flex items-center gap-2 tracking-widest hover:bg-emerald-500/10 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all shadow-[0_0_15px_rgba(16,185,129,0.2)] uppercase"
+             >
+                {showHUD ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                {showHUD ? 'HIDE HUD' : 'SHOW HUD'}
+             </button>
           </div>
+
+          {/* Animate the Interpreter and Spawn Zone visibility */}
+          <AnimatePresence initial={false}>
+             {showHUD && (
+                <motion.div 
+                   initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+                   animate={{ height: 180, opacity: 1, marginBottom: 24 }}
+                   exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                   transition={{ duration: 0.3, ease: 'easeInOut' }}
+                   className="flex gap-4 w-full shrink-0 overflow-hidden"
+                >
+                   {/* 1. HINGLISH INTERPRETER */}
+                   <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden h-full">
+                       <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+                          <div className="flex items-center gap-2 text-emerald-400">
+                              <Terminal size={14}/>
+                              <span className="text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
+                          </div>
+                          {variables.map((v, i) => <span key={i} className="text-[10px] font-mono"><span className="text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
+                       </div>
+                       <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                          {codeLines.length ? codeLines.map(line => (
+                             <div key={line.id} className={`flex flex-col text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
+                                <div className={`font-mono ${line.active ? 'text-emerald-400' : 'text-gray-400'}`}>{line.text}</div>
+                                {line.active && <div className="text-xs text-amber-400 mt-1 flex items-center gap-2 leading-relaxed"><ArrowRight size={12} className="shrink-0"/> {line.explanation}</div>}
+                             </div>
+                          )) : <div className="text-gray-600 text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14}/> Waiting for player action...</div>}
+                       </div>
+                   </div>
+
+                   {/* 2. THE SPAWN ZONE */}
+                   <div className="w-[350px] shrink-0 border border-emerald-500/30 bg-emerald-900/20 rounded-xl relative flex items-center justify-center shadow-inner h-full overflow-hidden">
+                      <div className="absolute top-3 right-4 flex items-center gap-2 text-[10px] font-mono text-emerald-500 uppercase tracking-widest">
+                          <Box size={14} /> Spawn_Zone (Heap)
+                      </div>
+                      
+                      <AnimatePresence>
+                         {phantom && (
+                            <motion.div
+                              initial={{ scale: 0, y: -20, opacity: 0 }}
+                              animate={{ scale: 1, y: 0, opacity: 1 }}
+                              exit={{ opacity: 0, scale: 0.8, y: 40 }}
+                              className="w-24 h-24 rounded-xl border-2 border-dashed border-emerald-400 flex flex-col items-center justify-center bg-emerald-500/10 shadow-[0_0_30px_rgba(16,185,129,0.3)] z-50 relative mt-4"
+                            >
+                               <span className="text-xs text-emerald-400 font-mono absolute top-2 left-2">0x{phantom.id}</span>
+                               <span className="text-3xl font-black text-white">{phantom.value}</span>
+                               <div className="absolute -bottom-6 bg-emerald-500 text-black px-2 py-1 rounded text-[10px] font-bold shadow-lg whitespace-nowrap">WAITING TO LINK...</div>
+                            </motion.div>
+                         )}
+                      </AnimatePresence>
+
+                      {!phantom && (
+                          <div className="text-emerald-500/30 font-mono text-xs flex items-center gap-2 mt-4">
+                              <Zap size={14} /> Memory Pool Empty
+                          </div>
+                      )}
+                   </div>
+                </motion.div>
+             )}
+          </AnimatePresence>
 
           {/* Central Arena: The Linked List Canvas */}
           <div className="flex-1 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden">
@@ -359,14 +376,36 @@ const LinkedListVisualizer = () => {
              <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar relative flex items-center">
                  <div className="min-w-max flex items-center px-16 relative h-full pt-10 pb-10">
                      
+                     {/* PERFECTED CIRCULAR POINTER SVG MAPPING */}
                      {(listType === 'circular' || listType === 'doubly-circular') && nodes.length > 1 && (
-                        <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-0">
-                           <motion.path 
-                             d={`M ${80 + 32 + (nodes.length-1)*112 + 48} 50 Q ${80 + 32 + ((nodes.length-1)*112)/2} -40 ${80 + 32 + 48} 50`}
-                             fill="transparent" stroke="#00ff88" strokeWidth="2" strokeDasharray="5,5"
-                             initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.5 }}
-                           />
-                           <polygon points={`${80 + 32 + 48},50 ${80 + 32 + 43},40 ${80 + 32 + 53},40`} fill="#00ff88" />
+                        <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 overflow-visible">
+                            {(() => {
+                                const startX = 160 + (nodes.length - 1) * 112 + 96;
+                                const startY = 88; 
+                                const endX = 96;   
+                                const endY = 40;   
+                                const controlY = 5; 
+
+                                const pathD = `M ${startX} ${startY} 
+                                               L ${startX + 10} ${startY}
+                                               Q ${startX + 30} ${startY} ${startX + 30} ${startY - 20} 
+                                               L ${startX + 30} ${controlY + 20} 
+                                               Q ${startX + 30} ${controlY} ${startX + 10} ${controlY} 
+                                               L ${endX + 20} ${controlY} 
+                                               Q ${endX} ${controlY} ${endX} ${controlY + 20} 
+                                               L ${endX} ${endY - 6}`;
+
+                                return (
+                                    <>
+                                        <motion.path 
+                                            d={pathD}
+                                            fill="transparent" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5"
+                                            initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.5 }}
+                                        />
+                                        <polygon points={`${endX - 6},${endY - 6} ${endX + 6},${endY - 6} ${endX},${endY + 2}`} fill="#f59e0b" />
+                                    </>
+                                );
+                            })()}
                         </svg>
                      )}
 

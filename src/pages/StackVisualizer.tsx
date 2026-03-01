@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowDown, ArrowUp, ArrowRight, RotateCcw, Layers, Play, Pause, StepForward, 
-  Terminal, Activity, Zap, Box, Trash2, Cpu, Crosshair
+  Terminal, Activity, Zap, Box, Trash2, Cpu, Crosshair, Minimize2, Maximize2
 } from 'lucide-react';
 
 // --- TYPES & GAME STATE ---
@@ -46,6 +46,7 @@ const StackVisualizer = () => {
   const [inputValue, setInputValue] = useState<number>(0);
   
   // Engine State
+  const [showHUD, setShowHUD] = useState<boolean>(true);
   const [isPaused, setIsPaused] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [message, setMessage] = useState('SYSTEM_IDLE: Ready for input');
@@ -176,7 +177,7 @@ const StackVisualizer = () => {
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
-                  {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'PLAY' : 'PAUSE'}
+                  {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
                 </button>
                 <button disabled={!isPaused || !isAnimating} onClick={resolveStep} className="flex-1 py-2 bg-cyan-500 text-black rounded flex items-center justify-center gap-2 text-xs font-black hover:bg-cyan-400 disabled:opacity-30 disabled:grayscale transition-all">
                   <StepForward size={14} /> NEXT STEP
@@ -214,81 +215,101 @@ const StackVisualizer = () => {
         {/* RIGHT: THE ARENA */}
         <div className="flex-1 relative flex flex-col p-6 min-w-0 overflow-hidden h-full">
           
-          {/* Top HUD: Interpreter & Spawn Zone */}
-          <div className="flex gap-6 w-full shrink-0 mb-6 h-[180px]">
-             
-             {/* 1. HINGLISH INTERPRETER */}
-             <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
-                 <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
-                    <div className="flex items-center gap-2 text-cyan-400">
-                        <Terminal size={14}/>
-                        <span className="text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
-                    </div>
-                    {variables.map((v, i) => <span key={i} className="text-[10px] font-mono"><span className="text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
-                 </div>
-                 
-                 {/* Auto-scrolling list container */}
-                 <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
-                    {codeLines.length ? codeLines.map(line => (
-                       <div key={line.id} className={`flex flex-col text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
-                          <div className={`font-mono ${line.active ? 'text-cyan-400' : 'text-gray-400'}`}>{line.text}</div>
-                          {line.active && <div className="text-xs text-amber-400 mt-1 flex items-center gap-2 leading-relaxed"><ArrowRight size={12} className="shrink-0"/> {line.explanation}</div>}
-                       </div>
-                    )) : <div className="text-gray-600 text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14}/> Awaiting Push/Pop sequence...</div>}
-                    
-                    {/* FIX: Invisible element to scroll to */}
-                    <div ref={interpreterEndRef} />
-                 </div>
-             </div>
-
-             {/* 2. THE SPAWN ZONE (HEAP) */}
-             <div className="w-[350px] shrink-0 border border-cyan-500/30 bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner overflow-hidden">
-                <div className="absolute top-3 right-4 flex items-center gap-2 text-[10px] font-mono text-cyan-500 uppercase tracking-widest">
-                    <Box size={14} /> Spawn_Zone
-                </div>
-                
-                <AnimatePresence>
-                   {phantom && (
-                      <motion.div
-                        initial={{ scale: 0, y: -20, opacity: 0 }}
-                        animate={{ scale: 1, y: 0, opacity: 1 }}
-                        exit={{ opacity: 0, scale: 0.8, y: 40 }}
-                        className="w-20 h-20 rounded-xl border-2 flex flex-col items-center justify-center shadow-2xl z-50 relative mt-4"
-                        style={{ borderColor: phantom.color, backgroundColor: `${phantom.color}15`, boxShadow: `0 0 30px ${phantom.color}40` }}
-                      >
-                         <span className="text-[8px] text-white/50 font-mono absolute top-1 left-1">NEW</span>
-                         <span className="text-3xl font-black text-white">{phantom.val}</span>
-                      </motion.div>
-                   )}
-                </AnimatePresence>
-
-                {poppedNode && (
-                     <motion.div
-                        initial={{ scale: 0.5, y: 50, opacity: 0, rotate: -15 }}
-                        animate={{ scale: 1, y: 0, opacity: 1, rotate: 0 }}
-                        exit={{ opacity: 0, scale: 1.5 }}
-                        className="w-full h-full absolute inset-0 flex items-center justify-center bg-red-900/20 backdrop-blur-sm z-40 border-2 border-red-500"
-                      >
-                         <div className="flex flex-col items-center gap-2 text-red-500">
-                             <Trash2 size={32} />
-                             <span className="text-sm font-black tracking-widest">[{poppedNode.val}] DESTROYED</span>
-                         </div>
-                     </motion.div>
-                )}
-
-                {!phantom && !poppedNode && (
-                    <div className="text-cyan-500/30 font-mono text-xs flex items-center gap-2 mt-4">
-                        <Zap size={14} /> Ready to allocate...
-                    </div>
-                )}
-             </div>
+          {/* Top Bar with HUD Toggle Button - MOVED TO START (Cyan Theme) */}
+          <div className="flex justify-start mb-4 shrink-0">
+             <button 
+                onClick={() => setShowHUD(!showHUD)}
+                className="px-4 py-2 bg-[#050505] border-[1.5px] border-cyan-500/80 rounded-full text-cyan-400 font-black text-xs flex items-center gap-2 tracking-widest hover:bg-cyan-500/10 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all shadow-[0_0_15px_rgba(6,182,212,0.2)] uppercase"
+             >
+                {showHUD ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                {showHUD ? 'HIDE HUD' : 'SHOW HUD'}
+             </button>
           </div>
 
-          {/* FIX: Central Arena Layout (No more clipping!) */}
+          {/* Animate the Interpreter and Spawn Zone visibility */}
+          <AnimatePresence initial={false}>
+             {showHUD && (
+                <motion.div 
+                   initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+                   animate={{ height: 180, opacity: 1, marginBottom: 24 }}
+                   exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                   transition={{ duration: 0.3, ease: 'easeInOut' }}
+                   className="flex gap-6 w-full shrink-0 overflow-hidden"
+                >
+                   {/* 1. HINGLISH INTERPRETER */}
+                   <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden h-full relative">
+                       <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+                          <div className="flex items-center gap-2 text-cyan-400">
+                              <Terminal size={14}/>
+                              <span className="text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
+                          </div>
+                          {variables.map((v, i) => <span key={i} className="text-[10px] font-mono"><span className="text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
+                       </div>
+                       
+                       {/* Auto-scrolling list container */}
+                       <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                          {codeLines.length ? codeLines.map(line => (
+                             <div key={line.id} className={`flex flex-col text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
+                                <div className={`font-mono ${line.active ? 'text-cyan-400' : 'text-gray-400'}`}>{line.text}</div>
+                                {line.active && <div className="text-xs text-amber-400 mt-1 flex items-center gap-2 leading-relaxed"><ArrowRight size={12} className="shrink-0"/> {line.explanation}</div>}
+                             </div>
+                          )) : <div className="text-gray-600 text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14}/> Awaiting Push/Pop sequence...</div>}
+                          
+                          {/* FIX: Invisible element to scroll to */}
+                          <div ref={interpreterEndRef} />
+                       </div>
+                   </div>
+
+                   {/* 2. THE SPAWN ZONE (HEAP) */}
+                   <div className="w-[350px] shrink-0 border border-cyan-500/30 bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner h-full overflow-hidden">
+                      <div className="absolute top-3 right-4 flex items-center gap-2 text-[10px] font-mono text-cyan-500 uppercase tracking-widest">
+                          <Box size={14} /> Spawn_Zone
+                      </div>
+                      
+                      <AnimatePresence>
+                         {phantom && (
+                            <motion.div
+                              initial={{ scale: 0, y: -20, opacity: 0 }}
+                              animate={{ scale: 1, y: 0, opacity: 1 }}
+                              exit={{ opacity: 0, scale: 0.8, y: 40 }}
+                              className="w-20 h-20 rounded-xl border-2 flex flex-col items-center justify-center shadow-2xl z-50 relative mt-4"
+                              style={{ borderColor: phantom.color, backgroundColor: `${phantom.color}15`, boxShadow: `0 0 30px ${phantom.color}40` }}
+                            >
+                               <span className="text-[8px] text-white/50 font-mono absolute top-1 left-1">NEW</span>
+                               <span className="text-3xl font-black text-white">{phantom.val}</span>
+                            </motion.div>
+                         )}
+                      </AnimatePresence>
+
+                      {poppedNode && (
+                           <motion.div
+                              initial={{ scale: 0.5, y: 50, opacity: 0, rotate: -15 }}
+                              animate={{ scale: 1, y: 0, opacity: 1, rotate: 0 }}
+                              exit={{ opacity: 0, scale: 1.5 }}
+                              className="w-full h-full absolute inset-0 flex items-center justify-center bg-red-900/20 backdrop-blur-sm z-40 border-2 border-red-500"
+                            >
+                               <div className="flex flex-col items-center gap-2 text-red-500">
+                                   <Trash2 size={32} />
+                                   <span className="text-sm font-black tracking-widest">[{poppedNode.val}] DESTROYED</span>
+                               </div>
+                           </motion.div>
+                      )}
+
+                      {!phantom && !poppedNode && (
+                          <div className="text-cyan-500/30 font-mono text-xs flex items-center gap-2 mt-4">
+                              <Zap size={14} /> Ready to allocate...
+                          </div>
+                      )}
+                   </div>
+                </motion.div>
+             )}
+          </AnimatePresence>
+
+          {/* Central Arena Layout */}
           <div className="flex-1 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col items-center justify-end pb-4 shadow-inner overflow-hidden">
              
              {/* Extended height h-[380px] so the 6th node easily clears the top line */}
-             <div className="relative w-72 h-[380px] border-b-4 border-l-4 border-r-4 border-gray-700/50 rounded-b-xl flex flex-col-reverse p-2 bg-gradient-to-t from-cyan-900/10 to-transparent">
+             <div className="relative w-72 h-[380px] border-b-4 border-l-4 border-r-4 border-gray-700/50 rounded-b-xl flex flex-col-reverse p-2 bg-gradient-to-t from-cyan-900/10 to-transparent mt-auto">
                  
                  {/* Capacity Line */}
                  <div className="absolute top-0 left-[-20px] right-[-20px] h-px border-t border-dashed border-red-500/50 flex items-center justify-end">
@@ -333,7 +354,7 @@ const StackVisualizer = () => {
              </div>
           </div>
 
-          {/* FIX: LIFO_ARRAY_STRUCTURE moved into bottom bar cleanly */}
+          {/* LIFO_ARRAY_STRUCTURE */}
           <div className="mt-4 shrink-0 flex justify-between items-center text-xs font-mono text-gray-500">
              <div className="flex items-center gap-2"><Activity size={14} className={isAnimating ? "text-cyan-500 animate-spin" : ""}/> {message}</div>
              <div className="text-[10px] uppercase tracking-widest text-gray-600 hidden md:block">LIFO_Array_Structure</div>
