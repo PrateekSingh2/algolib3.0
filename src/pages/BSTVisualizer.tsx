@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Binary, Plus, Search, Trash2, RotateCcw, 
   GitBranch, Zap, Layers, ArrowRight, Play, Pause, StepForward, 
-  Terminal, Activity, Box, Target, Maximize2, Minimize2, Settings2
+  Terminal, Activity, Box, Target, Maximize2, Minimize2, Settings2, Route
 } from 'lucide-react';
 
 // --- TYPES & GAME STATE ---
@@ -52,6 +52,10 @@ const SNIPPETS = {
     { id: '1', text: 'Node target = search(val);', explanation: 'Delete karne ke liye pehle target ko scan kar rahe hain...', active: false },
     { id: '2', text: 'if (target == null) return;', explanation: 'Target exist hi nahi karta!', active: false },
     { id: '3', text: 'rearrange_pointers(target);', explanation: 'Target mil gaya! Pointers ko bypass karke node ko free kar diya.', active: false }
+  ],
+  traversal: [
+    { id: '1', text: 'traverse(node);', explanation: 'Traversal sequence initiated. Scanning network...', active: false },
+    { id: '2', text: 'process(node.val);', explanation: 'Node data extract kar liya gaya hai.', active: false }
   ]
 };
 
@@ -144,16 +148,12 @@ const BSTVisualizer = () => {
 
       let balance = getBalance(node);
 
-      // LL Case
       if (balance > 1 && getBalance(node.left) >= 0) return rightRotate(node);
-      // LR Case
       if (balance > 1 && getBalance(node.left) < 0) {
           node.left = leftRotate(node.left!);
           return rightRotate(node);
       }
-      // RR Case
       if (balance < -1 && getBalance(node.right) <= 0) return leftRotate(node);
-      // RL Case
       if (balance < -1 && getBalance(node.right) > 0) {
           node.right = rightRotate(node.right!);
           return leftRotate(node);
@@ -186,7 +186,6 @@ const BSTVisualizer = () => {
       }
 
       setIsAnimating(true);
-      // REMOVED setShowHUD(true) - User controls the HUD entirely
       setOutputTitle("INSERTION_LOG");
       setOutputLog(prev => [...prev, `> Init insertion for [${val}]`]);
       const snippet = SNIPPETS.insert;
@@ -239,21 +238,19 @@ const BSTVisualizer = () => {
           setPhantom(null);
       }
 
-      // Run Auto-Balance if AVL Mode is ON
       if (treeMode === 'avl') {
           setOutputLog(prev => [...prev, `> AVL: Checking Balance Factors...`]);
           currentRoot = balanceTree(currentRoot);
       } else {
-          // Just update heights for standard BST
           const updateH = (n: TreeNode | null) => {
-             if(!n) return 0;
-             n.height = 1 + Math.max(updateH(n.left), updateH(n.right));
-             return n.height;
+               if(!n) return 0;
+               n.height = 1 + Math.max(updateH(n.left), updateH(n.right));
+               return n.height;
           };
           updateH(currentRoot);
       }
 
-      updatePositions(currentRoot, 0, 60, 260); // Wider initial gap for clean look
+      updatePositions(currentRoot, 0, 60, 260); 
       setRoot(currentRoot ? { ...currentRoot } : null); 
 
       setHighlightNode(null); setVisitedNodes(new Set());
@@ -315,7 +312,71 @@ const BSTVisualizer = () => {
     setIsAnimating(false); setCodeLines([]); generateRandom();
   };
 
-  // --- RENDERERS (CLEAN ACADEMIC DESIGN) ---
+  // --- TRAVERSAL PROTOCOLS ---
+  const handleTraversal = async (type: 'inorder' | 'preorder' | 'postorder' | 'levelorder') => {
+      if (!root || isAnimating) {
+          if(!root) setOutputLog(prev => [...prev, `> ERROR: Tree is empty.`]);
+          return;
+      }
+      setIsAnimating(true);
+      setOutputTitle(`${type.toUpperCase()}_TRAVERSAL`);
+      setOutputLog([`> Executing ${type.toUpperCase()} scan...`]);
+      const snippet = SNIPPETS.traversal;
+      await waitStep('1', snippet);
+
+      const result: number[] = [];
+
+      const visitNode = async (node: TreeNode) => {
+          setHighlightNode(node.id);
+          result.push(node.value);
+          setOutputLog(prev => [...prev, `> Extracted: [${node.value}]`]);
+          
+          if (isPaused) {
+              setMessage(`Processing node: ${node.value}`);
+              await new Promise<void>(r => stepTrigger.current = r);
+          } else {
+              await new Promise(r => setTimeout(r, 600));
+          }
+          setHighlightNode(null);
+      };
+
+      const traverse = async (node: TreeNode | null) => {
+          if (!node) return;
+          if (type === 'preorder') {
+              await visitNode(node);
+              await traverse(node.left);
+              await traverse(node.right);
+          } else if (type === 'inorder') {
+              await traverse(node.left);
+              await visitNode(node);
+              await traverse(node.right);
+          } else if (type === 'postorder') {
+              await traverse(node.left);
+              await traverse(node.right);
+              await visitNode(node);
+          }
+      };
+
+      const levelOrder = async () => {
+          const queue: TreeNode[] = [root];
+          while(queue.length > 0) {
+              const node = queue.shift()!;
+              await visitNode(node);
+              if (node.left) queue.push(node.left);
+              if (node.right) queue.push(node.right);
+          }
+      };
+
+      await waitStep('2', snippet);
+      if (type === 'levelorder') await levelOrder();
+      else await traverse(root);
+
+      setOutputLog(prev => [...prev, ``, `> FINAL SEQUENCE:`, `> ${result.join(' → ')}`]);
+      setMessage(`MISSION_PASSED: Traversal Complete`);
+      setIsAnimating(false); setCodeLines([]);
+  };
+
+  // --- RENDERERS ---
   const renderEdges = (node: TreeNode | null): JSX.Element[] => {
       if (!node) return [];
       const edges = [];
@@ -324,7 +385,7 @@ const BSTVisualizer = () => {
               <motion.line key={`${node.id}-left`} initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
                   x1={`calc(50% + ${node.xOffset}px)`} y1={node.y} 
                   x2={`calc(50% + ${node.left.xOffset}px)`} y2={node.left.y} 
-                  stroke="#52525b" strokeWidth="3" // Thicker gray edges
+                  stroke="#52525b" strokeWidth="3" 
               />
           );
           edges.push(...renderEdges(node.left));
@@ -344,7 +405,6 @@ const BSTVisualizer = () => {
 
   const renderNodes = (node: TreeNode | null): JSX.Element[] => {
       if (!node) return [];
-      const isVisited = visitedNodes.has(node.id);
       const isActive = highlightNode === node.id;
       const isFound = foundNode === node.id;
       
@@ -353,11 +413,10 @@ const BSTVisualizer = () => {
       const isLeaf = !node.left && !node.right;
       const isRoot = root && root.id === node.id;
 
-      // Color Logic based on Screenshot rules
-      let borderColor = '#0ea5e9'; // Default Blue/Cyan
-      if (isUnbalanced) borderColor = '#ef4444'; // Red if unbalanced
-      if (isFound) borderColor = '#22c55e'; // Green if found
-      if (isActive) borderColor = '#facc15'; // Yellow if active scanner
+      let borderColor = '#0ea5e9'; 
+      if (isUnbalanced) borderColor = '#ef4444'; 
+      if (isFound) borderColor = '#22c55e'; 
+      if (isActive) borderColor = '#a855f7'; // Purple highlight for scanning/traversal
 
       const nodes = [
           <motion.div key={node.id} initial={{ scale: 0 }}
@@ -367,30 +426,23 @@ const BSTVisualizer = () => {
               style={{ 
                   left: `calc(50% + ${node.xOffset}px)`, top: node.y,
                   borderColor: borderColor,
-                  boxShadow: isActive ? '0 0 30px rgba(250,204,21,0.4)' : 'none'
+                  boxShadow: isActive ? `0 0 30px ${borderColor}80` : 'none'
               }}
           >
-              {/* Top Height Indicator */}
               <span className="text-[9px] text-gray-400 font-mono absolute top-1">h: {node.height}</span>
-              
-              {/* Main Value */}
               <span className="font-black text-xl text-white mt-1">{node.value}</span>
 
-              {/* Bottom Balance Factor Indicator */}
               <div className="absolute -bottom-6 flex flex-col items-center whitespace-nowrap">
                   <span className={`text-[10px] font-black font-mono ${isUnbalanced ? 'text-red-500' : 'text-gray-400'}`}>
                       BF: {bf}
                   </span>
-                  {/* Leaf Indicator */}
                   {isLeaf && <span className="text-[9px] font-black text-emerald-400 mt-0.5">LEAF</span>}
               </div>
 
-              {/* Root Indicator */}
               {isRoot && <div className="absolute -top-6 text-[11px] font-black text-cyan-500">ROOT</div>}
 
-              {/* Scanner HUD */}
               {isActive && (
-                  <div className="absolute -left-12 top-4 bg-yellow-500 text-black px-1.5 py-0.5 rounded text-[8px] font-black shadow-lg">SCAN</div>
+                  <div className="absolute -left-12 top-4 bg-purple-500 text-white px-1.5 py-0.5 rounded text-[8px] font-black shadow-lg uppercase">Vis</div>
               )}
           </motion.div>
       ];
@@ -465,12 +517,23 @@ const BSTVisualizer = () => {
                </div>
                
                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <button onClick={handleInsert} disabled={isAnimating} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                  <button onClick={handleInsert} disabled={isAnimating} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                      <Plus size={16}/> INSERT
                   </button>
-                  <button onClick={() => {}} disabled={isAnimating} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                  <button onClick={handleDelete} disabled={isAnimating} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                      <Trash2 size={16}/> DELETE
                   </button>
+               </div>
+
+               {/* Traversal Controls Section */}
+               <div className="pt-3 border-t border-white/10 mt-2">
+                  <label className="text-[10px] text-purple-400 uppercase font-bold flex items-center gap-1 mb-2"><Route size={12}/> Traversal Protocols</label>
+                  <div className="grid grid-cols-2 gap-2">
+                      <button onClick={() => handleTraversal('inorder')} disabled={isAnimating} className="py-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[9px] font-black uppercase disabled:opacity-50 transition-all">In-Order</button>
+                      <button onClick={() => handleTraversal('preorder')} disabled={isAnimating} className="py-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[9px] font-black uppercase disabled:opacity-50 transition-all">Pre-Order</button>
+                      <button onClick={() => handleTraversal('postorder')} disabled={isAnimating} className="py-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[9px] font-black uppercase disabled:opacity-50 transition-all">Post-Order</button>
+                      <button onClick={() => handleTraversal('levelorder')} disabled={isAnimating} className="py-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[9px] font-black uppercase disabled:opacity-50 transition-all">Level-Order</button>
+                  </div>
                </div>
             </div>
 
@@ -488,12 +551,16 @@ const BSTVisualizer = () => {
                     {outputLog.length === 0 ? (
                         <span className="text-gray-600 italic mt-1">Awaiting execution...</span>
                     ) : (
-                        outputLog.map((log, i) => (
-                           <div key={i} className={`flex items-start ${log.includes('SUCCESS') || log.includes('AVL') ? 'text-emerald-400 font-bold' : log.includes('FAILED') || log.includes('Abort') ? 'text-red-400' : 'text-gray-400'}`}>
-                               <span className="opacity-50 mr-2 shrink-0">{String(i).padStart(2, '0')}</span>
-                               {log}
-                           </div>
-                        ))
+                        outputLog.map((log, i) => {
+                           const isSuccess = log.includes('SUCCESS') || log.includes('AVL') || log.includes('FINAL');
+                           const isError = log.includes('FAILED') || log.includes('Abort') || log.includes('ERROR');
+                           return (
+                            <div key={i} className={`flex items-start ${isSuccess ? 'text-emerald-400 font-bold' : isError ? 'text-red-400' : 'text-gray-400'}`}>
+                                {!log.startsWith('>') && <span className="opacity-50 mr-2 shrink-0">{String(i).padStart(2, '0')}</span>}
+                                {log}
+                            </div>
+                           );
+                        })
                     )}
                     <div ref={outputEndRef} />
                 </div>

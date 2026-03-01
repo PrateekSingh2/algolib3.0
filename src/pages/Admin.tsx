@@ -117,13 +117,15 @@ const Admin = () => {
 
   // --- EDITOR STATE ---
   const [mode, setMode] = useState<"create" | "edit">("create");
-  const [activeCodeTab, setActiveCodeTab] = useState<"java" | "cpp">("java");
+  // UPDATED: Added 'python' to activeCodeTab state
+  const [activeCodeTab, setActiveCodeTab] = useState<"java" | "cpp" | "python">("java");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   
+  // UPDATED: Added codePython to formData
   const [formData, setFormData] = useState({
     id: "", title: "", category: "", timeComplexity: "O(n)",
-    spaceComplexity: "O(1)", description: "", codeJava: "", codeCpp: ""
+    spaceComplexity: "O(1)", description: "", codeJava: "", codeCpp: "", codePython: ""
   });
 
   // --- UI STATE ---
@@ -145,7 +147,7 @@ const Admin = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [expandedPostId, setExpandedPostId] = useState<string | null>(null); // NEW: Track expanded post to show replies
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
 
   // --- BROADCAST STATE ---
   const [broadcastMsg, setBroadcastMsg] = useState("");
@@ -178,7 +180,7 @@ const Admin = () => {
     return () => unsubscribe();
   }, []);
 
-  // Fetch Community Posts & Broadcast Settings (Only if Admin)
+  // Fetch Community Posts & Broadcast Settings
   useEffect(() => {
     if (!isAdmin) return;
     
@@ -251,10 +253,12 @@ const Admin = () => {
   };
 
   const loadAlgorithm = (algo: any) => {
+      // UPDATED: Added codePython loading logic
       setFormData({
           id: algo.id || "", title: algo.title || "", category: algo.category || "",
           timeComplexity: algo.timeComplexity || "O(n)", spaceComplexity: algo.spaceComplexity || "O(1)",
-          description: algo.description || "", codeJava: algo.codeJava || "", codeCpp: algo.codeCpp || ""
+          description: algo.description || "", codeJava: algo.codeJava || "", codeCpp: algo.codeCpp || "",
+          codePython: algo.codePython || ""
       });
       setTags(algo.tags || []);
       setMode("edit");
@@ -292,9 +296,10 @@ const Admin = () => {
   };
 
   const handlePurge = () => {
+    // UPDATED: Added codePython clearing logic
     setFormData({
         id: "", title: "", category: "", timeComplexity: "O(n)", 
-        spaceComplexity: "O(1)", description: "", codeJava: "", codeCpp: ""
+        spaceComplexity: "O(1)", description: "", codeJava: "", codeCpp: "", codePython: ""
     });
     setTags([]); setJsonOutput(""); setMode("create"); setShowPurgeModal(false);
     setStatusMsg("Workspace Purged"); setTimeout(() => setStatusMsg(""), 2000);
@@ -309,7 +314,6 @@ const Admin = () => {
   };
   const removeTag = (t: string) => setTags(tags.filter(tag => tag !== t));
   const generateJSON = () => { setJsonOutput(JSON.stringify({ ...formData, tags }, null, 2)); };
-
 
   // ==========================================
   // MODERATION LOGIC
@@ -327,7 +331,6 @@ const Admin = () => {
     }
   };
 
-  // NEW: Function to delete a specific reply
   const handleDeleteReply = async (postId: string, replyId: string) => {
     if (!window.confirm("ADMIN ACTION: Are you sure you want to take down this specific reply?")) return;
     setIsDeleting(`reply-${replyId}`);
@@ -360,7 +363,6 @@ const Admin = () => {
   const totalPosts = posts.length;
   const totalReplies = posts.reduce((acc, post) => acc + (post.replies?.length || 0), 0);
   const totalInteractions = posts.reduce((acc, post) => acc + (post.upvotes?.length || 0) + (post.downvotes?.length || 0), 0) + totalReplies;
-
 
   // ==========================================
   // RENDERING: AUTHENTICATION SCREENS
@@ -675,13 +677,20 @@ const Admin = () => {
                                 <div className="flex">
                                     <button onClick={() => setActiveCodeTab("java")} className={`px-4 py-2 text-[10px] font-bold rounded-t-lg transition-all border-t border-l border-r ${activeCodeTab === 'java' ? 'bg-[#00ff88]/10 text-[#00ff88] border-[#00ff88]/30' : 'border-transparent text-gray-500 hover:text-white'}`}>JAVA</button>
                                     <button onClick={() => setActiveCodeTab("cpp")} className={`px-4 py-2 text-[10px] font-bold rounded-t-lg transition-all border-t border-l border-r ${activeCodeTab === 'cpp' ? 'bg-[#8b5cf6]/10 text-[#8b5cf6] border-[#8b5cf6]/30' : 'border-transparent text-gray-500 hover:text-white'}`}>C++</button>
+                                    {/* UPDATED: Added Python Tab Button */}
+                                    <button onClick={() => setActiveCodeTab("python")} className={`px-4 py-2 text-[10px] font-bold rounded-t-lg transition-all border-t border-l border-r ${activeCodeTab === 'python' ? 'bg-[#3b82f6]/10 text-[#3b82f6] border-[#3b82f6]/30' : 'border-transparent text-gray-500 hover:text-white'}`}>PYTHON</button>
                                 </div>
                             </div>
                             <div className="relative">
-                                {activeCodeTab === 'java' ? (
+                                {/* UPDATED: Converted to conditionally render all 3 options */}
+                                {activeCodeTab === 'java' && (
                                     <textarea value={formData.codeJava} onChange={(e) => setFormData({...formData, codeJava: e.target.value})} rows={12} className="w-full bg-[#050510] border-b border-l border-r border-[#00ff88]/30 rounded-b-lg rounded-tr-lg px-4 py-4 outline-none focus:bg-black/80 text-[11px] font-mono text-green-100 leading-relaxed custom-scrollbar transition-all" placeholder="// Java Implementation..." />
-                                ) : (
+                                )}
+                                {activeCodeTab === 'cpp' && (
                                     <textarea value={formData.codeCpp} onChange={(e) => setFormData({...formData, codeCpp: e.target.value})} rows={12} className="w-full bg-[#050510] border-b border-l border-r border-[#8b5cf6]/30 rounded-b-lg rounded-tr-lg px-4 py-4 outline-none focus:bg-black/80 text-[11px] font-mono text-purple-100 leading-relaxed custom-scrollbar transition-all" placeholder="// C++ Implementation..." />
+                                )}
+                                {activeCodeTab === 'python' && (
+                                    <textarea value={formData.codePython} onChange={(e) => setFormData({...formData, codePython: e.target.value})} rows={12} className="w-full bg-[#050510] border-b border-l border-r border-[#3b82f6]/30 rounded-b-lg rounded-tr-lg px-4 py-4 outline-none focus:bg-black/80 text-[11px] font-mono text-blue-100 leading-relaxed custom-scrollbar transition-all" placeholder="# Python Implementation..." />
                                 )}
                             </div>
                         </div>

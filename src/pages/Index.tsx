@@ -440,7 +440,7 @@ const Index = () => {
                             <Command className="h-6 w-6 text-green-700 group-focus-within:text-[#3b82f6] mr-5 transition-colors" />
                             <input
                             type="text"
-                            placeholder="SEARCH DATABASE..."
+                            placeholder="Search by title/tags ('linked list', 'stack', dp)"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="w-full bg-transparent text-white placeholder:text-green-700 focus:outline-none font-mono text-base tracking-wider"

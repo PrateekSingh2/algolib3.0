@@ -7,13 +7,14 @@ import { db, ref, get, set, runTransaction } from "./firebase";
 export interface Algorithm {
   id: string;
   title: string;
-  description: string;
+  category: string;
   timeComplexity: string;
   spaceComplexity: string;
+  description: string;
   tags: string[];
-  category: string;
   codeJava: string;
   codeCpp: string;
+  codePython: string;
 }
 
 const GIST_URL =

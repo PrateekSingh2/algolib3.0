@@ -12,6 +12,7 @@ import Prism from "prismjs";
 import "prismjs/components/prism-c";
 import "prismjs/components/prism-cpp";
 import "prismjs/components/prism-java";
+import "prismjs/components/prism-python"; // Added Python support
 
 import { fetchAlgorithms, type Algorithm } from "@/lib/algorithms";
 import Navbar from "@/components/Navbar";
@@ -28,8 +29,9 @@ const AmbientBackground = () => (
 
 const SnippetView = () => {
   const { id } = useParams<{ id: string }>();
+  // Added python to activeTab type
+  const [activeTab, setActiveTab] = useState<"java" | "cpp" | "python">("java");
   const [algorithm, setAlgorithm] = useState<Algorithm | null>(null);
-  const [activeTab, setActiveTab] = useState<"java" | "cpp">("java");
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -46,30 +48,40 @@ const SnippetView = () => {
     return () => { mounted = false; };
   }, [id]);
 
+  // Added logic for python code
+  const getCurrentCode = () => {
+    if (activeTab === "java") return algorithm?.codeJava;
+    if (activeTab === "cpp") return algorithm?.codeCpp;
+    if (activeTab === "python") return algorithm?.codePython;
+    return "";
+  };
+
+  const currentCode = getCurrentCode();
+
   const handleCopy = async () => {
-    const code = activeTab === "java" ? algorithm?.codeJava : algorithm?.codeCpp;
-    if (code) {
-      await navigator.clipboard.writeText(code);
+    if (currentCode) {
+      await navigator.clipboard.writeText(currentCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  const currentCode = activeTab === "java" ? algorithm?.codeJava : algorithm?.codeCpp;
-
   // --- THE FIX: MANUAL STRING HIGHLIGHTING ---
-  // Ye block React render hone se pehle string ko HTML spans me convert kar dega.
   const highlightedCode = useMemo(() => {
     if (!currentCode) return "";
-    const langConfig = activeTab === "java" ? Prism.languages.java : Prism.languages.cpp;
+    
+    // Added logic for Prism.languages.python
+    let langConfig;
+    if (activeTab === "java") langConfig = Prism.languages.java;
+    else if (activeTab === "cpp") langConfig = Prism.languages.cpp;
+    else if (activeTab === "python") langConfig = Prism.languages.python;
+
     // Safety check just in case Prism failed to load the module
     if (!langConfig) return currentCode; 
     return Prism.highlight(currentCode, langConfig, activeTab);
   }, [currentCode, activeTab]);
 
-
   // --- VS CODE / ONE DARK PRO INSPIRED CSS ---
-  // Highly specific CSS to override Tailwind resets
   const ideStyles = `
     code[class*="language-"], pre[class*="language-"] {
       color: #e2e8f0;
@@ -150,12 +162,13 @@ const SnippetView = () => {
                <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 bg-[#0A0A0A]">
                    <div className="flex items-center gap-2 text-zinc-400">
                       <TerminalSquare className="w-4 h-4" />
-                      <span className="text-xs font-mono lowercase">{algorithm.title.replace(/\s+/g, '_')}.{activeTab}</span>
+                      <span className="text-xs font-mono lowercase">{algorithm.title.replace(/\s+/g, '_')}.{activeTab === 'python' ? 'py' : activeTab}</span>
                    </div>
 
                    <div className="flex items-center gap-3">
                       <div className="flex bg-zinc-900 p-1 rounded-lg border border-zinc-800">
-                         {(['java', 'cpp'] as const).map((lang) => (
+                         {/* Added 'python' to the mapped array */}
+                         {(['java', 'cpp', 'python'] as const).map((lang) => (
                             <button
                                key={lang}
                                onClick={() => setActiveTab(lang)}
@@ -188,7 +201,6 @@ const SnippetView = () => {
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         transition={{ duration: 0.15 }}
                      >
-                        {/* React automatically handles dangerouslySetInnerHTML efficiently */}
                         <pre className={`language-${activeTab}`}>
                            <code 
                               className={`language-${activeTab}`}
