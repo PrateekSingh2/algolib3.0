@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   GitCommit, Layers, ArrowRightLeft, BarChart3, 
   Database, Activity, Cpu, Network, Binary, 
   Smartphone, PanelLeftClose, PanelLeftOpen,
-  Info, CheckCircle2, Maximize2, X, BookOpen, ArrowRight
+  BookOpen, ArrowRight, CheckCircle2, Maximize2, Zap, Terminal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -17,158 +17,193 @@ import GraphVisualizer from './GraphVisualizer';
 import Navbar from '@/components/Navbar';
 import GlobalRibbon from '@/components/GlobalRibbon';
 
-// Reuse the Alien Background
+// --- ENHANCED ALIEN BACKGROUND ---
 const AlienBackground = () => (
-  <div className="fixed inset-0 -z-10 bg-[#050510]">
-     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#1a0b2e] via-[#050510] to-[#000000]" />
+  <div className="fixed inset-0 -z-10 bg-[#020205] overflow-hidden">
+     {/* Deep Space Gradients */}
+     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#00f5ff]/10 via-[#050510] to-[#000000]" />
+     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#9d00ff]/10 via-transparent to-transparent opacity-50" />
+     
+     {/* Tech Grid */}
+     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.05]" />
+     
+     {/* Animated Radar Scanline */}
+     <motion.div 
+        animate={{ y: ['-100%', '200%'] }}
+        transition={{ repeat: Infinity, duration: 8, ease: 'linear' }}
+        className="absolute top-0 left-0 w-full h-[20vh] bg-gradient-to-b from-transparent via-[#00f5ff]/5 to-transparent pointer-events-none"
+     />
   </div>
 );
 
 const Visualizer = () => {
   const [activeTab, setActiveTab] = useState('ll');
   const [isNavOpen, setIsNavOpen] = useState(true);
-  
-  // State for the Welcome Popup
   const [showWelcome, setShowWelcome] = useState(true);
 
+  // Auto-hide welcome screen after some time (optional, left manual here for UX)
+  useEffect(() => {
+     // System boot sound/effect could go here
+  }, []);
+
   const MENU = [
-    { id: 'll', label: 'LINKED_LIST', icon: <GitCommit size={16} />, component: <LinkedListVisualizer /> },
-    { id: 'stack', label: 'STACK_LIFO', icon: <Layers size={16} />, component: <StackVisualizer /> },
-    { id: 'queue', label: 'QUEUE_FIFO', icon: <ArrowRightLeft size={16} />, component: <QueueVisualizer /> },
-    { id: 'sorting', label: 'SORTING_ALG', icon: <BarChart3 size={16} />, component: <SortingVisualizer /> },
-    { id: 'bst', label: 'BINARY_TREE', icon: <Binary size={16} />, component: <BSTVisualizer /> },
-    { id: 'graph', label: 'GRAPH_NET', icon: <Network size={16} />, component: <GraphVisualizer /> },
+    { id: 'll', label: 'LINKED_LIST', icon: <GitCommit size={18} />, component: <LinkedListVisualizer /> },
+    { id: 'stack', label: 'STACK_LIFO', icon: <Layers size={18} />, component: <StackVisualizer /> },
+    { id: 'queue', label: 'QUEUE_FIFO', icon: <ArrowRightLeft size={18} />, component: <QueueVisualizer /> },
+    { id: 'sorting', label: 'SORTING_ALG', icon: <BarChart3 size={18} />, component: <SortingVisualizer /> },
+    { id: 'bst', label: 'BINARY_TREE', icon: <Binary size={18} />, component: <BSTVisualizer /> },
+    { id: 'graph', label: 'GRAPH_NET', icon: <Network size={18} />, component: <GraphVisualizer /> },
   ];
 
   return (
     <>
       <AlienBackground />
       
-      {/* --- NAVBAR (Fixed Top, High Z-Index) --- */}
+      {/* --- NAVBAR --- */}
       <div className='fixed top-0 left-0 right-0 z-[200]'>
         <Navbar />
         <GlobalRibbon />
       </div>
 
-      {/* --- MOBILE WARNING SCREEN (Visible only on < md) --- */}
-      <div className="flex md:hidden h-screen flex-col items-center justify-center p-8 text-center relative z-50 pt-20">
+      {/* --- MOBILE WARNING SCREEN --- */}
+      <div className="flex lg:hidden h-screen flex-col items-center justify-center p-8 text-center relative z-50 pt-20">
           <div className="p-6 rounded-full bg-[#00f5ff]/5 border border-[#00f5ff]/20 mb-6 relative group">
-             <div className="absolute inset-0 bg-[#00f5ff]/20 blur-xl rounded-full opacity-50 animate-pulse" />
+             <div className="absolute inset-0 bg-[#00f5ff]/30 blur-2xl rounded-full animate-pulse" />
              <Smartphone size={48} className="text-[#00f5ff] relative z-10" />
              <XIconOverlay />
           </div>
-          
-          <h2 className="text-xl font-black text-white font-mono tracking-tighter mb-2">
-            MOBILE_VIEW <span className="text-red-500">RESTRICTED</span>
+          <h2 className="text-2xl font-black text-white font-mono tracking-tighter mb-2">
+            MOBILE_VIEW <span className="text-red-500 animate-pulse">RESTRICTED</span>
           </h2>
-          
-          <p className="text-gray-400 text-xs font-mono leading-relaxed max-w-xs mb-8">
-            The Algorithm Visualizer engine requires a larger viewport canvas.<br/><br/>This screen is too small for it...
+          <p className="text-gray-400 text-sm font-mono leading-relaxed max-w-xs mb-8">
+            Tactical Algorithm Visualizer requires a massive viewport.<br/><br/>Deploy on a desktop terminal to proceed.
           </p>
       </div>
 
-      {/* --- DESKTOP/TABLET APP (Visible on md+) --- */}
-      <div className="hidden md:flex flex-col h-screen w-full text-white font-sans overflow-hidden relative pt-20">
+      {/* --- DESKTOP APP (Visible on lg+) --- */}
+      <div className="hidden lg:flex flex-col h-screen w-full text-white font-sans overflow-hidden relative pt-[72px]">
         
-        {/* --- WELCOME POPUP MODAL (Enhanced) --- */}
+        {/* --- SYSTEM BOOT MODAL (Welcome) --- */}
+        {/* --- SYSTEM BOOT MODAL (Welcome) --- */}
         <AnimatePresence>
           {showWelcome && (
             <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+              initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+              animate={{ opacity: 1, backdropFilter: "blur(8px)" }}
+              exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+              className="absolute inset-0 z-[300] flex items-center justify-center bg-[#020205]/80 p-4"
             >
               <motion.div 
-                initial={{ scale: 0.95, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.95, y: 20 }}
-                className="w-full max-w-2xl bg-[#0a0a1a] border border-[#00f5ff]/30 rounded-2xl shadow-[0_0_60px_rgba(0,245,255,0.1)] overflow-hidden relative flex flex-col"
+                initial={{ scale: 0.9, y: 30, rotateX: 15 }}
+                animate={{ scale: 1, y: 0, rotateX: 0 }}
+                exit={{ scale: 0.95, y: 20, opacity: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                // CHANGED: max-w-3xl -> max-w-2xl for a sleeker profile
+                className="w-full max-w-2xl bg-[#0a0a1a]/90 backdrop-blur-2xl border border-[#00f5ff]/40 rounded-2xl shadow-[0_0_80px_rgba(0,245,255,0.15)] overflow-hidden relative flex flex-col perspective-[1000px]"
               >
-                {/* Decoration Lines */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#00f5ff] to-transparent opacity-50" />
-                <div className="absolute -top-32 -right-32 w-64 h-64 bg-[#00f5ff]/5 blur-3xl rounded-full pointer-events-none" />
+                {/* Glowing Core */}
+                <div className="absolute -top-40 -left-40 w-80 h-80 bg-[#00f5ff]/20 blur-[100px] rounded-full pointer-events-none" />
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#00f5ff] to-transparent opacity-80" />
 
-                {/* --- MODAL HEADER --- */}
-                <div className="p-8 pb-4 border-b border-white/5 flex items-center justify-between">
+                {/* MODAL HEADER */}
+                {/* CHANGED: p-8 pb-6 -> p-6 pb-4 */}
+                <div className="p-6 pb-4 border-b border-[#00f5ff]/10 flex items-center justify-between relative z-10">
                    <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-xl bg-[#00f5ff]/10 border border-[#00f5ff]/20 text-[#00f5ff] shadow-[0_0_15px_rgba(0,245,255,0.2)]">
-                        <Cpu size={28} />
+                      <div className="relative">
+                         <div className="absolute inset-0 bg-[#00f5ff] blur-md opacity-40 animate-pulse" />
+                         {/* CHANGED: p-4 -> p-3, icon size 32 -> 24 */}
+                         <div className="p-3 rounded-xl bg-[#00f5ff]/10 border border-[#00f5ff]/50 text-[#00f5ff] relative z-10">
+                           <Cpu size={24} />
+                         </div>
                       </div>
                       <div>
-                        <h2 className="text-2xl font-bold text-white font-mono tracking-tight">SYSTEM INITIALIZED</h2>
+                        {/* CHANGED: text-3xl -> text-2xl */}
+                        <h2 className="text-2xl font-black text-white font-mono tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">ALGO_CORE ONLINE</h2>
                         <div className="flex items-center gap-2 mt-1">
-                           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                           <p className="text-[10px] text-[#00f5ff] uppercase tracking-widest font-mono opacity-80">
-                             AlgoViz Engine v2.5.0
+                           <span className="flex h-2 w-2 relative">
+                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                           </span>
+                           <p className="text-[10px] text-[#00f5ff] uppercase tracking-[0.3em] font-mono font-bold">
+                             System Initialized
                            </p>
                         </div>
                       </div>
                    </div>
                 </div>
 
-                {/* --- MODAL BODY --- */}
-                <div className="p-8 space-y-6">
-                   <p className="text-gray-300 text-sm leading-relaxed max-w-lg">
-                     Welcome to the interactive algorithm simulation deck.
+                {/* MODAL BODY */}
+                {/* CHANGED: p-8 space-y-8 -> p-6 space-y-6 */}
+                <div className="p-6 space-y-6 relative z-10 bg-gradient-to-b from-transparent to-[#00f5ff]/5">
+                   {/* CHANGED: text-base -> text-sm */}
+                   <p className="text-gray-300 text-sm leading-relaxed max-w-2xl font-mono">
+                     Welcome to the high-fidelity algorithm simulation deck. Select a data structure from the control panel to initiate physical memory rendering.
                    </p>
 
-                   {/* Layout Grid for Tips */}
+                   {/* CHANGED: gap-6 -> gap-4 */}
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Tip 1: Viewport */}
-                      <div className="bg-[#050510] p-4 rounded-xl border border-white/5 flex gap-3 items-start">
-                         <Maximize2 size={18} className="text-[#00f5ff] shrink-0 mt-0.5" />
+                      {/* CHANGED: p-5 -> p-4 */}
+                      <div className="bg-black/50 p-4 rounded-xl border border-[#00f5ff]/20 hover:border-[#00f5ff]/50 transition-colors group flex gap-3 items-start shadow-inner">
+                         <div className="p-2 bg-[#00f5ff]/10 rounded-lg text-[#00f5ff] group-hover:scale-110 transition-transform">
+                             <Maximize2 size={18} />
+                         </div>
                          <div>
-                            <h4 className="text-white text-xs font-bold mb-1">Maximize View</h4>
-                            <p className="text-[11px] text-gray-500 leading-relaxed">
-                               Close the side navigation panel to extend the holographic canvas.
+                            <h4 className="text-[#00f5ff] text-xs font-black mb-1 font-mono uppercase tracking-wider">Expand Horizon</h4>
+                            <p className="text-[11px] text-gray-400 leading-relaxed">
+                               Collapse the sidebar to deploy the full holographic canvas for massive trees and graphs.
                             </p>
                          </div>
                       </div>
 
-                      {/* Tip 2: Performance */}
-                      <div className="bg-[#050510] p-4 rounded-xl border border-white/5 flex gap-3 items-start">
-                         <Activity size={18} className="text-[#9d00ff] shrink-0 mt-0.5" />
+                      {/* CHANGED: p-5 -> p-4 */}
+                      <div className="bg-black/50 p-4 rounded-xl border border-[#9d00ff]/20 hover:border-[#9d00ff]/50 transition-colors group flex gap-3 items-start shadow-inner">
+                         <div className="p-2 bg-[#9d00ff]/10 rounded-lg text-[#9d00ff] group-hover:scale-110 transition-transform">
+                             <Zap size={18} />
+                         </div>
                          <div>
-                            <h4 className="text-white text-xs font-bold mb-1">Real-Time Ops</h4>
-                            <p className="text-[11px] text-gray-500 leading-relaxed">
-                               Simulations run at 60fps. Use the speed slider to slow down execution.
+                            <h4 className="text-[#9d00ff] text-xs font-black mb-1 font-mono uppercase tracking-wider">Live Execution</h4>
+                            <p className="text-[11px] text-gray-400 leading-relaxed">
+                               Watch code execute frame-by-frame. Adjust the tachyon speed slider for precision debugging.
                             </p>
                          </div>
                       </div>
                    </div>
 
-                   {/* --- DOCUMENTATION ALERT (Highlight) --- */}
-                   <div className="relative overflow-hidden rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 flex gap-4 items-center group hover:bg-yellow-500/10 transition-colors">
-                      <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                   {/* DOCS ALERT */}
+                   {/* CHANGED: p-5 -> p-4 */}
+                   <div className="relative overflow-hidden rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-4 flex gap-4 items-center group hover:bg-yellow-500/10 transition-colors shadow-[0_0_20px_rgba(234,179,8,0.05)]">
+                      <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                       
-                      <div className="p-3 bg-yellow-500/10 rounded-lg text-yellow-500 shrink-0 relative z-10">
-                         <BookOpen size={24} />
+                      <div className="p-2.5 bg-yellow-500/10 rounded-lg text-yellow-500 shrink-0 relative z-10 border border-yellow-500/20">
+                         <BookOpen size={20} />
                       </div>
                       <div className="relative z-10 flex-1">
-                         <h4 className="text-yellow-500 font-bold text-sm mb-1 font-mono uppercase tracking-wide flex items-center gap-2">
-                            New User Detected?
+                         <h4 className="text-yellow-500 font-black text-xs mb-0.5 font-mono uppercase tracking-widest flex items-center gap-2">
+                            Manual Override
                          </h4>
-                         <p className="text-gray-400 text-xs leading-relaxed">
-                            If you are unsure how to control the visualizers or interpret the data, please refer to the system manual first.
+                         <p className="text-gray-400 text-[11px] leading-relaxed">
+                            Need clearance codes? Access the system documentation to understand visualizer mechanics.
                          </p>
                       </div>
-                      <a href="/docs" className="relative z-10 px-4 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 text-xs font-bold rounded border border-yellow-500/20 transition-all flex items-center gap-2">
+                      <a href="/docs" className="relative z-10 px-4 py-2 bg-yellow-500/10 hover:bg-yellow-500 text-yellow-500 hover:text-black text-[10px] font-black uppercase tracking-widest rounded-lg border border-yellow-500/50 transition-all flex items-center gap-2">
                          <span>DOCS</span>
                          <ArrowRight size={14} />
                       </a>
                    </div>
                 </div>
 
-                {/* --- MODAL FOOTER --- */}
-                <div className="p-6 border-t border-white/5 bg-black/20 flex justify-end">
+                {/* MODAL FOOTER */}
+                {/* CHANGED: p-6 -> p-5 */}
+                <div className="p-5 border-t border-[#00f5ff]/20 bg-[#00f5ff]/5 flex justify-end relative z-10">
                   <button 
                     onClick={() => setShowWelcome(false)}
-                    className="group relative flex items-center gap-3 px-8 py-3 bg-[#00f5ff] hover:bg-[#00c2cc] text-black font-bold text-sm rounded-xl transition-all shadow-[0_0_20px_rgba(0,245,255,0.2)] hover:shadow-[0_0_30px_rgba(0,245,255,0.4)] overflow-hidden"
+                    // CHANGED: px-10 py-4 -> px-8 py-3
+                    className="group relative flex items-center gap-2 px-8 py-3 bg-[#00f5ff] text-black font-black text-xs rounded-xl transition-all hover:scale-[1.02] shadow-[0_0_30px_rgba(0,245,255,0.4)] overflow-hidden"
                   >
-                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                    <span className="relative z-10">Ok, Continue</span>
-                    <CheckCircle2 size={18} className="relative z-10" />
+                    {/* Button shine effect */}
+                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
+                    <span className="relative z-10 tracking-widest uppercase">ENTER MATRIX</span>
+                    <Terminal size={16} className="relative z-10" />
                   </button>
                 </div>
 
@@ -178,106 +213,166 @@ const Visualizer = () => {
         </AnimatePresence>
 
 
-        <div className="flex flex-1 overflow-hidden px-4 pb-4">
+        {/* --- MAIN DASHBOARD LAYOUT --- */}
+        <div className="flex flex-1 overflow-hidden p-4 gap-4">
           
-          {/* --- LEFT CONTROL PANEL (SIDEBAR) --- */}
+          {/* --- LEFT NAVIGATION PANEL (The Deck) --- */}
           <motion.div 
-            initial={{ width: 256, opacity: 1, marginRight: 16 }}
+            initial={{ width: 280, opacity: 1 }}
             animate={{ 
-                width: isNavOpen ? 256 : 0, 
+                width: isNavOpen ? 280 : 0, 
                 opacity: isNavOpen ? 1 : 0,
-                marginRight: isNavOpen ? 16 : 0
             }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col z-20 shrink-0 overflow-hidden"
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} // Snappy fluid ease
+            className="flex flex-col z-20 shrink-0 overflow-hidden bg-[#0a0a1a]/90 border border-white/10 rounded-2xl backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.6)]"
           >
-            <div className="w-64 flex flex-col h-full">
+            <div className="w-[280px] flex flex-col h-full">
                 
                 {/* Panel Header */}
-                <div className="p-4 mb-4 rounded-tl-xl rounded-br-xl bg-[#0a0a1a]/80 border border-[#00f5ff]/30 backdrop-blur-md relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-[#00f5ff]/10 to-transparent opacity-20" />
-                <h1 className="text-lg font-black text-white flex items-center gap-2 font-mono tracking-tighter relative z-10">
-                    <Database className="text-[#00f5ff] w-4 h-4" />
-                    AlgoVIZ
-                </h1>
-                <div className="text-[9px] text-[#00f5ff] font-mono mt-1 opacity-70">INTERACTIVE SIMULATION</div>
+                <div className="p-6 pb-5 relative overflow-hidden group border-b border-white/10">
+                  <div className="absolute inset-0 bg-gradient-to-b from-[#00f5ff]/10 to-transparent opacity-30" />
+                  <h1 className="text-2xl font-black text-white flex items-center gap-3 font-mono tracking-tighter relative z-10 drop-shadow-md">
+                      <Database className="text-[#00f5ff] w-6 h-6" />
+                      AlgoVIZ
+                  </h1>
+                  <div className="flex items-center gap-2 mt-1.5 opacity-70 relative z-10">
+                      <div className="w-1 h-1 bg-[#00f5ff] rounded-full" />
+                      <div className="text-[9px] text-[#00f5ff] font-mono tracking-[0.2em] uppercase">MODULE_SELECTOR</div>
+                  </div>
                 </div>
                 
-                {/* Navigation Keys */}
-                <div className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
-                {MENU.map((item) => (
-                    <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full relative group overflow-hidden flex items-center gap-3 px-4 py-3.5 border-l-2 transition-all duration-300 rounded-r-md ${
-                        activeTab === item.id
-                        ? 'border-[#00f5ff] bg-[#00f5ff]/10'
-                        : 'border-transparent hover:border-[#00f5ff]/50 hover:bg-white/5'
-                    }`}
-                    >
-                    {/* Active Glow Background */}
-                    {activeTab === item.id && (
-                        <motion.div layoutId="activeTab" className="absolute inset-0 bg-gradient-to-r from-[#00f5ff]/10 to-transparent" />
-                    )}
-                    
-                    <div className={`relative z-10 ${activeTab === item.id ? 'text-[#00f5ff]' : 'text-gray-500 group-hover:text-gray-300'}`}>
-                        {item.icon}
-                    </div>
-                    <span className={`relative z-10 text-[11px] font-bold font-mono tracking-wider ${
-                        activeTab === item.id ? 'text-white' : 'text-gray-500 group-hover:text-white'
-                    }`}>
-                        {item.label}
-                    </span>
-                    </button>
-                ))}
+                {/* Navigation Keys (Tactile Feel) */}
+                <div className="flex-1 space-y-2 overflow-y-auto p-4 custom-scrollbar">
+                {MENU.map((item) => {
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveTab(item.id)}
+                        className={`w-full relative group overflow-hidden flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 transform hover:translate-x-1 ${
+                            isActive
+                            ? 'bg-gradient-to-r from-[#00f5ff]/20 to-transparent border border-[#00f5ff]/40 shadow-[inset_0_0_20px_rgba(0,245,255,0.1)]'
+                            : 'bg-black/40 border border-white/5 hover:border-white/20 hover:bg-white/5'
+                        }`}
+                      >
+                        {/* Active Laser Bar */}
+                        {isActive && (
+                            <motion.div layoutId="navLaser" className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#00f5ff] shadow-[0_0_15px_#00f5ff]" />
+                        )}
+                        
+                        <div className={`relative z-10 p-2.5 rounded-lg transition-colors ${isActive ? 'bg-[#00f5ff] text-black shadow-[0_0_15px_#00f5ff]' : 'bg-[#1a1a2e] text-gray-400 group-hover:text-white border border-white/10'}`}>
+                            {item.icon}
+                        </div>
+                        
+                        <span className={`relative z-10 text-xs font-black font-mono tracking-widest transition-colors ${
+                            isActive ? 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]' : 'text-gray-500 group-hover:text-gray-200'
+                        }`}>
+                            {item.label}
+                        </span>
+
+                        {/* Scanner Effect on Active */}
+                        {isActive && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+                        )}
+                      </button>
+                    )
+                })}
                 </div>
 
                 {/* Panel Footer */}
-                <div className="mt-auto p-4 rounded-bl-xl rounded-tr-xl border border-white/5 bg-black/40 backdrop-blur-md">
-                <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500">
-                    <Activity className="w-3 h-3 text-[#00ff88] animate-pulse" />
-                    SYSTEM_READY
-                </div>
+                <div className="mt-auto p-5 border-t border-white/10 bg-black/60 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#00ff88]/50 to-transparent" />
+                  <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 bg-[#050510] px-4 py-3 rounded-lg border border-[#00ff88]/20 shadow-[inset_0_0_10px_rgba(0,255,136,0.05)]">
+                      <div className="flex items-center gap-2">
+                         <Activity className="w-4 h-4 text-[#00ff88]" />
+                         <span className="font-bold text-[#00ff88] tracking-widest">ENGINE_LIVE</span>
+                      </div>
+                      <span className="text-[8px] opacity-50">60 FPS</span>
+                  </div>
                 </div>
             </div>
           </motion.div>
 
-          {/* --- MAIN HOLOGRAPHIC WORKSPACE --- */}
-          <div className="flex-1 relative flex flex-col min-w-0 rounded-2xl overflow-hidden border border-white/10 bg-[#050510]/50 backdrop-blur-sm shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+          {/* --- MAIN HOLOGRAPHIC WORKSPACE (The Arena) --- */}
+          <div className="flex-1 relative flex flex-col min-w-0 rounded-2xl overflow-hidden border border-white/10 bg-[#050510]/80 backdrop-blur-md shadow-[0_0_60px_rgba(0,0,0,0.7)]">
             
-            {/* Top HUD Strip */}
-            <div className="h-12 border-b border-white/5 bg-black/20 flex items-center px-4 justify-between shrink-0">
-               <div className="flex items-center gap-4">
+            {/* --- TOP HUD STRIP --- */}
+            <div className="h-[72px] border-b border-white/10 bg-gradient-to-b from-black/80 to-transparent flex items-center px-6 justify-between shrink-0 relative z-50">
+               <div className="flex items-center gap-6 h-full">
                   
-                  {/* SIDEBAR TOGGLE BUTTON */}
-                  <button 
+                  {/* --- SUPERNOVA TOGGLE BUTTON (Highly Visible) --- */}
+                  <motion.button 
                     onClick={() => setIsNavOpen(!isNavOpen)}
-                    className="p-1.5 rounded-lg bg-white/5 hover:bg-[#00f5ff]/20 text-gray-400 hover:text-[#00f5ff] transition-colors border border-white/5 hover:border-[#00f5ff]/30"
+                    animate={{
+                        boxShadow: isNavOpen ? "0px 0px 10px rgba(0,245,255,0.2)" : ["0px 0px 15px rgba(0,245,255,0.4)", "0px 0px 30px rgba(0,245,255,0.7)", "0px 0px 15px rgba(0,245,255,0.4)"],
+                        borderColor: isNavOpen ? "rgba(0,245,255,0.4)" : "rgba(0,245,255,1)"
+                    }}
+                    transition={{ duration: 2, repeat: isNavOpen ? 0 : Infinity, ease: "easeInOut" }}
+                    className={`group relative flex items-center gap-3 px-5 py-2.5 rounded-xl text-[#00f5ff] transition-all overflow-hidden bg-[#00f5ff]/10 border-2`}
                     title={isNavOpen ? "Maximize Workspace" : "Open Navigation"}
                   >
-                    {isNavOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
-                  </button>
+                    {/* Glowing Core for closed state to grab attention */}
+                    {!isNavOpen && <div className="absolute inset-0 bg-[#00f5ff]/10 animate-pulse" />}
+                    
+                    {isNavOpen ? <PanelLeftClose size={20} className="relative z-10 group-hover:-translate-x-1 transition-transform" /> : <PanelLeftOpen size={20} className="relative z-10 group-hover:translate-x-1 transition-transform" />}
+                    
+                    <span className="relative z-10 font-black font-mono text-[11px] tracking-[0.2em] uppercase mt-0.5 drop-shadow-[0_0_5px_rgba(0,245,255,0.8)]">
+                       {isNavOpen ? 'COLLAPSE MENU' : 'EXPAND MENU'}
+                    </span>
+                  </motion.button>
 
-                  <div className="h-6 w-px bg-white/10" />
+                  <div className="h-8 w-px bg-white/10" />
 
-                  <div className="flex items-center gap-3">
-                    <Cpu className="w-4 h-4 text-[#9d00ff]" />
-                    <span className="text-gray-500 font-mono text-[10px] tracking-widest uppercase">
-                        PROTOCOL :: <span className="text-[#00f5ff] font-bold">{MENU.find(m => m.id === activeTab)?.label}</span>
+                  {/* Active Protocol Indicator */}
+                  <div className="flex items-center gap-3 bg-[#0a0a1a] px-5 py-2 rounded-xl border border-white/10 shadow-inner">
+                    <Cpu className="w-5 h-5 text-[#9d00ff]" />
+                    <span className="text-gray-400 font-mono text-[11px] tracking-[0.2em] uppercase flex items-center gap-3">
+                        PROTOCOL_LOADED <ArrowRight size={10} className="opacity-50"/> 
+                        <span className="text-white font-black bg-[#9d00ff]/20 border border-[#9d00ff]/30 px-3 py-1 rounded shadow-[0_0_10px_rgba(157,0,255,0.2)]">
+                          {MENU.find(m => m.id === activeTab)?.label}
+                        </span>
                     </span>
                   </div>
                </div>
 
-               <div className="flex gap-1.5">
-                  {[1,2,3].map(i => <div key={i} className="w-1.5 h-1.5 bg-[#00f5ff] rounded-full opacity-50 animate-pulse" style={{ animationDelay: `${i * 0.2}s`}} />)}
+               {/* Decorative Tech Data */}
+               <div className="hidden md:flex items-center gap-6">
+                  <div className="flex flex-col items-end font-mono">
+                     <span className="text-[8px] text-gray-500 tracking-widest">MEM_ALLOC</span>
+                     <span className="text-[10px] font-bold text-emerald-400">0x00F8</span>
+                  </div>
+                  <div className="h-6 w-px bg-white/10" />
+                  <div className="flex gap-1.5">
+                     {[1,2,3].map(i => (
+                        <div key={i} className="w-1.5 h-6 bg-[#00f5ff] rounded-full opacity-50 animate-pulse shadow-[0_0_10px_#00f5ff]" style={{ animationDelay: `${i * 0.15}s`}} />
+                     ))}
+                  </div>
                </div>
             </div>
 
-            {/* Visualization Canvas */}
-            <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-transparent to-[#0a0a1a]/80">
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f1a_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f1a_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none opacity-50" />
+            {/* --- VISUALIZATION CANVAS --- */}
+            <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-[#020205] to-[#0a0a1a]">
+              {/* Complex Render Grid */}
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:100px_100px] pointer-events-none" />
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff02_1px,transparent_1px),linear-gradient(to_bottom,#ffffff02_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
+              
+              {/* Shadow Overlay for depth */}
+              <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(0,0,0,0.8)] pointer-events-none z-20" />
+
+              {/* Render Selected Component */}
               <div className="relative z-10 h-full w-full">
-                 {MENU.find(m => m.id === activeTab)?.component}
+                 <AnimatePresence mode="wait">
+                    <motion.div 
+                       key={activeTab}
+                       initial={{ opacity: 0, scale: 0.98, filter: 'blur(4px)' }}
+                       animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                       exit={{ opacity: 0, scale: 1.02, filter: 'blur(4px)' }}
+                       transition={{ duration: 0.4, ease: "easeOut" }}
+                       className="w-full h-full"
+                    >
+                       {MENU.find(m => m.id === activeTab)?.component}
+                    </motion.div>
+                 </AnimatePresence>
               </div>
             </div>
           </div>
@@ -290,8 +385,8 @@ const Visualizer = () => {
 
 // Helper for the "X" overlay on the smartphone icon
 const XIconOverlay = () => (
-    <div className="absolute -bottom-1 -right-1 bg-[#050510] rounded-full p-1 border border-red-500/50">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+    <div className="absolute -bottom-1 -right-1 bg-[#050510] rounded-full p-1.5 border-2 border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
