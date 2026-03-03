@@ -16,7 +16,9 @@ import {
   Maximize2,
   BookOpen,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
@@ -51,8 +53,9 @@ const Visualizer = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [mobile, setMobile] = useState(false);
   
-  // HUD states
+  // HUD & Layout states
   const [showWelcome, setShowWelcome] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Desktop Sidebar Toggle State
   const [topNavHidden, setTopNavHidden] = useState(() => 
     typeof window !== 'undefined' ? window.innerWidth <= 639 : false
   );
@@ -101,7 +104,7 @@ const Visualizer = () => {
     <>
       <AlienBackground mobile={mobile} />
 
-      {/* --- WELCOME MODAL (Screenshot Match) --- */}
+      {/* --- WELCOME MODAL --- */}
       <AnimatePresence>
         {showWelcome && (
           <motion.div
@@ -200,39 +203,62 @@ const Visualizer = () => {
       <div className={`h-screen overflow-hidden text-white ${topNavHidden ? 'pt-2 sm:pt-3' : 'pt-[64px] sm:pt-[80px] lg:pt-[96px]'}`}>
         <div className="h-full flex flex-col lg:flex-row gap-3 p-2 sm:p-3 lg:p-4">
           
-          {/* --- DESKTOP SIDE PANEL --- */}
-          <aside className="hidden lg:flex w-[260px] shrink-0 flex-col rounded-2xl bg-[#06060c]/95 border border-white/5 backdrop-blur-xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] z-20">
-            <div className="p-6 border-b border-[#00f5ff]/20">
-              <h1 className="text-2xl font-black text-white flex items-center gap-3 tracking-tight">
-                <Database className="text-[#00f5ff]" size={24} /> AlgoViz
-              </h1>
-              <p className="text-[10px] uppercase tracking-[0.15em] mt-2 text-[#00f5ff] font-bold">Simulator Engine of AlgoLib</p>
-            </div>
-            
-            <nav className="flex-1 py-4 flex flex-col overflow-y-auto custom-scrollbar">
-              {menu.map((item) => (
-                <MenuButton key={item.id} item={item} active={activeTab === item.id} onSelect={selectTab} />
-              ))}
-            </nav>
-            
-            <div className="p-6 border-t border-white/5 bg-black/40">
-              <div className="flex items-center gap-3 text-[10px] tracking-widest text-gray-500 font-mono">
-                <Activity size={16} className="text-[#00ff88]" /> SYSTEM_READY
-              </div>
-            </div>
-          </aside>
+          {/* --- DESKTOP SIDE PANEL (With smooth Width Collapse Animation) --- */}
+          <AnimatePresence initial={false}>
+            {isSidebarOpen && (
+              <motion.aside 
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 260, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                className="hidden lg:flex shrink-0 relative rounded-2xl bg-[#06060c]/95 border border-white/5 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.5)] z-20 overflow-hidden h-full"
+              >
+                {/* Fixed inner container prevents text squishing during animation */}
+                <div className="w-[260px] h-full flex flex-col absolute top-0 left-0">
+                  <div className="p-6 border-b border-[#00f5ff]/20 shrink-0">
+                    <h1 className="text-2xl font-black text-white flex items-center gap-3 tracking-tight">
+                      <Database className="text-[#00f5ff]" size={24} /> AlgoViz
+                    </h1>
+                    <p className="text-[10px] uppercase tracking-[0.15em] mt-2 text-[#00f5ff] font-bold">Simulator Engine of AlgoLib</p>
+                  </div>
+                  
+                  <nav className="flex-1 py-4 flex flex-col overflow-y-auto custom-scrollbar">
+                    {menu.map((item) => (
+                      <MenuButton key={item.id} item={item} active={activeTab === item.id} onSelect={selectTab} />
+                    ))}
+                  </nav>
+                  
+                  <div className="p-6 border-t border-white/5 bg-black/40 shrink-0">
+                    <div className="flex items-center gap-3 text-[10px] tracking-widest text-gray-500 font-mono">
+                      <Activity size={16} className="text-[#00ff88]" /> SYSTEM_READY
+                    </div>
+                  </div>
+                </div>
+              </motion.aside>
+            )}
+          </AnimatePresence>
 
           <section className="flex-1 min-w-0 rounded-2xl border border-white/10 bg-[#050510]/85 backdrop-blur-md overflow-hidden flex flex-col">
             <header className="h-14 sm:h-16 border-b border-white/10 bg-black/50 px-3 sm:px-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <button
                   onClick={() => setDrawerOpen(true)}
-                  className="lg:hidden h-11 w-11 rounded-xl border border-[#00f5ff]/40 bg-[#00f5ff]/10 grid place-items-center active:scale-95 transition-transform"
+                  className="lg:hidden h-11 w-11 shrink-0 rounded-xl border border-[#00f5ff]/40 bg-[#00f5ff]/10 grid place-items-center active:scale-95 transition-transform"
                   aria-label="Open modules"
                 >
                   <Menu size={20} className="text-[#00f5ff]" />
                 </button>
-                <div className="min-w-0">
+
+                {/* --- DESKTOP SIDEBAR TOGGLE BUTTON --- */}
+                <button
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className="hidden lg:flex h-11 w-11 shrink-0 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:text-white active:scale-95 transition-all items-center justify-center"
+                  aria-label="Toggle Sidebar"
+                >
+                  {isSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+                </button>
+
+                <div className="min-w-0 pl-1">
                   <p className="font-mono text-lg sm:text-xl font-black truncate">Visualizing</p>
                   <p className="text-xs text-gray-400 tracking-widest truncate">{activeModule?.label}</p>
                 </div>
@@ -241,7 +267,7 @@ const Visualizer = () => {
               {/* --- ARROW DOWN / UP Navbar Toggle --- */}
               <button
                 onClick={() => setTopNavHidden((prev) => !prev)}
-                className="h-11 min-w-11 px-3 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:text-white active:scale-95 transition-all flex items-center justify-center"
+                className="h-11 min-w-11 shrink-0 px-3 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:text-white active:scale-95 transition-all flex items-center justify-center"
                 aria-label="Toggle top navbar"
               >
                 {topNavHidden ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
