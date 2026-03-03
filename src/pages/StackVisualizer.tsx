@@ -45,8 +45,8 @@ const StackVisualizer = () => {
   ]);
   const [inputValue, setInputValue] = useState<number>(0);
   
-  // Engine State
-  const [showHUD, setShowHUD] = useState<boolean>(true);
+  // Engine State - HUD Hidden by Default
+  const [showHUD, setShowHUD] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const [message, setMessage] = useState('SYSTEM_IDLE: Ready for input');
@@ -58,13 +58,10 @@ const StackVisualizer = () => {
   const [poppedNode, setPoppedNode] = useState<StackNode | null>(null);
 
   const stepTrigger = useRef<() => void>(() => {});
-  
-  // FIX: Ref for Auto-Scrolling the Interpreter
   const interpreterEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { generateRandom(); }, []);
 
-  // FIX: Auto-scroll Effect whenever codeLines change
   useEffect(() => {
     interpreterEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [codeLines]);
@@ -94,6 +91,7 @@ const StackVisualizer = () => {
   const handlePush = async () => {
     if (isAnimating || stack.length >= MAX_CAPACITY) return;
     setIsAnimating(true);
+    if (!showHUD) setShowHUD(true); // Auto-show HUD
     const snippet = SNIPPETS.push;
     
     const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -124,6 +122,7 @@ const StackVisualizer = () => {
   const handlePop = async () => {
     if (isAnimating || stack.length === 0) return;
     setIsAnimating(true);
+    if (!showHUD) setShowHUD(true); // Auto-show HUD
     const snippet = SNIPPETS.pop;
 
     await waitStep('1', snippet, [{ name: 'TOP', value: `${stack.length - 1}`, color: '#facc15' }]);
@@ -154,19 +153,12 @@ const StackVisualizer = () => {
     <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden">
       <CyberGrid />
       
-      <div className="flex-1 flex relative z-10 overflow-hidden h-full">
+      <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
         
-        {/* LEFT: COMMAND CENTER */}
-        <div className="w-[340px] bg-black/80 backdrop-blur-md border-r border-white/10 flex flex-col h-full shadow-2xl shrink-0 z-20">
-          
-          <div className="p-5 border-b border-white/10 bg-gradient-to-r from-cyan-500/10 to-transparent shrink-0">
-             <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-cyan-400">
-                <Layers size={24} /> Stack Engine
-             </h2>
-             <p className="text-xs text-gray-400 mt-1">Hinglish LIFO Visualizer v2.1</p>
-          </div>
+        {/* LEFT: COMMAND CENTER (Constrained to 38% on mobile) */}
+        <div className="w-full lg:w-[340px] bg-black/95 lg:bg-black/80 backdrop-blur-md border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar pb-12">
+          <div className="overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6">
             
             <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
               <div className="flex justify-between items-center">
@@ -212,58 +204,124 @@ const StackVisualizer = () => {
           </div>
         </div>
 
+        {/* VISIBLE GLOWING SEPARATOR LINE (Mobile Only) */}
+        <div className="lg:hidden h-[2px] w-full bg-gradient-to-r from-cyan-500/10 via-cyan-500/60 to-cyan-500/10 shrink-0 z-30 order-2" />
+
         {/* RIGHT: THE ARENA */}
-        <div className="flex-1 relative flex flex-col p-6 min-w-0 overflow-hidden h-full">
+        <div className="order-3 lg:order-2 flex-1 relative flex flex-col p-3 sm:p-4 lg:p-6 min-w-0 overflow-hidden lg:h-full w-full">
           
-          {/* Top Bar with HUD Toggle Button - MOVED TO START (Cyan Theme) */}
-          <div className="flex justify-start mb-4 shrink-0">
+          {/* SMALL HUD TOGGLE */}
+          <div className="flex justify-start lg:justify-start items-center mb-2 lg:mb-3 shrink-0 gap-2">
              <button 
                 onClick={() => setShowHUD(!showHUD)}
-                className="px-4 py-2 bg-[#050505] border-[1.5px] border-cyan-500/80 rounded-full text-cyan-400 font-black text-xs flex items-center gap-2 tracking-widest hover:bg-cyan-500/10 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all shadow-[0_0_15px_rgba(6,182,212,0.2)] uppercase"
+                className="h-7 lg:h-8 px-3 bg-[#050505] border border-cyan-500/80 rounded-lg lg:rounded-full text-cyan-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-cyan-500/10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)] uppercase z-40"
              >
-                {showHUD ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                {showHUD ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
                 {showHUD ? 'HIDE HUD' : 'SHOW HUD'}
              </button>
           </div>
 
-          {/* Animate the Interpreter and Spawn Zone visibility */}
+          {/* Central Arena Layout */}
+          <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner mb-2 lg:mb-4 w-full overflow-hidden">
+             
+             {/* ADDED: Horizontal Scroll support just in case the stack is used in a wide configuration or screen is excessively narrow */}
+             <div className="flex-1 w-full h-full overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x flex items-end justify-center pb-4">
+                 <div className="min-w-max flex flex-col items-center justify-end px-8 lg:px-16 pt-10 h-full">
+                     {/* The Container Pipe */}
+                     <div className="relative w-64 lg:w-72 h-[280px] lg:h-[380px] border-b-4 border-l-4 border-r-4 border-gray-700/50 rounded-b-xl flex flex-col-reverse p-2 bg-gradient-to-t from-cyan-900/10 to-transparent shrink-0">
+                         
+                         {/* Capacity Line */}
+                         <div className="absolute top-0 left-[-20px] right-[-20px] h-px border-t border-dashed border-red-500/50 flex items-center justify-end">
+                             <span className="text-[7px] lg:text-[9px] text-red-500/80 font-mono bg-black px-1 -translate-y-2">MAX_CAP ({MAX_CAPACITY})</span>
+                         </div>
+
+                         <AnimatePresence>
+                            {stack.map((item, index) => {
+                               const isTop = index === stack.length - 1;
+                               
+                               return (
+                                  <motion.div
+                                     key={item.id}
+                                     layout
+                                     initial={{ y: -150, opacity: 0, scale: 0.8 }}
+                                     animate={{ y: 0, opacity: 1, scale: 1 }}
+                                     exit={{ y: -50, x: 150, opacity: 0, rotate: 15 }} // Ejected Bullet Effect
+                                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                     className={`w-full h-10 lg:h-12 mb-1 rounded flex items-center justify-between px-3 lg:px-4 border-2 relative shrink-0 transition-all ${
+                                         item.isTargeted ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)] z-20 scale-[1.02]' 
+                                         : 'border-white/10 z-10'
+                                     }`}
+                                     style={{ backgroundColor: `${item.color}15`, borderLeftColor: item.color }}
+                                  >
+                                     <span className="text-[8px] lg:text-[10px] font-mono text-gray-500 w-8">0x{index}</span>
+                                     <span className="text-xl lg:text-2xl font-black text-white">{item.val}</span>
+                                     <div className="w-8" />
+
+                                     {/* THE TOP POINTER */}
+                                     {isTop && !item.isTargeted && (
+                                        <motion.div layoutId="top-indicator" className="absolute -right-[60px] lg:-right-24 flex items-center gap-1 lg:gap-2 drop-shadow-lg z-50">
+                                            <div className="w-4 lg:w-8 h-0.5 bg-amber-500" />
+                                            <div className="bg-amber-500 text-black text-[8px] lg:text-[10px] font-black px-1.5 lg:px-2 py-0.5 lg:py-1 rounded shadow-[0_0_10px_rgba(245,158,11,0.5)] flex items-center gap-1">
+                                               <Crosshair size={10} className="lg:w-3 lg:h-3" /> TOP
+                                            </div>
+                                        </motion.div>
+                                     )}
+                                  </motion.div>
+                               )
+                            })}
+                         </AnimatePresence>
+                     </div>
+                 </div>
+             </div>
+          </div>
+
+          <div className="shrink-0 flex justify-between items-center text-[10px] lg:text-xs font-mono text-gray-500 px-2 lg:mb-2">
+             <div className="flex items-center gap-2"><Activity size={14} className={isAnimating ? "text-cyan-500 animate-spin lg:w-3.5 lg:h-3.5" : "lg:w-3.5 lg:h-3.5"}/> <span className="truncate max-w-[150px] lg:max-w-none">{message}</span></div>
+             <div className="flex items-center gap-2">
+                 <span className="hidden sm:inline">Elements in Stack:</span>
+                 <span className={`font-black ${stack.length === MAX_CAPACITY ? 'text-red-500' : 'text-cyan-500'}`}>
+                     {stack.length} / {MAX_CAPACITY}
+                 </span>
+             </div>
+          </div>
+
+          {/* BOTTOM HUD TRACE & HEAP */}
           <AnimatePresence initial={false}>
              {showHUD && (
                 <motion.div 
-                   initial={{ height: 0, opacity: 0, marginBottom: 0 }}
-                   animate={{ height: 180, opacity: 1, marginBottom: 24 }}
-                   exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                   initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                   animate={{ height: typeof window !== 'undefined' && window.innerWidth < 1024 ? 120 : 160, opacity: 1, marginTop: 12 }}
+                   exit={{ height: 0, opacity: 0, marginTop: 0 }}
                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                   className="flex gap-6 w-full shrink-0 overflow-hidden"
+                   className="flex gap-2 lg:gap-4 w-full shrink-0 overflow-hidden"
                 >
                    {/* 1. HINGLISH INTERPRETER */}
                    <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden h-full relative">
-                       <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
-                          <div className="flex items-center gap-2 text-cyan-400">
-                              <Terminal size={14}/>
-                              <span className="text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
+                       <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+                          <div className="flex items-center gap-1.5 lg:gap-2 text-cyan-400">
+                              <Terminal size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/>
+                              <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
                           </div>
-                          {variables.map((v, i) => <span key={i} className="text-[10px] font-mono"><span className="text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
+                          <div className="flex gap-2 overflow-x-auto custom-scrollbar no-scrollbar">
+                             {variables.map((v, i) => <span key={i} className="text-[9px] lg:text-[10px] font-mono whitespace-nowrap"><span className="text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
+                          </div>
                        </div>
                        
-                       {/* Auto-scrolling list container */}
-                       <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                       <div className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
                           {codeLines.length ? codeLines.map(line => (
-                             <div key={line.id} className={`flex flex-col text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
+                             <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
                                 <div className={`font-mono ${line.active ? 'text-cyan-400' : 'text-gray-400'}`}>{line.text}</div>
-                                {line.active && <div className="text-xs text-amber-400 mt-1 flex items-center gap-2 leading-relaxed"><ArrowRight size={12} className="shrink-0"/> {line.explanation}</div>}
+                                {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
                              </div>
-                          )) : <div className="text-gray-600 text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14}/> Awaiting Push/Pop sequence...</div>}
-                          
-                          {/* FIX: Invisible element to scroll to */}
+                          )) : <div className="text-gray-600 text-[10px] lg:text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/> Awaiting Push/Pop sequence...</div>}
                           <div ref={interpreterEndRef} />
                        </div>
                    </div>
 
                    {/* 2. THE SPAWN ZONE (HEAP) */}
-                   <div className="w-[350px] shrink-0 border border-cyan-500/30 bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner h-full overflow-hidden">
-                      <div className="absolute top-3 right-4 flex items-center gap-2 text-[10px] font-mono text-cyan-500 uppercase tracking-widest">
-                          <Box size={14} /> Spawn_Zone
+                   <div className="w-[130px] lg:w-[350px] shrink-0 border border-cyan-500/30 bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner h-full overflow-hidden">
+                      <div className="absolute top-2 right-2 lg:top-3 lg:right-4 flex items-center gap-1.5 lg:gap-2 text-[8px] lg:text-[10px] font-mono text-cyan-500 uppercase tracking-widest">
+                          <Box size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Spawn_Zone</span><span className="lg:hidden">Heap</span>
                       </div>
                       
                       <AnimatePresence>
@@ -272,11 +330,11 @@ const StackVisualizer = () => {
                               initial={{ scale: 0, y: -20, opacity: 0 }}
                               animate={{ scale: 1, y: 0, opacity: 1 }}
                               exit={{ opacity: 0, scale: 0.8, y: 40 }}
-                              className="w-20 h-20 rounded-xl border-2 flex flex-col items-center justify-center shadow-2xl z-50 relative mt-4"
+                              className="w-14 h-14 lg:w-20 lg:h-20 rounded-xl border-2 flex flex-col items-center justify-center shadow-2xl z-50 relative mt-4 lg:mt-6"
                               style={{ borderColor: phantom.color, backgroundColor: `${phantom.color}15`, boxShadow: `0 0 30px ${phantom.color}40` }}
                             >
-                               <span className="text-[8px] text-white/50 font-mono absolute top-1 left-1">NEW</span>
-                               <span className="text-3xl font-black text-white">{phantom.val}</span>
+                               <span className="text-[6px] lg:text-[8px] text-white/50 font-mono absolute top-1 left-1">NEW</span>
+                               <span className="text-xl lg:text-3xl font-black text-white">{phantom.val}</span>
                             </motion.div>
                          )}
                       </AnimatePresence>
@@ -288,83 +346,22 @@ const StackVisualizer = () => {
                               exit={{ opacity: 0, scale: 1.5 }}
                               className="w-full h-full absolute inset-0 flex items-center justify-center bg-red-900/20 backdrop-blur-sm z-40 border-2 border-red-500"
                             >
-                               <div className="flex flex-col items-center gap-2 text-red-500">
-                                   <Trash2 size={32} />
-                                   <span className="text-sm font-black tracking-widest">[{poppedNode.val}] DESTROYED</span>
+                               <div className="flex flex-col items-center gap-1 lg:gap-2 text-red-500">
+                                   <Trash2 size={24} className="lg:w-8 lg:h-8" />
+                                   <span className="text-[9px] lg:text-sm font-black tracking-widest">[{poppedNode.val}] DESTROYED</span>
                                </div>
                            </motion.div>
                       )}
 
                       {!phantom && !poppedNode && (
-                          <div className="text-cyan-500/30 font-mono text-xs flex items-center gap-2 mt-4">
-                              <Zap size={14} /> Ready to allocate...
+                          <div className="text-cyan-500/30 font-mono text-[9px] lg:text-xs flex items-center gap-1.5 lg:gap-2 mt-4">
+                              <Zap size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Ready to allocate...</span><span className="lg:hidden">Ready</span>
                           </div>
                       )}
                    </div>
                 </motion.div>
              )}
           </AnimatePresence>
-
-          {/* Central Arena Layout */}
-          <div className="flex-1 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col items-center justify-end pb-4 shadow-inner overflow-hidden">
-             
-             {/* Extended height h-[380px] so the 6th node easily clears the top line */}
-             <div className="relative w-72 h-[380px] border-b-4 border-l-4 border-r-4 border-gray-700/50 rounded-b-xl flex flex-col-reverse p-2 bg-gradient-to-t from-cyan-900/10 to-transparent mt-auto">
-                 
-                 {/* Capacity Line */}
-                 <div className="absolute top-0 left-[-20px] right-[-20px] h-px border-t border-dashed border-red-500/50 flex items-center justify-end">
-                     <span className="text-[9px] text-red-500/80 font-mono bg-black px-1 -translate-y-2">MAX_CAP ({MAX_CAPACITY})</span>
-                 </div>
-
-                 <AnimatePresence>
-                    {stack.map((item, index) => {
-                       const isTop = index === stack.length - 1;
-                       
-                       return (
-                          <motion.div
-                             key={item.id}
-                             layout
-                             initial={{ y: -150, opacity: 0, scale: 0.8 }}
-                             animate={{ y: 0, opacity: 1, scale: 1 }}
-                             exit={{ y: -50, x: 150, opacity: 0, rotate: 15 }} // Ejected Bullet Effect
-                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                             className={`w-full h-12 mb-1 rounded flex items-center justify-between px-4 border-2 relative shrink-0 transition-all ${
-                                 item.isTargeted ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)] z-20 scale-[1.02]' 
-                                 : 'border-white/10 z-10'
-                             }`}
-                             style={{ backgroundColor: `${item.color}15`, borderLeftColor: item.color }}
-                          >
-                             <span className="text-[10px] font-mono text-gray-500 w-8">0x{index}</span>
-                             <span className="text-2xl font-black text-white">{item.val}</span>
-                             <div className="w-8" />
-
-                             {/* THE TOP POINTER */}
-                             {isTop && !item.isTargeted && (
-                                <motion.div layoutId="top-indicator" className="absolute -right-24 flex items-center gap-2 drop-shadow-lg">
-                                    <div className="w-8 h-0.5 bg-amber-500" />
-                                    <div className="bg-amber-500 text-black text-[10px] font-black px-2 py-1 rounded shadow-[0_0_10px_rgba(245,158,11,0.5)] flex items-center gap-1">
-                                       <Crosshair size={12} /> TOP
-                                    </div>
-                                </motion.div>
-                             )}
-                          </motion.div>
-                       )
-                    })}
-                 </AnimatePresence>
-             </div>
-          </div>
-
-          {/* LIFO_ARRAY_STRUCTURE */}
-          <div className="mt-4 shrink-0 flex justify-between items-center text-xs font-mono text-gray-500">
-             <div className="flex items-center gap-2"><Activity size={14} className={isAnimating ? "text-cyan-500 animate-spin" : ""}/> {message}</div>
-             <div className="text-[10px] uppercase tracking-widest text-gray-600 hidden md:block">LIFO_Array_Structure</div>
-             <div className="flex items-center gap-2">
-                 <span>Elements in Stack:</span>
-                 <span className={`font-black ${stack.length === MAX_CAPACITY ? 'text-red-500' : 'text-cyan-500'}`}>
-                     {stack.length} / {MAX_CAPACITY}
-                 </span>
-             </div>
-          </div>
 
         </div>
       </div>

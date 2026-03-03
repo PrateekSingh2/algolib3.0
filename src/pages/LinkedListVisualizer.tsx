@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, RotateCcw, ArrowRight, Trash2, 
   CornerDownRight, X, Play, Pause, StepForward, 
-  Cpu, Terminal, Activity, Anchor, Zap, Target, ArrowDownToLine, Box,
+  Terminal, Activity, Anchor, Zap, Target, ArrowDownToLine, Box,
   Minimize2, Maximize2
 } from 'lucide-react';
 
@@ -83,7 +83,8 @@ const LinkedListVisualizer = () => {
   
   const [inputValue, setInputValue] = useState<number>(0);
   const [inputIndex, setInputIndex] = useState<number>(1);
-  const [showHUD, setShowHUD] = useState<boolean>(true);
+  
+  const [showHUD, setShowHUD] = useState<boolean>(false);
   
   const [isPaused, setIsPaused] = useState(true); 
   const [isAnimating, setIsAnimating] = useState(false);
@@ -96,6 +97,7 @@ const LinkedListVisualizer = () => {
   const stepTrigger = useRef<() => void>(() => {});
 
   useEffect(() => { generateRandom(); }, []);
+
   const generateRandom = () => setInputValue(Math.floor(Math.random() * 99) + 1);
 
   const resolveStep = () => { if (stepTrigger.current) stepTrigger.current(); };
@@ -116,6 +118,7 @@ const LinkedListVisualizer = () => {
   const handleInsert = async (position: 'head' | 'index' | 'end') => {
     if (isAnimating) return;
     setIsAnimating(true);
+    if (!showHUD) setShowHUD(true);
     
     let targetIdx = position === 'head' ? 0 : position === 'end' ? nodes.length : Math.max(0, Math.min(inputIndex, nodes.length));
     const newNode = { id: Math.floor(Math.random()*90 + 10).toString(), value: inputValue, isNew: true };
@@ -164,6 +167,7 @@ const LinkedListVisualizer = () => {
   const handleDelete = async (position: 'head' | 'index' | 'end') => {
     if (isAnimating || nodes.length === 0) return;
     setIsAnimating(true);
+    if (!showHUD) setShowHUD(true);
     
     let targetIdx = position === 'head' ? 0 : position === 'end' ? nodes.length - 1 : Math.max(0, Math.min(inputIndex, nodes.length - 1));
 
@@ -212,18 +216,11 @@ const LinkedListVisualizer = () => {
     <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden">
       <CyberGrid />
       
-      <div className="flex-1 flex relative z-10 overflow-hidden h-full">
+      <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
         
-        {/* LEFT: COMMAND CENTER - Now Always Visible */}
-        <div className="w-[340px] bg-black/80 backdrop-blur-md border-r border-white/10 flex flex-col h-full shadow-2xl shrink-0 z-20 overflow-hidden">
-            <div className="p-5 border-b border-white/10 bg-gradient-to-r from-emerald-500/10 to-transparent shrink-0">
-                <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-emerald-400">
-                    <Cpu size={24} /> LinkedList Zone
-                </h2>
-                <p className="text-xs text-gray-400 mt-1">Hinglish Visualizer v5.3.0</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar pb-12">
+        {/* LEFT: COMMAND CENTER */}
+        <div className="w-full lg:w-[340px] bg-black/95 lg:bg-black/80 backdrop-blur-md border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
+            <div className="overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6">
                 <div className="space-y-2">
                 <label className="text-[10px] font-bold text-gray-500 uppercase">Type</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -296,87 +293,30 @@ const LinkedListVisualizer = () => {
             </div>
         </div>
 
+        {/* VISIBLE GLOWING SEPARATOR LINE (Mobile Only) */}
+        <div className="lg:hidden h-[2px] w-full bg-gradient-to-r from-emerald-500/10 via-emerald-500/60 to-emerald-500/10 shrink-0 z-30 order-2" />
+
         {/* RIGHT: THE ARENA */}
-        <div className="flex-1 relative flex flex-col p-6 min-w-0 overflow-hidden h-full">
+        <div className="order-3 lg:order-2 flex-1 relative flex flex-col p-3 sm:p-4 lg:p-6 min-w-0 overflow-hidden lg:h-full w-full">
           
-          {/* Top Bar with HUD Toggle Button - MOVED TO START */}
-          <div className="flex justify-start mb-4 shrink-0">
+          {/* SMALL HUD TOGGLE */}
+          <div className="flex justify-start lg:justify-start items-center mb-2 lg:mb-3 shrink-0 gap-2">
              <button 
                 onClick={() => setShowHUD(!showHUD)}
-                className="px-4 py-2 bg-[#050505] border-[1.5px] border-emerald-500/80 rounded-full text-emerald-400 font-black text-xs flex items-center gap-2 tracking-widest hover:bg-emerald-500/10 hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all shadow-[0_0_15px_rgba(16,185,129,0.2)] uppercase"
+                className="h-7 lg:h-8 px-3 bg-[#050505] border border-emerald-500/80 rounded-lg lg:rounded-full text-emerald-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all shadow-[0_0_10px_rgba(16,185,129,0.2)] uppercase z-40"
              >
-                {showHUD ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                {showHUD ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
                 {showHUD ? 'HIDE HUD' : 'SHOW HUD'}
              </button>
           </div>
 
-          {/* Animate the Interpreter and Spawn Zone visibility */}
-          <AnimatePresence initial={false}>
-             {showHUD && (
-                <motion.div 
-                   initial={{ height: 0, opacity: 0, marginBottom: 0 }}
-                   animate={{ height: 180, opacity: 1, marginBottom: 24 }}
-                   exit={{ height: 0, opacity: 0, marginBottom: 0 }}
-                   transition={{ duration: 0.3, ease: 'easeInOut' }}
-                   className="flex gap-4 w-full shrink-0 overflow-hidden"
-                >
-                   {/* 1. HINGLISH INTERPRETER */}
-                   <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden h-full">
-                       <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
-                          <div className="flex items-center gap-2 text-emerald-400">
-                              <Terminal size={14}/>
-                              <span className="text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
-                          </div>
-                          {variables.map((v, i) => <span key={i} className="text-[10px] font-mono"><span className="text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
-                       </div>
-                       <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
-                          {codeLines.length ? codeLines.map(line => (
-                             <div key={line.id} className={`flex flex-col text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
-                                <div className={`font-mono ${line.active ? 'text-emerald-400' : 'text-gray-400'}`}>{line.text}</div>
-                                {line.active && <div className="text-xs text-amber-400 mt-1 flex items-center gap-2 leading-relaxed"><ArrowRight size={12} className="shrink-0"/> {line.explanation}</div>}
-                             </div>
-                          )) : <div className="text-gray-600 text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14}/> Waiting for player action...</div>}
-                       </div>
-                   </div>
-
-                   {/* 2. THE SPAWN ZONE */}
-                   <div className="w-[350px] shrink-0 border border-emerald-500/30 bg-emerald-900/20 rounded-xl relative flex items-center justify-center shadow-inner h-full overflow-hidden">
-                      <div className="absolute top-3 right-4 flex items-center gap-2 text-[10px] font-mono text-emerald-500 uppercase tracking-widest">
-                          <Box size={14} /> Spawn_Zone (Heap)
-                      </div>
-                      
-                      <AnimatePresence>
-                         {phantom && (
-                            <motion.div
-                              initial={{ scale: 0, y: -20, opacity: 0 }}
-                              animate={{ scale: 1, y: 0, opacity: 1 }}
-                              exit={{ opacity: 0, scale: 0.8, y: 40 }}
-                              className="w-24 h-24 rounded-xl border-2 border-dashed border-emerald-400 flex flex-col items-center justify-center bg-emerald-500/10 shadow-[0_0_30px_rgba(16,185,129,0.3)] z-50 relative mt-4"
-                            >
-                               <span className="text-xs text-emerald-400 font-mono absolute top-2 left-2">0x{phantom.id}</span>
-                               <span className="text-3xl font-black text-white">{phantom.value}</span>
-                               <div className="absolute -bottom-6 bg-emerald-500 text-black px-2 py-1 rounded text-[10px] font-bold shadow-lg whitespace-nowrap">WAITING TO LINK...</div>
-                            </motion.div>
-                         )}
-                      </AnimatePresence>
-
-                      {!phantom && (
-                          <div className="text-emerald-500/30 font-mono text-xs flex items-center gap-2 mt-4">
-                              <Zap size={14} /> Memory Pool Empty
-                          </div>
-                      )}
-                   </div>
-                </motion.div>
-             )}
-          </AnimatePresence>
-
           {/* Central Arena: The Linked List Canvas */}
-          <div className="flex-1 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden">
+          <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
              
-             <div className="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar relative flex items-center">
-                 <div className="min-w-max flex items-center px-16 relative h-full pt-10 pb-10">
+             {/* ADDED: w-full and touch-pan-x for proper horizontal scrolling */}
+             <div className="flex-1 w-full overflow-x-auto overflow-y-hidden custom-scrollbar relative flex items-center touch-pan-x">
+                 <div className="min-w-max flex items-center px-8 sm:px-16 relative h-full py-8 pr-16 sm:pr-24 w-max">
                      
-                     {/* PERFECTED CIRCULAR POINTER SVG MAPPING */}
                      {(listType === 'circular' || listType === 'doubly-circular') && nodes.length > 1 && (
                         <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 overflow-visible">
                             {(() => {
@@ -409,8 +349,8 @@ const LinkedListVisualizer = () => {
                         </svg>
                      )}
 
-                     <div className="relative mr-8 flex flex-col items-center shrink-0 w-16">
-                        <div className="w-12 h-12 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)] bg-black z-10"><Anchor size={20}/></div>
+                     <div className="relative mr-4 sm:mr-8 flex flex-col items-center shrink-0 w-14 sm:w-16">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)] bg-black z-10"><Anchor size={18}/></div>
                         <span className="text-[10px] font-black text-amber-500 mt-2">HEAD</span>
                         {nodes.length > 0 && <div className="absolute top-6 left-12 w-8 h-0.5 bg-amber-500" />}
                      </div>
@@ -421,15 +361,15 @@ const LinkedListVisualizer = () => {
                            return (
                               <motion.div layout key={node.id}
                                  initial={{ scale: 0, opacity: 0, y: -50 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0, opacity: 0, y: 50 }}
-                                 className="flex items-center shrink-0 mr-4 relative"
-                                 style={{ width: '112px' }}
+                                 className="flex items-center shrink-0 mr-3 sm:mr-4 relative"
+                                 style={{ width: '96px' }}
                               >
-                                 <div className={`w-24 h-24 rounded-xl border-2 flex flex-col items-center justify-center relative bg-[#09090b] z-10 transition-colors shrink-0
+                                 <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-2 flex flex-col items-center justify-center relative bg-[#09090b] z-10 transition-colors shrink-0
                                     ${node.isDeleting ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]' : isSeeker ? 'border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.4)]' : 'border-white/20 hover:border-white/50'}`}>
                                     
-                                    <span className="text-xs text-gray-500 font-mono absolute top-2 left-2">0x{node.id}</span>
-                                    <span className={`text-3xl font-black ${isSeeker ? 'text-cyan-400' : 'text-white'}`}>{node.value}</span>
-                                    <span className="text-[9px] text-gray-600 font-bold absolute bottom-2">IDX {i}</span>
+                                    <span className="text-[10px] sm:text-xs text-gray-500 font-mono absolute top-1.5 left-1.5 sm:top-2 sm:left-2">0x{node.id}</span>
+                                    <span className={`text-2xl sm:text-3xl font-black ${isSeeker ? 'text-cyan-400' : 'text-white'}`}>{node.value}</span>
+                                    <span className="text-[8px] sm:text-[9px] text-gray-600 font-bold absolute bottom-1.5 sm:bottom-2">IDX {i}</span>
                                     
                                     {isSeeker && (
                                        <div className="absolute -top-10 bg-cyan-500 text-black px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap z-50 shadow-lg shadow-cyan-500/20">
@@ -439,20 +379,20 @@ const LinkedListVisualizer = () => {
                                  </div>
 
                                  {i < nodes.length - 1 && (
-                                    <div className="w-10 h-0.5 bg-white/20 relative ml-[-8px]">
+                                    <div className="w-8 sm:w-10 h-0.5 bg-white/20 relative ml-[-6px] sm:ml-[-8px]">
                                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 border-t-2 border-r-2 border-white/40 rotate-45" />
                                        {node.isNew && <motion.div initial={{width:0}} animate={{width:"100%"}} className="absolute inset-0 bg-emerald-400 shadow-[0_0_10px_#34d399]" />}
                                     </div>
                                  )}
 
                                  {(listType === 'doubly' || listType === 'doubly-circular') && i < nodes.length - 1 && (
-                                    <div className="absolute left-[88px] bottom-8 w-10 h-0.5 bg-purple-500/40 translate-y-3">
+                                    <div className="absolute left-[72px] sm:left-[88px] bottom-7 sm:bottom-8 w-8 sm:w-10 h-0.5 bg-purple-500/40 translate-y-3">
                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 border-b-2 border-l-2 border-purple-500/60 rotate-45" />
                                     </div>
                                  )}
 
                                  {i === nodes.length - 1 && listType !== 'circular' && listType !== 'doubly-circular' && (
-                                    <div className="absolute left-[104px] flex items-center opacity-30 w-16">
+                                    <div className="absolute left-[86px] sm:left-[104px] flex items-center opacity-30 w-14 sm:w-16">
                                        <div className="w-6 h-0.5 bg-white" />
                                        <div className="px-1.5 py-0.5 border border-white text-[9px] rounded ml-1">NULL</div>
                                     </div>
@@ -465,10 +405,73 @@ const LinkedListVisualizer = () => {
              </div>
           </div>
 
-          <div className="mt-4 shrink-0 flex justify-between items-center text-xs font-mono text-gray-500">
+          {/* Message Status Bar */}
+          <div className="shrink-0 flex justify-between items-center text-[10px] lg:text-xs font-mono text-gray-500 px-2 lg:mb-2">
              <div className="flex items-center gap-2"><Activity size={14} className={isAnimating ? "text-amber-500 animate-spin" : ""}/> {message}</div>
              <div>Total Nodes: {nodes.length}</div>
           </div>
+
+          {/* HUD TRACE & HEAP */}
+          <AnimatePresence initial={false}>
+             {showHUD && (
+                <motion.div 
+                   initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                   animate={{ height: typeof window !== 'undefined' && window.innerWidth < 1024 ? 120 : 160, opacity: 1, marginTop: 12 }}
+                   exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                   transition={{ duration: 0.3, ease: 'easeInOut' }}
+                   className="flex gap-2 lg:gap-4 w-full shrink-0 overflow-hidden"
+                >
+                   {/* 1. HINGLISH INTERPRETER */}
+                   <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden h-full">
+                       <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+                          <div className="flex items-center gap-1.5 lg:gap-2 text-emerald-400">
+                              <Terminal size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/>
+                              <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
+                          </div>
+                          <div className="flex gap-2 overflow-x-auto custom-scrollbar no-scrollbar">
+                             {variables.map((v, i) => <span key={i} className="text-[9px] lg:text-[10px] font-mono whitespace-nowrap"><span className="text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
+                          </div>
+                       </div>
+                       <div className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                          {codeLines.length ? codeLines.map(line => (
+                             <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
+                                <div className={`font-mono ${line.active ? 'text-emerald-400' : 'text-gray-400'}`}>{line.text}</div>
+                                {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-start gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0 mt-0.5"/> {line.explanation}</div>}
+                             </div>
+                          )) : <div className="text-gray-600 text-[10px] lg:text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/> Waiting for player action...</div>}
+                       </div>
+                   </div>
+
+                   {/* 2. THE SPAWN ZONE */}
+                   <div className="w-[130px] lg:w-[350px] shrink-0 border border-emerald-500/30 bg-emerald-900/20 rounded-xl relative flex items-center justify-center shadow-inner h-full overflow-hidden">
+                      <div className="absolute top-2 right-2 lg:top-3 lg:right-4 flex items-center gap-1.5 lg:gap-2 text-[8px] lg:text-[10px] font-mono text-emerald-500 uppercase tracking-widest">
+                          <Box size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Spawn_Zone (Heap)</span><span className="lg:hidden">Heap</span>
+                      </div>
+                      
+                      <AnimatePresence>
+                         {phantom && (
+                            <motion.div
+                              initial={{ scale: 0, y: -20, opacity: 0 }}
+                              animate={{ scale: 1, y: 0, opacity: 1 }}
+                              exit={{ opacity: 0, scale: 0.8, y: 40 }}
+                              className="w-14 h-14 lg:w-24 lg:h-24 rounded-lg lg:rounded-xl border-2 border-dashed border-emerald-400 flex flex-col items-center justify-center bg-emerald-500/10 shadow-[0_0_30px_rgba(16,185,129,0.3)] z-50 relative mt-4 lg:mt-6"
+                            >
+                               <span className="text-[8px] lg:text-xs text-emerald-400 font-mono absolute top-1 left-1 lg:top-2 lg:left-2">0x{phantom.id}</span>
+                               <span className="text-xl lg:text-3xl font-black text-white">{phantom.value}</span>
+                               <div className="hidden lg:block absolute -bottom-6 bg-emerald-500 text-black px-2 py-1 rounded text-[10px] font-bold shadow-lg whitespace-nowrap">WAITING TO LINK...</div>
+                            </motion.div>
+                         )}
+                      </AnimatePresence>
+
+                      {!phantom && (
+                          <div className="text-emerald-500/30 font-mono text-[9px] lg:text-xs flex items-center gap-1.5 lg:gap-2 mt-4">
+                              <Zap size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Memory Pool Empty</span><span className="lg:hidden">Empty</span>
+                          </div>
+                      )}
+                   </div>
+                </motion.div>
+             )}
+          </AnimatePresence>
 
         </div>
       </div>

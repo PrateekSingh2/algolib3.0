@@ -57,7 +57,7 @@ const CODE_SNIPPETS = {
   heap: [
     { id: '1', text: 'buildMaxHeap(arr)', explanation: 'Pura array ko scan karke ek MAX-HEAP (Parent > Child) structure bana diya.', active: false },
     { id: '2', text: 'for i from n-1 down to 1:', explanation: 'Ab sabse bade element ko array ke end mein bhejte jayenge.', active: false },
-    { id: '3', text: '  swap(arr[0], arr[i])', current: 'Top (Max) element ko aakhri bache unsorted index se swap kiya.', active: false },
+    { id: '3', text: '  swap(arr[0], arr[i])', explanation: 'Top (Max) element ko aakhri bache unsorted index se swap kiya.', active: false },
     { id: '4', text: '  heapify(arr, i, 0)', explanation: 'Root kharab ho gaya! Array ko wapas Max-Heap mein restructure karo.', active: false },
   ]
 };
@@ -77,8 +77,8 @@ const SortingVisualizer = () => {
   const [isSorting, setIsSorting] = useState(false);
   const [isPaused, setIsPaused] = useState(true);
   
-  // Game HUD
-  const [showHUD, setShowHUD] = useState(true);
+  // Game HUD - Hidden by Default
+  const [showHUD, setShowHUD] = useState(false);
   const [speed, setSpeed] = useState(60);
   const [arraySize, setArraySize] = useState(30);
   
@@ -148,7 +148,6 @@ const SortingVisualizer = () => {
   const addLog = (log: string) => setOutputLog(prev => [...prev, log]);
 
   // --- ALGORITHMS ---
-
   const bubbleSort = async () => {
     let arr = [...array];
     let n = arr.length;
@@ -227,7 +226,6 @@ const SortingVisualizer = () => {
         setArray([...arr]);
         await waitStep([j+1], 'sorted', `PLACED ${key} AT INDEX ${j+1}`, '5');
         
-        // Visual sorted zone tracker
         const sortedRange = [];
         for(let k=0; k<=i; k++) sortedRange.push(k);
         setSortedIndices(sortedRange);
@@ -364,6 +362,7 @@ const SortingVisualizer = () => {
     setIsSorting(true);
     setIsPaused(false);
     sortingRef.current = true;
+    if (!showHUD) setShowHUD(true); // Auto-show HUD when sort starts
     setSortedIndices([]);
     const arrCopy = [...array];
 
@@ -390,18 +389,12 @@ const SortingVisualizer = () => {
     <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden">
       <CyberGrid />
       
-      <div className="flex-1 flex relative z-10 overflow-hidden h-full">
+      <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
         
-        {/* --- LEFT PANEL: COMMAND CENTER --- */}
-        <div className="w-[340px] bg-black/80 backdrop-blur-md border-r border-white/10 flex flex-col h-full shadow-2xl shrink-0 z-20">
-          <div className="p-5 border-b border-white/10 bg-gradient-to-r from-emerald-500/10 to-transparent shrink-0">
-             <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-emerald-400">
-                <BarChart3 size={24} /> Sorting Algo Engine
-             </h2>
-             <p className="text-xs text-gray-400 mt-1">Hinglish Sorting Visualizer v5.0</p>
-          </div>
+        {/* --- LEFT PANEL: COMMAND CENTER (Constrained to 42% on mobile) --- */}
+        <div className="w-full lg:w-[340px] bg-black/95 lg:bg-black/80 backdrop-blur-md border-white/10 flex flex-col h-[42%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar pb-4 flex flex-col">
+          <div className="overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6 flex flex-col">
             
             {/* Algorithm Selector */}
             <div className="space-y-2 shrink-0">
@@ -456,20 +449,20 @@ const SortingVisualizer = () => {
             {/* Controls */}
             <div className="grid grid-cols-2 gap-2 shrink-0">
                <button onClick={startSort}
-                  className={`py-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all ${
+                  className={`py-3 rounded-xl font-black text-[10px] lg:text-xs flex items-center justify-center gap-2 transition-all ${
                      isSorting && !isPaused
                      ? 'bg-amber-500 text-black shadow-[0_0_15px_#eab308]' 
                      : 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.5)] hover:scale-[1.02]'
                   }`}
                >
-                  {isSorting && !isPaused ? <Pause size={16} fill="currentColor"/> : <Play size={16} fill="currentColor"/>}
-                  {isSorting && !isPaused ? 'PAUSE' : isSorting ? 'RESUME' : 'START SORT'}
+                  {isSorting && !isPaused ? <Pause size={14} fill="currentColor"/> : <Play size={14} fill="currentColor"/>}
+                  {isSorting && !isPaused ? 'START' : isSorting ? 'RESUME' : 'INITIATE'}
                </button>
                
                <button onClick={resolveStep} disabled={!isPaused || !isSorting}
-                  className="py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl font-bold text-[10px] lg:text-xs flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                >
-                  <StepForward size={16} /> STEP
+                  <StepForward size={14} /> STEP
                </button>
             </div>
             
@@ -478,7 +471,7 @@ const SortingVisualizer = () => {
             </button>
 
             {/* DEDICATED OUTPUT CONSOLE */}
-            <div className="mt-4 flex-1 min-h-[150px] bg-black/90 border border-emerald-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
+            <div className="mt-4 flex-1 min-h-[120px] lg:min-h-[150px] bg-black/90 border border-emerald-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
                 <div className="px-3 py-2 border-b border-emerald-500/30 bg-emerald-900/20 flex items-center gap-2 shrink-0">
                     <Terminal size={12} className="text-emerald-400" />
                     <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">SYSTEM_LOGS</span>
@@ -497,41 +490,109 @@ const SortingVisualizer = () => {
           </div>
         </div>
 
-        {/* --- RIGHT PANEL: THE ARENA --- */}
-        <div className="flex-1 relative flex flex-col min-w-0 overflow-hidden h-full">
-          
-          {/* HUD TOGGLE BUTTON */}
-          <button 
-             onClick={() => setShowHUD(!showHUD)}
-             className="absolute top-6 left-6 z-50 p-2 bg-black/90 border border-emerald-500/50 rounded-lg text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] flex items-center gap-2"
-             title={showHUD ? "Hide HUD to maximize workspace" : "Show HUD"}
-          >
-             {showHUD ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-             <span className="text-[10px] font-black uppercase tracking-widest">{showHUD ? "HIDE HUD" : "SHOW HUD"}</span>
-          </button>
+        {/* VISIBLE GLOWING SEPARATOR LINE (Mobile Only) */}
+        <div className="lg:hidden h-[2px] w-full bg-gradient-to-r from-emerald-500/10 via-emerald-500/60 to-emerald-500/10 shrink-0 z-30 order-2" />
 
-          {/* Top HUD: Hinglish Interpreter */}
-          <AnimatePresence>
+        {/* --- RIGHT PANEL: THE ARENA --- */}
+        <div className="order-3 lg:order-2 flex-1 relative flex flex-col p-3 sm:p-4 lg:p-6 min-w-0 overflow-hidden lg:h-full w-full">
+          
+          {/* SMALL HUD TOGGLE BUTTON */}
+          <div className="flex justify-start lg:justify-start items-center mb-2 lg:mb-3 shrink-0 gap-2">
+             <button 
+                onClick={() => setShowHUD(!showHUD)}
+                className="h-7 lg:h-8 px-3 bg-[#050505] border border-emerald-500/80 rounded-lg lg:rounded-full text-emerald-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all shadow-[0_0_10px_rgba(16,185,129,0.2)] uppercase z-40"
+             >
+                {showHUD ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                {showHUD ? 'HIDE HUD' : 'SHOW HUD'}
+             </button>
+          </div>
+
+          {/* Central Arena: Array Data Pillars */}
+          <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
+             
+             {/* Status Badge inside Canvas */}
+             <div className="absolute top-4 right-6 z-20 flex items-center gap-2 lg:gap-3 px-3 py-1.5 bg-[#0a0a14]/90 backdrop-blur-md border border-white/10 rounded-full shadow-lg">
+                <Activity size={12} className={isSorting ? 'text-emerald-500 animate-pulse' : 'text-gray-600'} />
+                <span className="text-[8px] lg:text-[10px] font-mono font-bold text-white uppercase tracking-widest">{message}</span>
+             </div>
+
+             {/* HORIZONTAL SCROLLABLE DATA BARS */}
+             <div className="flex-1 w-full overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x flex items-end">
+                <div className="min-w-max w-full flex items-end justify-start lg:justify-center gap-[4px] md:gap-[6px] px-6 lg:px-12 h-full pb-4 pt-16">
+                    <AnimatePresence>
+                        {array.map((val, i) => {
+                            const isCompare = activeIndices.includes(i) && opType === 'compare';
+                            const isSwap = activeIndices.includes(i) && opType === 'swap';
+                            const isOverwrite = activeIndices.includes(i) && opType === 'overwrite';
+                            const isSorted = sortedIndices.includes(i);
+                            const isPivot = pivotIndex === i;
+
+                            let barColor = 'bg-[#1f2937]'; // Default gray
+                            let glow = '';
+                            
+                            if (isSorted) { barColor = 'bg-[#10b981]'; glow = 'shadow-[0_0_15px_rgba(16,185,129,0.5)]'; } // Emerald
+                            else if (isPivot) { barColor = 'bg-[#d946ef]'; glow = 'shadow-[0_0_20px_rgba(217,70,239,0.8)] z-10'; } // Fuchsia/Magenta
+                            else if (isSwap) { barColor = 'bg-[#ef4444]'; glow = 'shadow-[0_0_20px_rgba(239,68,68,0.8)] z-10'; } // Red
+                            else if (isOverwrite) { barColor = 'bg-[#f59e0b]'; glow = 'shadow-[0_0_20px_rgba(245,158,11,0.8)] z-10'; } // Amber/Orange
+                            else if (isCompare) { barColor = 'bg-[#06b6d4]'; glow = 'shadow-[0_0_20px_rgba(6,182,212,0.8)] z-10'; } // Cyan
+
+                            return (
+                                <motion.div
+                                    layout
+                                    key={i}
+                                    // ADDED min-w-[8px] to force horizontal scrolling on large arrays!
+                                    className={`relative rounded-t flex-1 max-w-[48px] min-w-[8px] lg:min-w-[12px] transition-colors duration-100 ${barColor} ${glow}`}
+                                    style={{ height: `${Math.max(val, 2)}%` }} // Minimum height so 0 values are still visible
+                                >
+                                    {/* Value Label (Only show if bars are thick enough) */}
+                                    {arraySize <= 40 && (
+                                        <span className={`absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] lg:text-[9px] font-mono font-bold ${isSorted ? 'text-emerald-500' : 'text-gray-400'}`}>
+                                            {val}
+                                        </span>
+                                    )}
+                                    
+                                    {/* Flash effect on active blocks */}
+                                    {(isCompare || isSwap || isOverwrite) && (
+                                        <motion.div 
+                                            className="absolute inset-0 bg-white/30 rounded-t"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: [0, 1, 0] }}
+                                            transition={{ duration: 0.3 }}
+                                        />
+                                    )}
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
+                </div>
+             </div>
+             
+             {/* Floor Line */}
+             <div className="w-full h-1 bg-white/5 rounded-b-2xl shrink-0" />
+          </div>
+
+          {/* BOTTOM HUD TRACE */}
+          <AnimatePresence initial={false}>
               {showHUD && (
                   <motion.div 
-                     initial={{ height: 0, opacity: 0, marginBottom: 0 }}
-                     animate={{ height: 180, opacity: 1, marginBottom: 24 }}
-                     exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                     initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                     animate={{ height: typeof window !== 'undefined' && window.innerWidth < 1024 ? 120 : 160, opacity: 1, marginTop: 12 }}
+                     exit={{ height: 0, opacity: 0, marginTop: 0 }}
                      transition={{ duration: 0.4, ease: "easeInOut" }}
-                     className="w-full shrink-0 pl-36 pr-6 pt-6" // pl-36 makes room for the toggle button
+                     className="w-full shrink-0 overflow-hidden" 
                   >
                      <div className="w-full h-full bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
-                         <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
-                            <div className="flex items-center gap-2 text-emerald-400">
-                                <Terminal size={14}/>
-                                <span className="text-[10px] font-black tracking-widest uppercase">Hinglish_Logic_Trace</span>
+                         <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+                            <div className="flex items-center gap-1.5 lg:gap-2 text-emerald-400">
+                                <Terminal size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/>
+                                <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Hinglish_Logic_Trace</span>
                             </div>
                          </div>
-                         <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                         <div className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
                             {codeLines.map(line => (
-                               <div key={line.id} className={`flex flex-col text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
+                               <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
                                   <div className={`font-mono ${line.active ? 'text-emerald-400' : 'text-gray-400'}`}>{line.text}</div>
-                                  {line.active && <div className="text-xs text-amber-400 mt-1 flex items-center gap-2 leading-relaxed"><ArrowRight size={12} className="shrink-0"/> {line.explanation}</div>}
+                                  {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
                                </div>
                             ))}
                             <div ref={interpreterEndRef} />
@@ -540,67 +601,6 @@ const SortingVisualizer = () => {
                   </motion.div>
               )}
           </AnimatePresence>
-
-          {/* Central Arena: Array Data Pillars */}
-          <div className="flex-1 relative flex flex-col overflow-hidden px-6 pb-6">
-             
-             {/* Status Badge inside Canvas */}
-             <div className="absolute top-0 right-6 z-20 flex items-center gap-3 px-4 py-1.5 bg-[#0a0a14]/90 backdrop-blur-md border border-white/10 rounded-full shadow-lg">
-                <Activity size={12} className={isSorting ? 'text-emerald-500 animate-pulse' : 'text-gray-600'} />
-                <span className="text-[10px] font-mono font-bold text-white uppercase tracking-widest">{message}</span>
-             </div>
-
-             {/* DATA BARS */}
-             <div className="flex-1 flex items-end justify-center w-full h-full gap-[2px] md:gap-1 mt-4">
-                <AnimatePresence>
-                    {array.map((val, i) => {
-                        const isCompare = activeIndices.includes(i) && opType === 'compare';
-                        const isSwap = activeIndices.includes(i) && opType === 'swap';
-                        const isOverwrite = activeIndices.includes(i) && opType === 'overwrite';
-                        const isSorted = sortedIndices.includes(i);
-                        const isPivot = pivotIndex === i;
-
-                        let barColor = 'bg-[#1f2937]'; // Default gray
-                        let glow = '';
-                        
-                        if (isSorted) { barColor = 'bg-[#10b981]'; glow = 'shadow-[0_0_15px_rgba(16,185,129,0.5)]'; } // Emerald
-                        else if (isPivot) { barColor = 'bg-[#d946ef]'; glow = 'shadow-[0_0_20px_rgba(217,70,239,0.8)] z-10'; } // Fuchsia/Magenta
-                        else if (isSwap) { barColor = 'bg-[#ef4444]'; glow = 'shadow-[0_0_20px_rgba(239,68,68,0.8)] z-10'; } // Red
-                        else if (isOverwrite) { barColor = 'bg-[#f59e0b]'; glow = 'shadow-[0_0_20px_rgba(245,158,11,0.8)] z-10'; } // Amber/Orange
-                        else if (isCompare) { barColor = 'bg-[#06b6d4]'; glow = 'shadow-[0_0_20px_rgba(6,182,212,0.8)] z-10'; } // Cyan
-
-                        return (
-                            <motion.div
-                                layout
-                                key={i}
-                                className={`relative rounded-t flex-1 max-w-[48px] min-w-[2px] transition-colors duration-100 ${barColor} ${glow}`}
-                                style={{ height: `${Math.max(val, 2)}%` }} // Minimum height so 0 values are still visible
-                            >
-                                {/* Value Label (Only show if bars are thick enough) */}
-                                {arraySize <= 40 && (
-                                    <span className={`absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-mono font-bold ${isSorted ? 'text-emerald-500' : 'text-gray-400'}`}>
-                                        {val}
-                                    </span>
-                                )}
-                                
-                                {/* Flash effect on active blocks */}
-                                {(isCompare || isSwap || isOverwrite) && (
-                                    <motion.div 
-                                        className="absolute inset-0 bg-white/30 rounded-t"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: [0, 1, 0] }}
-                                        transition={{ duration: 0.3 }}
-                                    />
-                                )}
-                            </motion.div>
-                        );
-                    })}
-                </AnimatePresence>
-             </div>
-             
-             {/* Floor Line */}
-             <div className="w-full h-1 bg-white/5 rounded-full mt-1 shrink-0" />
-          </div>
 
         </div>
       </div>

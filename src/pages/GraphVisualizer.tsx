@@ -75,7 +75,7 @@ const GraphVisualizer = () => {
 
   // UI & Interaction
   const [mode, setMode] = useState<Mode>('move');
-  const [showHUD, setShowHUD] = useState(true);
+  const [showHUD, setShowHUD] = useState(false); 
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   const [dragStartNode, setDragStartNode] = useState<string | null>(null); 
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 }); 
@@ -100,8 +100,12 @@ const GraphVisualizer = () => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const stepTrigger = useRef<() => void>(() => {});
   const engineRef = useRef<boolean>(false); 
+  const interpreterEndRef = useRef<HTMLDivElement>(null);
+  const outputEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { return () => { engineRef.current = false; }; }, []); 
+  useEffect(() => { interpreterEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [codeLines]);
+  useEffect(() => { outputEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [outputLog]);
 
   const generateNodeId = (): string => {
       let index = 0;
@@ -207,13 +211,12 @@ const GraphVisualizer = () => {
   };
 
   // --- ALGORITHMS ---
-
   const runBFS = async () => {
       if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
       resetVisuals();
       engineRef.current = true;
       setIsAnimating(true);
-      setShowHUD(true);
+      if (!showHUD) setShowHUD(true); // Pop open HUD
       setCodeLines(SNIPPETS.bfs);
       setOutputLog([`> Initiating BFS Radar: [${startNodeId}] -> [${targetNodeId}]`]);
 
@@ -268,7 +271,7 @@ const GraphVisualizer = () => {
       resetVisuals();
       engineRef.current = true;
       setIsAnimating(true);
-      setShowHUD(true);
+      if (!showHUD) setShowHUD(true);
       setCodeLines(SNIPPETS.dfs);
       setOutputLog([`> Initiating DFS Dive: [${startNodeId}] -> [${targetNodeId}]`]);
 
@@ -325,7 +328,7 @@ const GraphVisualizer = () => {
       resetVisuals();
       engineRef.current = true;
       setIsAnimating(true);
-      setShowHUD(true);
+      if (!showHUD) setShowHUD(true);
       setCodeLines(SNIPPETS.dijkstra);
       setOutputLog([`> Initiating Dijkstra Protocol: [${startNodeId}] -> [${targetNodeId}]`]);
 
@@ -390,7 +393,7 @@ const GraphVisualizer = () => {
       resetVisuals();
       engineRef.current = true;
       setIsAnimating(true);
-      setShowHUD(true);
+      if (!showHUD) setShowHUD(true);
       setCodeLines(SNIPPETS.astar);
       setOutputLog([`> Initiating A* Heuristic Protocol: [${startNodeId}] -> [${targetNodeId}]`]);
 
@@ -403,7 +406,7 @@ const GraphVisualizer = () => {
       const heuristic = (id1: string, id2: string) => {
           const n1 = nodes.find(n => n.id === id1)!;
           const n2 = nodes.find(n => n.id === id2)!;
-          return Math.hypot(n1.x - n2.x, n1.y - n2.y) / 50; // Scaling Euclidean distance for weights
+          return Math.hypot(n1.x - n2.x, n1.y - n2.y) / 50; 
       };
 
       nodes.forEach(n => { gScore[n.id] = Infinity; fScore[n.id] = Infinity; });
@@ -500,22 +503,15 @@ const GraphVisualizer = () => {
     <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden select-none">
       <CyberGrid />
       
-      <div className="flex-1 flex relative z-10 overflow-hidden h-full">
+      <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
         
-        {/* --- LEFT PANEL: COMMAND CENTER --- */}
-        <div className="w-[360px] bg-black/80 backdrop-blur-md border-r border-white/10 flex flex-col h-full shadow-2xl shrink-0 z-20">
+        {/* --- LEFT PANEL: COMMAND CENTER (Constrained to strictly 38% on mobile) --- */}
+        <div className="w-full lg:w-[360px] bg-black/95 lg:bg-black/80 backdrop-blur-md border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
           
-          <div className="p-5 border-b border-white/10 bg-gradient-to-r from-purple-500/10 to-transparent shrink-0">
-             <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-purple-400">
-                <Network size={24} /> Graph Engine
-             </h2>
-             <p className="text-xs text-gray-400 mt-1">Hinglish Routing Visualizer v4.0</p>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar pb-12 flex flex-col">
+          <div className="overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6 flex flex-col">
             
             {/* Interaction Modes */}
-            <div className="space-y-3 shrink-0">
+            <div className="space-y-2 shrink-0">
                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
                     <MousePointer2 size={12}/> Interaction Toolkit
                 </label>
@@ -526,26 +522,26 @@ const GraphVisualizer = () => {
                         { id: 'addEdge', icon: Share2, label: 'Link' }
                     ].map((m) => (
                         <button key={m.id} onClick={() => setMode(m.id as Mode)} disabled={isAnimating}
-                            className={`flex flex-col items-center justify-center gap-1 py-3 rounded-lg transition-all duration-300 disabled:opacity-30 ${
+                            className={`flex flex-col items-center justify-center gap-1 py-2 sm:py-3 rounded-lg transition-all duration-300 disabled:opacity-30 ${
                                 mode === m.id 
                                 ? 'bg-purple-500 text-black shadow-[0_0_15px_rgba(168,85,247,0.4)]' 
                                 : 'text-gray-500 hover:text-white hover:bg-white/5'
                             }`}
                         >
-                            <m.icon size={16} />
-                            <span className="text-[9px] font-bold font-mono uppercase">{m.label}</span>
+                            <m.icon size={14} className="sm:w-4 sm:h-4" />
+                            <span className="text-[8px] sm:text-[9px] font-bold font-mono uppercase">{m.label}</span>
                         </button>
                     ))}
                 </div>
             </div>
 
             {/* Playback Controls (WITH MODE TOGGLE & STOP) */}
-            <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4 shrink-0">
+            <div className="bg-white/5 p-3 sm:p-4 rounded-xl border border-white/10 space-y-3 sm:space-y-4 shrink-0">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-400 uppercase">Engine State</span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase">Engine State</span>
                 <div className="flex bg-black/50 rounded-lg p-0.5 border border-white/10">
-                    <button onClick={() => setEngineMode('AUTO')} disabled={isAnimating} className={`px-2 py-1 text-[9px] font-black rounded ${engineMode === 'AUTO' ? 'bg-purple-500 text-black' : 'text-gray-500'}`}>AUTO</button>
-                    <button onClick={() => setEngineMode('MANUAL')} disabled={isAnimating} className={`px-2 py-1 text-[9px] font-black rounded ${engineMode === 'MANUAL' ? 'bg-amber-500 text-black' : 'text-gray-500'}`}>MANUAL</button>
+                    <button onClick={() => setEngineMode('AUTO')} disabled={isAnimating} className={`px-2 py-1 text-[8px] sm:text-[9px] font-black rounded ${engineMode === 'AUTO' ? 'bg-purple-500 text-black' : 'text-gray-500'}`}>AUTO</button>
+                    <button onClick={() => setEngineMode('MANUAL')} disabled={isAnimating} className={`px-2 py-1 text-[8px] sm:text-[9px] font-black rounded ${engineMode === 'MANUAL' ? 'bg-amber-500 text-black' : 'text-gray-500'}`}>MANUAL</button>
                 </div>
               </div>
               
@@ -553,16 +549,16 @@ const GraphVisualizer = () => {
                 <button 
                    onClick={() => setIsPaused(!isPaused)} 
                    disabled={!isAnimating || engineMode === 'MANUAL'} 
-                   className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all disabled:opacity-30"
+                   className="flex-1 py-1.5 sm:py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold hover:bg-white/5 transition-all disabled:opacity-30"
                 >
-                  {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'RESUME' : 'PAUSE'}
+                  {isPaused ? <Play size={12} className="sm:w-3.5 sm:h-3.5"/> : <Pause size={12} className="sm:w-3.5 sm:h-3.5"/>} {isPaused ? 'RESUME' : 'PAUSE'}
                 </button>
                 <button 
                    onClick={resolveStep} 
                    disabled={isAnimating && engineMode === 'AUTO' && !isPaused} 
-                   className="flex-1 py-2 bg-purple-500 text-black rounded flex items-center justify-center gap-2 text-xs font-black hover:bg-purple-400 disabled:opacity-30 disabled:grayscale transition-all"
+                   className="flex-1 py-1.5 sm:py-2 bg-purple-500 text-black rounded flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-black hover:bg-purple-400 disabled:opacity-30 disabled:grayscale transition-all"
                 >
-                  <StepForward size={14} /> STEP
+                  <StepForward size={12} className="sm:w-3.5 sm:h-3.5" /> STEP
                 </button>
               </div>
 
@@ -570,31 +566,31 @@ const GraphVisualizer = () => {
               <button 
                   onClick={handleStop} 
                   disabled={!isAnimating}
-                  className="w-full py-2 mt-2 bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 rounded flex items-center justify-center gap-2 text-[10px] font-black uppercase transition-all disabled:opacity-30"
+                  className="w-full py-1.5 sm:py-2 mt-2 bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 rounded flex items-center justify-center gap-2 text-[9px] sm:text-[10px] font-black uppercase transition-all disabled:opacity-30"
               >
                   <Square size={12} fill="currentColor" /> ABORT OPERATION
               </button>
             </div>
 
             {/* Pathfinding Config */}
-            <div className="space-y-4 shrink-0 border-t border-white/5 pt-4">
+            <div className="space-y-3 sm:space-y-4 shrink-0 border-t border-white/5 pt-3 sm:pt-4">
                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
                    <Navigation size={12}/> Route Planner
                </label>
                
-               <div className="grid grid-cols-2 gap-3">
+               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                    <div className="space-y-1">
-                        <span className="text-[9px] text-gray-500 font-mono uppercase">Start Sector</span>
+                        <span className="text-[8px] sm:text-[9px] text-gray-500 font-mono uppercase">Start Sector</span>
                         <select value={startNodeId} onChange={(e) => setStartNodeId(e.target.value)} disabled={isAnimating}
-                           className="w-full bg-[#050510] border border-white/10 rounded-lg p-2 text-xs font-mono text-purple-400 outline-none focus:border-purple-500"
+                           className="w-full bg-[#050510] border border-white/10 rounded-lg p-1.5 sm:p-2 text-[10px] sm:text-xs font-mono text-purple-400 outline-none focus:border-purple-500"
                         >
                            {nodes.map(n => <option key={n.id} value={n.id}>{n.id}</option>)}
                         </select>
                    </div>
                    <div className="space-y-1">
-                        <span className="text-[9px] text-gray-500 font-mono uppercase">Target Sector</span>
+                        <span className="text-[8px] sm:text-[9px] text-gray-500 font-mono uppercase">Target Sector</span>
                         <select value={targetNodeId} onChange={(e) => setTargetNodeId(e.target.value)} disabled={isAnimating}
-                           className="w-full bg-[#050510] border border-white/10 rounded-lg p-2 text-xs font-mono text-cyan-400 outline-none focus:border-cyan-500"
+                           className="w-full bg-[#050510] border border-white/10 rounded-lg p-1.5 sm:p-2 text-[10px] sm:text-xs font-mono text-cyan-400 outline-none focus:border-cyan-500"
                         >
                            {nodes.map(n => <option key={n.id} value={n.id}>{n.id}</option>)}
                         </select>
@@ -602,33 +598,34 @@ const GraphVisualizer = () => {
                </div>
                
                {/* Algorithm Grid */}
-               <div className="grid grid-cols-2 gap-2 mt-2">
-                  <button onClick={runBFS} disabled={isAnimating} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
-                     <Map size={16}/> BFS
+               <div className="grid grid-cols-2 gap-1.5 sm:gap-2 mt-2">
+                  <button onClick={runBFS} disabled={isAnimating} className="p-2 sm:p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                     <Map size={14} className="sm:w-4 sm:h-4"/> BFS
                   </button>
-                  <button onClick={runDFS} disabled={isAnimating} className="p-3 bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-400 rounded hover:bg-fuchsia-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
-                     <ShieldAlert size={16}/> DFS
+                  <button onClick={runDFS} disabled={isAnimating} className="p-2 sm:p-3 bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-400 rounded hover:bg-fuchsia-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                     <ShieldAlert size={14} className="sm:w-4 sm:h-4"/> DFS
                   </button>
-                  <button onClick={runDijkstra} disabled={isAnimating} className="p-3 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
-                     <Zap size={16}/> Dijkstra
+                  <button onClick={runDijkstra} disabled={isAnimating} className="p-2 sm:p-3 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                     <Zap size={14} className="sm:w-4 sm:h-4"/> Dijkstra
                   </button>
-                  <button onClick={runAStar} disabled={isAnimating} className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
-                     <Crosshair size={16}/> A* (A-Star)
+                  <button onClick={runAStar} disabled={isAnimating} className="p-2 sm:p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                     <Crosshair size={14} className="sm:w-4 sm:h-4"/> A* (A-Star)
                   </button>
                </div>
             </div>
 
             {/* Outputs */}
-            <button onClick={() => { setNodes([]); setEdges([]); resetVisuals(); setOutputLog(['> Memory Wiped.']); }} disabled={isAnimating} className="w-full py-2 bg-white/5 hover:bg-red-500/20 hover:text-red-400 border border-white/5 hover:border-red-500/30 rounded text-[10px] font-bold text-gray-500 transition-all flex items-center justify-center gap-2 mt-4 shrink-0">
-               <Trash2 size={14}/> FORMAT GRAPH
+            <button onClick={() => { setNodes([]); setEdges([]); resetVisuals(); setOutputLog(['> Memory Wiped.']); }} disabled={isAnimating} className="w-full py-2 bg-white/5 hover:bg-red-500/20 hover:text-red-400 border border-white/5 hover:border-red-500/30 rounded text-[9px] sm:text-[10px] font-bold text-gray-500 transition-all flex items-center justify-center gap-2 mt-4 shrink-0">
+               <Trash2 size={12} className="sm:w-3.5 sm:h-3.5"/> FORMAT GRAPH
             </button>
 
-            <div className="mt-4 flex-1 min-h-[150px] bg-black/90 border border-purple-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
+            {/* DEDICATED OUTPUT SCREEN */}
+            <div className="mt-4 flex-1 min-h-[100px] lg:min-h-[150px] bg-black/90 border border-purple-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
                 <div className="px-3 py-2 border-b border-purple-500/30 bg-purple-900/20 flex items-center gap-2 shrink-0">
                     <Terminal size={12} className="text-purple-400" />
-                    <span className="text-[9px] font-black text-purple-400 uppercase tracking-widest">Operation_Log</span>
+                    <span className="text-[8px] sm:text-[9px] font-black text-purple-400 uppercase tracking-widest">Operation_Log</span>
                 </div>
-                <div className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[10px] text-gray-300 flex flex-col gap-1">
+                <div className="p-2 sm:p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[9px] sm:text-[10px] text-gray-300 flex flex-col gap-1">
                     {outputLog.length === 0 ? (
                         <span className="text-gray-600 italic mt-1">Awaiting map operations...</span>
                     ) : (
@@ -639,172 +636,185 @@ const GraphVisualizer = () => {
                            </div>
                         ))
                     )}
+                    <div ref={outputEndRef} />
                 </div>
             </div>
 
           </div>
         </div>
 
-        {/* --- RIGHT PANEL: THE ARENA --- */}
-        <div className="flex-1 relative flex flex-col min-w-0 overflow-hidden h-full">
-          
-          <button 
-             onClick={() => setShowHUD(!showHUD)}
-             className="absolute top-6 left-6 z-50 p-2 bg-black/90 border border-purple-500/50 rounded-lg text-purple-400 hover:bg-purple-500/20 hover:text-purple-300 transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)] flex items-center gap-2"
-          >
-             {showHUD ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-             <span className="text-[10px] font-black uppercase tracking-widest">{showHUD ? "HIDE HUD" : "SHOW HUD"}</span>
-          </button>
+        {/* VISIBLE GLOWING SEPARATOR LINE (Mobile Only) */}
+        <div className="lg:hidden h-[2px] w-full bg-gradient-to-r from-purple-500/10 via-purple-500/60 to-purple-500/10 shrink-0 z-30 order-2" />
 
-          <AnimatePresence>
+        {/* --- RIGHT PANEL: THE ARENA --- */}
+        <div className="order-3 lg:order-2 flex-1 relative flex flex-col p-3 sm:p-4 lg:p-6 min-w-0 overflow-hidden lg:h-full w-full">
+          
+          {/* SMALL HUD TOGGLE BUTTON */}
+          <div className="flex justify-start lg:justify-start items-center mb-2 lg:mb-3 shrink-0 gap-2">
+             <button 
+                onClick={() => setShowHUD(!showHUD)}
+                className="h-7 lg:h-8 px-3 bg-[#050505] border border-purple-500/80 rounded-lg lg:rounded-full text-purple-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-purple-500/10 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all shadow-[0_0_10px_rgba(168,85,247,0.2)] uppercase z-40"
+             >
+                {showHUD ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                {showHUD ? 'HIDE HUD' : 'SHOW HUD'}
+             </button>
+          </div>
+
+          {/* Central Arena: Map Canvas (Scrollable + Draggable) */}
+          <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
+             
+             <div className="absolute top-3 right-3 lg:top-4 lg:right-4 z-30 flex items-center gap-2 lg:gap-3 px-3 lg:px-4 py-1 lg:py-1.5 bg-[#0a0a14]/90 backdrop-blur-md border border-white/10 rounded-full shadow-lg pointer-events-none">
+                <Activity size={12} className={isAnimating ? 'text-purple-500 animate-pulse' : 'text-gray-600'} />
+                <span className="text-[8px] lg:text-[10px] font-mono font-bold text-white uppercase tracking-widest">{message}</span>
+             </div>
+
+             {/* Infinite Canvas Wrapper */}
+             <div className="flex-1 w-full h-full overflow-auto custom-scrollbar touch-pan-x touch-pan-y relative">
+                 <div 
+                     className={`absolute min-w-[1200px] min-h-[800px] w-full h-full ${mode === 'move' && !isAnimating ? 'cursor-grab active:cursor-grabbing' : mode === 'addNode' && !isAnimating ? 'cursor-crosshair' : 'cursor-default'}`}
+                     onMouseMove={handleMouseMove}
+                     onMouseUp={handleGlobalMouseUp}
+                     onMouseLeave={handleGlobalMouseUp}
+                 >
+                     <div ref={canvasRef} className="absolute inset-0 z-0" onClick={handleCanvasClick} />
+
+                     <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+                         <AnimatePresence>
+                         {edges.map((edge) => {
+                             const start = nodes.find(n => n.id === edge.source);
+                             const end = nodes.find(n => n.id === edge.target);
+                             if(!start || !end) return null;
+
+                             const isPath = path.includes(edge.source) && path.includes(edge.target) && 
+                                            (path.indexOf(edge.source) === path.indexOf(edge.target) - 1 || path.indexOf(edge.target) === path.indexOf(edge.source) - 1);
+                             const isActive = activeEdge === edge.id;
+
+                             return (
+                                 <g key={edge.id}>
+                                     <motion.line 
+                                        initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+                                        x1={start.x} y1={start.y} x2={end.x} y2={end.y} 
+                                        stroke={isPath ? '#00f5ff' : isActive ? '#facc15' : '#3f3f46'} 
+                                        strokeWidth={isPath || isActive ? 4 : 2}
+                                        strokeOpacity={isPath || isActive ? 1 : 0.5}
+                                        className="transition-colors duration-300"
+                                     />
+                                     <g transform={`translate(${(start.x + end.x)/2}, ${(start.y + end.y)/2})`}>
+                                         <rect x="-12" y="-9" width="24" height="18" fill={isPath ? '#00f5ff' : isActive ? '#facc15' : '#18181b'} rx="8" stroke={isPath ? '#00f5ff' : '#3f3f46'} strokeWidth="1"/>
+                                         <text x="0" y="3" textAnchor="middle" fill={isPath || isActive ? '#000' : '#a1a1aa'} fontSize="10" className="font-mono font-bold">{edge.weight}</text>
+                                     </g>
+                                 </g>
+                             );
+                         })}
+                         </AnimatePresence>
+                         
+                         {mode === 'addEdge' && dragStartNode && (
+                             <line 
+                                x1={nodes.find(n => n.id === dragStartNode)?.x} 
+                                y1={nodes.find(n => n.id === dragStartNode)?.y} 
+                                x2={mousePos.x} y2={mousePos.y} 
+                                stroke="#a855f7" strokeWidth="3" strokeDasharray="6,6" className="opacity-70"
+                             />
+                         )}
+                     </svg>
+
+                     <AnimatePresence>
+                     {nodes.map(node => {
+                         const isVisited = visited.has(node.id);
+                         const isPathNode = path.includes(node.id);
+                         const isCurrent = activeNode === node.id;
+                         const isStart = node.id === startNodeId;
+                         const isTarget = node.id === targetNodeId;
+                         
+                         const dist = nodeDistances[node.id];
+                         const displayDist = dist === undefined ? '' : dist === Infinity ? '∞' : dist;
+
+                         let borderColor = '#52525b';
+                         let bgColor = '#09090b';
+                         let glow = 'none';
+
+                         if (isCurrent) { borderColor = '#facc15'; bgColor = '#facc1520'; glow = '0 0 30px rgba(250,204,21,0.6)'; }
+                         else if (isPathNode) { borderColor = '#00f5ff'; bgColor = '#00f5ff20'; glow = '0 0 20px rgba(0,245,255,0.4)'; }
+                         else if (isVisited) { borderColor = '#a855f7'; bgColor = '#a855f720'; glow = '0 0 15px rgba(168,85,247,0.3)'; }
+                         else if (isStart) { borderColor = '#22c55e'; }
+                         else if (isTarget) { borderColor = '#ef4444'; }
+
+                         return (
+                            <motion.div
+                                key={node.id}
+                                initial={{ scale: 0 }} animate={{ scale: isCurrent ? 1.2 : 1 }}
+                                onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                                onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
+                                className={`absolute w-12 h-12 lg:w-14 lg:h-14 -ml-6 -mt-6 lg:-ml-7 lg:-mt-7 rounded-full flex flex-col items-center justify-center border-4 z-20 shadow-xl pointer-events-auto transition-colors duration-300 ${mode === 'addEdge' && !isAnimating ? 'cursor-crosshair' : ''}`}
+                                style={{ 
+                                    left: node.x, top: node.y, borderColor: borderColor, backgroundColor: bgColor, boxShadow: glow
+                                }}
+                                draggable={false}
+                            >
+                                <span className={`font-black text-sm lg:text-lg pointer-events-none ${isPathNode || isCurrent ? 'text-white' : 'text-gray-300'}`}>
+                                    {node.id}
+                                </span>
+                                
+                                {displayDist !== '' && (
+                                    <div className="absolute -bottom-5 lg:-bottom-6 bg-black border border-white/20 px-1.5 py-0.5 rounded text-[8px] lg:text-[10px] font-mono font-bold text-gray-300 pointer-events-none">
+                                        {Number.isInteger(displayDist as number) ? displayDist : Number(displayDist).toFixed(1)}
+                                    </div>
+                                )}
+
+                                {isStart && <div className="absolute -top-5 lg:-top-6 text-[7px] lg:text-[9px] font-black text-green-400 pointer-events-none">START</div>}
+                                {isTarget && <div className="absolute -top-5 lg:-top-6 text-[7px] lg:text-[9px] font-black text-red-400 pointer-events-none">TARGET</div>}
+                                
+                                {isCurrent && (
+                                    <>
+                                      <div className="absolute -left-10 lg:-left-12 top-4 bg-yellow-500 text-black px-1.5 py-0.5 rounded text-[7px] lg:text-[8px] font-black shadow-lg pointer-events-none">SCAN</div>
+                                      <motion.div animate={{ scale: [1, 1.5], opacity: [0.5, 0] }} transition={{ repeat: Infinity, duration: 1 }} className="absolute inset-0 rounded-full border-2 border-yellow-500 pointer-events-none" />
+                                    </>
+                                )}
+                            </motion.div>
+                         );
+                     })}
+                     </AnimatePresence>
+
+                     {/* Fixed Key/Legend floating inside canvas */}
+                     <div className="fixed bottom-10 lg:bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-3 lg:gap-6 bg-black/80 backdrop-blur-md px-4 lg:px-6 py-2 lg:py-3 rounded-xl border border-white/10 text-[8px] lg:text-[10px] font-mono font-bold text-gray-400 pointer-events-none z-30 shadow-2xl">
+                        <span className="flex items-center gap-1.5 lg:gap-2"><div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded bg-[#facc15] border border-black"/> ACTIVE</span>
+                        <span className="flex items-center gap-1.5 lg:gap-2"><div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded bg-[#a855f7] border border-black"/> VISITED</span>
+                        <span className="flex items-center gap-1.5 lg:gap-2"><div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded bg-[#00f5ff] border border-black"/> PATH</span>
+                     </div>
+                 </div>
+             </div>
+          </div>
+
+          {/* BOTTOM HUD TRACE */}
+          <AnimatePresence initial={false}>
               {showHUD && (
                   <motion.div 
-                     initial={{ height: 0, opacity: 0, marginBottom: 0 }}
-                     animate={{ height: 160, opacity: 1, marginBottom: 24 }}
-                     exit={{ height: 0, opacity: 0, marginBottom: 0 }}
-                     transition={{ duration: 0.4, ease: "easeInOut" }}
-                     className="w-full shrink-0 pl-36 pr-6 pt-6"
+                     initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                     animate={{ height: typeof window !== 'undefined' && window.innerWidth < 1024 ? 120 : 160, opacity: 1, marginTop: 12 }}
+                     exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                     transition={{ duration: 0.3, ease: 'easeInOut' }}
+                     className="w-full shrink-0 overflow-hidden" 
                   >
                      <div className="w-full h-full bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
-                         <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
-                            <div className="flex items-center gap-2 text-purple-400">
-                                <Terminal size={14}/>
-                                <span className="text-[10px] font-black tracking-widest uppercase">Hinglish_Logic_Trace</span>
+                         <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+                            <div className="flex items-center gap-1.5 lg:gap-2 text-purple-400">
+                                <Terminal size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/>
+                                <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Hinglish_Logic_Trace</span>
                             </div>
                          </div>
-                         <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
-                            {codeLines.length ? codeLines.map(line => (
-                               <div key={line.id} className={`flex flex-col text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
+                         <div className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                            {codeLines.map(line => (
+                               <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
                                   <div className={`font-mono ${line.active ? 'text-purple-400' : 'text-gray-400'}`}>{line.text}</div>
-                                  {line.active && <div className="text-xs text-amber-400 mt-1 flex items-center gap-2 leading-relaxed"><ArrowRight size={12} className="shrink-0"/> {line.explanation}</div>}
+                                  {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
                                </div>
-                            )) : <div className="text-gray-600 text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14}/> Awaiting Pathfinding execution...</div>}
+                            ))}
+                            <div ref={interpreterEndRef} />
                          </div>
                      </div>
                   </motion.div>
               )}
           </AnimatePresence>
-
-          {/* Central Arena: Map Canvas */}
-          <div className="flex-1 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mt-2 mx-6 mb-6">
-             
-             <div className="absolute top-4 right-4 z-30 flex items-center gap-3 px-4 py-1.5 bg-[#0a0a14]/90 backdrop-blur-md border border-white/10 rounded-full shadow-lg pointer-events-none">
-                <Activity size={12} className={isAnimating ? 'text-purple-500 animate-pulse' : 'text-gray-600'} />
-                <span className="text-[10px] font-mono font-bold text-white uppercase tracking-widest">{message}</span>
-             </div>
-
-             <div 
-                 className={`flex-1 relative overflow-hidden ${mode === 'move' && !isAnimating ? 'cursor-grab active:cursor-grabbing' : mode === 'addNode' && !isAnimating ? 'cursor-crosshair' : 'cursor-default'}`}
-                 onMouseMove={handleMouseMove}
-                 onMouseUp={handleGlobalMouseUp}
-                 onMouseLeave={handleGlobalMouseUp}
-             >
-                 <div ref={canvasRef} className="absolute inset-0 z-0" onClick={handleCanvasClick} />
-
-                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
-                     <AnimatePresence>
-                     {edges.map((edge) => {
-                         const start = nodes.find(n => n.id === edge.source);
-                         const end = nodes.find(n => n.id === edge.target);
-                         if(!start || !end) return null;
-
-                         const isPath = path.includes(edge.source) && path.includes(edge.target) && 
-                                        (path.indexOf(edge.source) === path.indexOf(edge.target) - 1 || path.indexOf(edge.target) === path.indexOf(edge.source) - 1);
-                         const isActive = activeEdge === edge.id;
-
-                         return (
-                             <g key={edge.id}>
-                                 <motion.line 
-                                    initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                                    x1={start.x} y1={start.y} x2={end.x} y2={end.y} 
-                                    stroke={isPath ? '#00f5ff' : isActive ? '#facc15' : '#3f3f46'} 
-                                    strokeWidth={isPath || isActive ? 4 : 2}
-                                    strokeOpacity={isPath || isActive ? 1 : 0.5}
-                                    className="transition-colors duration-300"
-                                 />
-                                 <g transform={`translate(${(start.x + end.x)/2}, ${(start.y + end.y)/2})`}>
-                                     <rect x="-14" y="-10" width="28" height="20" fill={isPath ? '#00f5ff' : isActive ? '#facc15' : '#18181b'} rx="10" stroke={isPath ? '#00f5ff' : '#3f3f46'} strokeWidth="1"/>
-                                     <text x="0" y="4" textAnchor="middle" fill={isPath || isActive ? '#000' : '#a1a1aa'} fontSize="11" className="font-mono font-bold">{edge.weight}</text>
-                                 </g>
-                             </g>
-                         );
-                     })}
-                     </AnimatePresence>
-                     
-                     {mode === 'addEdge' && dragStartNode && (
-                         <line 
-                            x1={nodes.find(n => n.id === dragStartNode)?.x} 
-                            y1={nodes.find(n => n.id === dragStartNode)?.y} 
-                            x2={mousePos.x} y2={mousePos.y} 
-                            stroke="#a855f7" strokeWidth="3" strokeDasharray="6,6" className="opacity-70"
-                         />
-                     )}
-                 </svg>
-
-                 <AnimatePresence>
-                 {nodes.map(node => {
-                     const isVisited = visited.has(node.id);
-                     const isPathNode = path.includes(node.id);
-                     const isCurrent = activeNode === node.id;
-                     const isStart = node.id === startNodeId;
-                     const isTarget = node.id === targetNodeId;
-                     
-                     const dist = nodeDistances[node.id];
-                     const displayDist = dist === undefined ? '' : dist === Infinity ? '∞' : dist;
-
-                     let borderColor = '#52525b';
-                     let bgColor = '#09090b';
-                     let glow = 'none';
-
-                     if (isCurrent) { borderColor = '#facc15'; bgColor = '#facc1520'; glow = '0 0 30px rgba(250,204,21,0.6)'; }
-                     else if (isPathNode) { borderColor = '#00f5ff'; bgColor = '#00f5ff20'; glow = '0 0 20px rgba(0,245,255,0.4)'; }
-                     else if (isVisited) { borderColor = '#a855f7'; bgColor = '#a855f720'; glow = '0 0 15px rgba(168,85,247,0.3)'; }
-                     else if (isStart) { borderColor = '#22c55e'; }
-                     else if (isTarget) { borderColor = '#ef4444'; }
-
-                     return (
-                        <motion.div
-                            key={node.id}
-                            initial={{ scale: 0 }} animate={{ scale: isCurrent ? 1.2 : 1 }}
-                            onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                            onMouseUp={(e) => handleNodeMouseUp(e, node.id)}
-                            className={`absolute w-14 h-14 -ml-7 -mt-7 rounded-full flex flex-col items-center justify-center border-4 z-20 shadow-xl pointer-events-auto transition-colors duration-300 ${mode === 'addEdge' && !isAnimating ? 'cursor-crosshair' : ''}`}
-                            style={{ 
-                                left: node.x, top: node.y, borderColor: borderColor, backgroundColor: bgColor, boxShadow: glow
-                            }}
-                            draggable={false}
-                        >
-                            <span className={`font-black text-lg pointer-events-none ${isPathNode || isCurrent ? 'text-white' : 'text-gray-300'}`}>
-                                {node.id}
-                            </span>
-                            
-                            {displayDist !== '' && (
-                                <div className="absolute -bottom-6 bg-black border border-white/20 px-2 py-0.5 rounded text-[10px] font-mono font-bold text-gray-300 pointer-events-none">
-                                    {Number.isInteger(displayDist as number) ? displayDist : Number(displayDist).toFixed(1)}
-                                </div>
-                            )}
-
-                            {isStart && <div className="absolute -top-6 text-[9px] font-black text-green-400 pointer-events-none">START</div>}
-                            {isTarget && <div className="absolute -top-6 text-[9px] font-black text-red-400 pointer-events-none">TARGET</div>}
-                            
-                            {isCurrent && (
-                                <>
-                                  <div className="absolute -left-12 top-4 bg-yellow-500 text-black px-1.5 py-0.5 rounded text-[8px] font-black shadow-lg pointer-events-none">SCAN</div>
-                                  <motion.div animate={{ scale: [1, 1.5], opacity: [0.5, 0] }} transition={{ repeat: Infinity, duration: 1 }} className="absolute inset-0 rounded-full border-2 border-yellow-500 pointer-events-none" />
-                                </>
-                            )}
-                        </motion.div>
-                     );
-                 })}
-                 </AnimatePresence>
-
-                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-6 bg-black/80 backdrop-blur-md px-6 py-3 rounded-xl border border-white/10 text-[10px] font-mono font-bold text-gray-400 pointer-events-none z-30 shadow-2xl">
-                    <span className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#facc15] border border-black"/> ACTIVE</span>
-                    <span className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#a855f7] border border-black"/> VISITED</span>
-                    <span className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#00f5ff] border border-black"/> PATH</span>
-                 </div>
-             </div>
-          </div>
 
         </div>
       </div>

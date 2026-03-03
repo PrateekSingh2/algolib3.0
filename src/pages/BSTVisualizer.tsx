@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Binary, Plus, Search, Trash2, RotateCcw, 
   GitBranch, Zap, Layers, ArrowRight, Play, Pause, StepForward, 
-  Terminal, Activity, Box, Target, Maximize2, Minimize2, Settings2, Route
+  Terminal, Activity, Box, Target, Maximize2, Minimize2, Settings2
 } from 'lucide-react';
 
 // --- TYPES & GAME STATE ---
@@ -52,10 +52,6 @@ const SNIPPETS = {
     { id: '1', text: 'Node target = search(val);', explanation: 'Delete karne ke liye pehle target ko scan kar rahe hain...', active: false },
     { id: '2', text: 'if (target == null) return;', explanation: 'Target exist hi nahi karta!', active: false },
     { id: '3', text: 'rearrange_pointers(target);', explanation: 'Target mil gaya! Pointers ko bypass karke node ko free kar diya.', active: false }
-  ],
-  traversal: [
-    { id: '1', text: 'traverse(node);', explanation: 'Traversal sequence initiated. Scanning network...', active: false },
-    { id: '2', text: 'process(node.val);', explanation: 'Node data extract kar liya gaya hai.', active: false }
   ]
 };
 
@@ -63,7 +59,7 @@ const CyberGrid = () => (
   <div className="absolute inset-0 z-0 pointer-events-none">
     <div className="absolute inset-0 bg-[#09090b]" />
     <div className="absolute inset-0 bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,245,255,0.05),transparent_70%)]" />
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,255,136,0.05),transparent_70%)]" />
   </div>
 );
 
@@ -72,7 +68,7 @@ const BSTVisualizer = () => {
   const [inputValue, setInputValue] = useState<number | ''>('');
   
   // Game HUD State
-  const [showHUD, setShowHUD] = useState(true); 
+  const [showHUD, setShowHUD] = useState(false); 
   const [treeMode, setTreeMode] = useState<TreeMode>('bst');
 
   // Engine State
@@ -95,10 +91,53 @@ const BSTVisualizer = () => {
   const stepTrigger = useRef<() => void>(() => {});
   const interpreterEndRef = useRef<HTMLDivElement>(null);
   const outputEndRef = useRef<HTMLDivElement>(null);
+  
+  // NEW: Ref for auto-centering and tracking
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { generateRandom(); }, []);
   useEffect(() => { interpreterEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [codeLines]);
   useEffect(() => { outputEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [outputLog]);
+
+  // NEW: Center the workspace horizontally on initial load
+  const centerWorkspace = () => {
+    if (scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
+        container.scrollTop = 0;
+    }
+  };
+
+  useEffect(() => {
+    centerWorkspace();
+    // Safety fallback in case layout shifts after mount
+    const timeout = setTimeout(centerWorkspace, 150);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // NEW: Auto-scroll camera to follow the active scanning node
+  useEffect(() => {
+    if (highlightNode && root && scrollContainerRef.current) {
+        const findNode = (n: TreeNode | null, targetId: string): TreeNode | null => {
+            if (!n) return null;
+            if (n.id === targetId) return n;
+            return findNode(n.left, targetId) || findNode(n.right, targetId);
+        };
+        const active = findNode(root, highlightNode);
+        if (active) {
+            const container = scrollContainerRef.current;
+            // Calculate absolute position mapping the 50% origin offset
+            const absoluteX = (container.scrollWidth / 2) + active.xOffset;
+            const absoluteY = active.y;
+
+            container.scrollTo({
+                left: absoluteX - container.clientWidth / 2,
+                top: Math.max(0, absoluteY - container.clientHeight / 3),
+                behavior: 'smooth'
+            });
+        }
+    }
+  }, [highlightNode, root]);
 
   const generateRandom = () => setInputValue(Math.floor(Math.random() * 99) + 1);
   const resolveStep = () => { if(stepTrigger.current) stepTrigger.current(); };
@@ -186,6 +225,16 @@ const BSTVisualizer = () => {
       }
 
       setIsAnimating(true);
+      if (!showHUD) setShowHUD(true); 
+      
+      // Before inserting, scroll to root automatically
+      if (root) {
+          const container = scrollContainerRef.current;
+          if (container) {
+              container.scrollTo({ left: (container.scrollWidth - container.clientWidth) / 2, top: 0, behavior: 'smooth' });
+          }
+      }
+
       setOutputTitle("INSERTION_LOG");
       setOutputLog(prev => [...prev, `> Init insertion for [${val}]`]);
       const snippet = SNIPPETS.insert;
@@ -243,9 +292,9 @@ const BSTVisualizer = () => {
           currentRoot = balanceTree(currentRoot);
       } else {
           const updateH = (n: TreeNode | null) => {
-               if(!n) return 0;
-               n.height = 1 + Math.max(updateH(n.left), updateH(n.right));
-               return n.height;
+             if(!n) return 0;
+             n.height = 1 + Math.max(updateH(n.left), updateH(n.right));
+             return n.height;
           };
           updateH(currentRoot);
       }
@@ -263,6 +312,13 @@ const BSTVisualizer = () => {
     if (inputValue === '' || !root || isAnimating) return;
     const val = Number(inputValue);
     setIsAnimating(true);
+    if (!showHUD) setShowHUD(true); 
+    
+    // Auto-scroll to root before starting deletion
+    if (root && scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({ left: (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth) / 2, top: 0, behavior: 'smooth' });
+    }
+
     setOutputTitle("DELETE_PROTOCOL");
     setOutputLog([`> Initiating strike on [${val}]`]);
     
@@ -312,71 +368,6 @@ const BSTVisualizer = () => {
     setIsAnimating(false); setCodeLines([]); generateRandom();
   };
 
-  // --- TRAVERSAL PROTOCOLS ---
-  const handleTraversal = async (type: 'inorder' | 'preorder' | 'postorder' | 'levelorder') => {
-      if (!root || isAnimating) {
-          if(!root) setOutputLog(prev => [...prev, `> ERROR: Tree is empty.`]);
-          return;
-      }
-      setIsAnimating(true);
-      setOutputTitle(`${type.toUpperCase()}_TRAVERSAL`);
-      setOutputLog([`> Executing ${type.toUpperCase()} scan...`]);
-      const snippet = SNIPPETS.traversal;
-      await waitStep('1', snippet);
-
-      const result: number[] = [];
-
-      const visitNode = async (node: TreeNode) => {
-          setHighlightNode(node.id);
-          result.push(node.value);
-          setOutputLog(prev => [...prev, `> Extracted: [${node.value}]`]);
-          
-          if (isPaused) {
-              setMessage(`Processing node: ${node.value}`);
-              await new Promise<void>(r => stepTrigger.current = r);
-          } else {
-              await new Promise(r => setTimeout(r, 600));
-          }
-          setHighlightNode(null);
-      };
-
-      const traverse = async (node: TreeNode | null) => {
-          if (!node) return;
-          if (type === 'preorder') {
-              await visitNode(node);
-              await traverse(node.left);
-              await traverse(node.right);
-          } else if (type === 'inorder') {
-              await traverse(node.left);
-              await visitNode(node);
-              await traverse(node.right);
-          } else if (type === 'postorder') {
-              await traverse(node.left);
-              await traverse(node.right);
-              await visitNode(node);
-          }
-      };
-
-      const levelOrder = async () => {
-          const queue: TreeNode[] = [root];
-          while(queue.length > 0) {
-              const node = queue.shift()!;
-              await visitNode(node);
-              if (node.left) queue.push(node.left);
-              if (node.right) queue.push(node.right);
-          }
-      };
-
-      await waitStep('2', snippet);
-      if (type === 'levelorder') await levelOrder();
-      else await traverse(root);
-
-      setOutputLog(prev => [...prev, ``, `> FINAL SEQUENCE:`, `> ${result.join(' → ')}`]);
-      setMessage(`MISSION_PASSED: Traversal Complete`);
-      setIsAnimating(false); setCodeLines([]);
-  };
-
-  // --- RENDERERS ---
   const renderEdges = (node: TreeNode | null): JSX.Element[] => {
       if (!node) return [];
       const edges = [];
@@ -405,6 +396,7 @@ const BSTVisualizer = () => {
 
   const renderNodes = (node: TreeNode | null): JSX.Element[] => {
       if (!node) return [];
+      const isVisited = visitedNodes.has(node.id);
       const isActive = highlightNode === node.id;
       const isFound = foundNode === node.id;
       
@@ -416,33 +408,31 @@ const BSTVisualizer = () => {
       let borderColor = '#0ea5e9'; 
       if (isUnbalanced) borderColor = '#ef4444'; 
       if (isFound) borderColor = '#22c55e'; 
-      if (isActive) borderColor = '#a855f7'; // Purple highlight for scanning/traversal
+      if (isActive) borderColor = '#facc15'; 
 
       const nodes = [
           <motion.div key={node.id} initial={{ scale: 0 }}
               animate={{ scale: isActive ? 1.1 : 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className={`absolute w-16 h-16 -ml-8 -mt-8 rounded-full flex flex-col items-center justify-center border-4 shadow-xl z-20 bg-[#09090b]`}
+              className={`absolute w-12 h-12 lg:w-16 lg:h-16 -ml-6 -mt-6 lg:-ml-8 lg:-mt-8 rounded-full flex flex-col items-center justify-center border-4 shadow-xl z-20 bg-[#09090b]`}
               style={{ 
                   left: `calc(50% + ${node.xOffset}px)`, top: node.y,
                   borderColor: borderColor,
-                  boxShadow: isActive ? `0 0 30px ${borderColor}80` : 'none'
+                  boxShadow: isActive ? '0 0 30px rgba(250,204,21,0.4)' : 'none'
               }}
           >
-              <span className="text-[9px] text-gray-400 font-mono absolute top-1">h: {node.height}</span>
-              <span className="font-black text-xl text-white mt-1">{node.value}</span>
+              <span className="text-[7px] lg:text-[9px] text-gray-400 font-mono absolute top-1">h: {node.height}</span>
+              <span className="font-black text-lg lg:text-xl text-white mt-1">{node.value}</span>
 
-              <div className="absolute -bottom-6 flex flex-col items-center whitespace-nowrap">
-                  <span className={`text-[10px] font-black font-mono ${isUnbalanced ? 'text-red-500' : 'text-gray-400'}`}>
+              <div className="absolute -bottom-5 lg:-bottom-6 flex flex-col items-center whitespace-nowrap">
+                  <span className={`text-[8px] lg:text-[10px] font-black font-mono ${isUnbalanced ? 'text-red-500' : 'text-gray-400'}`}>
                       BF: {bf}
                   </span>
-                  {isLeaf && <span className="text-[9px] font-black text-emerald-400 mt-0.5">LEAF</span>}
+                  {isLeaf && <span className="text-[7px] lg:text-[9px] font-black text-emerald-400 mt-0.5">LEAF</span>}
               </div>
-
-              {isRoot && <div className="absolute -top-6 text-[11px] font-black text-cyan-500">ROOT</div>}
-
+              {isRoot && <div className="absolute -top-5 lg:-top-6 text-[9px] lg:text-[11px] font-black text-cyan-500">ROOT</div>}
               {isActive && (
-                  <div className="absolute -left-12 top-4 bg-purple-500 text-white px-1.5 py-0.5 rounded text-[8px] font-black shadow-lg uppercase">Vis</div>
+                  <div className="absolute -left-10 lg:-left-12 top-4 bg-yellow-500 text-black px-1.5 py-0.5 rounded text-[7px] lg:text-[8px] font-black shadow-lg">SCAN</div>
               )}
           </motion.div>
       ];
@@ -455,19 +445,12 @@ const BSTVisualizer = () => {
     <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden">
       <CyberGrid />
       
-      <div className="flex-1 flex relative z-10 overflow-hidden h-full">
+      <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
         
         {/* LEFT: COMMAND CENTER */}
-        <div className="w-[340px] bg-black/80 backdrop-blur-md border-r border-white/10 flex flex-col h-full shadow-2xl shrink-0 z-20">
+        <div className="w-full lg:w-[340px] bg-black/95 lg:bg-black/80 backdrop-blur-md border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
           
-          <div className="p-5 border-b border-white/10 bg-gradient-to-r from-cyan-500/10 to-transparent shrink-0">
-             <h2 className="text-xl font-black tracking-tight flex items-center gap-2 text-cyan-400">
-                <Binary size={24} /> BST Engine
-             </h2>
-             <p className="text-xs text-gray-400 mt-1">v4.0 Academic Visualizer</p>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar pb-4 flex flex-col">
+          <div className="overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6 flex flex-col">
             
             {/* AVL Auto Balance Toggle */}
             <div className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center justify-between shrink-0">
@@ -478,7 +461,7 @@ const BSTVisualizer = () => {
                     </span>
                 </div>
                 <button 
-                    onClick={() => { setTreeMode(treeMode === 'bst' ? 'avl' : 'bst'); setRoot(null); }}
+                    onClick={() => { setTreeMode(treeMode === 'bst' ? 'avl' : 'bst'); setRoot(null); setTimeout(centerWorkspace, 100); }}
                     disabled={isAnimating}
                     className="px-3 py-1.5 bg-black/50 border border-white/20 rounded hover:border-white/50 text-[9px] font-black uppercase transition-all disabled:opacity-30"
                 >
@@ -517,32 +500,21 @@ const BSTVisualizer = () => {
                </div>
                
                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <button onClick={handleInsert} disabled={isAnimating} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
+                  <button onClick={handleInsert} disabled={isAnimating} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
                      <Plus size={16}/> INSERT
                   </button>
-                  <button onClick={handleDelete} disabled={isAnimating} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
+                  <button onClick={handleDelete} disabled={isAnimating} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
                      <Trash2 size={16}/> DELETE
                   </button>
                </div>
-
-               {/* Traversal Controls Section */}
-               <div className="pt-3 border-t border-white/10 mt-2">
-                  <label className="text-[10px] text-purple-400 uppercase font-bold flex items-center gap-1 mb-2"><Route size={12}/> Traversal Protocols</label>
-                  <div className="grid grid-cols-2 gap-2">
-                      <button onClick={() => handleTraversal('inorder')} disabled={isAnimating} className="py-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[9px] font-black uppercase disabled:opacity-50 transition-all">In-Order</button>
-                      <button onClick={() => handleTraversal('preorder')} disabled={isAnimating} className="py-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[9px] font-black uppercase disabled:opacity-50 transition-all">Pre-Order</button>
-                      <button onClick={() => handleTraversal('postorder')} disabled={isAnimating} className="py-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[9px] font-black uppercase disabled:opacity-50 transition-all">Post-Order</button>
-                      <button onClick={() => handleTraversal('levelorder')} disabled={isAnimating} className="py-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[9px] font-black uppercase disabled:opacity-50 transition-all">Level-Order</button>
-                  </div>
-               </div>
             </div>
 
-            <button onClick={() => { setRoot(null); setOutputLog([]); }} disabled={isAnimating} className="w-full py-2 shrink-0 bg-white/5 hover:bg-red-500/20 hover:text-red-400 border border-white/5 hover:border-red-500/30 rounded text-[10px] font-bold text-gray-500 transition-all flex items-center justify-center gap-2">
+            <button onClick={() => { setRoot(null); setOutputLog([]); setTimeout(centerWorkspace, 50); }} disabled={isAnimating} className="w-full py-2 shrink-0 bg-white/5 hover:bg-red-500/20 hover:text-red-400 border border-white/5 hover:border-red-500/30 rounded text-[10px] font-bold text-gray-500 transition-all flex items-center justify-center gap-2">
                   <Trash2 size={14}/> FORMAT TREE
             </button>
 
             {/* DEDICATED OUTPUT SCREEN */}
-            <div className="mt-4 flex-1 min-h-[150px] bg-black/90 border border-cyan-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
+            <div className="mt-4 flex-1 min-h-[120px] lg:min-h-[150px] bg-black/90 border border-cyan-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
                 <div className="px-3 py-2 border-b border-cyan-500/30 bg-cyan-900/20 flex items-center gap-2 shrink-0">
                     <Terminal size={12} className="text-cyan-400" />
                     <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">{outputTitle}</span>
@@ -551,16 +523,12 @@ const BSTVisualizer = () => {
                     {outputLog.length === 0 ? (
                         <span className="text-gray-600 italic mt-1">Awaiting execution...</span>
                     ) : (
-                        outputLog.map((log, i) => {
-                           const isSuccess = log.includes('SUCCESS') || log.includes('AVL') || log.includes('FINAL');
-                           const isError = log.includes('FAILED') || log.includes('Abort') || log.includes('ERROR');
-                           return (
-                            <div key={i} className={`flex items-start ${isSuccess ? 'text-emerald-400 font-bold' : isError ? 'text-red-400' : 'text-gray-400'}`}>
-                                {!log.startsWith('>') && <span className="opacity-50 mr-2 shrink-0">{String(i).padStart(2, '0')}</span>}
-                                {log}
-                            </div>
-                           );
-                        })
+                        outputLog.map((log, i) => (
+                           <div key={i} className={`flex items-start ${log.includes('SUCCESS') || log.includes('AVL') ? 'text-emerald-400 font-bold' : log.includes('FAILED') || log.includes('Abort') ? 'text-red-400' : 'text-gray-400'}`}>
+                               <span className="opacity-50 mr-2 shrink-0">{String(i).padStart(2, '0')}</span>
+                               {log}
+                           </div>
+                        ))
                     )}
                     <div ref={outputEndRef} />
                 </div>
@@ -569,76 +537,28 @@ const BSTVisualizer = () => {
           </div>
         </div>
 
+        {/* VISIBLE GLOWING SEPARATOR LINE (Mobile Only) */}
+        <div className="lg:hidden h-[2px] w-full bg-gradient-to-r from-cyan-500/10 via-cyan-500/60 to-cyan-500/10 shrink-0 z-30 order-2" />
+
         {/* RIGHT: THE ARENA */}
-        <div className="flex-1 relative flex flex-col p-6 min-w-0 overflow-hidden h-full">
+        <div className="order-3 lg:order-2 flex-1 relative flex flex-col p-3 sm:p-4 lg:p-6 min-w-0 overflow-hidden lg:h-full w-full">
           
-          {/* THE HUD TOGGLE BUTTON */}
-          <button 
-             onClick={() => setShowHUD(!showHUD)}
-             className="absolute top-6 left-6 z-50 p-2 bg-black/90 border border-cyan-500/50 rounded-lg text-cyan-400 hover:bg-cyan-500/20 hover:text-cyan-300 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] flex items-center gap-2"
-             title={showHUD ? "Hide HUD to maximize workspace" : "Show HUD"}
-          >
-             {showHUD ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-             <span className="text-[10px] font-black uppercase tracking-widest">{showHUD ? "HIDE HUD" : "SHOW HUD"}</span>
-          </button>
+          {/* SMALL HUD TOGGLE */}
+          <div className="flex justify-start lg:justify-start items-center mb-2 lg:mb-3 shrink-0 gap-2">
+             <button 
+                onClick={() => setShowHUD(!showHUD)}
+                className="h-7 lg:h-8 px-3 bg-[#050505] border border-cyan-500/80 rounded-lg lg:rounded-full text-cyan-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-cyan-500/10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)] uppercase z-40"
+             >
+                {showHUD ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                {showHUD ? 'HIDE HUD' : 'SHOW HUD'}
+             </button>
+          </div>
 
-          {/* Top HUD: Interpreter & Spawn Zone */}
-          <AnimatePresence>
-              {showHUD && (
-                  <motion.div 
-                     initial={{ height: 0, opacity: 0, marginBottom: 0 }}
-                     animate={{ height: 180, opacity: 1, marginBottom: 24 }}
-                     exit={{ height: 0, opacity: 0, marginBottom: 0 }}
-                     transition={{ duration: 0.4, ease: "easeInOut" }}
-                     className="flex gap-6 w-full shrink-0 ml-32" 
-                  >
-                     <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
-                         <div className="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
-                            <div className="flex items-center gap-2 text-cyan-400">
-                                <Terminal size={14}/>
-                                <span className="text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
-                            </div>
-                         </div>
-                         <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-1">
-                            {codeLines.length ? codeLines.map(line => (
-                               <div key={line.id} className={`flex flex-col text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
-                                  <div className={`font-mono ${line.active ? 'text-cyan-400' : 'text-gray-400'}`}>{line.text}</div>
-                                  {line.active && <div className="text-xs text-amber-400 mt-1 flex items-center gap-2 leading-relaxed"><ArrowRight size={12} className="shrink-0"/> {line.explanation}</div>}
-                               </div>
-                            )) : <div className="text-gray-600 text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14}/> Awaiting BST operation...</div>}
-                            <div ref={interpreterEndRef} />
-                         </div>
-                     </div>
-
-                     <div className="w-[300px] shrink-0 border border-cyan-500/30 bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner overflow-hidden">
-                        <div className="absolute top-3 right-4 flex items-center gap-2 text-[10px] font-mono text-cyan-500 uppercase tracking-widest">
-                            <Box size={14} /> Spawn_Zone
-                        </div>
-                        <AnimatePresence>
-                           {phantom && (
-                              <motion.div
-                                initial={{ scale: 0, y: -20, opacity: 0 }}
-                                animate={{ scale: 1, y: 0, opacity: 1 }}
-                                exit={{ opacity: 0, scale: 0.5, y: 50 }}
-                                className="w-16 h-16 rounded-full border-4 border-dashed border-cyan-400 flex items-center justify-center bg-cyan-500/20 shadow-[0_0_30px_rgba(6,182,212,0.4)] z-50 relative mt-4"
-                              >
-                                 <span className="text-2xl font-black text-white">{phantom.val}</span>
-                              </motion.div>
-                           )}
-                        </AnimatePresence>
-                        {!phantom && (
-                            <div className="text-cyan-500/30 font-mono text-xs flex items-center gap-2 mt-4">
-                                <Zap size={14} /> Memory Ready
-                            </div>
-                        )}
-                     </div>
-                  </motion.div>
-              )}
-          </AnimatePresence>
-
-          {/* Central Arena: The Infinite Tree Canvas */}
-          <div className="flex-1 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mt-2">
-             <div className="flex-1 overflow-auto custom-scrollbar relative">
+          {/* Central Arena: The Infinite Tree Canvas (Scrollable & Tracked) */}
+          <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
+             
+             {/* ADDED: ref attached for Auto-Scrolling Camera */}
+             <div className="flex-1 overflow-auto custom-scrollbar relative touch-pan-x touch-pan-y" ref={scrollContainerRef}>
                  <div className="absolute min-w-[2400px] min-h-[1200px] w-full h-full p-10 pt-16">
                     <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
                         {renderEdges(root)}
@@ -652,12 +572,70 @@ const BSTVisualizer = () => {
                     {!root && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600 font-mono opacity-50 pointer-events-none">
                             <Binary size={48} className="mb-4 text-gray-700" />
-                            <p className="text-sm">[ TREE_EMPTY :: AWAITING_ROOT ]</p>
+                            <p className="text-xs lg:text-sm">[ TREE_EMPTY :: AWAITING_ROOT ]</p>
                         </div>
                     )}
                  </div>
              </div>
           </div>
+
+          <div className="shrink-0 flex justify-between items-center text-[10px] lg:text-xs font-mono text-gray-500 px-2 lg:mb-2">
+             <div className="flex items-center gap-2"><Activity size={14} className={isAnimating ? "text-cyan-500 animate-spin lg:w-3.5 lg:h-3.5" : "lg:w-3.5 lg:h-3.5"}/> <span className="truncate max-w-[200px] lg:max-w-none">{message}</span></div>
+          </div>
+
+          {/* BOTTOM HUD TRACE & HEAP */}
+          <AnimatePresence initial={false}>
+              {showHUD && (
+                  <motion.div 
+                     initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                     animate={{ height: typeof window !== 'undefined' && window.innerWidth < 1024 ? 120 : 160, opacity: 1, marginTop: 12 }}
+                     exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                     transition={{ duration: 0.3, ease: "easeInOut" }}
+                     className="flex gap-2 lg:gap-4 w-full shrink-0 overflow-hidden" 
+                  >
+                     <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
+                         <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+                            <div className="flex items-center gap-1.5 lg:gap-2 text-cyan-400">
+                                <Terminal size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/>
+                                <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
+                            </div>
+                         </div>
+                         <div className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                            {codeLines.length ? codeLines.map(line => (
+                               <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
+                                  <div className={`font-mono ${line.active ? 'text-cyan-400' : 'text-gray-400'}`}>{line.text}</div>
+                                  {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
+                               </div>
+                            )) : <div className="text-gray-600 text-[10px] lg:text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/> Awaiting BST operation...</div>}
+                            <div ref={interpreterEndRef} />
+                         </div>
+                     </div>
+
+                     <div className="w-[130px] lg:w-[350px] shrink-0 border border-cyan-500/30 bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner h-full overflow-hidden">
+                        <div className="absolute top-2 right-2 lg:top-3 lg:right-4 flex items-center gap-1.5 lg:gap-2 text-[8px] lg:text-[10px] font-mono text-cyan-500 uppercase tracking-widest">
+                            <Box size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Spawn_Zone</span><span className="lg:hidden">Heap</span>
+                        </div>
+                        <AnimatePresence>
+                           {phantom && (
+                              <motion.div
+                                initial={{ scale: 0, y: -20, opacity: 0 }}
+                                animate={{ scale: 1, y: 0, opacity: 1 }}
+                                exit={{ opacity: 0, scale: 0.5, y: 50 }}
+                                className="w-14 h-14 lg:w-20 lg:h-20 rounded-full border-4 border-dashed border-cyan-400 flex items-center justify-center bg-cyan-500/20 shadow-[0_0_30px_rgba(6,182,212,0.4)] z-50 relative mt-4 lg:mt-6"
+                              >
+                                 <span className="text-xl lg:text-3xl font-black text-white">{phantom.val}</span>
+                              </motion.div>
+                           )}
+                        </AnimatePresence>
+                        {!phantom && (
+                            <div className="text-cyan-500/30 font-mono text-[9px] lg:text-xs flex items-center gap-1.5 lg:gap-2 mt-4">
+                                <Zap size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Memory Ready</span><span className="lg:hidden">Empty</span>
+                            </div>
+                        )}
+                     </div>
+                  </motion.div>
+              )}
+          </AnimatePresence>
 
         </div>
       </div>
