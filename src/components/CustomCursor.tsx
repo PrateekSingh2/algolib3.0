@@ -77,6 +77,37 @@ const DefaultCursorSVG: FC = () => {
   );
 };
 
+// --- New Text Cursor (|) ---
+const TextCursorSVG: FC = () => (
+  <svg width="12" height="24" viewBox="0 0 12 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path 
+      d="M6 2V22M3 2H9M3 22H9" 
+      stroke="white" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      style={{ filter: "drop-shadow(0px 2px 3px rgba(0,0,0,0.8))" }}
+    />
+  </svg>
+);
+
+// --- New Pointer Cursor (Thumb/Hand) ---
+const PointerCursorSVG: FC = () => (
+  <svg width="24" height="28" viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'translateY(15%)' }}>
+    <path 
+      d="M10 12V4C10 2.89543 10.8954 2 12 2C13.1046 2 14 2.89543 14 4V12M14 12V11C14 9.89543 14.8954 9 16 9C17.1046 9 18 9.89543 18 11V12M18 12V11C18 9.89543 18.8954 9 20 9C21.1046 9 22 9.89543 22 11V16C22 19.3137 19.3137 22 16 22H13.5C11.7761 22 10.1228 21.3158 8.90524 20.0982L6 17.193V15C6 13.8954 6.89543 13 8 13C8.53043 13 9.03914 13.2107 9.41421 13.5858L10 14.1716V12" 
+      fill="black" 
+      stroke="white" 
+      strokeWidth="1.8" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      style={{ filter: "drop-shadow(0px 3px 3px rgba(0,0,0,0.4))" }}
+    />
+  </svg>
+);
+
+type CursorType = "default" | "text" | "pointer";
+
 const CustomCursor = ({
   cursor = <DefaultCursorSVG />,
   springConfig = {
@@ -87,7 +118,9 @@ const CustomCursor = ({
   },
 }: SmoothCursorProps) => {
   const [isMoving, setIsMoving] = useState(false);
-  const [isMobile, setIsMobile] = useState(false); // Mobile detection state
+  const [isMobile, setIsMobile] = useState(false);
+  const [cursorType, setCursorType] = useState<CursorType>("default"); // State for cursor variants
+
   const lastMousePos = useRef<Position>({ x: 0, y: 0 });
   const velocity = useRef<Position>({ x: 0, y: 0 });
   const lastUpdateTime = useRef(Date.now());
@@ -109,7 +142,6 @@ const CustomCursor = ({
     mass: 0.1,
   });
 
-  // Effect to handle mobile/touch detection
   useEffect(() => {
     const checkDevice = () => {
       const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
@@ -126,7 +158,6 @@ const CustomCursor = ({
   }, []);
 
   useEffect(() => {
-    // If it's a mobile or touch device, do not run the cursor logic
     if (isMobile) return;
 
     const updateVelocity = (currentPos: Position) => {
@@ -147,6 +178,16 @@ const CustomCursor = ({
     const handleMouseMove = (e: MouseEvent) => {
       const currentPos = { x: e.clientX, y: e.clientY };
       updateVelocity(currentPos);
+
+      // Element detection for cursor type
+      const target = e.target as HTMLElement;
+      if (target.closest('input, textarea, [contenteditable="true"]')) {
+        setCursorType("text");
+      } else if (target.closest('a, button, [role="button"], label, select, option')) {
+        setCursorType("pointer");
+      } else {
+        setCursorType("default");
+      }
 
       const speed = Math.sqrt(
         Math.pow(velocity.current.x, 2) + Math.pow(velocity.current.y, 2)
@@ -180,7 +221,6 @@ const CustomCursor = ({
       }
     };
 
-    // Hide system cursor globally
     document.body.style.cursor = "none";
     
     const style = document.createElement('style');
@@ -201,7 +241,6 @@ const CustomCursor = ({
     };
   }, [cursorX, cursorY, rotation, scale, isMobile]);
 
-  // If mobile, render nothing
   if (isMobile) return null;
 
   return (
@@ -212,7 +251,8 @@ const CustomCursor = ({
         top: cursorY,
         x: "-50%",
         y: "-50%",
-        rotate: rotation,
+        // Only rotate if it is the default cursor arrow. Hands and Text beams should stay upright.
+        rotate: cursorType === "default" ? rotation : 0, 
         scale: scale,
         zIndex: 9999,
         pointerEvents: "none",
@@ -226,7 +266,7 @@ const CustomCursor = ({
         damping: 30,
       }}
     >
-      {cursor}
+      {cursorType === "text" ? <TextCursorSVG /> : cursorType === "pointer" ? <PointerCursorSVG /> : cursor}
     </motion.div>
   );
 };

@@ -7,9 +7,10 @@ import {
 } from "firebase/firestore";
 import { auth, firestoreDB } from "../lib/firebase"; 
 import { 
-  MessageSquare, PlusCircle, Image as ImageIcon, Reply, Loader2, 
+  MessageSquare, Image as ImageIcon, Reply, Loader2, 
   CheckCircle2, Trophy, Search, Edit2, Trash2, X, Save,
-  MoreVertical, ChevronUp, ChevronDown, AlertTriangle, ChevronRight, Hash
+  MoreVertical, ChevronUp, ChevronDown, AlertTriangle, ChevronRight, Hash,
+  Heading, Bold, Italic, ListOrdered, List, Minus, Quote, Code, Terminal, Link, SquarePen
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "./Navbar"; 
@@ -25,7 +26,8 @@ interface ReplyType {
   createdAt: number; 
   isAccepted?: boolean; 
   likes?: string[];    
-  dislikes?: string[]; 
+  dislikes?: string[];
+  isEdited?: boolean;
 }
 
 interface Post {
@@ -41,6 +43,7 @@ interface Post {
   dislikes?: string[]; 
   replies: ReplyType[];
   createdAt: any; 
+  isEdited?: boolean;
 }
 
 // --- Tech Grid Background ---
@@ -50,6 +53,71 @@ const TechGridBackground = () => (
      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(37,99,235,0.15),transparent)]" />
   </div>
 );
+
+// --- Simple Markdown/Code Renderer ---
+const renderText = (text: string) => {
+  if (!text) return null;
+  
+  // 1. Handle code blocks first (using unicode hex to avoid markdown parsing issues in the file itself)
+  const blockParts = text.split(/(\u0060\u0060\u0060[\s\S]*?\u0060\u0060\u0060)/g);
+  return blockParts.map((blockPart, index) => {
+    if (blockPart.startsWith('\u0060\u0060\u0060') && blockPart.endsWith('\u0060\u0060\u0060')) {
+      const codeContent = blockPart.slice(3, -3);
+      return (
+        <pre key={`block-${index}`} className="bg-[#0A0A0A] border border-zinc-800 p-3 rounded-lg my-2 overflow-x-auto font-mono text-sm text-blue-300">
+          {codeContent}
+        </pre>
+      );
+    }
+    
+    // 2. Handle bold
+    const boldParts = blockPart.split(/(\*\*[\s\S]*?\*\*)/g);
+    return boldParts.map((boldPart, bIdx) => {
+      if (boldPart.startsWith('**') && boldPart.endsWith('**')) {
+          return <strong key={`bold-${index}-${bIdx}`} className="text-white font-bold">{boldPart.slice(2, -2)}</strong>;
+      }
+
+      // 3. Handle italic
+      const italicParts = boldPart.split(/(_[\s\S]*?_)/g);
+      return italicParts.map((italicPart, iIdx) => {
+        if (italicPart.startsWith('_') && italicPart.endsWith('_')) {
+            return <em key={`italic-${index}-${bIdx}-${iIdx}`} className="italic text-zinc-300">{italicPart.slice(1, -1)}</em>;
+        }
+
+        // 4. Handle links
+        const linkParts = italicPart.split(/(\[[^\]]+\]\([^)]+\))/g);
+        return linkParts.map((linkPart, lIdx) => {
+            const linkMatch = linkPart.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+            if (linkMatch) {
+                let url = linkMatch[2];
+                // Check if it's not an absolute URL and fix it
+                if (!url.match(/^https?:\/\//i) && !url.startsWith('mailto:')) {
+                    url = `https://${url}`;
+                }
+                return (
+                    <a key={`link-${index}-${bIdx}-${iIdx}-${lIdx}`} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline transition-colors font-medium">
+                        {linkMatch[1]}
+                    </a>
+                );
+            }
+
+            // 5. Handle LeetCode style inline code
+            const inlineParts = linkPart.split(/(`[^`]+`)/g);
+            return inlineParts.map((part, pIdx) => {
+                if (part.startsWith('`') && part.endsWith('`')) {
+                    return (
+                        <code key={`inline-${index}-${bIdx}-${iIdx}-${lIdx}-${pIdx}`} className="bg-zinc-800/80 text-[#5eead4] px-1.5 py-0.5 rounded-md text-[13px] font-mono border border-zinc-700/50">
+                        {part.slice(1, -1)}
+                        </code>
+                    );
+                }
+                return <React.Fragment key={`text-${index}-${bIdx}-${iIdx}-${lIdx}-${pIdx}`}>{part}</React.Fragment>;
+            });
+        });
+      });
+    });
+  });
+};
 
 // --- Custom Delete Confirmation Modal ---
 const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, type }: { isOpen: boolean, onClose: () => void, onConfirm: () => void, type: 'post' | 'reply' }) => {
@@ -79,6 +147,42 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, type }: { isOpen: bool
   );
 };
 
+// --- Format Toolbar ---
+const MarkdownToolbar = ({ onInsert }: { onInsert: (prefix: string, suffix: string) => void }) => {
+  const tools = [
+      { icon: <Heading size={15}/>, prefix: '### ', suffix: '', label: 'Heading' },
+      { icon: <Bold size={15}/>, prefix: '**', suffix: '**', label: 'Bold' },
+      { icon: <Italic size={15}/>, prefix: '_', suffix: '_', label: 'Italic' },
+      { icon: <span className="text-zinc-600 font-light mx-0.5">|</span>, action: 'separator' },
+      { icon: <ListOrdered size={15}/>, prefix: '1. ', suffix: '', label: 'Ordered List' },
+      { icon: <List size={15}/>, prefix: '- ', suffix: '', label: 'Unordered List' },
+      { icon: <Minus size={15}/>, prefix: '\n---\n', suffix: '', label: 'Horizontal Rule' },
+      { icon: <span className="text-zinc-600 font-light mx-0.5">|</span>, action: 'separator' },
+      { icon: <Quote size={15}/>, prefix: '> ', suffix: '', label: 'Blockquote' },
+      { icon: <Code size={15}/>, prefix: '\n\u0060\u0060\u0060\n', suffix: '\n\u0060\u0060\u0060\n', label: 'Code Block' },
+      { icon: <Terminal size={15}/>, prefix: '`', suffix: '`', label: 'Inline Code' },
+      { icon: <Link size={15}/>, prefix: '[', suffix: '](url)', label: 'Link' },
+  ];
+
+  return (
+      <div className="flex items-center gap-0.5 bg-[#18181B] border border-zinc-800 border-b-0 rounded-t-lg px-2 py-1.5 overflow-x-auto">
+          {tools.map((tool, idx) => 
+              tool.action === 'separator' ? (
+                  <React.Fragment key={idx}>{tool.icon}</React.Fragment>
+              ) : (
+                  <button
+                      key={idx} type="button" title={tool.label}
+                      onClick={() => onInsert(tool.prefix!, tool.suffix!)}
+                      className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded transition-colors"
+                  >
+                      {tool.icon}
+                  </button>
+              )
+          )}
+      </div>
+  );
+};
+
 
 // --- Sub-component: Individual Reply Item ---
 const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: ReplyType, postId: string, postReplies: ReplyType[], isPostAuthor: boolean, user: User | null }) => {
@@ -87,10 +191,11 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const isReplyAuthor = user?.uid === reply.authorId;
+  const editReplyRef = useRef<HTMLTextAreaElement>(null);
 
   const handleUpdateReply = async () => {
     if (!editContent.trim()) return;
-    const updatedReplies = postReplies.map(r => r.id === reply.id ? { ...r, content: editContent } : r);
+    const updatedReplies = postReplies.map(r => r.id === reply.id ? { ...r, content: editContent, isEdited: true } : r);
     await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: updatedReplies });
     setIsEditing(false);
   };
@@ -98,6 +203,24 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
   const handleDeleteReply = async () => {
     const updatedReplies = postReplies.filter(r => r.id !== reply.id);
     await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: updatedReplies });
+  };
+
+  const insertFormatEditReply = (prefix: string, suffix: string) => {
+    const textarea = editReplyRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const scrollTop = textarea.scrollTop;
+    const before = editContent.substring(0, start);
+    const selected = editContent.substring(start, end);
+    const after = editContent.substring(end);
+    
+    setEditContent(before + prefix + selected + suffix + after);
+    setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+        textarea.scrollTop = scrollTop;
+    }, 0);
   };
 
   const handleReplyVote = async (type: 'up' | 'down') => {
@@ -138,7 +261,10 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
           <img src={reply.authorAvatar} alt="" className="w-6 h-6 rounded-md object-cover border border-zinc-700" />
           <div className="flex flex-col">
              <span className="font-semibold text-zinc-200 text-xs">{reply.authorName}</span>
-             <span className="text-zinc-500 text-[10px]">{new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' })}</span>
+             <span className="text-zinc-500 text-[10px]">
+               {new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' })}
+               {reply.isEdited && <span className="ml-1 italic text-zinc-600">(edited)</span>}
+             </span>
           </div>
         </div>
         
@@ -170,15 +296,20 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
       </div>
 
       {isEditing ? (
-        <div className="mt-2 space-y-3 bg-[#0A0A0A] p-3 rounded-lg border border-zinc-800">
-          <textarea value={editContent} onChange={e => setEditContent(e.target.value)} className="w-full bg-transparent text-zinc-200 text-sm focus:outline-none resize-y" rows={3}/>
-          <div className="flex gap-2 justify-end pt-2">
+        <div className="mt-2 flex flex-col">
+          <MarkdownToolbar onInsert={insertFormatEditReply} />
+          <textarea 
+            ref={editReplyRef}
+            value={editContent} onChange={e => setEditContent(e.target.value)} 
+            className="w-full bg-[#0A0A0A] border border-zinc-800 rounded-b-lg p-3 text-zinc-200 text-sm focus:outline-none focus:border-blue-500 resize-y cursor-text" rows={4}
+          />
+          <div className="flex gap-2 justify-end pt-3">
             <button onClick={() => setIsEditing(false)} className="px-3 py-1.5 text-xs text-zinc-400 hover:text-white transition-colors font-medium">Cancel</button>
             <button onClick={handleUpdateReply} className="px-4 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-md font-medium transition-colors">Save</button>
           </div>
         </div>
       ) : (
-        <p className="text-zinc-300 whitespace-pre-wrap leading-relaxed text-sm">{reply.content}</p>
+        <div className="text-zinc-300 whitespace-pre-wrap leading-relaxed text-sm">{renderText(reply.content)}</div>
       )}
 
       {/* Techy Voting Bar */}
@@ -215,10 +346,12 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Auto-collapse long posts initially
-  const isLongPost = post.body.length > 250 || post.body.split('\n').length > 5;
+  const editBodyRef = useRef<HTMLTextAreaElement>(null);
+  const replyBodyRef = useRef<HTMLTextAreaElement>(null);
+
   const isAuthor = user?.uid === post.authorId;
   const score = (post.likes?.length || 0) - (post.dislikes?.length || 0);
+  const isLongPost = post.body.length > 250 || post.body.split('\n').length > 5 || !!post.imageUrl;
 
   const handleVote = async (type: 'up' | 'down') => {
     if (!user) return;
@@ -243,12 +376,50 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
     catch (error) { console.error("Error deleting post:", error); }
   };
 
+  const insertFormatEditPost = (prefix: string, suffix: string) => {
+    const textarea = editBodyRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const scrollTop = textarea.scrollTop;
+    const before = editForm.body.substring(0, start);
+    const selected = editForm.body.substring(start, end);
+    const after = editForm.body.substring(end);
+    
+    setEditForm({ ...editForm, body: before + prefix + selected + suffix + after });
+    setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+        textarea.scrollTop = scrollTop;
+    }, 0);
+  };
+
+  const insertFormatReply = (prefix: string, suffix: string) => {
+    const textarea = replyBodyRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const scrollTop = textarea.scrollTop;
+    const before = replyContent.substring(0, start);
+    const selected = replyContent.substring(start, end);
+    const after = replyContent.substring(end);
+    
+    setReplyContent(before + prefix + selected + suffix + after);
+    setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+        textarea.scrollTop = scrollTop;
+    }, 0);
+  };
+
   const handleUpdatePost = async () => {
     if (!isAuthor || !editForm.title.trim() || !editForm.body.trim()) return;
     setIsUpdating(true);
     try {
       const tagsArray = editForm.tags.split(",").map(tag => tag.trim().toLowerCase()).filter(tag => tag !== "");
-      await updateDoc(doc(firestoreDB, "community_posts", post.id), { title: editForm.title, body: editForm.body, tags: tagsArray });
+      await updateDoc(doc(firestoreDB, "community_posts", post.id), { 
+        title: editForm.title, body: editForm.body, tags: tagsArray, isEdited: true 
+      });
       setIsEditing(false);
     } catch (error) { console.error("Error updating post:", error); } 
     finally { setIsUpdating(false); }
@@ -278,7 +449,6 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
     setMagPos({ x: `${x}%`, y: `${y}%` });
   };
 
-  // Logic for Top 1 Reply
   const sortedReplies = post.replies ? [...post.replies].sort((a, b) => {
     if (a.isAccepted) return -1; if (b.isAccepted) return 1;
     return b.createdAt - a.createdAt;
@@ -312,11 +482,14 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
             <img src={post.authorAvatar} alt="author" className="w-6 h-6 rounded-md object-cover border border-zinc-700" />
             <span className="font-medium text-sm text-zinc-200">{post.authorName}</span>
             <span className="text-zinc-600 text-xs hidden sm:inline">•</span>
-            <span className="text-zinc-500 text-xs">{post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Just now"}</span>
+            <span className="text-zinc-500 text-xs flex items-center gap-1">
+              {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Just now"}
+              {post.isEdited && <span className="italic text-zinc-600">(edited)</span>}
+            </span>
           </div>
 
           {isAuthor && !isEditing && (
-            <div className="relative">
+            <div className="relative z-20">
               <button onClick={() => setShowMenu(!showMenu)} className="p-1.5 text-zinc-500 hover:text-white rounded-md hover:bg-zinc-800 transition-colors">
                 <MoreVertical size={18} />
               </button>
@@ -335,18 +508,22 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
 
         {/* Post Body / Edit Mode */}
         {isEditing ? (
-          <div className="space-y-3 mb-5 bg-[#0A0A0A] p-4 rounded-xl border border-zinc-800">
+          <div className="space-y-4 mb-5 bg-[#0A0A0A] p-4 rounded-xl border border-zinc-800">
             <input 
               type="text" value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} 
-              className="w-full bg-transparent text-white font-bold text-lg border-b border-zinc-800 pb-2 focus:outline-none focus:border-blue-500" placeholder="Title"
+              className="w-full bg-transparent text-white font-bold text-lg border-b border-zinc-800 pb-2 focus:outline-none focus:border-blue-500 cursor-text" placeholder="Title"
             />
-            <textarea 
-              value={editForm.body} onChange={e => setEditForm({...editForm, body: e.target.value})} rows={5}
-              className="w-full bg-[#121214] text-zinc-300 text-sm border border-zinc-800 rounded-lg p-3 focus:outline-none focus:border-blue-500 resize-y" placeholder="Description..."
-            />
+            <div className="flex flex-col">
+              <MarkdownToolbar onInsert={insertFormatEditPost} />
+              <textarea 
+                ref={editBodyRef}
+                value={editForm.body} onChange={e => setEditForm({...editForm, body: e.target.value})} rows={6}
+                className="w-full bg-[#121214] text-zinc-300 text-sm border border-zinc-800 border-t-0 rounded-b-lg p-3 focus:outline-none focus:border-blue-500 resize-y cursor-text" placeholder="Description..."
+              />
+            </div>
             <input 
               type="text" value={editForm.tags} onChange={e => setEditForm({...editForm, tags: e.target.value})} 
-              className="w-full bg-[#121214] text-blue-400 text-xs border border-zinc-800 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500" placeholder="Tags (comma separated)"
+              className="w-full bg-[#121214] text-blue-400 text-xs border border-zinc-800 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 cursor-text" placeholder="Tags (comma separated)"
             />
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setIsEditing(false)} className="px-4 py-1.5 text-xs font-medium text-zinc-400 hover:text-white transition-colors">Cancel</button>
@@ -359,31 +536,35 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
           <>
             <h3 className="text-xl font-bold text-white mb-3 leading-tight pr-8">{post.title}</h3>
             
-            {/* Expandable Text Block */}
-            <div className="relative mb-4">
-              <div className={`text-zinc-300 text-sm whitespace-pre-wrap leading-relaxed ${!isExpanded && isLongPost ? 'max-h-[120px] overflow-hidden' : ''}`}>
-                {post.body}
+            {/* Uniform Expanded/Collapsed Wrapper */}
+            <div className={`relative transition-all duration-300 ${!isExpanded && isLongPost ? 'max-h-[160px] overflow-hidden' : ''}`}>
+              <div className="text-zinc-300 text-sm whitespace-pre-wrap leading-relaxed pb-4">
+                {renderText(post.body)}
               </div>
-              {!isExpanded && isLongPost && <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-[#121214] to-transparent pointer-events-none" />}
+              
+              {/* Optional Image inside the wrapper to keep uniform height */}
+              {post.imageUrl && (
+                <div 
+                  className={`mb-5 bg-[#0A0A0A] border border-zinc-800 p-1.5 rounded-lg relative inline-block w-full max-w-lg ${isMagnified ? 'cursor-zoom-out z-10' : 'cursor-zoom-in'}`}
+                  onClick={() => setIsMagnified(!isMagnified)} onMouseMove={handleImageMouseMove} onMouseLeave={() => setIsMagnified(false)}
+                >
+                  <img src={post.imageUrl} alt="Context" style={{ transform: isMagnified ? 'scale(2)' : 'scale(1)', transformOrigin: `${magPos.x} ${magPos.y}` }} className="max-h-[300px] w-full object-contain rounded transition-transform duration-200 ease-out" />
+                </div>
+              )}
+
+              {/* Fade Out Effect */}
+              {!isExpanded && isLongPost && <div className="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-t from-[#121214] to-transparent pointer-events-none" />}
             </div>
+
+            {/* Expand / Collapse Button */}
             {isLongPost && (
-              <button onClick={() => setIsExpanded(!isExpanded)} className="text-blue-500 hover:text-blue-400 text-xs font-medium mb-4 transition-colors">
-                {isExpanded ? "Show less" : "Read more"}
+              <button onClick={() => setIsExpanded(!isExpanded)} className="text-blue-500 hover:text-blue-400 text-xs font-medium mb-4 mt-2 transition-colors">
+                {isExpanded ? "Show less" : "Expand / See more"}
               </button>
             )}
           </>
         )}
 
-        {/* Optional Image */}
-        {post.imageUrl && !isEditing && (
-          <div 
-            className={`mb-5 bg-[#0A0A0A] border border-zinc-800 p-1.5 rounded-lg relative inline-block w-full max-w-lg ${isMagnified ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
-            onClick={() => setIsMagnified(!isMagnified)} onMouseMove={handleImageMouseMove} onMouseLeave={() => setIsMagnified(false)}
-          >
-            <img src={post.imageUrl} alt="Context" style={{ transform: isMagnified ? 'scale(2)' : 'scale(1)', transformOrigin: `${magPos.x} ${magPos.y}` }} className="max-h-[300px] w-full object-contain rounded transition-transform duration-200 ease-out" />
-          </div>
-        )}
-        
         {/* Footer: Tags & Reply Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t border-zinc-800/50">
           <div className="flex flex-wrap gap-2">
@@ -406,10 +587,12 @@ const PostItem = ({ post, user }: { post: Post, user: User | null }) => {
         {/* Reply Input Box */}
         <AnimatePresence>
         {showReplyBox && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-4 bg-[#0A0A0A] p-1 rounded-xl border border-zinc-800 focus-within:border-blue-500/50 transition-colors overflow-hidden">
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-4 bg-[#0A0A0A] p-2 rounded-xl border border-zinc-800 focus-within:border-blue-500/50 transition-colors overflow-hidden">
+            <MarkdownToolbar onInsert={insertFormatReply} />
             <textarea 
-              rows={3} placeholder="Add your response..." value={replyContent} onChange={(e) => setReplyContent(e.target.value)}
-              className="w-full bg-transparent text-zinc-200 border-none px-4 py-3 text-sm focus:outline-none resize-y"
+              ref={replyBodyRef}
+              rows={4} placeholder="Add your response..." value={replyContent} onChange={(e) => setReplyContent(e.target.value)}
+              className="w-full bg-transparent text-zinc-200 border-none px-4 py-3 text-sm focus:outline-none resize-y cursor-text"
             />
             <div className="flex justify-end px-3 py-2 border-t border-zinc-800/50 bg-[#121214]">
               <button onClick={handleReplySubmit} disabled={isSubmittingReply || !replyContent.trim()} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors flex items-center gap-2">
@@ -455,6 +638,7 @@ export default function Community() {
   const [newPost, setNewPost] = useState({ title: "", body: "", tags: "" });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const createBodyRef = useRef<HTMLTextAreaElement>(null);
   
   const location = useLocation();
 
@@ -490,6 +674,24 @@ export default function Community() {
     }
   };
 
+  const insertFormatCreatePost = (prefix: string, suffix: string) => {
+    const textarea = createBodyRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const scrollTop = textarea.scrollTop;
+    const before = newPost.body.substring(0, start);
+    const selected = newPost.body.substring(start, end);
+    const after = newPost.body.substring(end);
+    
+    setNewPost({ ...newPost, body: before + prefix + selected + suffix + after });
+    setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
+        textarea.scrollTop = scrollTop;
+    }, 0);
+  };
+
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -512,7 +714,7 @@ export default function Community() {
       await addDoc(collection(firestoreDB, "community_posts"), {
         title: newPost.title, body: newPost.body, tags: tagsArray, imageUrl: imageUrl,
         authorId: user.uid, authorName: user.displayName || "Developer", authorAvatar: user.photoURL || "",
-        likes: [], dislikes: [], replies: [], createdAt: serverTimestamp()
+        likes: [], dislikes: [], replies: [], createdAt: serverTimestamp(), isEdited: false
       });
       
       setShowCreateModal(false); setNewPost({ title: "", body: "", tags: "" }); setImageFile(null);
@@ -569,14 +771,14 @@ export default function Community() {
             onClick={() => setShowCreateModal(true)}
             className="w-full bg-blue-600 hover:bg-blue-500 text-white px-6 py-3.5 rounded-xl transition-colors font-medium text-sm shadow-lg flex items-center justify-center gap-2"
           >
-            <PlusCircle size={18} /> Ask a Question
+            <SquarePen size={18} /> Ask a Question
           </button>
 
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
             <input 
               type="text" placeholder="Search by keyword or tag..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#121214] border border-zinc-800 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors text-white placeholder:text-zinc-600"
+              className="w-full bg-[#121214] border border-zinc-800 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors text-white placeholder:text-zinc-600 cursor-text"
             />
           </div>
 
@@ -617,7 +819,7 @@ export default function Community() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreateModal(false)} />
           <motion.div 
             initial={{ scale: 0.95, y: 10, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 10, opacity: 0 }}
-            className="bg-[#18181B] border border-zinc-800 rounded-2xl p-6 sm:p-8 w-full max-w-2xl relative z-10 shadow-2xl"
+            className="bg-[#18181B] border border-zinc-800 rounded-2xl p-6 sm:p-8 w-full max-w-5xl relative z-10 shadow-2xl flex flex-col max-h-[90vh]"
           >
             <div className="flex justify-between items-center mb-6">
                 <div>
@@ -627,53 +829,94 @@ export default function Community() {
                 <button onClick={() => setShowCreateModal(false)} className="text-zinc-500 hover:text-white transition-colors p-1 bg-zinc-800 rounded-md"><X size={20}/></button>
             </div>
             
-            <form onSubmit={handleCreatePost} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wide">Title</label>
-                <input 
-                  type="text" required placeholder="e.g. How to optimize a React useEffect?" value={newPost.title} onChange={e => setNewPost({...newPost, title: e.target.value})}
-                  className="w-full bg-[#0A0A0A] border border-zinc-800 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-600"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wide">Body</label>
-                <textarea 
-                  required rows={6} placeholder="Describe your problem or share your thoughts here..." value={newPost.body} onChange={e => setNewPost({...newPost, body: e.target.value})}
-                  className="w-full bg-[#0A0A0A] border border-zinc-800 text-zinc-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors resize-y placeholder:text-zinc-600"
-                ></textarea>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wide">Tags</label>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 overflow-y-auto pr-2 custom-scrollbar">
+                
+                {/* Form Side */}
+                <form onSubmit={handleCreatePost} className="space-y-4 flex flex-col h-full">
+                <div>
+                    <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wide">Title</label>
                     <input 
-                      type="text" required placeholder="e.g. react, performance (comma sep)" value={newPost.tags} onChange={e => setNewPost({...newPost, tags: e.target.value})}
-                      className="w-full bg-[#0A0A0A] border border-zinc-800 text-blue-400 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-600"
+                    type="text" required placeholder="e.g. How to optimize a React useEffect?" value={newPost.title} onChange={e => setNewPost({...newPost, title: e.target.value})}
+                    className="w-full bg-[#0A0A0A] border border-zinc-800 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-600 cursor-text"
                     />
+                </div>
+                
+                <div className="flex-1 flex flex-col">
+                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wide">Body</label>
+                  <div className="flex flex-col flex-1">
+                  <MarkdownToolbar onInsert={insertFormatCreatePost} />
+                  <textarea 
+                      ref={createBodyRef}
+                      required 
+                      rows={14} /* Increased from 8 to 14 */
+                      placeholder="Describe your problem or share your thoughts here..." 
+                      value={newPost.body} 
+                      onChange={e => setNewPost({...newPost, body: e.target.value})}
+                      /* Added min-h-[300px] and changed resize-none to resize-y */
+                      className="w-full h-full min-h-[300px] bg-[#0A0A0A] border border-zinc-800 border-t-0 text-zinc-200 rounded-b-lg px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors resize-y placeholder:text-zinc-600 cursor-text"
+                  ></textarea>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wide">Attachment (Optional)</label>
-                    <div className="bg-[#0A0A0A] border border-zinc-800 rounded-lg px-4 py-2.5 flex items-center justify-between">
-                        <label className="cursor-pointer text-sm text-zinc-300 hover:text-white transition-colors flex items-center gap-2">
-                        <ImageIcon size={16} className="text-blue-500" /> {imageFile ? "Change Image" : "Upload Image"}
-                        <input type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleImageChange} />
-                        </label>
-                        {imageFile && <span className="text-[10px] text-zinc-500 truncate max-w-[100px]">{imageFile.name}</span>}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wide">Tags</label>
+                        <input 
+                        type="text" required placeholder="e.g. react, performance" value={newPost.tags} onChange={e => setNewPost({...newPost, tags: e.target.value})}
+                        className="w-full bg-[#0A0A0A] border border-zinc-800 text-blue-400 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder:text-zinc-600 cursor-text"
+                        />
                     </div>
-                  </div>
-              </div>
 
-              <div className="flex justify-end gap-3 pt-4 mt-2">
-                <button type="button" onClick={() => setShowCreateModal(false)} disabled={isPublishing} className="px-5 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" disabled={isPublishing} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 shadow-lg">
-                  {isPublishing ? <><Loader2 size={16} className="animate-spin" /> Posting...</> : "Post Discussion"}
-                </button>
-              </div>
-            </form>
+                    <div>
+                        <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase tracking-wide">Attachment</label>
+                        <div className="bg-[#0A0A0A] border border-zinc-800 rounded-lg px-4 py-2.5 flex items-center justify-between">
+                            <label className="cursor-pointer text-sm text-zinc-300 hover:text-white transition-colors flex items-center gap-2 w-full">
+                            <ImageIcon size={16} className="text-blue-500 shrink-0" /> 
+                            <span className="truncate">{imageFile ? "Change Image" : "Upload Image"}</span>
+                            <input type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleImageChange} />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 mt-2 border-t border-zinc-800">
+                    <button type="button" onClick={() => setShowCreateModal(false)} disabled={isPublishing} className="px-5 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                    Cancel
+                    </button>
+                    <button type="submit" disabled={isPublishing} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 shadow-lg">
+                    {isPublishing ? <><Loader2 size={16} className="animate-spin" /> Posting...</> : "Post Discussion"}
+                    </button>
+                </div>
+                </form>
+
+                {/* Preview Side */}
+                <div className="hidden lg:flex flex-col border-l border-zinc-800 pl-8 h-full">
+                    <h3 className="text-sm font-semibold text-zinc-400 mb-1.5 uppercase tracking-wide">Live Preview</h3>
+                    <div className="flex-1 bg-[#121214] rounded-xl border border-zinc-800 p-6 overflow-y-auto min-h-[400px]">
+                        {newPost.title || newPost.body || imageFile ? (
+                            <div className="break-words">
+                                <h3 className="text-xl font-bold text-white mb-4 leading-tight">{newPost.title || "Post Title Preview"}</h3>
+                                <div className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed pb-4">
+                                    {renderText(newPost.body)}
+                                </div>
+                                {imageFile && (
+                                    <div className="mt-2 bg-[#0A0A0A] border border-zinc-800 p-1.5 rounded-lg inline-block w-full">
+                                        <img src={URL.createObjectURL(imageFile)} alt="Preview" className="max-h-[250px] w-full object-contain rounded" />
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-zinc-600 space-y-4">
+                                <div className="p-4 bg-zinc-800/30 rounded-full">
+                                    <MessageSquare size={32} />
+                                </div>
+                                <p className="text-sm font-medium">Start typing to see a live preview</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                
+            </div>
           </motion.div>
         </div>
       )}

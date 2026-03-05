@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
-import { Search, ChevronRight, X, Menu, RefreshCw, Cpu as CpuIcon, Blocks, ListTree } from "lucide-react";
+import { Search, ChevronRight, X, Menu, RefreshCw, Cpu as CpuIcon, Blocks, ListTree, ArrowUp } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { CyberSpaceBackground, SectionBadge, DocSection } from "@/components/docs/DocComponents";
 import { BASIC_SECTIONS } from "@/components/docs/BasicSections";
@@ -14,6 +14,8 @@ const Docs = () => {
   const [activeSection, setActiveSection] = useState(BASIC_SECTIONS[0].id);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
 
@@ -27,6 +29,12 @@ const Docs = () => {
 
   useEffect(() => {
     const handleScroll = () => {
+      if (window.scrollY > 400) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+
       const scrollPosition = window.scrollY + 200;
       for (const section of currentSections) {
         const element = document.getElementById(section.id);
@@ -58,8 +66,11 @@ const Docs = () => {
     }
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
-    // Replaced text-foreground with text-slate-50 and standard selection color
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans selection:bg-cyan-500/30">
       <CyberSpaceBackground />
       <Navbar />
@@ -74,17 +85,40 @@ const Docs = () => {
         </button>
       </div>
 
+      {/* Scroll to Top Button */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.8 }}
+            className="fixed bottom-24 lg:bottom-6 right-6 lg:right-6 z-50"
+          >
+            <button 
+              onClick={scrollToTop} 
+              className="w-12 h-12 bg-slate-800/90 backdrop-blur-sm border border-slate-700 hover:border-cyan-500/50 rounded-full flex items-center justify-center text-slate-300 hover:text-cyan-400 transition-all shadow-lg shadow-black/20"
+              aria-label="Scroll to top"
+            >
+              <ArrowUp size={20} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="pt-24 container mx-auto px-4 max-w-7xl">
-        {/* Top Tabs */}
-        <div className="flex flex-wrap gap-2 md:gap-4 mb-8 bg-slate-900/80 backdrop-blur-xl p-2 rounded-2xl border border-slate-800 shadow-lg sticky top-20 z-40">
-          <button onClick={() => setActiveTab('basics')} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'basics' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.2)]' : 'text-slate-400 hover:text-slate-50 hover:bg-slate-800/50'}`}>
-            <CpuIcon size={18} /> Basic Programming
+        {/* Top Tabs - Adjusted for side-by-side mobile fit */}
+        <div className="flex w-full gap-1 sm:gap-2 md:gap-4 mb-8 bg-slate-900/80 backdrop-blur-xl p-1 md:p-2 rounded-2xl border border-slate-800 shadow-lg relative lg:sticky lg:top-20 z-40">
+          <button onClick={() => setActiveTab('basics')} className={`flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-2 px-1 md:py-3 md:px-4 rounded-xl text-[10px] sm:text-[11px] md:text-sm font-bold text-center leading-tight transition-all duration-300 ${activeTab === 'basics' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.2)]' : 'text-slate-400 hover:text-slate-50 hover:bg-slate-800/50'}`}>
+            <CpuIcon size={18} className="shrink-0" />
+            <span>Basic Programming</span>
           </button>
-          <button onClick={() => setActiveTab('oops')} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'oops' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : 'text-slate-400 hover:text-slate-50 hover:bg-slate-800/50'}`}>
-            <Blocks size={18} /> OOP Concepts
+          <button onClick={() => setActiveTab('oops')} className={`flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-2 px-1 md:py-3 md:px-4 rounded-xl text-[10px] sm:text-[11px] md:text-sm font-bold text-center leading-tight transition-all duration-300 ${activeTab === 'oops' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : 'text-slate-400 hover:text-slate-50 hover:bg-slate-800/50'}`}>
+            <Blocks size={18} className="shrink-0" />
+            <span>OOP Concepts</span>
           </button>
-          <button onClick={() => setActiveTab('dsa')} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all duration-300 ${activeTab === 'dsa' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'text-slate-400 hover:text-slate-50 hover:bg-slate-800/50'}`}>
-            <ListTree size={18} /> Data Structures
+          <button onClick={() => setActiveTab('dsa')} className={`flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-2 px-1 md:py-3 md:px-4 rounded-xl text-[10px] sm:text-[11px] md:text-sm font-bold text-center leading-tight transition-all duration-300 ${activeTab === 'dsa' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'text-slate-400 hover:text-slate-50 hover:bg-slate-800/50'}`}>
+            <ListTree size={18} className="shrink-0" />
+            <span>Data Structures</span>
           </button>
         </div>
 
