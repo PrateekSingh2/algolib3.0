@@ -226,13 +226,11 @@ const TypewriterText = ({ text, delay = 0 }: { text: string, delay?: number }) =
 const TiltCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
   const ref = useRef<HTMLAnchorElement>(null);
   
-  // Framer Motion Values for 3D
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
-  // Springs make the tilt buttery smooth and heavy-feeling
   const springConfig = { damping: 25, stiffness: 120, mass: 0.5 };
   const rotateX = useSpring(useMotionTemplate`${y}deg` as any, springConfig);
   const rotateY = useSpring(useMotionTemplate`${x}deg` as any, springConfig);
@@ -249,7 +247,6 @@ const TiltCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
     mouseX.set(clientX);
     mouseY.set(clientY);
 
-    // Calculate rotation (Max 15 degrees tilt for a premium feel)
     const xPct = (clientX / width - 0.5) * 2;
     const yPct = (clientY / height - 0.5) * 2;
     x.set(xPct * 30);
@@ -261,7 +258,6 @@ const TiltCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
     y.set(0);
   };
 
-  // Dynamic light sheen that follows the mouse
   const background = useMotionTemplate`radial-gradient(circle at ${mouseX}px ${mouseY}px, rgba(0, 245, 255, 0.15) 0%, transparent 60%)`;
 
   return (
@@ -278,19 +274,14 @@ const TiltCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-        // Yahan se 'transition-all' hata kar specific transitions daale hain
         className="relative block h-full w-full rounded-[1.5rem] bg-[#05050A]/80 backdrop-blur-md border border-white/10 transition-colors transition-shadow duration-300 hover:border-[#00f5ff]/50 hover:shadow-[0_20px_50px_-10px_rgba(0,245,255,0.2)] group outline-none will-change-transform"
       >
-        {/* Inner Glint/Sheen Effect */}
         <motion.div 
             className="absolute inset-0 rounded-[1.5rem] z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
             style={{ background }}
         />
 
-        {/* Content Container (Pushed out in 3D space) */}
         <div className="relative h-full flex flex-col p-6 z-10 [transform:translateZ(30px)]">
-          
-          {/* Header */}
           <div className="flex justify-between items-start mb-5">
             <div className="flex items-center gap-3">
                <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-gray-400 group-hover:text-[#00f5ff] group-hover:bg-[#00f5ff]/10 group-hover:border-[#00f5ff]/30 transition-all duration-300 shadow-inner">
@@ -302,12 +293,10 @@ const TiltCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
             </div>
           </div>
           
-          {/* Description */}
           <p className="text-sm text-gray-400 leading-relaxed font-sans line-clamp-3 mb-6 flex-grow group-hover:text-gray-300 transition-colors">
             {algo.description}
           </p>
           
-          {/* Footer Tags */}
           <div className="pt-5 border-t border-white/5 flex gap-2 flex-wrap items-center mt-auto">
              <span className="px-2.5 py-1 text-[10px] font-bold font-mono uppercase tracking-widest text-[#00f5ff] bg-[#00f5ff]/10 rounded-md border border-[#00f5ff]/20 shadow-[inset_0_0_10px_rgba(0,245,255,0.1)]">
                 {algo.category?.slice(0,8) || "SYS"}
@@ -327,16 +316,16 @@ const TiltCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
 
 const Index = () => {
   const [algorithms, setAlgorithms] = useState<Algorithm[]>([]);
-  const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
-  // --- SESSION PRELOADER LOGIC ---
+  // --- THE FIX: PERSIST STATE WITH SESSION STORAGE ---
+  const [search, setSearch] = useState(() => sessionStorage.getItem("algolib_search") || "");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(() => sessionStorage.getItem("algolib_category") || null);
+  const [isGridExpanded, setIsGridExpanded] = useState(() => sessionStorage.getItem("algolib_grid_expanded") === "true");
+  const [showAllCategories, setShowAllCategories] = useState(() => sessionStorage.getItem("algolib_show_cats") === "true");
+
   const [isLoading, setIsLoading] = useState(() => {
     return !sessionStorage.getItem("algolib_preloader_shown");
   });
-  
-  const [isGridExpanded, setIsGridExpanded] = useState(false);
-  const [showAllCategories, setShowAllCategories] = useState(false);
   
   const INITIAL_GRID_COUNT = 9;
   const INITIAL_CATEGORY_COUNT = 6;
@@ -359,7 +348,27 @@ const Index = () => {
     initializeData();
   }, []);
 
-  useEffect(() => { setIsGridExpanded(false); }, [selectedCategory, search]);
+  // Sync state to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem("algolib_search", search);
+    if (selectedCategory) {
+      sessionStorage.setItem("algolib_category", selectedCategory);
+    } else {
+      sessionStorage.removeItem("algolib_category");
+    }
+    sessionStorage.setItem("algolib_grid_expanded", String(isGridExpanded));
+    sessionStorage.setItem("algolib_show_cats", String(showAllCategories));
+  }, [search, selectedCategory, isGridExpanded, showAllCategories]);
+
+  // Prevent grid from collapsing immediately if restored from session storage
+  const isInitialMount = useRef(true);
+  useEffect(() => { 
+    if (isInitialMount.current) {
+        isInitialMount.current = false;
+        return;
+    }
+    setIsGridExpanded(false); 
+  }, [selectedCategory, search]);
 
   const scrollToGrid = () => {
     const gridSection = document.getElementById("algorithm-grid");

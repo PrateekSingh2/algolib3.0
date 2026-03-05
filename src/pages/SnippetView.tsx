@@ -3,8 +3,9 @@ import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, Clock, HardDrive, Copy, Check, 
-  TerminalSquare, Hash
+  TerminalSquare, Hash, BookOpen
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 // --- PRISM CORE & LANGUAGES ---
 import Prism from "prismjs";
@@ -14,6 +15,7 @@ import "prismjs/components/prism-cpp";
 import "prismjs/components/prism-java";
 import "prismjs/components/prism-python"; // Added Python support
 
+// Note: Make sure your Algorithm type in @/lib/algorithms includes `details?: string`
 import { fetchAlgorithms, type Algorithm } from "@/lib/algorithms";
 import Navbar from "@/components/Navbar";
 import GlobalRibbon from "@/components/GlobalRibbon";
@@ -48,7 +50,7 @@ const SnippetView = () => {
     return () => { mounted = false; };
   }, [id]);
 
-  // Added logic for python code
+  // Logic for picking code
   const getCurrentCode = () => {
     if (activeTab === "java") return algorithm?.codeJava;
     if (activeTab === "cpp") return algorithm?.codeCpp;
@@ -66,11 +68,10 @@ const SnippetView = () => {
     }
   };
 
-  // --- THE FIX: MANUAL STRING HIGHLIGHTING ---
+  // --- MANUAL STRING HIGHLIGHTING ---
   const highlightedCode = useMemo(() => {
     if (!currentCode) return "";
     
-    // Added logic for Prism.languages.python
     let langConfig;
     if (activeTab === "java") langConfig = Prism.languages.java;
     else if (activeTab === "cpp") langConfig = Prism.languages.cpp;
@@ -81,7 +82,7 @@ const SnippetView = () => {
     return Prism.highlight(currentCode, langConfig, activeTab);
   }, [currentCode, activeTab]);
 
-  // --- VS CODE / ONE DARK PRO INSPIRED CSS ---
+  // --- VS CODE / ONE DARK PRO INSPIRED CSS & MARKDOWN STYLES ---
   const ideStyles = `
     code[class*="language-"], pre[class*="language-"] {
       color: #e2e8f0;
@@ -117,6 +118,16 @@ const SnippetView = () => {
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+
+    /* Custom Markdown Styles */
+    .markdown-body h3 { color: #f8fafc; font-size: 1.125rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; letter-spacing: 0.025em; }
+    .markdown-body h3:first-child { margin-top: 0; }
+    .markdown-body p { margin-bottom: 1.25rem; line-height: 1.7; color: #a1a1aa; }
+    .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1.25rem; color: #a1a1aa; }
+    .markdown-body li { margin-bottom: 0.5rem; line-height: 1.6; }
+    .markdown-body li::marker { color: #52525b; }
+    .markdown-body strong { color: #e4e4e7; font-weight: 600; }
+    .markdown-body code { background-color: #27272a; color: #38bdf8; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.875em; }
   `;
 
   if (loading) {
@@ -154,63 +165,83 @@ const SnippetView = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8 items-start">
             
-            {/* --- LEFT: CODE TERMINAL --- */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-              className="w-full flex flex-col bg-[#121214] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
-            >
-               <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 bg-[#0A0A0A]">
-                   <div className="flex items-center gap-2 text-zinc-400">
-                      <TerminalSquare className="w-4 h-4" />
-                      <span className="text-xs font-mono lowercase">{algorithm.title.replace(/\s+/g, '_')}.{activeTab === 'python' ? 'py' : activeTab}</span>
-                   </div>
+            {/* --- LEFT COLUMN: CODE TERMINAL & DETAILS --- */}
+            <div className="flex flex-col gap-8 w-full">
+              {/* CODE TERMINAL */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+                className="w-full flex flex-col bg-[#121214] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
+              >
+                 <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 bg-[#0A0A0A]">
+                     <div className="flex items-center gap-2 text-zinc-400">
+                        <TerminalSquare className="w-4 h-4" />
+                        <span className="text-xs font-mono lowercase">{algorithm.title.replace(/\s+/g, '_')}.{activeTab === 'python' ? 'py' : activeTab}</span>
+                     </div>
 
-                   <div className="flex items-center gap-3">
-                      <div className="flex bg-zinc-900 p-1 rounded-lg border border-zinc-800">
-                         {/* Added 'python' to the mapped array */}
-                         {(['java', 'cpp', 'python'] as const).map((lang) => (
-                            <button
-                               key={lang}
-                               onClick={() => setActiveTab(lang)}
-                               className={`px-4 py-1.5 text-xs font-semibold uppercase rounded-md transition-colors ${
-                                  activeTab === lang 
-                                      ? "bg-zinc-800 text-white shadow-sm" 
-                                      : "text-zinc-500 hover:text-zinc-300"
-                               }`}
-                            >
-                               {lang}
-                            </button>
-                         ))}
-                      </div>
-                      
-                      <button 
-                          onClick={handleCopy} 
-                          className={`p-2 rounded-lg transition-colors ${copied ? 'bg-green-500/10 text-green-500 border border-green-500/50' : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
-                          title="Copy Code"
-                      >
-                         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      </button>
-                   </div>
-               </div>
+                     <div className="flex items-center gap-3">
+                        <div className="flex bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+                           {(['java', 'cpp', 'python'] as const).map((lang) => (
+                              <button
+                                 key={lang}
+                                 onClick={() => setActiveTab(lang)}
+                                 className={`px-4 py-1.5 text-xs font-semibold uppercase rounded-md transition-colors ${
+                                    activeTab === lang 
+                                        ? "bg-zinc-800 text-white shadow-sm" 
+                                        : "text-zinc-500 hover:text-zinc-300"
+                                 }`}
+                              >
+                                 {lang}
+                              </button>
+                           ))}
+                        </div>
+                        
+                        <button 
+                            onClick={handleCopy} 
+                            className={`p-2 rounded-lg transition-colors ${copied ? 'bg-green-500/10 text-green-500 border border-green-500/50' : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                            title="Copy Code"
+                        >
+                           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                     </div>
+                 </div>
 
-               {/* CODE AREA */}
-               <div className="relative bg-[#0A0A0A] w-full p-6 overflow-auto custom-scrollbar max-h-[70vh]">
-                  <AnimatePresence mode="wait">
-                     <motion.div
-                        key={activeTab}
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        transition={{ duration: 0.15 }}
-                     >
-                        <pre className={`language-${activeTab}`}>
-                           <code 
-                              className={`language-${activeTab}`}
-                              dangerouslySetInnerHTML={{ __html: highlightedCode }}
-                           />
-                        </pre>
-                     </motion.div>
-                  </AnimatePresence>
-               </div>
-            </motion.div>
+                 <div className="relative bg-[#0A0A0A] w-full p-6 overflow-auto custom-scrollbar max-h-[70vh]">
+                    <AnimatePresence mode="wait">
+                       <motion.div
+                          key={activeTab}
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                       >
+                          <pre className={`language-${activeTab}`}>
+                             <code 
+                                className={`language-${activeTab}`}
+                                dangerouslySetInnerHTML={{ __html: highlightedCode }}
+                             />
+                          </pre>
+                       </motion.div>
+                    </AnimatePresence>
+                 </div>
+              </motion.div>
+
+              {/* DETAILS MARKDOWN SECTION */}
+              {/* @ts-ignore - Assuming you added 'details' to your Algorithm type interface */}
+              {algorithm.details && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}
+                  className="w-full bg-[#121214] border border-zinc-800 rounded-2xl shadow-xl p-6 sm:p-8"
+                >
+                  <div className="flex items-center gap-2 mb-6 border-b border-zinc-800/50 pb-4">
+                    <BookOpen className="w-5 h-5 text-blue-400" />
+                    <h2 className="text-lg font-semibold text-zinc-100">Deep Dive & Explanation</h2>
+                  </div>
+                  
+                  <div className="markdown-body">
+                     {/* @ts-ignore */}
+                    <ReactMarkdown>{algorithm.details}</ReactMarkdown>
+                  </div>
+                </motion.div>
+              )}
+            </div>
 
             {/* --- RIGHT: INFORMATION PANEL --- */}
             <div className="space-y-6 lg:sticky lg:top-32">

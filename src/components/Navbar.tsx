@@ -18,6 +18,7 @@ import {
   Bell,
   Check
 } from "lucide-react";
+import InstallPrompt from "./InstallPrompt"; // <-- Imported the InstallPrompt component
 
 // --- Helper to format time like LeetCode (e.g., "19 hours ago") ---
 const timeAgo = (timestamp: number) => {
@@ -278,6 +279,9 @@ const Navbar = () => {
           })}
         </ul>
 
+        {/* <-- ADDED DESKTOP INSTALL PROMPT HERE --> */}
+        <InstallPrompt />
+
         <div className="w-[1px] h-6 bg-white/10 mx-1" />
 
         <div className="flex items-center gap-1 pr-1">
@@ -371,6 +375,12 @@ const Navbar = () => {
               <Link to="/docs" className="flex items-center gap-4 px-4 py-3.5 rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition-colors">
                 <BookOpen size={20} /> <span className="font-medium text-sm">Documentation</span>
               </Link>
+              
+              {/* <-- ADDED MOBILE INSTALL PROMPT HERE --> */}
+              <div className="px-4 py-2">
+                <InstallPrompt />
+              </div>
+
               {user && (
                 <button onClick={logout} className="flex items-center gap-4 px-4 py-3.5 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors w-full text-left">
                   <LogOut size={20} /> <span className="font-medium text-sm">Secure Logout</span>
