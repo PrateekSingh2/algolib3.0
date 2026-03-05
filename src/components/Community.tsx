@@ -10,7 +10,8 @@ import {
   MessageSquare, Image as ImageIcon, Reply, Loader2, 
   CheckCircle2, Trophy, Search, Edit2, Trash2, X, Save,
   MoreVertical, ChevronUp, ChevronDown, AlertTriangle, ChevronRight, Hash,
-  Heading, Bold, Italic, ListOrdered, List, Minus, Quote, Code, Terminal, Link, SquarePen
+  Heading, Bold, Italic, ListOrdered, List, Minus, Quote, Code, Terminal, Link, SquarePen,
+  ArrowUp
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "./Navbar"; 
@@ -634,6 +635,7 @@ export default function Community() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showScrollTop, setShowScrollTop] = useState(false);
   
   const [newPost, setNewPost] = useState({ title: "", body: "", tags: "" });
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -654,6 +656,24 @@ export default function Community() {
     });
     return () => unsubscribe();
   }, []);
+
+  // Track scroll position for the scroll-to-top button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const topContributors = useMemo(() => {
     const scores: Record<string, { name: string, avatar: string, score: number }> = {};
@@ -920,6 +940,26 @@ export default function Community() {
           </motion.div>
         </div>
       )}
+      </AnimatePresence>
+
+      {/* --- SCROLL TO TOP BUTTON --- */}
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 right-6 lg:bottom-10 lg:right-10 z-[100]"
+          >
+            <button
+              onClick={scrollToTop}
+              className="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all border border-blue-400/30 flex items-center justify-center group"
+              aria-label="Scroll to top"
+            >
+              <ArrowUp size={20} className="group-hover:-translate-y-1 transition-transform" />
+            </button>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
