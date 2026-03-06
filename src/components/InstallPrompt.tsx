@@ -1,65 +1,120 @@
 import { useState, useEffect } from "react";
-import { Download } from "lucide-react"; // Or any icon you prefer
+import { Download, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+declare global {
+  interface Window {
+    deferredPWAInstallPrompt: any;
+  }
+}
 
 const InstallPrompt = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    // 1. Check if the app is already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsStandalone(true);
+    // 1. Check if dismissed THIS SESSION (Clears when tab closes!)
+    if (sessionStorage.getItem("algolib_pwa_dismissed") === "true") {
       return;
     }
 
-    // 2. Check if the device is iOS (Safari doesn't support the automatic prompt)
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    if (/iphone|ipad|ipod/.test(userAgent)) {
-      setIsIOS(true);
+    // 2. Check if already installed
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    if (isStandalone) {
+      return;
     }
 
-    // 3. Listen for the Android/Chrome install prompt event
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault(); // Prevent the default mini-infobar from appearing
-      setDeferredPrompt(e); // Save the event so we can trigger it later
+    // 3. Check for iOS
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const iosDevice = /iphone|ipad|ipod/.test(userAgent);
+    setIsIOS(iosDevice);
+
+    if (iosDevice) {
+      setShowPrompt(true);
+      return;
+    }
+
+    // 4. Handle Android / Chrome Event
+    const handlePrompt = (e: Event) => {
+      e.preventDefault();
+      window.deferredPWAInstallPrompt = e;
+      setShowPrompt(true);
     };
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    // If index.html caught it early
+    if (window.deferredPWAInstallPrompt) {
+      setShowPrompt(true);
+    }
+
+    window.addEventListener("beforeinstallprompt", handlePrompt);
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("beforeinstallprompt", handlePrompt);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      // Show the native install prompt
-      deferredPrompt.prompt();
-      // Wait for the user to respond to the prompt
-      const { outcome } = await deferredPrompt.userChoice;
+    const promptEvent = window.deferredPWAInstallPrompt;
+    
+    if (promptEvent) {
+      promptEvent.prompt();
+      const { outcome } = await promptEvent.userChoice;
       if (outcome === 'accepted') {
-        setDeferredPrompt(null); // Hide the button if they accepted
+        window.deferredPWAInstallPrompt = null;
+        setShowPrompt(false);
       }
     } else if (isIOS) {
-      // Show a custom alert for iOS users
-      alert("To install AlgoLib on iOS:\n1. Tap the 'Share' icon at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.");
+      alert("To install AlgoLib on iOS:\n\n1. Tap the 'Share' icon at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.");
     }
   };
 
-  // If it's already installed, don't show the button at all
-  if (isStandalone || (!deferredPrompt && !isIOS)) {
-    return null;
-  }
+  const handleDismiss = () => {
+    setShowPrompt(false);
+    // Uses sessionStorage so it resets when the tab is closed
+    sessionStorage.setItem("algolib_pwa_dismissed", "true");
+  };
+
+  if (!showPrompt) return null;
 
   return (
-    <button
-      onClick={handleInstallClick}
-      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-500/20"
-    >
-      <Download className="w-4 h-4" />
-      Install App
-    </button>
+    <AnimatePresence>
+      <motion.div
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 100, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="fixed bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-96 z-[9999]"
+      >
+        <div className="bg-[#0A0A1A]/95 backdrop-blur-xl border border-[#00d2ff]/30 rounded-2xl p-4 shadow-[0_10px_40px_rgba(0,210,255,0.15)] flex items-center justify-between gap-4">
+          
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-tr from-[#00d2ff] to-[#3a7bd5] rounded-xl flex items-center justify-center shadow-lg shadow-[#00d2ff]/20 shrink-0">
+              <Download className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-white text-sm font-bold tracking-tight">Install AlgoLib</span>
+              <span className="text-gray-400 text-xs">Visualise offline & faster access</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleInstallClick}
+              className="px-4 py-2 bg-[#00d2ff]/10 hover:bg-[#00d2ff]/20 border border-[#00d2ff]/50 text-[#00d2ff] text-xs font-bold rounded-lg transition-colors"
+            >
+              INSTALL
+            </button>
+            <button
+              onClick={handleDismiss}
+              className="p-2 text-gray-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          
+        </div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 

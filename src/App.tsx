@@ -10,8 +10,9 @@ import { Loader2, Zap, Lock, ChevronRight, Terminal, Network, Cpu, LockKeyhole, 
 import { motion, AnimatePresence } from "framer-motion";
 import Footer from './components/Footer';
 
-// --- ADD THIS IMPORT ---
+// --- IMPORTS ---
 import { incrementVisitCount } from "@/lib/algorithms";
+import InstallPrompt from "@/components/InstallPrompt";
 
 // Pages
 import Index from "./pages/Index";
@@ -171,7 +172,6 @@ const UnauthenticatedLanding = () => {
           {/* Login Container */}
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="relative max-w-md mx-auto">
             
-            {/* Themed Cyber-Cyan Alert */}
             <AnimatePresence>
               {loginAlert && (
                 <motion.div 
@@ -240,11 +240,9 @@ const UnauthenticatedLanding = () => {
         </motion.div>
       </main>
 
-      {/* Restricted Footer Wrapper */}
       <div 
         onClickCapture={(e) => {
           const target = e.target as HTMLElement;
-          // Trigger alert if the user clicked a link or a button inside the footer
           if (target.closest('a') || target.closest('button')) {
             e.preventDefault();
             e.stopPropagation();
@@ -291,7 +289,6 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
 // --- THE MAIN APP COMPONENT ---
 const App = () => {
-  // GLOBAL VISIT TRACKER
   useEffect(() => {
     const initializeVisit = async () => {
       try {
@@ -299,7 +296,6 @@ const App = () => {
         const sessionKey = "algolib_session_active";
         const hasVisitedSession = sessionStorage.getItem(sessionKey);
 
-        // If they are not on localhost and haven't visited in this tab session
         if (!isLocalhost && !hasVisitedSession) {
            await incrementVisitCount();
            sessionStorage.setItem(sessionKey, "true");
@@ -319,6 +315,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          
           <AuthGuard>
             <Routes>
               <Route path="/" element={<Index />} />
@@ -331,6 +328,10 @@ const App = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthGuard>
+
+          {/* The only instance of InstallPrompt, rendering at the app root */}
+          <InstallPrompt />
+
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

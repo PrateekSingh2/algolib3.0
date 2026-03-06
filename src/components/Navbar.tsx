@@ -18,7 +18,6 @@ import {
   Bell,
   Check
 } from "lucide-react";
-import InstallPrompt from "./InstallPrompt"; // <-- Imported the InstallPrompt component
 
 // --- Helper to format time like LeetCode (e.g., "19 hours ago") ---
 const timeAgo = (timestamp: number) => {
@@ -56,17 +55,14 @@ const Navbar = () => {
     parseInt(localStorage.getItem("algoLib_lastRead") || Date.now().toString())
   );
 
-  // FIX: Separate refs for Desktop and Mobile to prevent premature unmounting
   const desktopNotifRef = useRef<HTMLDivElement>(null);
   const mobileNotifRef = useRef<HTMLDivElement>(null);
 
-  // Close mobile menu and notif panel on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsNotifOpen(false);
   }, [location.pathname]);
 
-  // Click outside to close notifications (checks BOTH refs)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
@@ -74,7 +70,6 @@ const Navbar = () => {
       const isOutsideDesktop = desktopNotifRef.current && !desktopNotifRef.current.contains(target);
       const isOutsideMobile = mobileNotifRef.current && !mobileNotifRef.current.contains(target);
 
-      // Only close if the click was outside BOTH notification wrappers
       if (isOutsideDesktop && isOutsideMobile) {
         setIsNotifOpen(false);
       }
@@ -88,7 +83,6 @@ const Navbar = () => {
     return () => unsubscribe();
   }, []);
 
-  // Listen for recent posts for notifications
   useEffect(() => {
     const q = query(collection(firestoreDB, "community_posts"), orderBy("createdAt", "desc"), limit(15));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -129,7 +123,6 @@ const Navbar = () => {
     }
   };
 
-  // Robust click handler for notifications
   const handleNotifItemClick = (e: React.MouseEvent, id: string) => {
     e.preventDefault(); 
     setIsNotifOpen(false);
@@ -176,7 +169,6 @@ const Navbar = () => {
           } bg-[#11121C] border border-[#2A2B3D] rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] overflow-hidden z-[100] flex flex-col cursor-default`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className="bg-[#0B0C15] p-3.5 border-b border-[#2A2B3D] flex justify-between items-center">
             <h3 className="text-white font-bold text-[15px] flex items-center gap-2">
               <Bell size={16} className="text-[#00d2ff]" /> Notifications
@@ -186,7 +178,6 @@ const Navbar = () => {
             </span>
           </div>
 
-          {/* List */}
           <div className="max-h-[380px] overflow-y-auto overflow-x-hidden flex flex-col scrollbar-thin scrollbar-thumb-[#2A2B3D] scrollbar-track-transparent">
             {notifications.length === 0 ? (
               <div className="p-8 text-center flex flex-col items-center justify-center">
@@ -226,7 +217,6 @@ const Navbar = () => {
             )}
           </div>
           
-          {/* Footer */}
           <div className="bg-[#0B0C15] p-3 text-center border-t border-[#2A2B3D]">
             <Link to="/discussion" onClick={() => setIsNotifOpen(false)} className="text-xs text-slate-400 hover:text-white transition-colors font-medium">
               View All Discussions
@@ -279,9 +269,6 @@ const Navbar = () => {
           })}
         </ul>
 
-        {/* <-- ADDED DESKTOP INSTALL PROMPT HERE --> */}
-        <InstallPrompt />
-
         <div className="w-[1px] h-6 bg-white/10 mx-1" />
 
         <div className="flex items-center gap-1 pr-1">
@@ -289,7 +276,6 @@ const Navbar = () => {
             <BookOpen className="w-[18px] h-[18px]" />
           </Link>
           
-          {/* USES desktopNotifRef */}
           <div className="relative" ref={desktopNotifRef}>
             <button 
               onClick={handleToggleNotif} 
@@ -333,7 +319,6 @@ const Navbar = () => {
           </Link>
           
           <div className="flex items-center gap-3">
-             {/* USES mobileNotifRef */}
              <div className="relative" ref={mobileNotifRef}>
               <button 
                 onClick={handleToggleNotif} 
@@ -376,11 +361,6 @@ const Navbar = () => {
                 <BookOpen size={20} /> <span className="font-medium text-sm">Documentation</span>
               </Link>
               
-              {/* <-- ADDED MOBILE INSTALL PROMPT HERE --> */}
-              <div className="px-4 py-2">
-                <InstallPrompt />
-              </div>
-
               {user && (
                 <button onClick={logout} className="flex items-center gap-4 px-4 py-3.5 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors w-full text-left">
                   <LogOut size={20} /> <span className="font-medium text-sm">Secure Logout</span>

@@ -25,8 +25,15 @@
     <meta name="theme-color" content="#09090B">
     <link rel="apple-touch-icon" href="/pwa-192x192.png">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <script>
+      window.deferredPWAInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.deferredPWAInstallPrompt = e;
+      });
+    </script>
   </head>
 
   <body>
