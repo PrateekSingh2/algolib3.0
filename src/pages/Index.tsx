@@ -18,7 +18,6 @@ import {
 } from "@/lib/algorithms";
 import Navbar from "@/components/Navbar";
 import GlobalRibbon from '@/components/GlobalRibbon';
-import { Preloader } from "@/components/Preloader";
 import Footer from "@/components/Footer"; 
 
 // --- 1. CLEAN CYBER-NETWORK BACKGROUND ---
@@ -317,23 +316,14 @@ const TiltCard = ({ algo, index }: { algo: Algorithm; index: number }) => {
 const Index = () => {
   const [algorithms, setAlgorithms] = useState<Algorithm[]>([]);
   
-  // --- THE FIX: PERSIST STATE WITH SESSION STORAGE ---
+  // --- PERSIST STATE WITH SESSION STORAGE ---
   const [search, setSearch] = useState(() => sessionStorage.getItem("algolib_search") || "");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(() => sessionStorage.getItem("algolib_category") || null);
   const [isGridExpanded, setIsGridExpanded] = useState(() => sessionStorage.getItem("algolib_grid_expanded") === "true");
   const [showAllCategories, setShowAllCategories] = useState(() => sessionStorage.getItem("algolib_show_cats") === "true");
 
-  const [isLoading, setIsLoading] = useState(() => {
-    return !sessionStorage.getItem("algolib_preloader_shown");
-  });
-  
   const INITIAL_GRID_COUNT = 9;
   const INITIAL_CATEGORY_COUNT = 6;
-
-  const handlePreloaderComplete = () => {
-    setIsLoading(false);
-    sessionStorage.setItem("algolib_preloader_shown", "true");
-  };
 
   useEffect(() => {
     const initializeData = async () => {
@@ -394,187 +384,181 @@ const Index = () => {
 
   return (
     <>
-      <AnimatePresence mode="wait">
-        {isLoading ? (
-            <Preloader key="loader" onComplete={handlePreloaderComplete} />
-        ) : (
-            <motion.div
-                key="content"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="min-h-screen overflow-x-hidden text-white font-sans relative selection:bg-[#3b82f6]/30 flex flex-col"
-            >
-                <CyberSpaceBackground />
-                <Spotlight />
-                
-                <div className="fixed top-0 left-0 w-full z-[200]">
-                    <Navbar />
-                    <GlobalRibbon />
-                </div>
+      <motion.div
+          key="content"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="min-h-screen overflow-x-hidden text-white font-sans relative selection:bg-[#3b82f6]/30 flex flex-col"
+      >
+          <CyberSpaceBackground />
+          <Spotlight />
+          
+          <div className="fixed top-0 left-0 w-full z-[200]">
+              <Navbar />
+              <GlobalRibbon />
+          </div>
 
-                {/* --- HERO SECTION --- */}
-                <section className="relative min-h-screen flex flex-col items-center justify-center px-4 z-50">
-                    <div className="container mx-auto text-center max-w-5xl">
-                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: "easeOut" }}>
-                        
-                        <motion.div 
-                        whileHover={{ scale: 1.05 }}
-                        className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-[#3b82f6]/50 bg-[#3b82f6]/5 mb-10 backdrop-blur-sm group"
-                        >
-                        <div className="relative flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3b82f6] opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#ffa500]"></span>
-                        </div>
-                        <span className="text-[12px] font-regular tracking-[0.2em] text-[#ffafff] group-hover:text-yellow-300 transition-colors">
-                            For & By Developers
-                        </span>
-                        </motion.div>
+          {/* --- HERO SECTION --- */}
+          <section className="relative min-h-screen flex flex-col items-center justify-center px-4 z-50">
+              <div className="container mx-auto text-center max-w-5xl">
+              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: "easeOut" }}>
+                  
+                  <motion.div 
+                  whileHover={{ scale: 1.05 }}
+                  className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-[#3b82f6]/50 bg-[#3b82f6]/5 mb-10 backdrop-blur-sm group"
+                  >
+                  <div className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#3b82f6] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#ffa500]"></span>
+                  </div>
+                  <span className="text-[12px] font-regular tracking-[0.2em] text-[#ffafff] group-hover:text-yellow-300 transition-colors">
+                      For & By Developers
+                  </span>
+                  </motion.div>
 
-                        <MainTitle />
-                        
-                        <div className="h-12 mb-10 flex justify-center items-center">
-                        <p className="text-sm sm:text-base text-yellow-700 font-mono tracking-wide max-w-2xl mx-auto">
-                            <span className="text-[#3b82f6] mr-2">{'>'}</span>
-                            <TypewriterText 
-                                text="Loading algorithmic archives... visualization engine ready." 
-                                delay={0.5} 
-                            />
-                        </p>
-                        </div>
-                        
-                        {/* SEARCH BAR */}
-                        <div className="relative max-w-2xl mx-auto mt-6 group z-[100]">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] rounded-2xl blur opacity-25 group-focus-within:opacity-75 transition duration-500 group-hover:opacity-50" />
-                        <div className="relative flex items-center bg-[#050510]/80 backdrop-blur-xl rounded-2xl border border-white/10 px-6 py-5 shadow-2xl transition-all duration-300 group-focus-within:border-[#3b82f6]/50 group-focus-within:shadow-[0_0_40px_-10px_rgba(59,130,246,0.4)]">
-                            <Command className="h-6 w-6 text-green-700 group-focus-within:text-[#3b82f6] mr-5 transition-colors" />
-                            <input
-                            type="text"
-                            placeholder="Search by title/tags ('linked list', 'stack', dp)"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-transparent text-white placeholder:text-green-700 focus:outline-none font-mono text-base tracking-wider"
-                            />
-                        </div>
-                        
-                        <AnimatePresence>
-                            {search.length > 0 && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: -10 }} 
-                                animate={{ opacity: 1, y: 0 }} 
-                                exit={{ opacity: 0, y: -10 }} 
-                                className="absolute top-full left-0 right-0 mt-3 bg-[#0a0a1a]/95 backdrop-blur-xl border border-[#3b82f6]/20 rounded-xl overflow-hidden shadow-2xl z-[101]"
-                            >
-                                {suggestions.length > 0 ? suggestions.map((algo) => (
-                                <Link key={algo.id} to={`/view/${algo.id}`}>
-                                    <div className="flex items-center justify-between px-5 py-3 hover:bg-[#3b82f6]/10 border-b border-white/5 last:border-0 group/item">
-                                        <div className="flex items-center gap-3">
-                                            <Cpu className="h-4 w-4 text-gray-500 group-hover/item:text-[#3b82f6]" />
-                                            <span className="text-sm font-mono text-gray-300 group-hover/item:text-white transition-colors">{algo.title}</span>
-                                        </div>
-                                        <ArrowRight className="h-3 w-3 text-[#3b82f6] opacity-0 group-hover/item:opacity-100 -translate-x-2 group-hover/item:translate-x-0 transition-all" />
-                                    </div>
-                                </Link>
-                                )) : (
-                                <div className="px-5 py-4 text-xs font-mono text-gray-500">NO MATCHING PROTOCOLS FOUND</div>
-                                )}
-                            </motion.div>
-                            )}
-                        </AnimatePresence>
-                        </div>
-                    </motion.div>
-                    </div>
+                  <MainTitle />
+                  
+                  <div className="h-12 mb-10 flex justify-center items-center">
+                  <p className="text-sm sm:text-base text-yellow-700 font-mono tracking-wide max-w-2xl mx-auto">
+                      <span className="text-[#3b82f6] mr-2">{'>'}</span>
+                      <TypewriterText 
+                          text="Loading algorithmic archives... visualization engine ready." 
+                          delay={0.5} 
+                      />
+                  </p>
+                  </div>
+                  
+                  {/* SEARCH BAR */}
+                  <div className="relative max-w-2xl mx-auto mt-6 group z-[100]">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] rounded-2xl blur opacity-25 group-focus-within:opacity-75 transition duration-500 group-hover:opacity-50" />
+                  <div className="relative flex items-center bg-[#050510]/80 backdrop-blur-xl rounded-2xl border border-white/10 px-6 py-5 shadow-2xl transition-all duration-300 group-focus-within:border-[#3b82f6]/50 group-focus-within:shadow-[0_0_40px_-10px_rgba(59,130,246,0.4)]">
+                      <Command className="h-6 w-6 text-green-700 group-focus-within:text-[#3b82f6] mr-5 transition-colors" />
+                      <input
+                      type="text"
+                      placeholder="Search by title/tags ('linked list', 'stack', dp)"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="w-full bg-transparent text-white placeholder:text-green-700 focus:outline-none font-mono text-base tracking-wider"
+                      />
+                  </div>
+                  
+                  <AnimatePresence>
+                      {search.length > 0 && (
+                      <motion.div 
+                          initial={{ opacity: 0, y: -10 }} 
+                          animate={{ opacity: 1, y: 0 }} 
+                          exit={{ opacity: 0, y: -10 }} 
+                          className="absolute top-full left-0 right-0 mt-3 bg-[#0a0a1a]/95 backdrop-blur-xl border border-[#3b82f6]/20 rounded-xl overflow-hidden shadow-2xl z-[101]"
+                      >
+                          {suggestions.length > 0 ? suggestions.map((algo) => (
+                          <Link key={algo.id} to={`/view/${algo.id}`}>
+                              <div className="flex items-center justify-between px-5 py-3 hover:bg-[#3b82f6]/10 border-b border-white/5 last:border-0 group/item">
+                                  <div className="flex items-center gap-3">
+                                      <Cpu className="h-4 w-4 text-gray-500 group-hover/item:text-[#3b82f6]" />
+                                      <span className="text-sm font-mono text-gray-300 group-hover/item:text-white transition-colors">{algo.title}</span>
+                                  </div>
+                                  <ArrowRight className="h-3 w-3 text-[#3b82f6] opacity-0 group-hover/item:opacity-100 -translate-x-2 group-hover/item:translate-x-0 transition-all" />
+                              </div>
+                          </Link>
+                          )) : (
+                          <div className="px-5 py-4 text-xs font-mono text-gray-500">NO MATCHING PROTOCOLS FOUND</div>
+                          )}
+                      </motion.div>
+                      )}
+                  </AnimatePresence>
+                  </div>
+              </motion.div>
+              </div>
 
-                    {/* --- SCROLL INDICATOR --- */}
-                    <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1, y: [0, 10, 0] }}
-                    transition={{ delay: 1.5, duration: 2, repeat: Infinity }}
-                    onClick={scrollToGrid}
-                    className="absolute bottom-10 left-0 right-0 mx-auto w-max flex flex-col items-center gap-2 cursor-pointer group z-50"
-                    >
-                    <span className="text-[10px] font-mono text-gray-500 tracking-[0.3em] group-hover:text-[#3b82f6] transition-colors">SCROLL TO EXPLORE</span>
-                    <div className="w-6 h-10 border border-white/20 rounded-full flex justify-center pt-2 group-hover:border-[#3b82f6]/50 transition-colors">
-                        <motion.div 
-                        animate={{ y: [0, 12, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                        className="w-1 h-1 bg-white rounded-full group-hover:bg-[#3b82f6]" 
-                        />
-                    </div>
-                    </motion.div>
-                </section>
+              {/* --- SCROLL INDICATOR --- */}
+              <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, y: [0, 10, 0] }}
+              transition={{ delay: 1.5, duration: 2, repeat: Infinity }}
+              onClick={scrollToGrid}
+              className="absolute bottom-10 left-0 right-0 mx-auto w-max flex flex-col items-center gap-2 cursor-pointer group z-50"
+              >
+              <span className="text-[10px] font-mono text-gray-500 tracking-[0.3em] group-hover:text-[#3b82f6] transition-colors">SCROLL TO EXPLORE</span>
+              <div className="w-6 h-10 border border-white/20 rounded-full flex justify-center pt-2 group-hover:border-[#3b82f6]/50 transition-colors">
+                  <motion.div 
+                  animate={{ y: [0, 12, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="w-1 h-1 bg-white rounded-full group-hover:bg-[#3b82f6]" 
+                  />
+              </div>
+              </motion.div>
+          </section>
 
-                {/* --- CONTENT SECTION --- */}
-                <div id="algorithm-grid" className="relative z-10 bg-[#020205] pt-20 flex-grow flex flex-col">
-                    <section className="px-4 pb-12 relative z-20">
-                        <div className="container mx-auto max-w-6xl">
-                            <div className="flex flex-wrap justify-center gap-3">
-                                <button 
-                                    onClick={() => setSelectedCategory(null)} 
-                                    className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${!selectedCategory ? "text-[#3b82f6] border border-[#3b82f6]" : "text-gray-400 border border-white/20 hover:border-white/20"}`}
-                                >
-                                    <div className={`absolute inset-0 bg-[#3b82f6]/10 transition-transform duration-300 ${!selectedCategory ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`} />
-                                    <span className="relative z-10">[ ALL_SYSTEMS ]</span>
-                                </button>
-                                
-                                {visibleCategories.map((cat) => (
-                                    <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)} className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${selectedCategory === cat ? "text-[#8b5cf6] border border-[#8b5cf6]" : "text-gray-400 border border-white/30 hover:border-white/40"}`}>
-                                        <div className={`absolute inset-0 bg-[#8b5cf6]/10 transition-transform duration-300 ${selectedCategory === cat ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`} />
-                                        <span className="relative z-10">{cat.toUpperCase()}</span>
-                                    </button>
-                                ))}
+          {/* --- CONTENT SECTION --- */}
+          <div id="algorithm-grid" className="relative z-10 bg-[#020205] pt-20 flex-grow flex flex-col">
+              <section className="px-4 pb-12 relative z-20">
+                  <div className="container mx-auto max-w-6xl">
+                      <div className="flex flex-wrap justify-center gap-3">
+                          <button 
+                              onClick={() => setSelectedCategory(null)} 
+                              className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${!selectedCategory ? "text-[#3b82f6] border border-[#3b82f6]" : "text-gray-400 border border-white/20 hover:border-white/20"}`}
+                          >
+                              <div className={`absolute inset-0 bg-[#3b82f6]/10 transition-transform duration-300 ${!selectedCategory ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`} />
+                              <span className="relative z-10">[ ALL_SYSTEMS ]</span>
+                          </button>
+                          
+                          {visibleCategories.map((cat) => (
+                              <button key={cat} onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)} className={`relative px-5 py-2 rounded-lg text-[10px] font-mono tracking-widest transition-all overflow-hidden group cursor-none ${selectedCategory === cat ? "text-[#8b5cf6] border border-[#8b5cf6]" : "text-gray-400 border border-white/30 hover:border-white/40"}`}>
+                                  <div className={`absolute inset-0 bg-[#8b5cf6]/10 transition-transform duration-300 ${selectedCategory === cat ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`} />
+                                  <span className="relative z-10">{cat.toUpperCase()}</span>
+                              </button>
+                          ))}
 
-                                {categories.length > INITIAL_CATEGORY_COUNT && (
-                                    <button 
-                                        onClick={() => setShowAllCategories(!showAllCategories)} 
-                                        className="px-4 py-2 rounded-lg text-[10px] font-mono border border-dashed border-[#3b82f6]/80 text-[#3b82f6]/100 hover:bg-[#3b82f6]/5 hover:text-[#ffa500] flex items-center gap-2 transition-all cursor-none"
-                                    >
-                                        {showAllCategories ? <Minus className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    </section>
+                          {categories.length > INITIAL_CATEGORY_COUNT && (
+                              <button 
+                                  onClick={() => setShowAllCategories(!showAllCategories)} 
+                                  className="px-4 py-2 rounded-lg text-[10px] font-mono border border-dashed border-[#3b82f6]/80 text-[#3b82f6]/100 hover:bg-[#3b82f6]/5 hover:text-[#ffa500] flex items-center gap-2 transition-all cursor-none"
+                              >
+                                  {showAllCategories ? <Minus className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                              </button>
+                          )}
+                      </div>
+                  </div>
+              </section>
 
-                    <section className="px-4 pb-32 relative z-10 flex-grow">
-                        <div className="container mx-auto max-w-7xl">
-                        {/* THE NEW TILT CARDS GRID */}
-                        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
-                            <AnimatePresence mode="popLayout">
-                            {displayedAlgorithms.map((algo, index) => (
-                                <TiltCard key={algo.id} algo={algo} index={index} />
-                            ))}
-                            </AnimatePresence>
-                        </motion.div>
+              <section className="px-4 pb-32 relative z-10 flex-grow">
+                  <div className="container mx-auto max-w-7xl">
+                  {/* THE NEW TILT CARDS GRID */}
+                  <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+                      <AnimatePresence mode="popLayout">
+                      {displayedAlgorithms.map((algo, index) => (
+                          <TiltCard key={algo.id} algo={algo} index={index} />
+                      ))}
+                      </AnimatePresence>
+                  </motion.div>
 
-                        {filtered.length === 0 && (
-                            <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl bg-white/5 backdrop-blur-sm mt-8">
-                            <Hash className="h-10 w-10 text-gray-600 mx-auto mb-4" />
-                            <div className="text-gray-400 font-mono text-sm">VOID DETECTED: NO DATA</div>
-                            </div>
-                        )}
+                  {filtered.length === 0 && (
+                      <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl bg-white/5 backdrop-blur-sm mt-8">
+                      <Hash className="h-10 w-10 text-gray-600 mx-auto mb-4" />
+                      <div className="text-gray-400 font-mono text-sm">VOID DETECTED: NO DATA</div>
+                      </div>
+                  )}
 
-                        {filtered.length > displayedAlgorithms.length && (
-                            <div className="flex justify-center mt-24">
-                            <button 
-                                onClick={() => setIsGridExpanded(true)} 
-                                className="group relative px-10 py-4 bg-[#3b82f6]/5 border border-[#3b82f6]/30 hover:border-[#3b82f6] transition-all duration-300 rounded-sm overflow-hidden cursor-none"
-                            >
-                                <div className="absolute inset-0 bg-[#3b82f6]/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                                <span className="relative flex items-center gap-3 text-xs font-mono font-bold text-[#3b82f6] tracking-[0.25em]">
-                                INITIALIZE FULL DUMP <ChevronDown className="h-4 w-4 animate-bounce" />
-                                </span>
-                            </button>
-                            </div>
-                        )}
-                        </div>
-                    </section>
+                  {filtered.length > displayedAlgorithms.length && (
+                      <div className="flex justify-center mt-24">
+                      <button 
+                          onClick={() => setIsGridExpanded(true)} 
+                          className="group relative px-10 py-4 bg-[#3b82f6]/5 border border-[#3b82f6]/30 hover:border-[#3b82f6] transition-all duration-300 rounded-sm overflow-hidden cursor-none"
+                      >
+                          <div className="absolute inset-0 bg-[#3b82f6]/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                          <span className="relative flex items-center gap-3 text-xs font-mono font-bold text-[#3b82f6] tracking-[0.25em]">
+                          INITIALIZE FULL DUMP <ChevronDown className="h-4 w-4 animate-bounce" />
+                          </span>
+                      </button>
+                      </div>
+                  )}
+                  </div>
+              </section>
 
-                    {/* NEW ISOLATED FOOTER */}
-                    <Footer />
-                </div>
-            </motion.div>
-        )}
-      </AnimatePresence>
+              {/* NEW ISOLATED FOOTER */}
+              <Footer />
+          </div>
+      </motion.div>
     </>
   );
 };

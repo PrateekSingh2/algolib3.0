@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate', 
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'AlgoLib - Visualizer',
+        name: 'AlgoLib',
         short_name: 'AlgoLib',
         description: 'Visualize Logic. Execute Code. For & By Developers.',
         theme_color: '#09090B',
