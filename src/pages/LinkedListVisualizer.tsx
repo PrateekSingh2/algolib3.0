@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, RotateCcw, ArrowRight, Trash2, 
-  CornerDownRight, X, Play, Pause, StepForward, 
+  CornerDownRight, X, Play, Pause, StepForward, StepBack,
   Terminal, Activity, Anchor, Zap, Target, ArrowDownToLine, Box,
   Minimize2, Maximize2
 } from 'lucide-react';
@@ -18,6 +18,15 @@ type NodeData = {
 
 type CodeLine = { id: string; text: string; explanation: string; active: boolean };
 type VariableState = { name: string; value: string; color: string };
+
+type VisualFrame = {
+  nodes: NodeData[];
+  phantom: NodeData | null;
+  seekerIndex: number | null;
+  codeLines: CodeLine[];
+  variables: VariableState[];
+  message: string;
+};
 
 // --- ADVANCED HINGLISH EXECUTION MATRIX ---
 const SNIPPETS = {
@@ -57,7 +66,7 @@ const headSnippets = {
     insertHead: [
       { id: '1', text: 'Node temp = new Node(val);', explanation: 'Heap memory mein naya node spawn kiya.', active: false },
       { id: '2', text: 'temp.next = head;', explanation: 'Naye node ka pointer purane head pe aim kar raha hai.', active: false },
-      { id: '3', text: 'head = temp;', explanation: 'Ab system ko bata diya ki ye naya dabbu hi hamara naya Head hai!', active: false },
+      { id: '3', text: 'head = temp;', explanation: 'Ab system ko bata diya ki ye naya dabba hi hamara naya Head hai!', active: false },
     ],
     deleteHead: [
       { id: '1', text: 'if(head == null) return;', explanation: 'Agar list khali hai, toh delete kya karoge?', active: false },
@@ -83,39 +92,63 @@ const LinkedListVisualizer = () => {
   
   const [inputValue, setInputValue] = useState<number>(0);
   const [inputIndex, setInputIndex] = useState<number>(1);
-  
   const [showHUD, setShowHUD] = useState<boolean>(false);
-  
   const [isPaused, setIsPaused] = useState(true); 
   const [isAnimating, setIsAnimating] = useState(false);
+  
+  // FRAME-BASED ANIMATION ENGINE
+  const [frames, setFrames] = useState<VisualFrame[]>([]);
+  const [frameIdx, setFrameIdx] = useState<number>(0);
+  
+  // Visual states synced to current frame
   const [message, setMessage] = useState('SYSTEM_IDLE: Ready for input');
   const [codeLines, setCodeLines] = useState<CodeLine[]>([]);
   const [variables, setVariables] = useState<VariableState[]>([]);
-  
   const [phantom, setPhantom] = useState<NodeData | null>(null);
   const [seekerIndex, setSeekerIndex] = useState<number | null>(null);
-  const stepTrigger = useRef<() => void>(() => {});
 
   useEffect(() => { generateRandom(); }, []);
 
   const generateRandom = () => setInputValue(Math.floor(Math.random() * 99) + 1);
 
-  const resolveStep = () => { if (stepTrigger.current) stepTrigger.current(); };
-  
-  const waitStep = async (lineId: string, snippet: CodeLine[], vars: VariableState[] = []) => {
-    const currentLine = snippet.find(l => l.id === lineId);
-    setMessage(currentLine ? currentLine.explanation : 'Processing...');
-    setCodeLines(snippet.map(line => ({ ...line, active: line.id === lineId })));
-    if (vars.length > 0) setVariables(vars);
-    
-    if (isPaused) {
-      await new Promise<void>((resolve) => { stepTrigger.current = resolve; });
-    } else {
-      await new Promise(r => setTimeout(r, 1200));
+  // Sync visual components to the active frame
+  useEffect(() => {
+    if (frames.length > 0 && frameIdx >= 0 && frameIdx < frames.length) {
+        const f = frames[frameIdx];
+        setNodes(f.nodes);
+        setPhantom(f.phantom);
+        setSeekerIndex(f.seekerIndex);
+        setCodeLines(f.codeLines);
+        setVariables(f.variables);
+        setMessage(f.message);
+        
+        // Final frame cleanup timeout
+        if (frameIdx === frames.length - 1) {
+            const tm = setTimeout(() => {
+                setNodes(prev => prev.map(n => ({ ...n, isNew: false, isDeleting: false })));
+                setIsAnimating(false);
+                setFrames([]);
+                setCodeLines([]);
+                setVariables([]);
+                generateRandom();
+            }, 1000);
+            return () => clearTimeout(tm);
+        }
     }
-  };
+  }, [frameIdx, frames]);
 
-  const handleInsert = async (position: 'head' | 'index' | 'end') => {
+  // Autoplay engine
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (!isPaused && isAnimating && frames.length > 0 && frameIdx < frames.length - 1) {
+        timer = setTimeout(() => {
+            setFrameIdx(prev => prev + 1);
+        }, 1200);
+    }
+    return () => clearTimeout(timer);
+  }, [isPaused, isAnimating, frameIdx, frames]);
+
+  const handleInsert = (position: 'head' | 'index' | 'end') => {
     if (isAnimating) return;
     setIsAnimating(true);
     if (!showHUD) setShowHUD(true);
@@ -123,93 +156,149 @@ const LinkedListVisualizer = () => {
     let targetIdx = position === 'head' ? 0 : position === 'end' ? nodes.length : Math.max(0, Math.min(inputIndex, nodes.length));
     const newNode = { id: Math.floor(Math.random()*90 + 10).toString(), value: inputValue, isNew: true };
 
-    setPhantom(newNode);
+    let currentNodes = [...nodes];
+    let newFrames: VisualFrame[] = [];
+    
+    const addFrame = (snippet: CodeLine[], lineId: string, vars: VariableState[], seeker: number | null, phan: NodeData | null, n: NodeData[] = currentNodes) => {
+        const currentLine = snippet.find(l => l.id === lineId);
+        newFrames.push({
+            nodes: n.map(x => ({...x})),
+            phantom: phan ? {...phan} : null,
+            seekerIndex: seeker,
+            codeLines: snippet.map(line => ({ ...line, active: line.id === lineId })),
+            variables: vars.map(v => ({...v})),
+            message: currentLine ? currentLine.explanation : 'Processing...'
+        });
+    };
 
     if (position === 'end' && listType === 'doubly-circular') {
         const snippet = SNIPPETS.doublyCircular.insertEnd;
-        await waitStep('1', snippet, [{ name: 'temp', value: `${newNode.value}`, color: '#00ff88' }]);
-        setSeekerIndex(nodes.length - 1);
-        await waitStep('2', snippet, [{ name: 'tail', value: nodes[nodes.length-1].id, color: '#00f5ff' }]);
-        await waitStep('3', snippet);
-        await waitStep('4', snippet);
+        let v = [{ name: 'temp', value: `${newNode.value}`, color: '#00ff88' }];
+        addFrame(snippet, '1', v, null, newNode);
+        
+        v = [...v, { name: 'tail', value: currentNodes[currentNodes.length-1]?.id || 'NULL', color: '#00f5ff' }];
+        addFrame(snippet, '2', v, currentNodes.length - 1, newNode);
+        addFrame(snippet, '3', v, currentNodes.length - 1, newNode);
+        addFrame(snippet, '4', v, currentNodes.length - 1, newNode);
     } 
     else {
         const snippet = position === 'head' ? headSnippets.insertHead : SNIPPETS.singly.insertIndex;
-        await waitStep('1', snippet, [{ name: 'temp', value: `${newNode.value}`, color: '#00ff88' }]);
+        let v = [{ name: 'temp', value: `${newNode.value}`, color: '#00ff88' }];
+        addFrame(snippet, '1', v, null, newNode);
 
         if (position === 'head') {
-            await waitStep('2', snippet);
-            await waitStep('3', snippet, [{ name: 'head', value: newNode.id, color: '#fbbf24' }]);
+            addFrame(snippet, '2', v, null, newNode);
+            v = [...v, { name: 'head', value: newNode.id, color: '#fbbf24' }];
+            addFrame(snippet, '3', v, null, newNode);
         } else {
-            await waitStep('2', snippet, [{ name: 'ptr', value: 'HEAD', color: '#00f5ff' }]);
+            v = [...v, { name: 'ptr', value: 'HEAD', color: '#00f5ff' }];
+            addFrame(snippet, '2', v, null, newNode);
+            
             for (let i = 0; i < targetIdx - 1; i++) {
-                setSeekerIndex(i);
-                await waitStep('3', snippet, [{ name: 'ptr', value: nodes[i]?.id || 'NULL', color: '#00f5ff' }]);
+                let loopV = [{ name: 'temp', value: `${newNode.value}`, color: '#00ff88' }, { name: 'ptr', value: currentNodes[i]?.id || 'NULL', color: '#00f5ff' }];
+                addFrame(snippet, '3', loopV, i, newNode);
             }
-            setSeekerIndex(Math.max(0, targetIdx - 1));
-            await waitStep('4', snippet);
-            await waitStep('5', snippet);
+            
+            let finalSeeker = Math.max(0, targetIdx - 1);
+            let finalV = [{ name: 'temp', value: `${newNode.value}`, color: '#00ff88' }, { name: 'ptr', value: currentNodes[finalSeeker]?.id || 'NULL', color: '#00f5ff' }];
+            addFrame(snippet, '4', finalV, finalSeeker, newNode);
+            addFrame(snippet, '5', finalV, finalSeeker, newNode);
         }
     }
 
-    setPhantom(null);
-    const newArr = [...nodes];
-    newArr.splice(targetIdx, 0, newNode);
-    setNodes(newArr);
-    setSeekerIndex(null);
-    
-    setTimeout(() => setNodes(prev => prev.map(n => ({ ...n, isNew: false }))), 1000);
-    setIsAnimating(false);
-    setMessage("MISSION_PASSED: Node Inserted");
-    setCodeLines([]); setVariables([]); generateRandom();
+    // Append Final result frame
+    currentNodes.splice(targetIdx, 0, newNode);
+    newFrames.push({
+        nodes: currentNodes.map(x => ({...x})),
+        phantom: null,
+        seekerIndex: null,
+        codeLines: [],
+        variables: [],
+        message: "MISSION_PASSED: Node Inserted"
+    });
+
+    setFrames(newFrames);
+    setFrameIdx(0);
   };
 
-  const handleDelete = async (position: 'head' | 'index' | 'end') => {
+  const handleDelete = (position: 'head' | 'index' | 'end') => {
     if (isAnimating || nodes.length === 0) return;
     setIsAnimating(true);
     if (!showHUD) setShowHUD(true);
     
     let targetIdx = position === 'head' ? 0 : position === 'end' ? nodes.length - 1 : Math.max(0, Math.min(inputIndex, nodes.length - 1));
 
+    let currentNodes = [...nodes];
+    let newFrames: VisualFrame[] = [];
+    
+    const addFrame = (snippet: CodeLine[], lineId: string, vars: VariableState[], seeker: number | null, n: NodeData[] = currentNodes) => {
+        const currentLine = snippet.find(l => l.id === lineId);
+        newFrames.push({
+            nodes: n.map(x => ({...x})),
+            phantom: null,
+            seekerIndex: seeker,
+            codeLines: snippet.map(line => ({ ...line, active: line.id === lineId })),
+            variables: vars.map(v => ({...v})),
+            message: currentLine ? currentLine.explanation : 'Processing...'
+        });
+    };
+
     if (position === 'end' && listType === 'doubly-circular') {
         const snippet = SNIPPETS.doublyCircular.deleteEnd;
-        setSeekerIndex(nodes.length - 1);
-        await waitStep('1', snippet, [{ name: 'tail', value: nodes[nodes.length-1].id, color: '#ef4444' }]);
-        setSeekerIndex(nodes.length - 2);
-        await waitStep('2', snippet, [{ name: 'newTail', value: nodes[nodes.length-2]?.id || 'NULL', color: '#00f5ff' }]);
-        await waitStep('3', snippet);
-        setNodes(prev => prev.map((n, i) => i === nodes.length - 1 ? { ...n, isDeleting: true } : n));
-        await waitStep('4', snippet);
+        let v = [{ name: 'tail', value: currentNodes[currentNodes.length-1].id, color: '#ef4444' }];
+        addFrame(snippet, '1', v, currentNodes.length - 1);
+        
+        v = [...v, { name: 'newTail', value: currentNodes[currentNodes.length-2]?.id || 'NULL', color: '#00f5ff' }];
+        addFrame(snippet, '2', v, currentNodes.length - 2);
+        addFrame(snippet, '3', v, currentNodes.length - 2);
+        
+        let markedNodes = currentNodes.map((n, i) => i === currentNodes.length - 1 ? { ...n, isDeleting: true } : n);
+        addFrame(snippet, '4', v, currentNodes.length - 2, markedNodes);
     } 
     else {
         const snippet = position === 'head' ? headSnippets.deleteHead : SNIPPETS.singly.deleteIndex;
 
         if (position === 'head') {
-            await waitStep('1', snippet);
-            await waitStep('2', snippet, [{ name: 'temp', value: nodes[0].id, color: '#ef4444' }]);
-            setNodes(prev => prev.map((n, i) => i === 0 ? { ...n, isDeleting: true } : n));
-            await waitStep('3', snippet, [{ name: 'head', value: nodes[1]?.id || 'NULL', color: '#fbbf24' }]);
-            await waitStep('4', snippet);
+            addFrame(snippet, '1', [], null);
+            let v = [{ name: 'temp', value: currentNodes[0].id, color: '#ef4444' }];
+            addFrame(snippet, '2', v, null);
+            let markedNodes = currentNodes.map((n, i) => i === 0 ? { ...n, isDeleting: true } : n);
+            let v2 = [...v, { name: 'head', value: currentNodes[1]?.id || 'NULL', color: '#fbbf24' }];
+            addFrame(snippet, '3', v2, null, markedNodes);
+            addFrame(snippet, '4', v2, null, markedNodes);
         } else {
             if (targetIdx === 0) targetIdx = 1; 
-            await waitStep('1', snippet, [{ name: 'ptr', value: 'HEAD', color: '#00f5ff' }]);
+            let v = [{ name: 'ptr', value: 'HEAD', color: '#00f5ff' }];
+            addFrame(snippet, '1', v, null);
+            
             for (let i = 0; i < targetIdx - 1; i++) {
-                setSeekerIndex(i);
-                await waitStep('2', snippet, [{ name: 'ptr', value: nodes[i].id, color: '#00f5ff' }]);
+                let loopV = [{ name: 'ptr', value: currentNodes[i].id, color: '#00f5ff' }];
+                addFrame(snippet, '2', loopV, i);
             }
-            setSeekerIndex(targetIdx - 1);
-            await waitStep('3', snippet, [{ name: 'temp', value: nodes[targetIdx].id, color: '#ef4444' }]);
-            setNodes(prev => prev.map((n, i) => i === targetIdx ? { ...n, isDeleting: true } : n));
-            await waitStep('4', snippet);
-            await waitStep('5', snippet);
+            
+            let finalSeeker = targetIdx - 1;
+            let v2 = [{ name: 'ptr', value: currentNodes[finalSeeker]?.id || 'NULL', color: '#00f5ff' }, { name: 'temp', value: currentNodes[targetIdx]?.id || 'NULL', color: '#ef4444' }];
+            addFrame(snippet, '3', v2, finalSeeker);
+            
+            let markedNodes = currentNodes.map((n, i) => i === targetIdx ? { ...n, isDeleting: true } : n);
+            addFrame(snippet, '4', v2, finalSeeker, markedNodes);
+            addFrame(snippet, '5', v2, finalSeeker, markedNodes);
         }
     }
 
-    setNodes(prev => prev.filter((_, i) => i !== targetIdx));
-    setSeekerIndex(null);
-    setIsAnimating(false);
-    setMessage("TARGET_ELIMINATED: Memory Freed");
-    setCodeLines([]); setVariables([]);
+    // Append Final result frame
+    currentNodes.splice(targetIdx, 1);
+    newFrames.push({
+        nodes: currentNodes.map(x => ({...x})),
+        phantom: null,
+        seekerIndex: null,
+        codeLines: [],
+        variables: [],
+        message: "TARGET_ELIMINATED: Memory Freed"
+    });
+
+    setFrames(newFrames);
+    setFrameIdx(0);
   };
 
   return (
@@ -247,9 +336,22 @@ const LinkedListVisualizer = () => {
                     <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
                     {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
                     </button>
-                    <button disabled={!isPaused || !isAnimating} onClick={resolveStep} className="flex-1 py-2 bg-emerald-500 text-black rounded flex items-center justify-center gap-2 text-xs font-black hover:bg-emerald-400 disabled:opacity-30 disabled:grayscale transition-all">
-                    <StepForward size={14} /> NEXT STEP
-                    </button>
+                    <div className="flex flex-1 gap-1">
+                        <button 
+                          disabled={!isPaused || !isAnimating || frameIdx <= 0} 
+                          onClick={() => setFrameIdx(f => Math.max(0, f - 1))} 
+                          className="flex-1 py-2 bg-emerald-600 text-white rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-emerald-500 disabled:opacity-30 disabled:grayscale transition-all"
+                        >
+                          <StepBack size={14} /> PREV
+                        </button>
+                        <button 
+                          disabled={!isPaused || !isAnimating || frameIdx >= frames.length - 1} 
+                          onClick={() => setFrameIdx(f => Math.min(frames.length - 1, f + 1))} 
+                          className="flex-1 py-2 bg-emerald-500 text-black rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-emerald-400 disabled:opacity-30 disabled:grayscale transition-all"
+                        >
+                          NEXT <StepForward size={14} />
+                        </button>
+                    </div>
                 </div>
                 </div>
 

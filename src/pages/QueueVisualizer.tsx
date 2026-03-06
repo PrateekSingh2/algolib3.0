@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ArrowRightLeft, RotateCcw, Play, Pause, StepForward, 
+  ArrowRightLeft, RotateCcw, Play, Pause, StepForward, StepBack,
   Terminal, Activity, Zap, Box, Trash2, Cpu, 
   LogIn, LogOut, Maximize2, Minimize2, CheckCircle2, ArrowRight
 } from 'lucide-react';
@@ -10,6 +10,17 @@ import {
 type QueueNode = { id: string; val: number; color: string; isTargeted?: boolean };
 type CodeLine = { id: string; text: string; explanation: string; active: boolean };
 type VariableState = { name: string; value: string; color: string };
+
+type VisualFrame = {
+  queue: QueueNode[];
+  phantom: QueueNode | null;
+  dequeuedNode: QueueNode | null;
+  codeLines: CodeLine[];
+  variables: VariableState[];
+  message: string;
+  outputLog: string[];
+  outputTitle: string;
+};
 
 // --- HINGLISH EXECUTION MATRIX ---
 const SNIPPETS = {
@@ -52,117 +63,206 @@ const QueueVisualizer = () => {
   // Engine State
   const [isPaused, setIsPaused] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
+  
+  // FRAME-BASED ANIMATION ENGINE
+  const [frames, setFrames] = useState<VisualFrame[]>([]);
+  const [frameIdx, setFrameIdx] = useState<number>(0);
+
+  // Visual states synced to current frame
   const [message, setMessage] = useState('SYSTEM_IDLE: Ready for input');
   const [codeLines, setCodeLines] = useState<CodeLine[]>([]);
   const [variables, setVariables] = useState<VariableState[]>([]);
-  
-  // Terminal Logic
+  const [phantom, setPhantom] = useState<QueueNode | null>(null);
+  const [dequeuedNode, setDequeuedNode] = useState<QueueNode | null>(null);
   const [outputLog, setOutputLog] = useState<string[]>([]);
   const [outputTitle, setOutputTitle] = useState<string>("OUTPUT_CONSOLE");
 
-  // HUD Actors
-  const [phantom, setPhantom] = useState<QueueNode | null>(null);
-  const [dequeuedNode, setDequeuedNode] = useState<QueueNode | null>(null);
-
-  const stepTrigger = useRef<() => void>(() => {});
-  const interpreterEndRef = useRef<HTMLDivElement>(null);
-  const outputEndRef = useRef<HTMLDivElement>(null);
+  const interpreterScrollRef = useRef<HTMLDivElement>(null);
+  const outputScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { generateRandom(); }, []);
-  useEffect(() => { interpreterEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [codeLines]);
-  useEffect(() => { outputEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [outputLog]);
+  
+  useEffect(() => { 
+    if (interpreterScrollRef.current) {
+        interpreterScrollRef.current.scrollTo({ top: interpreterScrollRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [codeLines]);
+  
+  useEffect(() => { 
+    if (outputScrollRef.current) {
+        outputScrollRef.current.scrollTo({ top: outputScrollRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [outputLog]);
 
   const generateRandom = () => setInputValue(Math.floor(Math.random() * 99) + 1);
-  const resolveStep = () => { if(stepTrigger.current) stepTrigger.current(); };
 
-  const waitStep = async (lineId: string, snippet: CodeLine[], vars: VariableState[] = []) => {
-    const line = snippet.find(l => l.id === lineId);
-    setMessage(line ? line.explanation : 'Processing...');
-    setCodeLines(snippet.map(l => ({ ...l, active: l.id === lineId })));
-    
-    let currentVars = [...vars];
-    if (!currentVars.some(v => v.name === 'REAR')) {
-        currentVars.push({ name: 'REAR', value: `${queue.length}`, color: '#00ff88' });
+  // Sync visual components to the active frame
+  useEffect(() => {
+    if (frames.length > 0 && frameIdx >= 0 && frameIdx < frames.length) {
+        const f = frames[frameIdx];
+        setQueue(f.queue);
+        setPhantom(f.phantom);
+        setDequeuedNode(f.dequeuedNode);
+        setCodeLines(f.codeLines);
+        setVariables(f.variables);
+        setMessage(f.message);
+        setOutputLog(f.outputLog);
+        setOutputTitle(f.outputTitle);
+        
+        // Final frame cleanup timeout
+        if (frameIdx === frames.length - 1) {
+            const tm = setTimeout(() => {
+                setQueue(prev => prev.map(n => ({ ...n, isTargeted: false })));
+                setIsAnimating(false);
+                setFrames([]);
+                setCodeLines([]);
+                setVariables([]);
+                setDequeuedNode(null);
+                generateRandom();
+            }, 1200);
+            return () => clearTimeout(tm);
+        }
     }
-    if (!currentVars.some(v => v.name === 'FRONT')) {
-        currentVars.push({ name: 'FRONT', value: `0`, color: '#ef4444' });
+  }, [frameIdx, frames]);
+
+  // Autoplay engine
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (!isPaused && isAnimating && frames.length > 0 && frameIdx < frames.length - 1) {
+        timer = setTimeout(() => {
+            setFrameIdx(prev => prev + 1);
+        }, 1200);
     }
-    setVariables(currentVars);
+    return () => clearTimeout(timer);
+  }, [isPaused, isAnimating, frameIdx, frames]);
 
-    if (isPaused) await new Promise<void>(r => stepTrigger.current = r);
-    else await new Promise(r => setTimeout(r, 1200));
-  };
-
-  const handleEnqueue = async () => {
+  const handleEnqueue = () => {
     if (isAnimating || queue.length >= MAX_CAPACITY) return;
     setIsAnimating(true);
-    if (!showHUD) setShowHUD(true); // Auto-show HUD
-    setOutputTitle("ENQUEUE_LOG");
+    if (!showHUD) setShowHUD(true);
     
     const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
     const newNode = { id: Math.random().toString(), val: inputValue, color: randomColor };
-    const snippet = SNIPPETS.enqueue;
 
-    await waitStep('1', snippet, [{ name: 'REAR', value: `${queue.length}`, color: '#00ff88' }]);
+    let currentQueue = [...queue];
+    let currentLog = [...outputLog];
+    let newFrames: VisualFrame[] = [];
+    const title = "ENQUEUE_LOG";
+
+    const addFrame = (snippet: CodeLine[], lineId: string, vars: VariableState[], phan: QueueNode | null, q: QueueNode[] = currentQueue, log: string[] = currentLog) => {
+        const currentLine = snippet.find(l => l.id === lineId);
+        newFrames.push({
+            queue: q.map(x => ({...x})),
+            phantom: phan ? {...phan} : null,
+            dequeuedNode: null,
+            codeLines: snippet.map(line => ({ ...line, active: line.id === lineId })),
+            variables: vars.map(v => ({...v})),
+            message: currentLine ? currentLine.explanation : 'Processing...',
+            outputLog: [...log],
+            outputTitle: title
+        });
+    };
+
+    const snippet = SNIPPETS.enqueue;
+    let baseVars = [
+        { name: 'FRONT', value: `0`, color: '#ef4444' }, 
+        { name: 'REAR', value: `${currentQueue.length}`, color: '#00ff88' }
+    ];
+
+    addFrame(snippet, '1', baseVars, null);
     
-    setPhantom(newNode);
-    await waitStep('2', snippet, [
-        { name: 'REAR', value: `${queue.length}`, color: '#00ff88' },
-        { name: 'temp', value: `${newNode.val}`, color: newNode.color }
-    ]);
+    let v2 = [...baseVars, { name: 'temp', value: `${newNode.val}`, color: newNode.color }];
+    addFrame(snippet, '2', v2, newNode);
+    addFrame(snippet, '3', v2, newNode);
     
-    await waitStep('3', snippet, [
-        { name: 'REAR', value: `${queue.length}`, color: '#00ff88' },
-        { name: 'temp', value: `${newNode.val}`, color: newNode.color }
-    ]);
+    currentQueue.push(newNode);
+    currentLog.push(`> [${newNode.val}] Joined the queue at REAR.`);
+    let v4 = [
+        { name: 'FRONT', value: `0`, color: '#ef4444' }, 
+        { name: 'REAR', value: `${currentQueue.length}`, color: '#00ff88' }
+    ];
+    addFrame(snippet, '4', v4, null, currentQueue, currentLog);
     
-    // Enter the queue
-    setPhantom(null);
-    setQueue(prev => [...prev, newNode]);
-    setOutputLog(prev => [...prev, `> [${newNode.val}] Joined the queue at REAR.`]);
-    
-    await waitStep('4', snippet, [{ name: 'REAR', value: `${queue.length + 1}`, color: '#00ff88' }]);
-    
-    setMessage('MISSION_PASSED: Block Enqueued');
-    setIsAnimating(false);
-    setCodeLines([]); setVariables([]); generateRandom();
+    newFrames.push({
+        queue: currentQueue.map(x => ({...x})),
+        phantom: null,
+        dequeuedNode: null,
+        codeLines: [],
+        variables: [],
+        message: "MISSION_PASSED: Block Enqueued",
+        outputLog: [...currentLog],
+        outputTitle: title
+    });
+
+    setFrames(newFrames);
+    setFrameIdx(0);
   };
 
-  const handleDequeue = async () => {
+  const handleDequeue = () => {
     if (isAnimating || queue.length === 0) return;
     setIsAnimating(true);
-    if (!showHUD) setShowHUD(true); // Auto-show HUD
-    setOutputTitle("DEQUEUE_LOG");
-    const snippet = SNIPPETS.dequeue;
+    if (!showHUD) setShowHUD(true);
+    
+    let currentQueue = [...queue];
+    let currentLog = [...outputLog];
+    let newFrames: VisualFrame[] = [];
+    const title = "DEQUEUE_LOG";
 
-    await waitStep('1', snippet, [{ name: 'FRONT', value: `0`, color: '#ef4444' }]);
+    const addFrame = (snippet: CodeLine[], lineId: string, vars: VariableState[], deqNode: QueueNode | null, q: QueueNode[] = currentQueue, log: string[] = currentLog) => {
+        const currentLine = snippet.find(l => l.id === lineId);
+        newFrames.push({
+            queue: q.map(x => ({...x})),
+            phantom: null,
+            dequeuedNode: deqNode ? {...deqNode} : null,
+            codeLines: snippet.map(line => ({ ...line, active: line.id === lineId })),
+            variables: vars.map(v => ({...v})),
+            message: currentLine ? currentLine.explanation : 'Processing...',
+            outputLog: [...log],
+            outputTitle: title
+        });
+    };
+
+    const snippet = SNIPPETS.dequeue;
+    let baseVars = [
+        { name: 'FRONT', value: `0`, color: '#ef4444' }, 
+        { name: 'REAR', value: `${currentQueue.length}`, color: '#00ff88' }
+    ];
+
+    addFrame(snippet, '1', baseVars, null);
     
-    // Target Front Node
-    setQueue(prev => prev.map((n, i) => i === 0 ? { ...n, isTargeted: true } : n));
-    const targetNode = queue[0];
-    await waitStep('2', snippet, [
-        { name: 'FRONT', value: `0`, color: '#ef4444' },
-        { name: 'target', value: `${targetNode.val}`, color: '#ef4444' }
-    ]);
+    let markedQueue = currentQueue.map((n, i) => i === 0 ? { ...n, isTargeted: true } : n);
+    const targetNode = currentQueue[0];
+    let v2 = [...baseVars, { name: 'target', value: `${targetNode.val}`, color: '#ef4444' }];
+    addFrame(snippet, '2', v2, null, markedQueue);
     
-    await waitStep('3', snippet, [
+    let v3 = [
         { name: 'FRONT', value: `1`, color: '#ef4444' }, 
+        { name: 'REAR', value: `${currentQueue.length}`, color: '#00ff88' },
         { name: 'target', value: `${targetNode.val}`, color: '#ef4444' }
-    ]);
+    ];
+    addFrame(snippet, '3', v3, null, markedQueue);
     
-    // Exit the queue
-    setQueue(prev => prev.slice(1));
-    setDequeuedNode(targetNode);
-    setOutputLog(prev => [...prev, `> SUCCESS: [${targetNode.val}] Processed & Removed.`]);
-    
-    await waitStep('4', snippet, [{ name: 'FRONT', value: `0`, color: '#ef4444' }]); 
-    
-    setTimeout(() => {
-        setDequeuedNode(null);
-        setMessage('TARGET_PROCESSED: Block Dequeued');
-        setIsAnimating(false);
-        setCodeLines([]); setVariables([]);
-    }, 1500);
+    currentQueue.shift();
+    currentLog.push(`> SUCCESS: [${targetNode.val}] Processed & Removed.`);
+    let v4 = [
+        { name: 'FRONT', value: `0`, color: '#ef4444' }, 
+        { name: 'REAR', value: `${currentQueue.length}`, color: '#00ff88' }
+    ];
+    addFrame(snippet, '4', v4, targetNode, currentQueue, currentLog);
+
+    newFrames.push({
+        queue: currentQueue.map(x => ({...x})),
+        phantom: null,
+        dequeuedNode: null, 
+        codeLines: [],
+        variables: [],
+        message: "TARGET_PROCESSED: Block Dequeued",
+        outputLog: [...currentLog],
+        outputTitle: title
+    });
+
+    setFrames(newFrames);
+    setFrameIdx(0);
   };
 
   return (
@@ -171,12 +271,11 @@ const QueueVisualizer = () => {
       
       <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
         
-        {/* LEFT: COMMAND CENTER (Constrained to 38% on mobile) */}
+        {/* LEFT: COMMAND CENTER */}
         <div className="w-full lg:w-[340px] bg-black/95 lg:bg-black/80 backdrop-blur-md border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
           
           <div className="overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6 flex flex-col">
             
-            {/* Playback Controls */}
             <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4 shrink-0">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold text-gray-400 uppercase">Step Engine</span>
@@ -188,13 +287,25 @@ const QueueVisualizer = () => {
                 <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
                   {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
                 </button>
-                <button disabled={!isPaused || !isAnimating} onClick={resolveStep} className="flex-1 py-2 bg-green-500 text-black rounded flex items-center justify-center gap-2 text-xs font-black hover:bg-green-400 disabled:opacity-30 disabled:grayscale transition-all">
-                  <StepForward size={14} /> NEXT STEP
-                </button>
+                <div className="flex flex-1 gap-1">
+                    <button 
+                      disabled={!isPaused || !isAnimating || frameIdx <= 0} 
+                      onClick={() => setFrameIdx(f => Math.max(0, f - 1))} 
+                      className="flex-1 py-2 bg-green-600 text-white rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-green-500 disabled:opacity-30 disabled:grayscale transition-all"
+                    >
+                      <StepBack size={14} /> PREV
+                    </button>
+                    <button 
+                      disabled={!isPaused || !isAnimating || frameIdx >= frames.length - 1} 
+                      onClick={() => setFrameIdx(f => Math.min(frames.length - 1, f + 1))} 
+                      className="flex-1 py-2 bg-green-500 text-black rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-green-400 disabled:opacity-30 disabled:grayscale transition-all"
+                    >
+                      NEXT <StepForward size={14} />
+                    </button>
+                </div>
               </div>
             </div>
 
-            {/* Inputs & Actions */}
             <div className="space-y-4 shrink-0">
                <div className="flex gap-2">
                   <div className="flex-1">
@@ -220,13 +331,12 @@ const QueueVisualizer = () => {
                </button>
             </div>
 
-            {/* DEDICATED OUTPUT SCREEN */}
             <div className="mt-4 flex-1 min-h-[120px] lg:min-h-[150px] bg-black/90 border border-green-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
                 <div className="px-3 py-2 border-b border-green-500/30 bg-green-900/20 flex items-center gap-2 shrink-0">
                     <Terminal size={12} className="text-green-400" />
                     <span className="text-[9px] font-black text-green-400 uppercase tracking-widest">{outputTitle}</span>
                 </div>
-                <div className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[11px] text-gray-300 flex flex-col gap-1">
+                <div ref={outputScrollRef} className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[11px] text-gray-300 flex flex-col gap-1">
                     {outputLog.length === 0 ? (
                         <span className="text-gray-600 italic mt-1">Awaiting operations...</span>
                     ) : (
@@ -237,7 +347,6 @@ const QueueVisualizer = () => {
                            </div>
                         ))
                     )}
-                    <div ref={outputEndRef} />
                 </div>
             </div>
 
@@ -248,9 +357,9 @@ const QueueVisualizer = () => {
         <div className="lg:hidden h-[2px] w-full bg-gradient-to-r from-green-500/10 via-green-500/60 to-green-500/10 shrink-0 z-30 order-2" />
 
         {/* RIGHT: THE ARENA */}
-        <div className="order-3 lg:order-2 flex-1 relative flex flex-col p-3 sm:p-4 lg:p-6 min-w-0 overflow-hidden lg:h-full w-full">
+        {/* FIXED: overflow-y-auto added so the pipe won't be squished on small mobile layouts */}
+        <div className="order-3 lg:order-2 flex-1 relative flex flex-col p-2 sm:p-4 lg:p-6 min-w-0 overflow-y-auto overflow-x-hidden custom-scrollbar lg:h-full w-full">
           
-          {/* SMALL HUD TOGGLE */}
           <div className="flex justify-start lg:justify-start items-center mb-2 lg:mb-3 shrink-0 gap-2">
              <button 
                 onClick={() => setShowHUD(!showHUD)}
@@ -261,18 +370,15 @@ const QueueVisualizer = () => {
              </button>
           </div>
 
-          {/* Central Arena: The Pipe / Conveyor Belt */}
-          <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 items-center justify-center p-4 lg:p-10 w-full">
+          <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 items-center justify-center p-2 sm:p-4 lg:p-10 w-full shrink-0 min-h-[220px]">
              
-             {/* ADDED: Separation of pipe border and scrollable inner content for HORIZONTAL SCROLLING */}
-             <div className="relative w-full max-w-4xl h-48 border-y-4 border-gray-700 bg-white/[0.01] backdrop-blur-sm shadow-inner rounded-[40px] overflow-hidden flex flex-col justify-center">
+             {/* FIXED: Added shrink-0 and min-h-[160px] to strictly prevent flex-squishing on small screens */}
+             <div className="relative w-full max-w-4xl min-h-[160px] lg:min-h-[192px] shrink-0 border-y-4 border-gray-700 bg-white/[0.01] backdrop-blur-sm shadow-inner rounded-[30px] lg:rounded-[40px] overflow-hidden flex flex-col justify-center py-4">
                  
-                 {/* Sci-Fi Pipe Accents (Fixed overlays) */}
                  <div className="absolute top-0 left-0 h-full w-8 bg-gradient-to-r from-[#020205] via-red-500/20 to-transparent z-10 pointer-events-none" />
                  <div className="absolute top-0 right-0 h-full w-8 bg-gradient-to-l from-[#020205] via-green-500/20 to-transparent z-10 pointer-events-none" />
                  <div className="absolute top-1/2 -translate-y-1/2 left-0 w-full h-px bg-white/5 pointer-events-none z-10" />
 
-                 {/* Indicators (Fixed position) */}
                  <div className="absolute top-2 left-6 lg:left-8 text-red-500 text-[8px] lg:text-[10px] font-mono font-bold flex flex-col items-center z-10">
                      <span>FRONT (EXIT)</span>
                      <div className="w-px h-4 lg:h-6 bg-red-500/50 mt-1" />
@@ -282,9 +388,9 @@ const QueueVisualizer = () => {
                      <div className="w-px h-4 lg:h-6 bg-green-500/50 mt-1" />
                  </div>
 
-                 {/* HORIZONTAL SCROLLABLE QUEUE CONTENT */}
+                 {/* FIXED: Added explicit min-h to scroll container with padding to allow visual space for indicators underneath blocks */}
                  <div className="w-full overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x z-0">
-                    <div className="flex gap-4 min-w-max justify-start items-center px-12 lg:px-24 h-40">
+                    <div className="flex gap-4 min-w-max justify-start items-center px-12 lg:px-24 min-h-[120px] lg:min-h-[150px] py-6 lg:py-8">
                         <AnimatePresence mode="popLayout">
                            {queue.map((item, i) => (
                               <motion.div
@@ -323,7 +429,6 @@ const QueueVisualizer = () => {
                  </div>
              </div>
 
-             {/* DEQUEUED NOTIFICATION OVERLAY */}
              <AnimatePresence>
                 {dequeuedNode && (
                      <motion.div
@@ -372,14 +477,13 @@ const QueueVisualizer = () => {
                                 {variables.map((v, i) => <span key={i} className="text-[9px] lg:text-[10px] font-mono whitespace-nowrap"><span className="text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
                             </div>
                          </div>
-                         <div className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                         <div ref={interpreterScrollRef} className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
                             {codeLines.length ? codeLines.map(line => (
                                <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
                                   <div className={`font-mono ${line.active ? 'text-green-400' : 'text-gray-400'}`}>{line.text}</div>
                                   {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
                                </div>
                             )) : <div className="text-gray-600 text-[10px] lg:text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/> Awaiting Queue operation...</div>}
-                            <div ref={interpreterEndRef} />
                          </div>
                      </div>
 

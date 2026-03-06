@@ -110,13 +110,13 @@ const UnauthenticatedLanding = () => {
     },
     { 
       title: "Snippet Library", 
-      description: "Access a vast, searchable repository algorithm snippet in C++ and Java.",
+      description: "Access a vast, searchable repository algorithm snippet in C++, Java and Python.",
       category: "Developer Hub", 
       icon: Terminal, 
       color: "text-[#ff9900]", 
       bg: "bg-[#ff9900]/10", 
       border: "border-[#ff9900]/30", 
-      badge: "C++ / Java" 
+      badge: "C++ / Java / Python" 
     },
     { 
       title: "Global Community", 

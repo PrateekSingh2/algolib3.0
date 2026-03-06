@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Network, Play, Pause, StepForward, RotateCcw, Plus, 
+  Network, Play, Pause, StepForward, StepBack, RotateCcw, Plus, 
   MousePointer2, Move, Share2, Zap, Trash2, Terminal, 
   Activity, Maximize2, Minimize2, Map, Navigation, Square, ShieldAlert, Crosshair, ArrowRight
 } from 'lucide-react';
@@ -11,6 +11,17 @@ type GraphNode = { id: string; x: number; y: number };
 type GraphEdge = { source: string; target: string; weight: number; id: string };
 type Mode = 'move' | 'addNode' | 'addEdge';
 type CodeLine = { id: string; text: string; explanation: string; active: boolean };
+
+type VisualFrame = {
+  visited: Set<string>;
+  path: string[];
+  activeEdge: string | null;
+  activeNode: string | null;
+  nodeDistances: Record<string, number | null>;
+  codeLines: CodeLine[];
+  outputLog: string[];
+  message: string;
+};
 
 // --- HINGLISH EXECUTION MATRIX ---
 const SNIPPETS = {
@@ -86,11 +97,15 @@ const GraphVisualizer = () => {
   const [engineMode, setEngineMode] = useState<'AUTO' | 'MANUAL'>('AUTO');
   const [isPaused, setIsPaused] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  
+  // FRAME-BASED ANIMATION ENGINE
+  const [frames, setFrames] = useState<VisualFrame[]>([]);
+  const [frameIdx, setFrameIdx] = useState<number>(0);
+
+  // Visual Pathfinding Actors synced to frames
   const [codeLines, setCodeLines] = useState<CodeLine[]>(SNIPPETS.bfs);
   const [outputLog, setOutputLog] = useState<string[]>([]);
   const [message, setMessage] = useState('SYSTEM_IDLE: Map Loaded');
-
-  // Visual Pathfinding Actors
   const [visited, setVisited] = useState<Set<string>>(new Set());
   const [path, setPath] = useState<string[]>([]); 
   const [activeEdge, setActiveEdge] = useState<string | null>(null); 
@@ -98,14 +113,52 @@ const GraphVisualizer = () => {
   const [nodeDistances, setNodeDistances] = useState<Record<string, number | null>>({});
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  const stepTrigger = useRef<() => void>(() => {});
-  const engineRef = useRef<boolean>(false); 
-  const interpreterEndRef = useRef<HTMLDivElement>(null);
-  const outputEndRef = useRef<HTMLDivElement>(null);
+  const interpreterScrollRef = useRef<HTMLDivElement>(null);
+  const outputScrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { return () => { engineRef.current = false; }; }, []); 
-  useEffect(() => { interpreterEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [codeLines]);
-  useEffect(() => { outputEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [outputLog]);
+  useEffect(() => { 
+    if (interpreterScrollRef.current) {
+        interpreterScrollRef.current.scrollTo({ top: interpreterScrollRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [codeLines]);
+  
+  useEffect(() => { 
+    if (outputScrollRef.current) {
+        outputScrollRef.current.scrollTo({ top: outputScrollRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [outputLog]);
+
+  // Sync visual components to the active frame
+  useEffect(() => {
+    if (frames.length > 0 && frameIdx >= 0 && frameIdx < frames.length) {
+        const f = frames[frameIdx];
+        setVisited(f.visited);
+        setPath(f.path);
+        setActiveEdge(f.activeEdge);
+        setActiveNode(f.activeNode);
+        setNodeDistances(f.nodeDistances);
+        setCodeLines(f.codeLines);
+        setOutputLog(f.outputLog);
+        setMessage(f.message);
+        
+        if (frameIdx === frames.length - 1) {
+            setIsAnimating(false);
+        } else {
+            setIsAnimating(true);
+        }
+    }
+  }, [frameIdx, frames]);
+
+  // Autoplay engine
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (!isPaused && engineMode === 'AUTO' && isAnimating && frames.length > 0 && frameIdx < frames.length - 1) {
+        timer = setTimeout(() => {
+            setFrameIdx(prev => prev + 1);
+        }, 1200);
+    }
+    return () => clearTimeout(timer);
+  }, [isPaused, engineMode, isAnimating, frameIdx, frames]);
 
   const generateNodeId = (): string => {
       let index = 0;
@@ -176,30 +229,14 @@ const GraphVisualizer = () => {
   };
 
   // --- ENGINE HELPERS ---
-  const resolveStep = () => { if(stepTrigger.current) stepTrigger.current(); };
-  
   const handleStop = () => {
-      engineRef.current = false; 
       setIsAnimating(false);
       setIsPaused(false);
+      setFrames([]);
+      setCodeLines(codeLines.map(l => ({...l, active: false})));
       resetVisuals();
       setMessage('SYSTEM_HALTED');
       setOutputLog(prev => [...prev, '> ! OPERATION ABORTED BY USER !']);
-      setCodeLines(codeLines.map(l => ({...l, active: false})));
-  };
-
-  const waitStep = async (lineId: string, snippet: CodeLine[]) => {
-      if (!engineRef.current) return false;
-      const line = snippet.find(l => l.id === lineId);
-      setMessage(line ? line.explanation : 'Processing...');
-      setCodeLines(snippet.map(l => ({ ...l, active: l.id === lineId })));
-      
-      if (engineMode === 'MANUAL' || isPaused) {
-          await new Promise<void>(r => { stepTrigger.current = r; });
-      } else {
-          await new Promise(r => setTimeout(r, 1200));
-      }
-      return engineRef.current; 
   };
 
   const resetVisuals = () => {
@@ -211,193 +248,297 @@ const GraphVisualizer = () => {
   };
 
   // --- ALGORITHMS ---
-  const runBFS = async () => {
+  const runBFS = () => {
       if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
       resetVisuals();
-      engineRef.current = true;
       setIsAnimating(true);
-      if (!showHUD) setShowHUD(true); // Pop open HUD
-      setCodeLines(SNIPPETS.bfs);
-      setOutputLog([`> Initiating BFS Radar: [${startNodeId}] -> [${targetNodeId}]`]);
+      if (!showHUD) setShowHUD(true);
 
+      let newFrames: VisualFrame[] = [];
+      let currentLog = [`> Initiating BFS Radar: [${startNodeId}] -> [${targetNodeId}]`];
       const snippet = SNIPPETS.bfs;
+
       const queue = [startNodeId];
       const visitedSet = new Set<string>([startNodeId]);
       const parent: Record<string, string | null> = { [startNodeId]: null };
-      setVisited(new Set([startNodeId]));
+
+      let currentVisited = new Set<string>([startNodeId]);
+      let currentActiveNode: string | null = null;
+      let currentActiveEdge: string | null = null;
+      let currentPath: string[] = [];
+
+      const pushFrame = (lineId: string, msg?: string) => {
+         const line = snippet.find(l => l.id === lineId);
+         newFrames.push({
+             visited: new Set(currentVisited),
+             path: [...currentPath],
+             activeEdge: currentActiveEdge,
+             activeNode: currentActiveNode,
+             nodeDistances: {},
+             codeLines: snippet.map(l => ({ ...l, active: l.id === lineId })),
+             outputLog: [...currentLog],
+             message: msg || (line ? line.explanation : 'Processing...')
+         });
+      };
+
+      pushFrame('1');
 
       let found = false;
-      if (!(await waitStep('1', snippet))) return;
-
       while (queue.length > 0) {
-          if (!engineRef.current) return;
           const current = queue.shift()!;
-          setActiveNode(current);
-          setOutputLog(prev => [...prev, `> Scanning Sector [${current}]`]);
-          if (!(await waitStep('2', snippet))) return;
+          currentActiveNode = current;
+          currentLog.push(`> Scanning Sector [${current}]`);
+          pushFrame('2');
 
           if (current === targetNodeId) {
               found = true;
-              if (!(await waitStep('3', snippet))) return;
+              pushFrame('3');
               break;
           }
 
-          if (!(await waitStep('4', snippet))) return;
+          pushFrame('4');
           const neighbors = edges
               .filter(e => e.source === current || e.target === current)
               .map(e => ({ id: e.source === current ? e.target : e.source, edgeId: e.id }));
 
           for (const { id, edgeId } of neighbors) {
-              if (!engineRef.current) return;
-              setActiveEdge(edgeId); 
-              await new Promise(r => setTimeout(r, 400)); 
+              currentActiveEdge = edgeId;
+              pushFrame('4', `Checking edge ${edgeId}`);
 
               if (!visitedSet.has(id)) {
                   visitedSet.add(id);
                   parent[id] = current;
-                  setVisited(new Set(visitedSet));
+                  currentVisited = new Set(visitedSet);
                   queue.push(id);
-                  setOutputLog(prev => [...prev, `  - Discovered [${id}]`]);
-                  if (!(await waitStep('5', snippet))) return;
+                  currentLog.push(`  - Discovered [${id}]`);
+                  pushFrame('5');
               }
           }
       }
 
-      if (engineRef.current) finalizePath(found, parent, 'BFS');
+      currentActiveEdge = null;
+      currentActiveNode = null;
+      if (found) {
+          const pathStack = [];
+          let curr: string | null = targetNodeId;
+          while (curr !== null) {
+              pathStack.unshift(curr);
+              curr = parent[curr] || null;
+          }
+          currentPath = pathStack;
+          currentLog.push(`> BFS SUCCESS. Path: ${pathStack.join(' ➔ ')}`);
+          pushFrame('', "TARGET_REACHED");
+      } else {
+          currentLog.push(`> Abort: Target Unreachable via BFS.`);
+          pushFrame('', "404_NOT_FOUND");
+      }
+
+      setFrames(newFrames);
+      setFrameIdx(0);
   };
 
-  const runDFS = async () => {
+  const runDFS = () => {
       if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
       resetVisuals();
-      engineRef.current = true;
       setIsAnimating(true);
       if (!showHUD) setShowHUD(true);
-      setCodeLines(SNIPPETS.dfs);
-      setOutputLog([`> Initiating DFS Dive: [${startNodeId}] -> [${targetNodeId}]`]);
 
+      let newFrames: VisualFrame[] = [];
+      let currentLog = [`> Initiating DFS Dive: [${startNodeId}] -> [${targetNodeId}]`];
       const snippet = SNIPPETS.dfs;
+
       const stack = [startNodeId];
       const visitedSet = new Set<string>();
       const parent: Record<string, string | null> = { [startNodeId]: null };
       
+      let currentVisited = new Set<string>();
+      let currentActiveNode: string | null = null;
+      let currentActiveEdge: string | null = null;
+      let currentPath: string[] = [];
+
+      const pushFrame = (lineId: string, msg?: string) => {
+         const line = snippet.find(l => l.id === lineId);
+         newFrames.push({
+             visited: new Set(currentVisited),
+             path: [...currentPath],
+             activeEdge: currentActiveEdge,
+             activeNode: currentActiveNode,
+             nodeDistances: {},
+             codeLines: snippet.map(l => ({ ...l, active: l.id === lineId })),
+             outputLog: [...currentLog],
+             message: msg || (line ? line.explanation : 'Processing...')
+         });
+      };
+
+      pushFrame('1');
       let found = false;
-      if (!(await waitStep('1', snippet))) return;
 
       while (stack.length > 0) {
-          if (!engineRef.current) return;
           const current = stack.pop()!;
           
           if (!visitedSet.has(current)) {
               visitedSet.add(current);
-              setVisited(new Set(visitedSet));
-              setActiveNode(current);
-              setOutputLog(prev => [...prev, `> Deep Dive into Sector [${current}]`]);
-              if (!(await waitStep('2', snippet))) return;
+              currentVisited = new Set(visitedSet);
+              currentActiveNode = current;
+              currentLog.push(`> Deep Dive into Sector [${current}]`);
+              pushFrame('2');
 
               if (current === targetNodeId) {
                   found = true;
-                  if (!(await waitStep('3', snippet))) return;
+                  pushFrame('3');
                   break;
               }
 
-              if (!(await waitStep('4', snippet))) return;
+              pushFrame('4');
               const neighbors = edges
                   .filter(e => e.source === current || e.target === current)
                   .map(e => ({ id: e.source === current ? e.target : e.source, edgeId: e.id }));
 
               for (const { id, edgeId } of neighbors) {
-                  if (!engineRef.current) return;
-                  setActiveEdge(edgeId);
-                  await new Promise(r => setTimeout(r, 400)); 
+                  currentActiveEdge = edgeId;
+                  pushFrame('4', `Checking edge ${edgeId}`);
                   
                   if (!visitedSet.has(id)) {
                       parent[id] = current;
                       stack.push(id);
-                      setOutputLog(prev => [...prev, `  - Stacked [${id}] for exploration`]);
-                      if (!(await waitStep('5', snippet))) return;
+                      currentLog.push(`  - Stacked [${id}] for exploration`);
+                      pushFrame('5');
                   }
               }
           }
       }
 
-      if (engineRef.current) finalizePath(found, parent, 'DFS');
+      currentActiveEdge = null;
+      currentActiveNode = null;
+      if (found) {
+          const pathStack = [];
+          let curr: string | null = targetNodeId;
+          while (curr !== null) {
+              pathStack.unshift(curr);
+              curr = parent[curr] || null;
+          }
+          currentPath = pathStack;
+          currentLog.push(`> DFS SUCCESS. Path: ${pathStack.join(' ➔ ')}`);
+          pushFrame('', "TARGET_REACHED");
+      } else {
+          currentLog.push(`> Abort: Target Unreachable via DFS.`);
+          pushFrame('', "404_NOT_FOUND");
+      }
+
+      setFrames(newFrames);
+      setFrameIdx(0);
   };
 
-  const runDijkstra = async () => {
+  const runDijkstra = () => {
       if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
       resetVisuals();
-      engineRef.current = true;
       setIsAnimating(true);
       if (!showHUD) setShowHUD(true);
-      setCodeLines(SNIPPETS.dijkstra);
-      setOutputLog([`> Initiating Dijkstra Protocol: [${startNodeId}] -> [${targetNodeId}]`]);
 
+      let newFrames: VisualFrame[] = [];
+      let currentLog = [`> Initiating Dijkstra Protocol: [${startNodeId}] -> [${targetNodeId}]`];
       const snippet = SNIPPETS.dijkstra;
+
       const distances: Record<string, number> = {};
       const previous: Record<string, string | null> = {};
       const unvisited = new Set(nodes.map(n => n.id));
 
       nodes.forEach(n => distances[n.id] = Infinity);
       distances[startNodeId] = 0;
-      setNodeDistances({ ...distances });
-      if (!(await waitStep('1', snippet))) return;
+
+      let currentVisited = new Set<string>();
+      let currentActiveNode: string | null = null;
+      let currentActiveEdge: string | null = null;
+      let currentPath: string[] = [];
+      let currentDistances = { ...distances };
+
+      const pushFrame = (lineId: string, msg?: string) => {
+         const line = snippet.find(l => l.id === lineId);
+         newFrames.push({
+             visited: new Set(currentVisited),
+             path: [...currentPath],
+             activeEdge: currentActiveEdge,
+             activeNode: currentActiveNode,
+             nodeDistances: { ...currentDistances },
+             codeLines: snippet.map(l => ({ ...l, active: l.id === lineId })),
+             outputLog: [...currentLog],
+             message: msg || (line ? line.explanation : 'Processing...')
+         });
+      };
+
+      pushFrame('1');
 
       while (unvisited.size > 0) {
-          if (!engineRef.current) return;
           let current: string | null = null;
           let minInfo = Infinity;
-          
           unvisited.forEach(id => {
               if (distances[id] < minInfo) { minInfo = distances[id]; current = id; }
           });
-
+          
           if (current === null || distances[current] === Infinity) break;
           
-          setActiveNode(current);
+          currentActiveNode = current;
           unvisited.delete(current);
-          setVisited(prev => new Set(prev).add(current!));
-          setOutputLog(prev => [...prev, `> Active Target [${current}] (Cost: ${distances[current]})`]);
-          if (!(await waitStep('2', snippet))) return;
+          currentVisited.add(current);
+          currentLog.push(`> Active Target [${current}] (Cost: ${distances[current]})`);
+          pushFrame('2');
 
           if (current === targetNodeId) {
-              if (!(await waitStep('3', snippet))) return;
+              pushFrame('3');
               break;
           }
 
           const neighbors = edges.filter(e => e.source === current || e.target === current);
           for (let edge of neighbors) {
-              if (!engineRef.current) return;
               const neighbor = edge.source === current ? edge.target : edge.source;
               
               if (unvisited.has(neighbor)) {
-                  setActiveEdge(edge.id);
-                  if (!(await waitStep('4', snippet))) return;
+                  currentActiveEdge = edge.id;
+                  pushFrame('4');
                   
                   const alt = distances[current] + edge.weight;
                   if (alt < distances[neighbor]) {
                       distances[neighbor] = alt;
                       previous[neighbor] = current;
-                      setNodeDistances({ ...distances });
-                      setOutputLog(prev => [...prev, `  - Relaxed Edge to [${neighbor}]. New Cost: ${alt}`]);
-                      if (!(await waitStep('5', snippet))) return;
+                      currentDistances = { ...distances };
+                      currentLog.push(`  - Relaxed Edge to [${neighbor}]. New Cost: ${alt}`);
+                      pushFrame('5');
                   }
               }
           }
       }
 
-      if (engineRef.current) finalizeCostPath(distances[targetNodeId], previous, 'DIJKSTRA');
+      currentActiveEdge = null;
+      currentActiveNode = null;
+      if (distances[targetNodeId] !== Infinity) {
+          const pathStack = [];
+          let u: string | null = targetNodeId;
+          while (u) {
+              pathStack.unshift(u);
+              u = previous[u] || null;
+          }
+          currentPath = pathStack;
+          currentLog.push(`> DIJKSTRA SUCCESS. Optimal Path: ${pathStack.join(' ➔ ')} (Total Cost: ${distances[targetNodeId].toFixed(1)})`);
+          pushFrame('', "OPTIMAL_ROUTE_FOUND");
+      } else {
+          currentLog.push(`> Abort: Target Unreachable.`);
+          pushFrame('', "404_NOT_FOUND");
+      }
+
+      setFrames(newFrames);
+      setFrameIdx(0);
   };
 
-  const runAStar = async () => {
+  const runAStar = () => {
       if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
       resetVisuals();
-      engineRef.current = true;
       setIsAnimating(true);
       if (!showHUD) setShowHUD(true);
-      setCodeLines(SNIPPETS.astar);
-      setOutputLog([`> Initiating A* Heuristic Protocol: [${startNodeId}] -> [${targetNodeId}]`]);
 
+      let newFrames: VisualFrame[] = [];
+      let currentLog = [`> Initiating A* Heuristic Protocol: [${startNodeId}] -> [${targetNodeId}]`];
       const snippet = SNIPPETS.astar;
+
       const gScore: Record<string, number> = {};
       const fScore: Record<string, number> = {};
       const previous: Record<string, string | null> = {};
@@ -412,12 +553,30 @@ const GraphVisualizer = () => {
       nodes.forEach(n => { gScore[n.id] = Infinity; fScore[n.id] = Infinity; });
       gScore[startNodeId] = 0;
       fScore[startNodeId] = heuristic(startNodeId, targetNodeId);
-      setNodeDistances({ ...gScore });
+
+      let currentVisited = new Set<string>();
+      let currentActiveNode: string | null = null;
+      let currentActiveEdge: string | null = null;
+      let currentPath: string[] = [];
+      let currentDistances = { ...gScore };
+
+      const pushFrame = (lineId: string, msg?: string) => {
+         const line = snippet.find(l => l.id === lineId);
+         newFrames.push({
+             visited: new Set(currentVisited),
+             path: [...currentPath],
+             activeEdge: currentActiveEdge,
+             activeNode: currentActiveNode,
+             nodeDistances: { ...currentDistances },
+             codeLines: snippet.map(l => ({ ...l, active: l.id === lineId })),
+             outputLog: [...currentLog],
+             message: msg || (line ? line.explanation : 'Processing...')
+         });
+      };
       
-      if (!(await waitStep('1', snippet))) return;
+      pushFrame('1');
 
       while (openSet.size > 0) {
-          if (!engineRef.current) return;
           let current: string | null = null;
           let minF = Infinity;
           
@@ -427,24 +586,23 @@ const GraphVisualizer = () => {
 
           if (current === null) break;
           
-          setActiveNode(current);
+          currentActiveNode = current;
           openSet.delete(current);
-          setVisited(prev => new Set(prev).add(current!));
-          setOutputLog(prev => [...prev, `> Exploring [${current}] (G:${gScore[current].toFixed(1)}, F:${minF.toFixed(1)})`]);
-          if (!(await waitStep('2', snippet))) return;
+          currentVisited.add(current);
+          currentLog.push(`> Exploring [${current}] (G:${gScore[current].toFixed(1)}, F:${minF.toFixed(1)})`);
+          pushFrame('2');
 
           if (current === targetNodeId) {
-              if (!(await waitStep('3', snippet))) return;
+              pushFrame('3');
               break;
           }
 
           const neighbors = edges.filter(e => e.source === current || e.target === current);
           for (let edge of neighbors) {
-              if (!engineRef.current) return;
               const neighbor = edge.source === current ? edge.target : edge.source;
               
-              setActiveEdge(edge.id);
-              if (!(await waitStep('4', snippet))) return;
+              currentActiveEdge = edge.id;
+              pushFrame('4');
               
               const tentativeG = gScore[current] + edge.weight;
               if (tentativeG < gScore[neighbor]) {
@@ -453,50 +611,32 @@ const GraphVisualizer = () => {
                   fScore[neighbor] = tentativeG + heuristic(neighbor, targetNodeId);
                   if (!openSet.has(neighbor)) openSet.add(neighbor);
                   
-                  setNodeDistances({ ...gScore });
-                  setOutputLog(prev => [...prev, `  - Optimal neighbor [${neighbor}] found. G-cost: ${tentativeG}`]);
-                  if (!(await waitStep('5', snippet))) return;
+                  currentDistances = { ...gScore };
+                  currentLog.push(`  - Optimal neighbor [${neighbor}] found. G-cost: ${tentativeG}`);
+                  pushFrame('5');
               }
           }
       }
 
-      if (engineRef.current) finalizeCostPath(gScore[targetNodeId], previous, 'A*');
-  };
-
-  const finalizePath = (found: boolean, parent: any, algoName: string) => {
-      if (found) {
-          const pathStack = [];
-          let curr: string | null = targetNodeId;
-          while (curr !== null) {
-              pathStack.unshift(curr);
-              curr = parent[curr] || null;
-          }
-          setPath(pathStack);
-          setOutputLog(prev => [...prev, `> ${algoName} SUCCESS. Path: ${pathStack.join(' ➔ ')}`]);
-          setMessage("TARGET_REACHED");
-      } else {
-          setOutputLog(prev => [...prev, `> Abort: Target Unreachable via ${algoName}.`]);
-          setMessage("404_NOT_FOUND");
-      }
-      setActiveEdge(null); setActiveNode(null); setIsAnimating(false); setCodeLines(codeLines.map(l=>({...l, active:false})));
-  };
-
-  const finalizeCostPath = (finalCost: number, previous: any, algoName: string) => {
-      if (finalCost !== Infinity) {
+      currentActiveEdge = null;
+      currentActiveNode = null;
+      if (gScore[targetNodeId] !== Infinity) {
           const pathStack = [];
           let u: string | null = targetNodeId;
           while (u) {
               pathStack.unshift(u);
               u = previous[u] || null;
           }
-          setPath(pathStack);
-          setOutputLog(prev => [...prev, `> ${algoName} SUCCESS. Optimal Path: ${pathStack.join(' ➔ ')} (Total Cost: ${finalCost.toFixed(1)})`]);
-          setMessage("OPTIMAL_ROUTE_FOUND");
+          currentPath = pathStack;
+          currentLog.push(`> A* SUCCESS. Optimal Path: ${pathStack.join(' ➔ ')} (Total Cost: ${gScore[targetNodeId].toFixed(1)})`);
+          pushFrame('', "OPTIMAL_ROUTE_FOUND");
       } else {
-          setOutputLog(prev => [...prev, `> Abort: Target Unreachable.`]);
-          setMessage("404_NOT_FOUND");
+          currentLog.push(`> Abort: Target Unreachable.`);
+          pushFrame('', "404_NOT_FOUND");
       }
-      setActiveEdge(null); setActiveNode(null); setIsAnimating(false); setCodeLines(codeLines.map(l=>({...l, active:false})));
+
+      setFrames(newFrames);
+      setFrameIdx(0);
   };
 
   return (
@@ -521,7 +661,7 @@ const GraphVisualizer = () => {
                         { id: 'addNode', icon: Plus, label: 'Node' },
                         { id: 'addEdge', icon: Share2, label: 'Link' }
                     ].map((m) => (
-                        <button key={m.id} onClick={() => setMode(m.id as Mode)} disabled={isAnimating}
+                        <button key={m.id} onClick={() => setMode(m.id as Mode)} disabled={isAnimating || frames.length > 0}
                             className={`flex flex-col items-center justify-center gap-1 py-2 sm:py-3 rounded-lg transition-all duration-300 disabled:opacity-30 ${
                                 mode === m.id 
                                 ? 'bg-purple-500 text-black shadow-[0_0_15px_rgba(168,85,247,0.4)]' 
@@ -540,32 +680,41 @@ const GraphVisualizer = () => {
               <div className="flex justify-between items-center">
                 <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase">Engine State</span>
                 <div className="flex bg-black/50 rounded-lg p-0.5 border border-white/10">
-                    <button onClick={() => setEngineMode('AUTO')} disabled={isAnimating} className={`px-2 py-1 text-[8px] sm:text-[9px] font-black rounded ${engineMode === 'AUTO' ? 'bg-purple-500 text-black' : 'text-gray-500'}`}>AUTO</button>
-                    <button onClick={() => setEngineMode('MANUAL')} disabled={isAnimating} className={`px-2 py-1 text-[8px] sm:text-[9px] font-black rounded ${engineMode === 'MANUAL' ? 'bg-amber-500 text-black' : 'text-gray-500'}`}>MANUAL</button>
+                    <button onClick={() => setEngineMode('AUTO')} className={`px-2 py-1 text-[8px] sm:text-[9px] font-black rounded ${engineMode === 'AUTO' ? 'bg-purple-500 text-black' : 'text-gray-500'}`}>AUTO</button>
+                    <button onClick={() => setEngineMode('MANUAL')} className={`px-2 py-1 text-[8px] sm:text-[9px] font-black rounded ${engineMode === 'MANUAL' ? 'bg-amber-500 text-black' : 'text-gray-500'}`}>MANUAL</button>
                 </div>
               </div>
               
               <div className="flex gap-2">
                 <button 
                    onClick={() => setIsPaused(!isPaused)} 
-                   disabled={!isAnimating || engineMode === 'MANUAL'} 
+                   disabled={engineMode === 'MANUAL'} 
                    className="flex-1 py-1.5 sm:py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold hover:bg-white/5 transition-all disabled:opacity-30"
                 >
                   {isPaused ? <Play size={12} className="sm:w-3.5 sm:h-3.5"/> : <Pause size={12} className="sm:w-3.5 sm:h-3.5"/>} {isPaused ? 'RESUME' : 'PAUSE'}
                 </button>
-                <button 
-                   onClick={resolveStep} 
-                   disabled={isAnimating && engineMode === 'AUTO' && !isPaused} 
-                   className="flex-1 py-1.5 sm:py-2 bg-purple-500 text-black rounded flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-black hover:bg-purple-400 disabled:opacity-30 disabled:grayscale transition-all"
-                >
-                  <StepForward size={12} className="sm:w-3.5 sm:h-3.5" /> STEP
-                </button>
+                <div className="flex flex-1 gap-1">
+                    <button 
+                      disabled={(engineMode === 'AUTO' && !isPaused) || frames.length === 0 || frameIdx <= 0} 
+                      onClick={() => setFrameIdx(f => Math.max(0, f - 1))} 
+                      className="flex-1 py-1.5 sm:py-2 bg-purple-600 text-white rounded flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-black hover:bg-purple-500 disabled:opacity-30 disabled:grayscale transition-all"
+                    >
+                      <StepBack size={12} className="sm:w-3.5 sm:h-3.5" /> PREV
+                    </button>
+                    <button 
+                       onClick={() => setFrameIdx(f => Math.min(frames.length - 1, f + 1))} 
+                       disabled={(engineMode === 'AUTO' && !isPaused) || frames.length === 0 || frameIdx >= frames.length - 1} 
+                       className="flex-1 py-1.5 sm:py-2 bg-purple-500 text-black rounded flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-black hover:bg-purple-400 disabled:opacity-30 disabled:grayscale transition-all"
+                    >
+                      NEXT <StepForward size={12} className="sm:w-3.5 sm:h-3.5" />
+                    </button>
+                </div>
               </div>
 
               {/* THE KILL SWITCH */}
               <button 
                   onClick={handleStop} 
-                  disabled={!isAnimating}
+                  disabled={frames.length === 0}
                   className="w-full py-1.5 sm:py-2 mt-2 bg-red-500/10 border border-red-500/30 text-red-500 hover:bg-red-500/20 rounded flex items-center justify-center gap-2 text-[9px] sm:text-[10px] font-black uppercase transition-all disabled:opacity-30"
               >
                   <Square size={12} fill="currentColor" /> ABORT OPERATION
@@ -581,7 +730,7 @@ const GraphVisualizer = () => {
                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                    <div className="space-y-1">
                         <span className="text-[8px] sm:text-[9px] text-gray-500 font-mono uppercase">Start Sector</span>
-                        <select value={startNodeId} onChange={(e) => setStartNodeId(e.target.value)} disabled={isAnimating}
+                        <select value={startNodeId} onChange={(e) => setStartNodeId(e.target.value)} disabled={isAnimating || frames.length > 0}
                            className="w-full bg-[#050510] border border-white/10 rounded-lg p-1.5 sm:p-2 text-[10px] sm:text-xs font-mono text-purple-400 outline-none focus:border-purple-500"
                         >
                            {nodes.map(n => <option key={n.id} value={n.id}>{n.id}</option>)}
@@ -589,7 +738,7 @@ const GraphVisualizer = () => {
                    </div>
                    <div className="space-y-1">
                         <span className="text-[8px] sm:text-[9px] text-gray-500 font-mono uppercase">Target Sector</span>
-                        <select value={targetNodeId} onChange={(e) => setTargetNodeId(e.target.value)} disabled={isAnimating}
+                        <select value={targetNodeId} onChange={(e) => setTargetNodeId(e.target.value)} disabled={isAnimating || frames.length > 0}
                            className="w-full bg-[#050510] border border-white/10 rounded-lg p-1.5 sm:p-2 text-[10px] sm:text-xs font-mono text-cyan-400 outline-none focus:border-cyan-500"
                         >
                            {nodes.map(n => <option key={n.id} value={n.id}>{n.id}</option>)}
@@ -599,16 +748,16 @@ const GraphVisualizer = () => {
                
                {/* Algorithm Grid */}
                <div className="grid grid-cols-2 gap-1.5 sm:gap-2 mt-2">
-                  <button onClick={runBFS} disabled={isAnimating} className="p-2 sm:p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                  <button onClick={runBFS} disabled={isAnimating || frames.length > 0} className="p-2 sm:p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
                      <Map size={14} className="sm:w-4 sm:h-4"/> BFS
                   </button>
-                  <button onClick={runDFS} disabled={isAnimating} className="p-2 sm:p-3 bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-400 rounded hover:bg-fuchsia-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                  <button onClick={runDFS} disabled={isAnimating || frames.length > 0} className="p-2 sm:p-3 bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-400 rounded hover:bg-fuchsia-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
                      <ShieldAlert size={14} className="sm:w-4 sm:h-4"/> DFS
                   </button>
-                  <button onClick={runDijkstra} disabled={isAnimating} className="p-2 sm:p-3 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                  <button onClick={runDijkstra} disabled={isAnimating || frames.length > 0} className="p-2 sm:p-3 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded hover:bg-purple-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
                      <Zap size={14} className="sm:w-4 sm:h-4"/> Dijkstra
                   </button>
-                  <button onClick={runAStar} disabled={isAnimating} className="p-2 sm:p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                  <button onClick={runAStar} disabled={isAnimating || frames.length > 0} className="p-2 sm:p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/20 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
                      <Crosshair size={14} className="sm:w-4 sm:h-4"/> A* (A-Star)
                   </button>
                </div>
@@ -625,7 +774,7 @@ const GraphVisualizer = () => {
                     <Terminal size={12} className="text-purple-400" />
                     <span className="text-[8px] sm:text-[9px] font-black text-purple-400 uppercase tracking-widest">Operation_Log</span>
                 </div>
-                <div className="p-2 sm:p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[9px] sm:text-[10px] text-gray-300 flex flex-col gap-1">
+                <div ref={outputScrollRef} className="p-2 sm:p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[9px] sm:text-[10px] text-gray-300 flex flex-col gap-1">
                     {outputLog.length === 0 ? (
                         <span className="text-gray-600 italic mt-1">Awaiting map operations...</span>
                     ) : (
@@ -636,7 +785,6 @@ const GraphVisualizer = () => {
                            </div>
                         ))
                     )}
-                    <div ref={outputEndRef} />
                 </div>
             </div>
 
@@ -802,14 +950,13 @@ const GraphVisualizer = () => {
                                 <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Hinglish_Logic_Trace</span>
                             </div>
                          </div>
-                         <div className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                         <div ref={interpreterScrollRef} className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
                             {codeLines.map(line => (
                                <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
                                   <div className={`font-mono ${line.active ? 'text-purple-400' : 'text-gray-400'}`}>{line.text}</div>
                                   {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
                                </div>
                             ))}
-                            <div ref={interpreterEndRef} />
                          </div>
                      </div>
                   </motion.div>

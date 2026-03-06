@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ArrowDown, ArrowUp, ArrowRight, RotateCcw, Layers, Play, Pause, StepForward, 
+  ArrowDown, ArrowUp, ArrowRight, RotateCcw, Layers, Play, Pause, StepForward, StepBack,
   Terminal, Activity, Zap, Box, Trash2, Cpu, Crosshair, Minimize2, Maximize2
 } from 'lucide-react';
 
@@ -9,6 +9,15 @@ import {
 type StackNode = { id: string; val: number; color: string; isTargeted?: boolean };
 type CodeLine = { id: string; text: string; explanation: string; active: boolean };
 type VariableState = { name: string; value: string; color: string };
+
+type VisualFrame = {
+  stack: StackNode[];
+  phantom: StackNode | null;
+  poppedNode: StackNode | null;
+  codeLines: CodeLine[];
+  variables: VariableState[];
+  message: string;
+};
 
 // --- HINGLISH EXECUTION MATRIX ---
 const SNIPPETS = {
@@ -49,15 +58,18 @@ const StackVisualizer = () => {
   const [showHUD, setShowHUD] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
+  
+  // FRAME-BASED ANIMATION ENGINE
+  const [frames, setFrames] = useState<VisualFrame[]>([]);
+  const [frameIdx, setFrameIdx] = useState<number>(0);
+
+  // Visual states synced to current frame
   const [message, setMessage] = useState('SYSTEM_IDLE: Ready for input');
   const [codeLines, setCodeLines] = useState<CodeLine[]>([]);
   const [variables, setVariables] = useState<VariableState[]>([]);
-  
-  // HUD Actors
   const [phantom, setPhantom] = useState<StackNode | null>(null);
   const [poppedNode, setPoppedNode] = useState<StackNode | null>(null);
 
-  const stepTrigger = useRef<() => void>(() => {});
   const interpreterEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { generateRandom(); }, []);
@@ -68,85 +80,151 @@ const StackVisualizer = () => {
 
   const generateRandom = () => setInputValue(Math.floor(Math.random() * 99) + 1);
 
-  const resolveStep = () => { if(stepTrigger.current) stepTrigger.current(); };
-
-  const waitStep = async (lineId: string, snippet: CodeLine[], vars: VariableState[] = []) => {
-    const line = snippet.find(l => l.id === lineId);
-    setMessage(line ? line.explanation : 'Processing...');
-    setCodeLines(snippet.map(l => ({ ...l, active: l.id === lineId })));
-    
-    let currentVars = [...vars];
-    if (!currentVars.some(v => v.name === 'TOP')) {
-        currentVars.push({ name: 'TOP', value: `${stack.length - 1}`, color: '#facc15' });
+  // Sync visual components to the active frame
+  useEffect(() => {
+    if (frames.length > 0 && frameIdx >= 0 && frameIdx < frames.length) {
+        const f = frames[frameIdx];
+        setStack(f.stack);
+        setPhantom(f.phantom);
+        setPoppedNode(f.poppedNode);
+        setCodeLines(f.codeLines);
+        setVariables(f.variables);
+        setMessage(f.message);
+        
+        // Final frame cleanup timeout
+        if (frameIdx === frames.length - 1) {
+            const tm = setTimeout(() => {
+                setStack(prev => prev.map(n => ({ ...n, isTargeted: false })));
+                setIsAnimating(false);
+                setFrames([]);
+                setCodeLines([]);
+                setVariables([]);
+                setPoppedNode(null);
+                generateRandom();
+            }, 1200);
+            return () => clearTimeout(tm);
+        }
     }
-    setVariables(currentVars);
+  }, [frameIdx, frames]);
 
-    if (isPaused) {
-      await new Promise<void>(r => stepTrigger.current = r);
-    } else {
-      await new Promise(r => setTimeout(r, 1200));
+  // Autoplay engine
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (!isPaused && isAnimating && frames.length > 0 && frameIdx < frames.length - 1) {
+        timer = setTimeout(() => {
+            setFrameIdx(prev => prev + 1);
+        }, 1200);
     }
-  };
+    return () => clearTimeout(timer);
+  }, [isPaused, isAnimating, frameIdx, frames]);
 
-  const handlePush = async () => {
+  const handlePush = () => {
     if (isAnimating || stack.length >= MAX_CAPACITY) return;
     setIsAnimating(true);
-    if (!showHUD) setShowHUD(true); // Auto-show HUD
-    const snippet = SNIPPETS.push;
+    if (!showHUD) setShowHUD(true);
     
     const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
     const newNode = { id: Math.random().toString(), val: inputValue, color: randomColor };
 
-    await waitStep('1', snippet, [{ name: 'TOP', value: `${stack.length - 1}`, color: '#facc15' }]);
+    let currentStack = [...stack];
+    let newFrames: VisualFrame[] = [];
+
+    const addFrame = (snippet: CodeLine[], lineId: string, vars: VariableState[], phan: StackNode | null, currentStk: StackNode[] = currentStack) => {
+        const currentLine = snippet.find(l => l.id === lineId);
+        newFrames.push({
+            stack: currentStk.map(x => ({...x})),
+            phantom: phan ? {...phan} : null,
+            poppedNode: null,
+            codeLines: snippet.map(line => ({ ...line, active: line.id === lineId })),
+            variables: vars.map(v => ({...v})),
+            message: currentLine ? currentLine.explanation : 'Processing...'
+        });
+    };
+
+    const snippet = SNIPPETS.push;
     
-    setPhantom(newNode);
-    await waitStep('2', snippet, [
-        { name: 'TOP', value: `${stack.length - 1}`, color: '#facc15' },
-        { name: 'temp', value: `${newNode.val}`, color: newNode.color }
-    ]);
+    // Step 1: Check Overflow
+    let v = [{ name: 'TOP', value: `${currentStack.length - 1}`, color: '#facc15' }];
+    addFrame(snippet, '1', v, null);
     
-    await waitStep('3', snippet, [
-        { name: 'TOP', value: `${stack.length}`, color: '#facc15' },
-        { name: 'temp', value: `${newNode.val}`, color: newNode.color }
-    ]);
+    // Step 2: Create Temp Node
+    v = [...v, { name: 'temp', value: `${newNode.val}`, color: newNode.color }];
+    addFrame(snippet, '2', v, newNode);
     
-    setPhantom(null);
-    setStack(prev => [...prev, newNode]);
-    await waitStep('4', snippet, [{ name: 'TOP', value: `${stack.length}`, color: '#facc15' }]);
+    // Step 3: Increment Top
+    let vUpdatedTop = [{ name: 'TOP', value: `${currentStack.length}`, color: '#facc15' }, { name: 'temp', value: `${newNode.val}`, color: newNode.color }];
+    addFrame(snippet, '3', vUpdatedTop, newNode);
     
-    setMessage('MISSION_PASSED: Block Pushed');
-    setIsAnimating(false);
-    setCodeLines([]); setVariables([]); generateRandom();
+    // Step 4: Add to Stack
+    currentStack.push(newNode);
+    addFrame(snippet, '4', [{ name: 'TOP', value: `${currentStack.length - 1}`, color: '#facc15' }], null, currentStack);
+    
+    // Final Result Frame
+    newFrames.push({
+        stack: currentStack.map(x => ({...x})),
+        phantom: null,
+        poppedNode: null,
+        codeLines: [],
+        variables: [],
+        message: "MISSION_PASSED: Block Pushed"
+    });
+
+    setFrames(newFrames);
+    setFrameIdx(0);
   };
 
-  const handlePop = async () => {
+  const handlePop = () => {
     if (isAnimating || stack.length === 0) return;
     setIsAnimating(true);
-    if (!showHUD) setShowHUD(true); // Auto-show HUD
-    const snippet = SNIPPETS.pop;
+    if (!showHUD) setShowHUD(true);
 
-    await waitStep('1', snippet, [{ name: 'TOP', value: `${stack.length - 1}`, color: '#facc15' }]);
+    let currentStack = [...stack];
+    let newFrames: VisualFrame[] = [];
+
+    const addFrame = (snippet: CodeLine[], lineId: string, vars: VariableState[], popNode: StackNode | null, currentStk: StackNode[] = currentStack) => {
+        const currentLine = snippet.find(l => l.id === lineId);
+        newFrames.push({
+            stack: currentStk.map(x => ({...x})),
+            phantom: null,
+            poppedNode: popNode ? {...popNode} : null,
+            codeLines: snippet.map(line => ({ ...line, active: line.id === lineId })),
+            variables: vars.map(v => ({...v})),
+            message: currentLine ? currentLine.explanation : 'Processing...'
+        });
+    };
+
+    const snippet = SNIPPETS.pop;
     
-    setStack(prev => prev.map((n, i) => i === prev.length - 1 ? { ...n, isTargeted: true } : n));
-    const targetNode = stack[stack.length - 1];
-    await waitStep('2', snippet, [
-        { name: 'TOP', value: `${stack.length - 1}`, color: '#facc15' },
-        { name: 'target', value: `${targetNode.val}`, color: '#ef4444' }
-    ]);
+    // Step 1: Check Underflow
+    let v = [{ name: 'TOP', value: `${currentStack.length - 1}`, color: '#facc15' }];
+    addFrame(snippet, '1', v, null);
     
-    await waitStep('3', snippet, [
-        { name: 'TOP', value: `${stack.length - 2}`, color: '#facc15' },
-        { name: 'target', value: `${targetNode.val}`, color: '#ef4444' }
-    ]);
+    // Step 2: Target Top Node
+    let markedStack = currentStack.map((n, i) => i === currentStack.length - 1 ? { ...n, isTargeted: true } : n);
+    const targetNode = currentStack[currentStack.length - 1];
+    v = [...v, { name: 'target', value: `${targetNode.val}`, color: '#ef4444' }];
+    addFrame(snippet, '2', v, null, markedStack);
     
-    setStack(prev => prev.slice(0, -1));
-    setPoppedNode(targetNode);
-    await waitStep('4', snippet, [{ name: 'TOP', value: `${stack.length - 2}`, color: '#facc15' }]);
+    // Step 3: Decrement Top
+    let vDecTop = [{ name: 'TOP', value: `${currentStack.length - 2}`, color: '#facc15' }, { name: 'target', value: `${targetNode.val}`, color: '#ef4444' }];
+    addFrame(snippet, '3', vDecTop, null, markedStack);
     
-    setPoppedNode(null);
-    setMessage('TARGET_ELIMINATED: Block Popped');
-    setIsAnimating(false);
-    setCodeLines([]); setVariables([]);
+    // Step 4: Pop out
+    currentStack.pop();
+    addFrame(snippet, '4', [{ name: 'TOP', value: `${currentStack.length - 1}`, color: '#facc15' }], targetNode, currentStack);
+
+    // Final Result Frame
+    newFrames.push({
+        stack: currentStack.map(x => ({...x})),
+        phantom: null,
+        poppedNode: null, // Clear popped node animation
+        codeLines: [],
+        variables: [],
+        message: "TARGET_ELIMINATED: Block Popped"
+    });
+
+    setFrames(newFrames);
+    setFrameIdx(0);
   };
 
   return (
@@ -155,7 +233,7 @@ const StackVisualizer = () => {
       
       <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
         
-        {/* LEFT: COMMAND CENTER (Constrained to 38% on mobile) */}
+        {/* LEFT: COMMAND CENTER */}
         <div className="w-full lg:w-[340px] bg-black/95 lg:bg-black/80 backdrop-blur-md border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
 
           <div className="overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6">
@@ -171,9 +249,22 @@ const StackVisualizer = () => {
                 <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
                   {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
                 </button>
-                <button disabled={!isPaused || !isAnimating} onClick={resolveStep} className="flex-1 py-2 bg-cyan-500 text-black rounded flex items-center justify-center gap-2 text-xs font-black hover:bg-cyan-400 disabled:opacity-30 disabled:grayscale transition-all">
-                  <StepForward size={14} /> NEXT STEP
-                </button>
+                <div className="flex flex-1 gap-1">
+                    <button 
+                      disabled={!isPaused || !isAnimating || frameIdx <= 0} 
+                      onClick={() => setFrameIdx(f => Math.max(0, f - 1))} 
+                      className="flex-1 py-2 bg-cyan-600 text-white rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-cyan-500 disabled:opacity-30 disabled:grayscale transition-all"
+                    >
+                      <StepBack size={14} /> PREV
+                    </button>
+                    <button 
+                      disabled={!isPaused || !isAnimating || frameIdx >= frames.length - 1} 
+                      onClick={() => setFrameIdx(f => Math.min(frames.length - 1, f + 1))} 
+                      className="flex-1 py-2 bg-cyan-500 text-black rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-cyan-400 disabled:opacity-30 disabled:grayscale transition-all"
+                    >
+                      NEXT <StepForward size={14} />
+                    </button>
+                </div>
               </div>
             </div>
 
@@ -224,7 +315,7 @@ const StackVisualizer = () => {
           {/* Central Arena Layout */}
           <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner mb-2 lg:mb-4 w-full overflow-hidden">
              
-             {/* ADDED: Horizontal Scroll support just in case the stack is used in a wide configuration or screen is excessively narrow */}
+             {/* Horizontal Scroll support */}
              <div className="flex-1 w-full h-full overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x flex items-end justify-center pb-4">
                  <div className="min-w-max flex flex-col items-center justify-end px-8 lg:px-16 pt-10 h-full">
                      {/* The Container Pipe */}

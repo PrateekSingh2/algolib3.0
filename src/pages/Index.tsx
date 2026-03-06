@@ -153,10 +153,10 @@ const CyberSpaceBackground = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 -z-10 bg-[#020205]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_#050514_0%,_#020205_100%)]" />
+    <div className="fixed inset-0 -z-10 bg-[#020205] pointer-events-none">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,_#050514_0%,_#020205_100%)] pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:50px_50px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-20 transform perspective-500 rotate-x-12 scale-110 pointer-events-none" />
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block pointer-events-none" />
     </div>
   );
 };
@@ -193,7 +193,8 @@ const Spotlight = () => {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [mouseX, mouseY]);
   const background = useMotionTemplate`radial-gradient(600px circle at ${mouseX}px ${mouseY}px, rgba(59, 130, 246, 0.05), transparent 40%)`;
-  return <motion.div className="pointer-events-none fixed inset-0 z-30 transition-opacity duration-300" style={{ background }} />;
+  {/* Changed from z-30 to z-0 so it doesn't overlap global elements */}
+  return <motion.div className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300" style={{ background }} />;
 };
 
 const TypewriterText = ({ text, delay = 0 }: { text: string, delay?: number }) => {
@@ -393,13 +394,15 @@ const Index = () => {
           <CyberSpaceBackground />
           <Spotlight />
           
-          <div className="fixed top-0 left-0 w-full z-[200]">
+          {/* Kept top nav at high z-index so dropdowns don't hide */}
+          <div className="fixed top-0 left-0 w-full z-[100]">
               <Navbar />
               <GlobalRibbon />
           </div>
 
           {/* --- HERO SECTION --- */}
-          <section className="relative min-h-screen flex flex-col items-center justify-center px-4 z-50">
+          {/* Changed z-50 to z-10 so it doesn't cover fixed global elements */}
+          <section className="relative min-h-screen flex flex-col items-center justify-center px-4 z-10">
               <div className="container mx-auto text-center max-w-5xl">
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: "easeOut" }}>
                   
@@ -429,7 +432,8 @@ const Index = () => {
                   </div>
                   
                   {/* SEARCH BAR */}
-                  <div className="relative max-w-2xl mx-auto mt-6 group z-[100]">
+                  {/* Changed z-[100] to z-20 */}
+                  <div className="relative max-w-2xl mx-auto mt-6 group z-20">
                   <div className="absolute -inset-1 bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6] rounded-2xl blur opacity-25 group-focus-within:opacity-75 transition duration-500 group-hover:opacity-50" />
                   <div className="relative flex items-center bg-[#050510]/80 backdrop-blur-xl rounded-2xl border border-white/10 px-6 py-5 shadow-2xl transition-all duration-300 group-focus-within:border-[#3b82f6]/50 group-focus-within:shadow-[0_0_40px_-10px_rgba(59,130,246,0.4)]">
                       <Command className="h-6 w-6 text-green-700 group-focus-within:text-[#3b82f6] mr-5 transition-colors" />
@@ -448,7 +452,7 @@ const Index = () => {
                           initial={{ opacity: 0, y: -10 }} 
                           animate={{ opacity: 1, y: 0 }} 
                           exit={{ opacity: 0, y: -10 }} 
-                          className="absolute top-full left-0 right-0 mt-3 bg-[#0a0a1a]/95 backdrop-blur-xl border border-[#3b82f6]/20 rounded-xl overflow-hidden shadow-2xl z-[101]"
+                          className="absolute top-full left-0 right-0 mt-3 bg-[#0a0a1a]/95 backdrop-blur-xl border border-[#3b82f6]/20 rounded-xl overflow-hidden shadow-2xl z-30"
                       >
                           {suggestions.length > 0 ? suggestions.map((algo) => (
                           <Link key={algo.id} to={`/view/${algo.id}`}>
@@ -471,12 +475,13 @@ const Index = () => {
               </div>
 
               {/* --- SCROLL INDICATOR --- */}
+              {/* Changed z-50 to z-20 */}
               <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1, y: [0, 10, 0] }}
               transition={{ delay: 1.5, duration: 2, repeat: Infinity }}
               onClick={scrollToGrid}
-              className="absolute bottom-10 left-0 right-0 mx-auto w-max flex flex-col items-center gap-2 cursor-pointer group z-50"
+              className="absolute bottom-10 left-0 right-0 mx-auto w-max flex flex-col items-center gap-2 cursor-pointer group z-20"
               >
               <span className="text-[10px] font-mono text-gray-500 tracking-[0.3em] group-hover:text-[#3b82f6] transition-colors">SCROLL TO EXPLORE</span>
               <div className="w-6 h-10 border border-white/20 rounded-full flex justify-center pt-2 group-hover:border-[#3b82f6]/50 transition-colors">

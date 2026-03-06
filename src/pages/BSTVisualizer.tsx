@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Binary, Plus, Search, Trash2, RotateCcw, 
-  GitBranch, Zap, Layers, ArrowRight, Play, Pause, StepForward, 
+  GitBranch, Zap, Layers, ArrowRight, Play, Pause, StepForward, StepBack,
   Terminal, Activity, Box, Target, Maximize2, Minimize2, Settings2
 } from 'lucide-react';
 
@@ -30,6 +30,19 @@ class TreeNode {
 type CodeLine = { id: string; text: string; explanation: string; active: boolean };
 type VariableState = { name: string; value: string; color: string };
 type TreeMode = 'bst' | 'avl';
+
+type VisualFrame = {
+  root: TreeNode | null;
+  phantom: {val: number, id: string} | null;
+  highlightNode: string | null;
+  visitedNodes: Set<string>;
+  foundNode: string | null;
+  codeLines: CodeLine[];
+  variables: VariableState[];
+  message: string;
+  outputLog: string[];
+  outputTitle: string;
+};
 
 // --- ADVANCED HINGLISH EXECUTION MATRIX ---
 const SNIPPETS = {
@@ -63,6 +76,19 @@ const CyberGrid = () => (
   </div>
 );
 
+// Helper for deep cloning Tree structure to preserve visual state frames
+const cloneTree = (node: TreeNode | null): TreeNode | null => {
+    if (!node) return null;
+    const newNode = new TreeNode(node.value);
+    newNode.id = node.id;
+    newNode.height = node.height;
+    newNode.xOffset = node.xOffset;
+    newNode.y = node.y;
+    newNode.left = cloneTree(node.left);
+    newNode.right = cloneTree(node.right);
+    return newNode;
+};
+
 const BSTVisualizer = () => {
   const [root, setRoot] = useState<TreeNode | null>(null);
   const [inputValue, setInputValue] = useState<number | ''>('');
@@ -74,32 +100,85 @@ const BSTVisualizer = () => {
   // Engine State
   const [isPaused, setIsPaused] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
+
+  // FRAME-BASED ANIMATION ENGINE
+  const [frames, setFrames] = useState<VisualFrame[]>([]);
+  const [frameIdx, setFrameIdx] = useState<number>(0);
+
+  // Visual states synced to current frame
   const [message, setMessage] = useState('SYSTEM_IDLE: Ready for input');
   const [codeLines, setCodeLines] = useState<CodeLine[]>([]);
   const [variables, setVariables] = useState<VariableState[]>([]);
-  
-  // HUD & Animation Actors
   const [phantom, setPhantom] = useState<{val: number, id: string} | null>(null);
   const [highlightNode, setHighlightNode] = useState<string | null>(null);
   const [visitedNodes, setVisitedNodes] = useState<Set<string>>(new Set());
   const [foundNode, setFoundNode] = useState<string | null>(null);
-  
-  // Dedicated Output Panel State
   const [outputLog, setOutputLog] = useState<string[]>([]);
   const [outputTitle, setOutputTitle] = useState<string>("OUTPUT_CONSOLE");
 
-  const stepTrigger = useRef<() => void>(() => {});
-  const interpreterEndRef = useRef<HTMLDivElement>(null);
-  const outputEndRef = useRef<HTMLDivElement>(null);
-  
-  // NEW: Ref for auto-centering and tracking
+  const interpreterScrollRef = useRef<HTMLDivElement>(null);
+  const outputScrollRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { generateRandom(); }, []);
-  useEffect(() => { interpreterEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [codeLines]);
-  useEffect(() => { outputEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [outputLog]);
+  
+  // Scoped interior scrolling to prevent mobile layout jumps
+  useEffect(() => { 
+    if (interpreterScrollRef.current) {
+        interpreterScrollRef.current.scrollTo({ top: interpreterScrollRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [codeLines]);
+  
+  useEffect(() => { 
+    if (outputScrollRef.current) {
+        outputScrollRef.current.scrollTo({ top: outputScrollRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [outputLog]);
 
-  // NEW: Center the workspace horizontally on initial load
+  // Sync visual components to the active frame
+  useEffect(() => {
+    if (frames.length > 0 && frameIdx >= 0 && frameIdx < frames.length) {
+        const f = frames[frameIdx];
+        setRoot(f.root);
+        setPhantom(f.phantom);
+        setHighlightNode(f.highlightNode);
+        setVisitedNodes(f.visitedNodes);
+        setFoundNode(f.foundNode);
+        setCodeLines(f.codeLines);
+        setVariables(f.variables);
+        setMessage(f.message);
+        setOutputLog(f.outputLog);
+        setOutputTitle(f.outputTitle);
+        
+        // Final frame cleanup timeout
+        if (frameIdx === frames.length - 1) {
+            const tm = setTimeout(() => {
+                setHighlightNode(null);
+                setVisitedNodes(new Set());
+                setFoundNode(null);
+                setIsAnimating(false);
+                setFrames([]);
+                setCodeLines([]);
+                setVariables([]);
+                generateRandom();
+            }, 1200);
+            return () => clearTimeout(tm);
+        }
+    }
+  }, [frameIdx, frames]);
+
+  // Autoplay engine
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (!isPaused && isAnimating && frames.length > 0 && frameIdx < frames.length - 1) {
+        timer = setTimeout(() => {
+            setFrameIdx(prev => prev + 1);
+        }, 1200);
+    }
+    return () => clearTimeout(timer);
+  }, [isPaused, isAnimating, frameIdx, frames]);
+
+  // Center the workspace horizontally on initial load
   const centerWorkspace = () => {
     if (scrollContainerRef.current) {
         const container = scrollContainerRef.current;
@@ -110,12 +189,11 @@ const BSTVisualizer = () => {
 
   useEffect(() => {
     centerWorkspace();
-    // Safety fallback in case layout shifts after mount
     const timeout = setTimeout(centerWorkspace, 150);
     return () => clearTimeout(timeout);
   }, []);
 
-  // NEW: Auto-scroll camera to follow the active scanning node
+  // Auto-scroll camera to follow the active scanning node
   useEffect(() => {
     if (highlightNode && root && scrollContainerRef.current) {
         const findNode = (n: TreeNode | null, targetId: string): TreeNode | null => {
@@ -126,7 +204,6 @@ const BSTVisualizer = () => {
         const active = findNode(root, highlightNode);
         if (active) {
             const container = scrollContainerRef.current;
-            // Calculate absolute position mapping the 50% origin offset
             const absoluteX = (container.scrollWidth / 2) + active.xOffset;
             const absoluteY = active.y;
 
@@ -140,17 +217,6 @@ const BSTVisualizer = () => {
   }, [highlightNode, root]);
 
   const generateRandom = () => setInputValue(Math.floor(Math.random() * 99) + 1);
-  const resolveStep = () => { if(stepTrigger.current) stepTrigger.current(); };
-
-  const waitStep = async (lineId: string, snippet: CodeLine[], vars: VariableState[] = []) => {
-    const line = snippet.find(l => l.id === lineId);
-    setMessage(line ? line.explanation : 'Processing...');
-    setCodeLines(snippet.map(l => ({ ...l, active: l.id === lineId })));
-    setVariables(vars);
-
-    if (isPaused) await new Promise<void>(r => stepTrigger.current = r);
-    else await new Promise(r => setTimeout(r, 1200));
-  };
 
   // --- MATH & AVL LOGIC ---
   const getHeight = (node: TreeNode | null) => node ? node.height : 0;
@@ -208,14 +274,14 @@ const BSTVisualizer = () => {
       updatePositions(node.right, xOffset + gap, y + 100, gap * 0.55);
   };
 
-  // --- OPERATIONS ---
   const checkDuplicate = (node: TreeNode | null, val: number): boolean => {
       if (!node) return false;
       if (node.value === val) return true;
       return val < node.value ? checkDuplicate(node.left, val) : checkDuplicate(node.right, val);
   };
 
-  const handleInsert = async () => {
+  // --- OPERATIONS ---
+  const handleInsert = () => {
       if (inputValue === '' || isAnimating) return;
       const val = Number(inputValue);
       
@@ -227,68 +293,81 @@ const BSTVisualizer = () => {
       setIsAnimating(true);
       if (!showHUD) setShowHUD(true); 
       
-      // Before inserting, scroll to root automatically
-      if (root) {
-          const container = scrollContainerRef.current;
-          if (container) {
-              container.scrollTo({ left: (container.scrollWidth - container.clientWidth) / 2, top: 0, behavior: 'smooth' });
-          }
+      if (root && scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({ left: (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth) / 2, top: 0, behavior: 'smooth' });
       }
 
-      setOutputTitle("INSERTION_LOG");
-      setOutputLog(prev => [...prev, `> Init insertion for [${val}]`]);
+      const title = "INSERTION_LOG";
+      let currentLog = [...outputLog, `> Init insertion for [${val}]`];
+      let newFrames: VisualFrame[] = [];
       const snippet = SNIPPETS.insert;
 
-      setPhantom({ val, id: 'spawned' });
-      await waitStep('1', snippet, [{ name: 'temp', value: `${val}`, color: '#00ff88' }]);
+      let currentRoot = root ? cloneTree(root) : null;
+      let currentPhantom: {val: number, id: string} | null = { val, id: 'spawned' };
+      let currentVisited = new Set<string>();
 
-      let currentRoot = root;
+      const addFrame = (lineId: string, vars: VariableState[], high: string | null = null) => {
+          const currentLine = snippet.find(l => l.id === lineId);
+          newFrames.push({
+              root: cloneTree(currentRoot),
+              phantom: currentPhantom ? { ...currentPhantom } : null,
+              highlightNode: high,
+              visitedNodes: new Set(currentVisited),
+              foundNode: null,
+              codeLines: snippet.map(line => ({ ...line, active: line.id === lineId })),
+              variables: vars.map(v => ({...v})),
+              message: currentLine ? currentLine.explanation : 'Processing...',
+              outputLog: [...currentLog],
+              outputTitle: title
+          });
+      };
+
+      addFrame('1', [{ name: 'temp', value: `${val}`, color: '#00ff88' }]);
 
       if (!currentRoot) {
-          await waitStep('2', snippet);
+          addFrame('2', [{ name: 'temp', value: `${val}`, color: '#00ff88' }]);
           const newNode = new TreeNode(val);
           currentRoot = newNode;
-          setPhantom(null);
-          setOutputLog(prev => [...prev, `> [${val}] Set as ROOT`]);
+          updatePositions(currentRoot, 0, 60, 260);
+          currentPhantom = null;
+          currentLog.push(`> [${val}] Set as ROOT`);
       } else {
           let current: TreeNode | null = currentRoot;
-          const newVisited = new Set<string>();
-
-          await waitStep('3', snippet, [
-              { name: 'ptr', value: `${current.value}`, color: '#00f5ff' },
+          addFrame('3', [
+              { name: 'ptr', value: `${current!.value}`, color: '#00f5ff' },
               { name: 'val', value: `${val}`, color: '#00ff88' }
           ]);
 
           while (true) {
-              setHighlightNode(current!.id);
-              newVisited.add(current!.id);
-              setVisitedNodes(new Set(newVisited));
-              
+              let high = current!.id;
+              currentVisited.add(current!.id);
+
               if (val < current!.value) {
-                  await waitStep('4', snippet, [{ name: 'action', value: `GO LEFT`, color: '#facc15' }]);
+                  addFrame('4', [{ name: 'action', value: `GO LEFT`, color: '#facc15' }], high);
                   if (!current!.left) {
-                      await waitStep('6', snippet);
+                      addFrame('6', [{ name: 'action', value: `GO LEFT`, color: '#facc15' }], high);
                       current!.left = new TreeNode(val);
-                      setOutputLog(prev => [...prev, `> [${val}] Inserted LEFT of [${current!.value}]`]);
+                      currentLog.push(`> [${val}] Inserted LEFT of [${current!.value}]`);
                       break;
                   }
                   current = current!.left;
               } else {
-                  await waitStep('5', snippet, [{ name: 'action', value: `GO RIGHT`, color: '#facc15' }]);
+                  addFrame('5', [{ name: 'action', value: `GO RIGHT`, color: '#facc15' }], high);
                   if (!current!.right) {
-                      await waitStep('6', snippet);
+                      addFrame('6', [{ name: 'action', value: `GO RIGHT`, color: '#facc15' }], high);
                       current!.right = new TreeNode(val);
-                      setOutputLog(prev => [...prev, `> [${val}] Inserted RIGHT of [${current!.value}]`]);
+                      currentLog.push(`> [${val}] Inserted RIGHT of [${current!.value}]`);
                       break;
                   }
                   current = current!.right;
               }
           }
-          setPhantom(null);
+          currentPhantom = null;
       }
 
+      // Compute Final Position and Balance Tree
       if (treeMode === 'avl') {
-          setOutputLog(prev => [...prev, `> AVL: Checking Balance Factors...`]);
+          currentLog.push(`> AVL: Checking Balance Factors...`);
           currentRoot = balanceTree(currentRoot);
       } else {
           const updateH = (n: TreeNode | null) => {
@@ -298,40 +377,83 @@ const BSTVisualizer = () => {
           };
           updateH(currentRoot);
       }
-
       updatePositions(currentRoot, 0, 60, 260); 
-      setRoot(currentRoot ? { ...currentRoot } : null); 
 
-      setHighlightNode(null); setVisitedNodes(new Set());
-      setIsAnimating(false); setCodeLines([]); setVariables([]);
-      setMessage("MISSION_PASSED: Node Inserted");
-      generateRandom();
+      // Push final resolution frame
+      newFrames.push({
+          root: cloneTree(currentRoot),
+          phantom: null,
+          highlightNode: null,
+          visitedNodes: new Set(),
+          foundNode: null,
+          codeLines: [],
+          variables: [],
+          message: "MISSION_PASSED: Node Inserted",
+          outputLog: [...currentLog],
+          outputTitle: title
+      });
+
+      setFrames(newFrames);
+      setFrameIdx(0);
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (inputValue === '' || !root || isAnimating) return;
     const val = Number(inputValue);
     setIsAnimating(true);
     if (!showHUD) setShowHUD(true); 
     
-    // Auto-scroll to root before starting deletion
     if (root && scrollContainerRef.current) {
         scrollContainerRef.current.scrollTo({ left: (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth) / 2, top: 0, behavior: 'smooth' });
     }
 
-    setOutputTitle("DELETE_PROTOCOL");
-    setOutputLog([`> Initiating strike on [${val}]`]);
-    
+    const title = "DELETE_PROTOCOL";
+    let currentLog = [...outputLog, `> Initiating strike on [${val}]`];
+    let newFrames: VisualFrame[] = [];
     const snippet = SNIPPETS.delete;
-    await waitStep('1', snippet);
+    let currentRoot = cloneTree(root);
+
+    const addFrame = (lineId: string) => {
+        const currentLine = snippet.find(l => l.id === lineId);
+        newFrames.push({
+            root: cloneTree(currentRoot),
+            phantom: null,
+            highlightNode: null,
+            visitedNodes: new Set(),
+            foundNode: null,
+            codeLines: snippet.map(line => ({ ...line, active: line.id === lineId })),
+            variables: [],
+            message: currentLine ? currentLine.explanation : 'Processing...',
+            outputLog: [...currentLog],
+            outputTitle: title
+        });
+    };
+
+    addFrame('1');
     
-    if (!checkDuplicate(root, val)) {
-        await waitStep('2', snippet);
-        setOutputLog(prev => [...prev, `> Abort: Target [${val}] missing.`]);
-        setIsAnimating(false); setCodeLines([]); return;
+    if (!checkDuplicate(currentRoot, val)) {
+        currentLog.push(`> Abort: Target [${val}] missing.`);
+        addFrame('2');
+        
+        newFrames.push({
+            root: cloneTree(currentRoot),
+            phantom: null,
+            highlightNode: null,
+            visitedNodes: new Set(),
+            foundNode: null,
+            codeLines: [],
+            variables: [],
+            message: "ABORTED: Node not found",
+            outputLog: [...currentLog],
+            outputTitle: title
+        });
+        setFrames(newFrames);
+        setFrameIdx(0);
+        return;
     }
 
-    await waitStep('3', snippet);
+    addFrame('3');
+
     const deleteNode = (node: TreeNode | null, v: number): TreeNode | null => {
         if (!node) return null;
         if (v < node.value) { node.left = deleteNode(node.left, v); return node; }
@@ -348,24 +470,37 @@ const BSTVisualizer = () => {
         }
     };
 
-    let newRoot = deleteNode(root, val);
+    currentRoot = deleteNode(currentRoot, val);
     
     if (treeMode === 'avl') {
-        newRoot = balanceTree(newRoot);
+        currentRoot = balanceTree(currentRoot);
     } else {
         const updateH = (n: TreeNode | null) => {
              if(!n) return 0;
              n.height = 1 + Math.max(updateH(n.left), updateH(n.right));
              return n.height;
         };
-        updateH(newRoot);
+        updateH(currentRoot);
     }
 
-    updatePositions(newRoot, 0, 60, 260);
-    setRoot(newRoot ? { ...newRoot } : null);
-    setOutputLog(prev => [...prev, `> SUCCESS: Target [${val}] eradicated.`]);
-    setMessage('TARGET_ELIMINATED');
-    setIsAnimating(false); setCodeLines([]); generateRandom();
+    updatePositions(currentRoot, 0, 60, 260);
+    currentLog.push(`> SUCCESS: Target [${val}] eradicated.`);
+
+    newFrames.push({
+        root: cloneTree(currentRoot),
+        phantom: null,
+        highlightNode: null,
+        visitedNodes: new Set(),
+        foundNode: null,
+        codeLines: [],
+        variables: [],
+        message: "TARGET_ELIMINATED",
+        outputLog: [...currentLog],
+        outputTitle: title
+    });
+
+    setFrames(newFrames);
+    setFrameIdx(0);
   };
 
   const renderEdges = (node: TreeNode | null): JSX.Element[] => {
@@ -481,9 +616,22 @@ const BSTVisualizer = () => {
                 <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
                   {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
                 </button>
-                <button disabled={!isPaused || !isAnimating} onClick={resolveStep} className="flex-1 py-2 bg-cyan-500 text-black rounded flex items-center justify-center gap-2 text-xs font-black hover:bg-cyan-400 disabled:opacity-30 disabled:grayscale transition-all">
-                  <StepForward size={14} /> NEXT STEP
-                </button>
+                <div className="flex flex-1 gap-1">
+                    <button 
+                      disabled={!isPaused || !isAnimating || frameIdx <= 0} 
+                      onClick={() => setFrameIdx(f => Math.max(0, f - 1))} 
+                      className="flex-1 py-2 bg-cyan-600 text-white rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-cyan-500 disabled:opacity-30 disabled:grayscale transition-all"
+                    >
+                      <StepBack size={14} /> PREV
+                    </button>
+                    <button 
+                      disabled={!isPaused || !isAnimating || frameIdx >= frames.length - 1} 
+                      onClick={() => setFrameIdx(f => Math.min(frames.length - 1, f + 1))} 
+                      className="flex-1 py-2 bg-cyan-500 text-black rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-cyan-400 disabled:opacity-30 disabled:grayscale transition-all"
+                    >
+                      NEXT <StepForward size={14} />
+                    </button>
+                </div>
               </div>
             </div>
 
@@ -519,7 +667,7 @@ const BSTVisualizer = () => {
                     <Terminal size={12} className="text-cyan-400" />
                     <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">{outputTitle}</span>
                 </div>
-                <div className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[11px] text-gray-300 flex flex-col gap-1">
+                <div ref={outputScrollRef} className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[11px] text-gray-300 flex flex-col gap-1">
                     {outputLog.length === 0 ? (
                         <span className="text-gray-600 italic mt-1">Awaiting execution...</span>
                     ) : (
@@ -530,7 +678,6 @@ const BSTVisualizer = () => {
                            </div>
                         ))
                     )}
-                    <div ref={outputEndRef} />
                 </div>
             </div>
 
@@ -557,7 +704,7 @@ const BSTVisualizer = () => {
           {/* Central Arena: The Infinite Tree Canvas (Scrollable & Tracked) */}
           <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
              
-             {/* ADDED: ref attached for Auto-Scrolling Camera */}
+             {/* Auto-Scrolling Camera Container */}
              <div className="flex-1 overflow-auto custom-scrollbar relative touch-pan-x touch-pan-y" ref={scrollContainerRef}>
                  <div className="absolute min-w-[2400px] min-h-[1200px] w-full h-full p-10 pt-16">
                     <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
@@ -600,14 +747,13 @@ const BSTVisualizer = () => {
                                 <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
                             </div>
                          </div>
-                         <div className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
+                         <div ref={interpreterScrollRef} className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
                             {codeLines.length ? codeLines.map(line => (
                                <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
                                   <div className={`font-mono ${line.active ? 'text-cyan-400' : 'text-gray-400'}`}>{line.text}</div>
                                   {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
                                </div>
                             )) : <div className="text-gray-600 text-[10px] lg:text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/> Awaiting BST operation...</div>}
-                            <div ref={interpreterEndRef} />
                          </div>
                      </div>
 
