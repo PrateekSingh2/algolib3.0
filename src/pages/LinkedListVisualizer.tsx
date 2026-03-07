@@ -33,7 +33,7 @@ const SNIPPETS = {
   singly: {
     insertIndex: [
       { id: '1', text: 'Node temp = new Node(val);', explanation: 'Heap memory mein naya node spawn kiya.', active: false },
-      { id: '2', text: 'Node ptr = head;', explanation: 'Scanner (ptr) ko start pe rakha.', active: false },
+      { id: '2', text: 'Node ptr = head;', explanation: 'Scanner (ptr) ko pahli node par rakha jaha head point kar raha hai.', active: false },
       { id: '3', text: 'while(i < index - 1) ptr = ptr.next;', explanation: 'Target position se ek pehle tak scan karte hue jao... (O(N) Time)', active: false },
       { id: '4', text: 'temp.next = ptr.next;', explanation: 'Naye node ko aage wale chain se joda.', active: false },
       { id: '5', text: 'ptr.next = temp;', explanation: 'Peeche wale node ko naye node se connect kar diya!', active: false }
@@ -48,7 +48,7 @@ const SNIPPETS = {
   },
   doublyCircular: {
     insertEnd: [
-      { id: '1', text: 'Node temp = new Node(val);', explanation: 'Heap memory mein naya node spawn kiya.', active: false },
+      { id: '1', text: 'Node temp = new Node(val);', explanation: 'Ek nayi node banayi aur use heap memory mein allocate kiya.', active: false },
       { id: '2', text: 'Node tail = head.prev;', explanation: 'WARP ZONE! Head ke peeche hi Tail hai. Direct jump in O(1) time!', active: false },
       { id: '3', text: 'temp.next = head; temp.prev = tail;', explanation: 'Naye node ko Head (aage) aur Tail (peeche) se joda.', active: false },
       { id: '4', text: 'tail.next = temp; head.prev = temp;', explanation: 'List ko wapas circular lock kar diya!', active: false }

@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, loginWithGoogle } from "./lib/firebase"; 
 import { Loader2, Zap, Lock, ChevronRight, Terminal, Network, Cpu, LockKeyhole, Sparkles, Eye } from "lucide-react";
@@ -13,6 +13,7 @@ import Footer from './components/Footer';
 // --- IMPORTS ---
 import { incrementVisitCount } from "@/lib/algorithms";
 import InstallPrompt from "@/components/InstallPrompt";
+import { useActivityTracker, setTrackedActivity } from "@/hooks/useActivityTracker";
 
 // Pages
 import Index from "./pages/Index";
@@ -257,10 +258,11 @@ const UnauthenticatedLanding = () => {
   );
 };
 
-// --- GLOBAL AUTH GUARD ---
+// --- GLOBAL AUTH GUARD WITH TRACKING ---
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -269,6 +271,29 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     });
     return () => unsubscribe();
   }, []);
+
+  // --- FIX: Clean the path BEFORE it touches the tracker ---
+  const getCleanPath = (path: string) => {
+    if (path.startsWith('/view/')) return 'snippet_library';
+    if (path.startsWith('/visualizer')) return 'visualizer_ll'; // Default fallback
+    return path;
+  };
+
+  const activePath = getCleanPath(location.pathname);
+
+  // Initialize tracker with the perfectly cleaned path
+  useActivityTracker(activePath, user ? {
+    uid: user.uid,
+    email: user.email || "Unknown",
+    displayName: user.displayName || "Anonymous"
+  } : null);
+
+  // Update tracked activity when URL changes
+  useEffect(() => {
+    if (!location.pathname.includes('/visualizer')) {
+       setTrackedActivity(activePath);
+    }
+  }, [location.pathname, activePath]);
 
   if (loading) {
     return (
@@ -289,6 +314,8 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
 
 // --- THE MAIN APP COMPONENT ---
 const App = () => {
+  
+  // Existing view count logic remains untouched!
   useEffect(() => {
     const initializeVisit = async () => {
       try {

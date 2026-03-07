@@ -23,6 +23,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import GlobalRibbon from '@/components/GlobalRibbon';
+import { setTrackedActivity } from '@/hooks/useActivityTracker';
 
 const LinkedListVisualizer = lazy(() => import('./LinkedListVisualizer'));
 const StackVisualizer = lazy(() => import('./StackVisualizer'));
@@ -59,6 +60,11 @@ const Visualizer = () => {
   const [topNavHidden, setTopNavHidden] = useState(() => 
     typeof window !== 'undefined' ? window.innerWidth <= 639 : false
   );
+
+  // --- NEW: Tell the tracker exactly which visualizer tab is active ---
+  useEffect(() => {
+    setTrackedActivity(`visualizer_${activeTab}`);
+  }, [activeTab]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 639px)');
