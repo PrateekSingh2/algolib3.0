@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { 
-  collection, query, orderBy, onSnapshot, deleteDoc, doc, setDoc, updateDoc
+  collection, query, orderBy, onSnapshot, deleteDoc, doc, setDoc, updateDoc, getDocs 
 } from "firebase/firestore";
 import { auth, firestoreDB, loginWithGoogle, logout } from "../lib/firebase"; 
 import { 
@@ -12,17 +12,23 @@ import {
   Settings, Loader2, Edit3, ShieldAlert, Fingerprint, 
   ChevronRight, Unlock, Search, Users, Activity,
   LayoutDashboard, Database, ChevronUp, MessageSquare, AlertTriangle, Trash2,
-  Megaphone, Radio, ExternalLink, Eye
+  Megaphone, Radio, ExternalLink, Eye, BarChart3, PieChart as PieChartIcon, 
+  Download, User as UserIcon, AlignLeft
 } from "lucide-react";
+
+// --- Charting Library ---
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import Navbar from '@/components/Navbar';
 
 // ==========================================
 // SECURITY: DEFINE YOUR ADMIN EMAILS HERE
 // ==========================================
 const ADMIN_EMAILS = [
-  "prateeksinghrajawat2006@gmail.com", // REPLACE WITH YOUR ACTUAL EMAIL
+  "prateeksinghrajawat2006@gmail.com", 
   "shivanshmax@gmail.com"
 ];
+
+const CHART_COLORS = ['#00f5ff', '#00ff88', '#8b5cf6', '#f97316', '#ef4444', '#eab308', '#ec4899', '#3b82f6'];
 
 // --- Types ---
 interface ReplyType {
@@ -45,6 +51,16 @@ interface Post {
   downvotes?: string[];
   replies: ReplyType[];
   createdAt: any; 
+}
+
+// --- Insights Types ---
+interface UserActivityData {
+  id: string;
+  email?: string;
+  displayName?: string;
+  lifetimeActiveTimeMins?: number;
+  lastActiveDate?: any;
+  activityUsage?: Record<string, number>;
 }
 
 // --- 1. NEURAL BACKGROUND (Core Aesthetic) ---
@@ -113,19 +129,17 @@ const Admin = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // --- TAB STATE ---
-  const [activeTab, setActiveTab] = useState<"forge" | "moderation" | "broadcast">("forge");
+  const [activeTab, setActiveTab] = useState<"forge" | "moderation" | "broadcast" | "insights">("forge");
 
   // --- EDITOR STATE ---
   const [mode, setMode] = useState<"create" | "edit">("create");
-  // UPDATED: Added 'python' to activeCodeTab state
   const [activeCodeTab, setActiveCodeTab] = useState<"java" | "cpp" | "python">("java");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   
-  // UPDATED: Added codePython to formData
   const [formData, setFormData] = useState({
     id: "", title: "", category: "", timeComplexity: "O(n)",
-    spaceComplexity: "O(1)", description: "", codeJava: "", codeCpp: "", codePython: ""
+    spaceComplexity: "O(1)", description: "", details: "", codeJava: "", codeCpp: "", codePython: ""
   });
 
   // --- UI STATE ---
@@ -156,17 +170,20 @@ const Admin = () => {
   const [broadcastLink, setBroadcastLink] = useState("");
   const [isSavingBroadcast, setIsSavingBroadcast] = useState(false);
 
+  // --- INSIGHTS STATE ---
+  const [insightsData, setInsightsData] = useState<UserActivityData[]>([]);
+  const [isInsightsLoading, setIsInsightsLoading] = useState(false);
+  const [insightSearchEmail, setInsightSearchEmail] = useState("");
+
   // ==========================================
   // INITIALIZATION & EFFECTS
   // ==========================================
   
-  // Load Gist Config
   useEffect(() => {
     const savedConfig = localStorage.getItem("algolib_gist_config");
     if(savedConfig) setGistConfig(JSON.parse(savedConfig));
   }, []);
 
-  // Firebase Auth Check
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -180,17 +197,14 @@ const Admin = () => {
     return () => unsubscribe();
   }, []);
 
-  // Fetch Community Posts & Broadcast Settings
   useEffect(() => {
     if (!isAdmin) return;
     
-    // Fetch Posts
     const qPosts = query(collection(firestoreDB, "community_posts"), orderBy("createdAt", "desc"));
     const unsubPosts = onSnapshot(qPosts, (snapshot) => {
       setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)));
     });
 
-    // Fetch Broadcast Settings
     const unsubBroadcast = onSnapshot(doc(firestoreDB, "system_settings", "announcement"), (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
@@ -206,6 +220,132 @@ const Admin = () => {
         unsubBroadcast();
     };
   }, [isAdmin]);
+
+  // ==========================================
+  // INSIGHTS FETCHING (SMART PARSER FOR FIREBASE FLAT KEYS)
+  // ==========================================
+  useEffect(() => {
+    if (activeTab === "insights" && isAdmin && insightsData.length === 0) {
+      const fetchInsights = async () => {
+        setIsInsightsLoading(true);
+        try {
+          const querySnapshot = await getDocs(collection(firestoreDB, "users"));
+          const users = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            
+            const parsedActivityUsage: Record<string, number> = {};
+            
+            Object.keys(data).forEach(key => {
+                if (key.startsWith('activityUsage.')) {
+                    const cleanKey = key.replace('activityUsage.', '');
+                    parsedActivityUsage[cleanKey] = data[key];
+                }
+            });
+
+            if (data.activityUsage && typeof data.activityUsage === 'object') {
+                Object.assign(parsedActivityUsage, data.activityUsage);
+            }
+
+            return {
+              id: doc.id,
+              email: data.email,
+              displayName: data.displayName,
+              lifetimeActiveTimeMins: data.lifetimeActiveTimeMins || 0,
+              lastActiveDate: data.lastActiveDate,
+              activityUsage: parsedActivityUsage
+            } as UserActivityData;
+          });
+          
+          setInsightsData(users);
+          setStatusMsg("Analytics Synced");
+          setTimeout(() => setStatusMsg(""), 3000);
+        } catch (error) {
+          console.error("Error fetching insights:", error);
+          alert("Failed to fetch analytics data.");
+        } finally {
+          setIsInsightsLoading(false);
+        }
+      };
+      fetchInsights();
+    }
+  }, [activeTab, isAdmin, insightsData.length]);
+
+
+  // ==========================================
+  // INSIGHTS DATA PROCESSING
+  // ==========================================
+  const aggregatedActivityData = useMemo(() => {
+      const totals: Record<string, number> = {};
+      let totalPlatformMinutes = 0;
+
+      insightsData.forEach(user => {
+          if (user.activityUsage) {
+              Object.entries(user.activityUsage).forEach(([activity, minutes]) => {
+                  if(typeof minutes === 'number') {
+                      totals[activity] = (totals[activity] || 0) + minutes;
+                      totalPlatformMinutes += minutes;
+                  }
+              });
+          }
+      });
+
+      const sorted = Object.entries(totals)
+          .map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }))
+          .sort((a, b) => b.value - a.value);
+
+      return {
+          chartData: sorted.slice(0, 10), 
+          totalPlatformMinutes: Number(totalPlatformMinutes.toFixed(2)),
+          totalUsersWithData: insightsData.filter(u => u.lifetimeActiveTimeMins && u.lifetimeActiveTimeMins > 0).length
+      };
+  }, [insightsData]);
+
+  const searchedUserStats = useMemo(() => {
+      if (!insightSearchEmail.trim()) return null;
+      return insightsData.find(u => u.email?.toLowerCase().includes(insightSearchEmail.toLowerCase()));
+  }, [insightSearchEmail, insightsData]);
+
+  // --- UPDATED CSV EXPORT FUNCTION ---
+  const exportInsightsToCSV = () => {
+      if (insightsData.length === 0) return;
+      
+      let csvContent = "UserID,Email,DisplayName,TotalActiveTimeMins,LastActive,ActivityBreakdown\n";
+      
+      insightsData.forEach(user => {
+          const date = user.lastActiveDate?.toDate ? user.lastActiveDate.toDate().toISOString() : "N/A";
+          
+          // Stringify the activities into a single readable column
+          const activities = user.activityUsage && Object.keys(user.activityUsage).length > 0 
+              ? Object.entries(user.activityUsage)
+                  .map(([k, v]) => `${k}: ${typeof v === 'number' ? v.toFixed(2) : v}m`)
+                  .join(' | ') 
+              : "No specific route data";
+          
+          // Wrap everything in quotes to prevent commas from breaking the CSV layout
+          const row = [
+              `"${user.id}"`,
+              `"${user.email || 'N/A'}"`,
+              `"${user.displayName || 'N/A'}"`,
+              `"${user.lifetimeActiveTimeMins?.toFixed(2) || 0}"`,
+              `"${date}"`,
+              `"${activities}"`
+          ].join(",");
+
+          csvContent += row + "\n";
+      });
+
+      // Using Blob for cleaner and safer generation of files without URI length limits
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `algolib_insights_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+  };
 
   // ==========================================
   // BROADCAST LOGIC
@@ -253,11 +393,11 @@ const Admin = () => {
   };
 
   const loadAlgorithm = (algo: any) => {
-      // UPDATED: Added codePython loading logic
       setFormData({
           id: algo.id || "", title: algo.title || "", category: algo.category || "",
           timeComplexity: algo.timeComplexity || "O(n)", spaceComplexity: algo.spaceComplexity || "O(1)",
-          description: algo.description || "", codeJava: algo.codeJava || "", codeCpp: algo.codeCpp || "",
+          description: algo.description || "", details: algo.details || "", 
+          codeJava: algo.codeJava || "", codeCpp: algo.codeCpp || "",
           codePython: algo.codePython || ""
       });
       setTags(algo.tags || []);
@@ -296,10 +436,9 @@ const Admin = () => {
   };
 
   const handlePurge = () => {
-    // UPDATED: Added codePython clearing logic
     setFormData({
         id: "", title: "", category: "", timeComplexity: "O(n)", 
-        spaceComplexity: "O(1)", description: "", codeJava: "", codeCpp: "", codePython: ""
+        spaceComplexity: "O(1)", description: "", details: "", codeJava: "", codeCpp: "", codePython: ""
     });
     setTags([]); setJsonOutput(""); setMode("create"); setShowPurgeModal(false);
     setStatusMsg("Workspace Purged"); setTimeout(() => setStatusMsg(""), 2000);
@@ -555,13 +694,19 @@ const Admin = () => {
                      onClick={() => setActiveTab("moderation")}
                      className={`px-4 py-2 font-mono text-xs font-bold tracking-widest uppercase transition-all rounded-lg ${activeTab === 'moderation' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' : 'bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-white/20'}`}
                    >
-                     Community Moderation
+                     Moderation
                    </button>
                    <button 
                      onClick={() => setActiveTab("broadcast")}
                      className={`px-4 py-2 font-mono text-xs font-bold tracking-widest uppercase transition-all rounded-lg flex items-center gap-2 ${activeTab === 'broadcast' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50' : 'bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-white/20'}`}
                    >
-                     <Megaphone size={14} /> Global_Broadcast
+                     Broadcast
+                   </button>
+                   <button 
+                     onClick={() => setActiveTab("insights")}
+                     className={`px-4 py-2 font-mono text-xs font-bold tracking-widest uppercase transition-all rounded-lg flex items-center gap-2 ${activeTab === 'insights' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50' : 'bg-white/5 text-gray-400 hover:text-white border border-transparent hover:border-white/20'}`}
+                   >
+                     <BarChart3 size={14} /> Insights
                    </button>
                </div>
            </div>
@@ -667,8 +812,13 @@ const Admin = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Description</label>
-                            <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={3} className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-[#00f5ff] text-sm leading-relaxed text-gray-300 focus:text-white transition-all resize-none" />
+                            <label className="text-[10px] font-mono text-gray-400 uppercase tracking-widest flex items-center gap-2"><AlignLeft size={12}/> Description Summary</label>
+                            <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={2} className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-[#00f5ff] text-sm leading-relaxed text-gray-300 focus:text-white transition-all resize-none" placeholder="Brief summary of the algorithm..." />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest flex items-center gap-2"><FileJson size={12}/> Detailed Content (Markdown/HTML Supported)</label>
+                            <textarea value={formData.details} onChange={(e) => setFormData({...formData, details: e.target.value})} rows={5} className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 outline-none focus:border-emerald-500 text-sm leading-relaxed text-emerald-100 focus:text-white transition-all resize-none custom-scrollbar" placeholder="In-depth explanation, steps, edge cases..." />
                         </div>
 
                         <div className="space-y-0">
@@ -677,12 +827,10 @@ const Admin = () => {
                                 <div className="flex">
                                     <button onClick={() => setActiveCodeTab("java")} className={`px-4 py-2 text-[10px] font-bold rounded-t-lg transition-all border-t border-l border-r ${activeCodeTab === 'java' ? 'bg-[#00ff88]/10 text-[#00ff88] border-[#00ff88]/30' : 'border-transparent text-gray-500 hover:text-white'}`}>JAVA</button>
                                     <button onClick={() => setActiveCodeTab("cpp")} className={`px-4 py-2 text-[10px] font-bold rounded-t-lg transition-all border-t border-l border-r ${activeCodeTab === 'cpp' ? 'bg-[#8b5cf6]/10 text-[#8b5cf6] border-[#8b5cf6]/30' : 'border-transparent text-gray-500 hover:text-white'}`}>C++</button>
-                                    {/* UPDATED: Added Python Tab Button */}
                                     <button onClick={() => setActiveCodeTab("python")} className={`px-4 py-2 text-[10px] font-bold rounded-t-lg transition-all border-t border-l border-r ${activeCodeTab === 'python' ? 'bg-[#3b82f6]/10 text-[#3b82f6] border-[#3b82f6]/30' : 'border-transparent text-gray-500 hover:text-white'}`}>PYTHON</button>
                                 </div>
                             </div>
                             <div className="relative">
-                                {/* UPDATED: Converted to conditionally render all 3 options */}
                                 {activeCodeTab === 'java' && (
                                     <textarea value={formData.codeJava} onChange={(e) => setFormData({...formData, codeJava: e.target.value})} rows={12} className="w-full bg-[#050510] border-b border-l border-r border-[#00ff88]/30 rounded-b-lg rounded-tr-lg px-4 py-4 outline-none focus:bg-black/80 text-[11px] font-mono text-green-100 leading-relaxed custom-scrollbar transition-all" placeholder="// Java Implementation..." />
                                 )}
@@ -1024,6 +1172,217 @@ const Admin = () => {
                         UPDATE TRANSMISSION PROTOCOL
                     </button>
                 </div>
+            </motion.div>
+        )}
+
+        {/* ========================================== */}
+        {/* TAB 4: NEW - INSIGHTS DASHBOARD            */}
+        {/* ========================================== */}
+        {activeTab === "insights" && (
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8">
+                
+                {isInsightsLoading ? (
+                    <div className="h-64 flex flex-col items-center justify-center gap-4 text-emerald-400 bg-[#0a0a1a]/80 backdrop-blur-xl rounded-3xl border border-emerald-500/20">
+                        <Loader2 size={40} className="animate-spin" />
+                        <span className="font-mono text-sm tracking-widest uppercase animate-pulse">Aggregating Global Telemetry...</span>
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex justify-between items-center bg-[#0a0a1a]/80 backdrop-blur-xl p-4 rounded-2xl border border-white/10 shadow-lg">
+                            <h2 className="text-lg font-bold font-mono text-emerald-400 flex items-center gap-2 uppercase tracking-widest">
+                                <Database size={18} /> Telemetry_Dashboard
+                            </h2>
+                            <button onClick={exportInsightsToCSV} className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold font-mono transition-colors">
+                                <Download size={14} /> EXPORT_CSV
+                            </button>
+                        </div>
+
+                        {/* Top Meta Stats */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg border-t-2 border-t-[#00f5ff]">
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-[10px] text-gray-400 font-mono uppercase tracking-widest">Total Active Users</p>
+                                    <Users size={18} className="text-[#00f5ff]" />
+                                </div>
+                                <h3 className="text-3xl font-black text-white">{aggregatedActivityData.totalUsersWithData}</h3>
+                                <p className="text-xs text-gray-500 font-mono mt-2">Registered telemetry signatures</p>
+                            </div>
+
+                            <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg border-t-2 border-t-[#8b5cf6]">
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-[10px] text-gray-400 font-mono uppercase tracking-widest">Global Platform Usage</p>
+                                    <Activity size={18} className="text-[#8b5cf6]" />
+                                </div>
+                                <h3 className="text-3xl font-black text-white">{aggregatedActivityData.totalPlatformMinutes} <span className="text-sm text-gray-500 font-mono">MINS</span></h3>
+                                <p className="text-xs text-gray-500 font-mono mt-2">Cumulative time spent on AlgoLib</p>
+                            </div>
+
+                            <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg border-t-2 border-t-[#00ff88]">
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-[10px] text-gray-400 font-mono uppercase tracking-widest">Avg Time Per User</p>
+                                    <Clock size={18} className="text-[#00ff88]" />
+                                </div>
+                                <h3 className="text-3xl font-black text-white">
+                                    {aggregatedActivityData.totalUsersWithData > 0 
+                                        ? (aggregatedActivityData.totalPlatformMinutes / aggregatedActivityData.totalUsersWithData).toFixed(1) 
+                                        : 0} 
+                                    <span className="text-sm text-gray-500 font-mono"> MINS</span>
+                                </h3>
+                                <p className="text-xs text-gray-500 font-mono mt-2">Platform engagement metric</p>
+                            </div>
+                        </div>
+
+                        {/* Charts Section */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Bar Chart */}
+                            <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg">
+                                <h3 className="text-xs font-mono text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                    <BarChart3 size={14} className="text-emerald-400"/> Most Popular Routes / Activities
+                                </h3>
+                                {/* Added bottom margin to give room for the angled text */}
+                                <div className="h-80 w-full text-xs font-mono">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={aggregatedActivityData.chartData} margin={{ top: 20, right: 20, left: -20, bottom: 60 }}>
+                                            {/* Angled text, forced intervals to prevent skipping */}
+                                            <XAxis 
+                                                dataKey="name" 
+                                                stroke="#4b5563" 
+                                                tick={{ fill: '#9ca3af', fontSize: 10 }} 
+                                                angle={-45} 
+                                                textAnchor="end"
+                                                interval={0}
+                                            />
+                                            <YAxis stroke="#4b5563" tick={{ fill: '#9ca3af' }} />
+                                            <Tooltip 
+                                                cursor={{ fill: 'rgba(255,255,255,0.05)' }} 
+                                                contentStyle={{ backgroundColor: '#050510', border: '1px solid rgba(0,245,255,0.2)', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#00f5ff' }}
+                                            />
+                                            <Bar dataKey="value" fill="#00f5ff" radius={[4, 4, 0, 0]} name="Minutes Spent">
+                                                {aggregatedActivityData.chartData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Pie Chart */}
+                            <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg">
+                                <h3 className="text-xs font-mono text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                    <PieChartIcon size={14} className="text-purple-400"/> Attention Distribution Matrix
+                                </h3>
+                                <div className="h-80 w-full text-xs font-mono flex items-center justify-center">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={aggregatedActivityData.chartData}
+                                                cx="50%" cy="50%"
+                                                innerRadius={60} outerRadius={110}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                                stroke="rgba(0,0,0,0)"
+                                            >
+                                                {aggregatedActivityData.chartData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#050510', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#fff' }}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* User Search & Tabular Data */}
+                        <div className="bg-[#0a0a1a]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg overflow-hidden">
+                            <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-white/5 pb-6 mb-6">
+                                <h3 className="text-sm font-bold font-mono text-white flex items-center gap-2">
+                                    <UserIcon size={16} className="text-[#00f5ff]"/> INDIVIDUAL_USER_TRACKING
+                                </h3>
+                                <div className="relative w-full md:w-96 group">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#00f5ff] transition-colors" size={16} />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Target exact email signature..." 
+                                        className="w-full bg-[#050510] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-[#00f5ff]/50 transition-colors text-white placeholder:text-gray-600 font-mono"
+                                        value={insightSearchEmail}
+                                        onChange={(e) => setInsightSearchEmail(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            {insightSearchEmail.trim() === "" ? (
+                                <div className="py-12 text-center text-gray-600 font-mono text-xs">
+                                    [ AWAITING TARGET INPUT TO FETCH INDIVIDUAL TELEMETRY ]
+                                </div>
+                            ) : searchedUserStats ? (
+                                <div className="space-y-6">
+                                    {/* User Meta Card */}
+                                    <div className="flex flex-wrap items-center gap-6 bg-black/40 border border-white/5 rounded-xl p-4">
+                                        <div className="w-12 h-12 bg-[#00f5ff]/10 rounded-full border border-[#00f5ff]/30 flex items-center justify-center">
+                                            <span className="text-[#00f5ff] font-bold text-lg">{searchedUserStats.displayName?.charAt(0) || 'U'}</span>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-white font-bold text-lg">{searchedUserStats.displayName || 'Anonymous Target'}</h4>
+                                            <p className="text-xs font-mono text-gray-500">{searchedUserStats.email}</p>
+                                        </div>
+                                        <div className="w-px h-10 bg-white/10 hidden md:block mx-4" />
+                                        <div className="flex gap-8 text-sm font-mono text-gray-400">
+                                            <div>
+                                                <span className="block text-[10px] uppercase tracking-widest text-[#00ff88]">Total Runtime</span>
+                                                <span className="text-white font-bold">{searchedUserStats.lifetimeActiveTimeMins?.toFixed(2) || 0} mins</span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-[10px] uppercase tracking-widest text-purple-400">Last Sync</span>
+                                                <span className="text-white font-bold">{searchedUserStats.lastActiveDate?.toDate ? searchedUserStats.lastActiveDate.toDate().toLocaleString() : 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Tabular Data */}
+                                    <div className="overflow-x-auto border border-white/5 rounded-xl">
+                                        <table className="w-full text-left font-mono text-sm">
+                                            <thead className="bg-black/60 text-[10px] text-gray-500 uppercase tracking-widest border-b border-white/5">
+                                                <tr>
+                                                    <th className="p-4 w-1/2">Monitored Route / Activity</th>
+                                                    <th className="p-4 text-right">Time Spent (Mins)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5 bg-[#0a0a1a]/50">
+                                                {searchedUserStats.activityUsage && Object.keys(searchedUserStats.activityUsage).length > 0 ? (
+                                                    Object.entries(searchedUserStats.activityUsage)
+                                                        .sort((a, b) => b[1] - a[1])
+                                                        .map(([activity, time], idx) => (
+                                                            <tr key={idx} className="hover:bg-white/5 transition-colors group">
+                                                                <td className="p-4 text-gray-300 group-hover:text-white flex items-center gap-3">
+                                                                    <div className="w-2 h-2 rounded-full bg-[#00f5ff]/50" />
+                                                                    {activity}
+                                                                </td>
+                                                                <td className="p-4 text-right text-[#00ff88] font-bold">{typeof time === 'number' ? time.toFixed(2) : time}</td>
+                                                            </tr>
+                                                        ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={2} className="p-8 text-center text-gray-600 text-xs">NO ROUTE ACTIVITY DETECTED FOR THIS TARGET.</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="py-12 text-center text-red-500/50 font-mono text-xs border border-red-500/10 rounded-xl bg-red-500/5">
+                                    [ ERROR 404: TARGET SIGNATURE "{insightSearchEmail}" NOT FOUND IN DATABASE ]
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
             </motion.div>
         )}
 
