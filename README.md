@@ -1,15 +1,15 @@
 <h1 align="center">
   <br>
-  AlgoLib 3.0
+  AlgoLib-v6
   <br>
 </h1>
 
 ## ⚡ About
 
-**AlgoLib 3.0** is a next-generation interactive algorithm visualizer and logic execution platform. Built by and for developers, it provides an immersive, 3D holographic interface to explore, understand, and visualize complex data structures and logic circuits.
+**AlgoLib-v6** is a next-generation interactive algorithm visualizer and logic execution platform. Built by and for developers, it provides an immersive, 3D holographic interface to explore, understand, and visualize complex data structures and logic circuits.
 
 <p align="center">
-  <img src="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-02-20%20193936.png" alt="AlgoLib Home Page Preview" width="100%" style="border-radius: 10px; box-shadow: 0 0 20px rgba(0,245,255,0.2);">
+  <img src="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-03-15%20211002.png?updatedAt=1773589228664" alt="AlgoLib Home Page Preview" width="100%" style="border-radius: 10px; box-shadow: 0 0 20px rgba(0,245,255,0.2);">
 </p>
 
 ---
@@ -40,11 +40,11 @@ Follow these steps:
 
 ```sh
 # Step 1: Clone the repository using the project's Git URL.
-git clone https://github.com/PrateekSingh2/algolib3.0.git
+git clone https://github.com/PrateekSingh2/AlgoLib-v6.git
 ```
 ```sh
 # Step 2: Navigate to the project directory.
-cd algolib3.0
+cd AlgoLib-v6
 ```
 ```sh
 # Step 3: Install the necessary dependencies.

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, RotateCcw, ArrowRight, Trash2, 
@@ -107,7 +107,27 @@ const LinkedListVisualizer = () => {
   const [phantom, setPhantom] = useState<NodeData | null>(null);
   const [seekerIndex, setSeekerIndex] = useState<number | null>(null);
 
-  useEffect(() => { generateRandom(); }, []);
+  // DYNAMIC SVG TRACKING
+  const [svgDim, setSvgDim] = useState({ height: 0, isSm: false });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    generateRandom(); 
+  }, []);
+
+  // ResizeObserver guarantees perfectly connected lines on any screen size/orientation
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(() => {
+       setSvgDim({
+          height: container.clientHeight,
+          isSm: window.innerWidth >= 640
+       });
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   const generateRandom = () => setInputValue(Math.floor(Math.random() * 99) + 1);
 
@@ -206,7 +226,6 @@ const LinkedListVisualizer = () => {
         }
     }
 
-    // Append Final result frame
     currentNodes.splice(targetIdx, 0, newNode);
     newFrames.push({
         nodes: currentNodes.map(x => ({...x})),
@@ -286,7 +305,6 @@ const LinkedListVisualizer = () => {
         }
     }
 
-    // Append Final result frame
     currentNodes.splice(targetIdx, 1);
     newFrames.push({
         nodes: currentNodes.map(x => ({...x})),
@@ -415,27 +433,46 @@ const LinkedListVisualizer = () => {
           {/* Central Arena: The Linked List Canvas */}
           <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
              
-             {/* ADDED: w-full and touch-pan-x for proper horizontal scrolling */}
              <div className="flex-1 w-full overflow-x-auto overflow-y-hidden custom-scrollbar relative flex items-center touch-pan-x">
-                 <div className="min-w-max flex items-center px-8 sm:px-16 relative h-full py-8 pr-16 sm:pr-24 w-max">
+                 <div className="min-w-max flex items-center px-8 sm:px-16 relative h-full py-8 pr-16 sm:pr-24 w-max" ref={containerRef}>
                      
-                     {(listType === 'circular' || listType === 'doubly-circular') && nodes.length > 1 && (
+                     {/* DYNAMIC, RESPONSIVE CIRCULAR LINK SVG */}
+                     {(listType === 'circular' || listType === 'doubly-circular') && nodes.length > 1 && svgDim.height > 0 && (
                         <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-0 overflow-visible">
                             {(() => {
-                                const startX = 160 + (nodes.length - 1) * 112 + 96;
-                                const startY = 88; 
-                                const endX = 96;   
-                                const endY = 40;   
-                                const controlY = 5; 
+                                const H = svgDim.height;
+                                const isSm = svgDim.isSm;
+                                
+                                // Precise tracking based on the actual Tailwind CSS values used below
+                                const nodeW = isSm ? 96 : 80;
+                                const nodeH = isSm ? 96 : 80;
+                                const blockW = isSm ? 112 : 108; // Wrapper (96px) + margin-right (16px or 12px)
+                                const startOffset = isSm ? 160 : 104; // Padding + Head width + Head Margin
+                                
+                                const centerY = H / 2;
+                                const firstNodeLeft = startOffset;
+                                const lastNodeLeft = startOffset + (nodes.length - 1) * blockW;
 
-                                const pathD = `M ${startX} ${startY} 
-                                               L ${startX + 10} ${startY}
-                                               Q ${startX + 30} ${startY} ${startX + 30} ${startY - 20} 
-                                               L ${startX + 30} ${controlY + 20} 
-                                               Q ${startX + 30} ${controlY} ${startX + 10} ${controlY} 
-                                               L ${endX + 20} ${controlY} 
-                                               Q ${endX} ${controlY} ${endX} ${controlY + 20} 
-                                               L ${endX} ${endY - 6}`;
+                                // Coordinates mapping to exact edges of the node boxes
+                                const startX = lastNodeLeft + nodeW;
+                                const startY = centerY;
+                                const endX = firstNodeLeft + (nodeW / 2);
+                                const endY = centerY - (nodeH / 2);
+
+                                // Dynamic curve routing to clear hovering scanner elements
+                                const controlY = Math.max(10, centerY - (nodeH / 2) - 35); 
+                                const r = 16; 
+
+                                const pathD = `
+                                  M ${startX} ${startY}
+                                  L ${startX + r} ${startY}
+                                  Q ${startX + 2*r} ${startY} ${startX + 2*r} ${startY - r}
+                                  L ${startX + 2*r} ${controlY + r}
+                                  Q ${startX + 2*r} ${controlY} ${startX + r} ${controlY}
+                                  L ${endX + r} ${controlY}
+                                  Q ${endX} ${controlY} ${endX} ${controlY + r}
+                                  L ${endX} ${endY - 4}
+                                `;
 
                                 return (
                                     <>
@@ -444,7 +481,8 @@ const LinkedListVisualizer = () => {
                                             fill="transparent" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5,5"
                                             initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.5 }}
                                         />
-                                        <polygon points={`${endX - 6},${endY - 6} ${endX + 6},${endY - 6} ${endX},${endY + 2}`} fill="#f59e0b" />
+                                        {/* Perfect arrowhead positioning */}
+                                        <polygon points={`${endX - 5},${endY - 8} ${endX + 5},${endY - 8} ${endX},${endY + 2}`} fill="#f59e0b" />
                                     </>
                                 );
                             })()}

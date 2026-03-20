@@ -1,3 +1,15 @@
+# AlgoLib - Global Crawler Directives
+
+User-agent: *
+Allow: /
+
+# Prevent indexing of private, user-specific, or admin routes
+Disallow: /profile
+Disallow: /edit-profile
+Disallow: /hq
+Disallow: /view/*
+
+# Explicit Bot Allowances (Optional but good for specialized crawling)
 User-agent: Googlebot
 Allow: /
 
@@ -10,5 +22,5 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
-Allow: /
+# Link to Sitemap for automatic discovery
+Sitemap: https://algolib.netlify.app/sitemap.xml

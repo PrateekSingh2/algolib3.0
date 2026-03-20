@@ -1,7 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+body, html, * {
+  cursor: system;
+}
 @layer base {
   :root {
     --background: 0 0% 2%;
@@ -55,10 +57,9 @@
 }
 
 @layer base {
-  /* Hide default cursor on desktop */
   @media (min-width: 768px) {
     body, a, button, input, select, textarea {
-      cursor: none !important;
+      cursor: system;
     }
   }
 }
@@ -226,4 +227,26 @@ pre[class*="language-"] {
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(220 15% 30%);
+}
+
+
+
+/* Add to the bottom of index.css */
+
+/* Global Light Mode via Inversion */
+html.light-theme {
+  filter: invert(1) hue-rotate(180deg);
+  background-color: white; /* Ensures the base background flips correctly */
+}
+
+/* Re-invert images, videos, and specific elements so they look normal */
+html.light-theme img,
+html.light-theme video,
+html.light-theme [data-exclude-theme="true"] {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Optional: Smooth transition for the theme switch */
+html {
+  transition: filter 0.5s ease, background-color 0.5s ease;
 }

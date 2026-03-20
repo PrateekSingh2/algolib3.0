@@ -274,6 +274,37 @@ public class LinkedListUtils {
         return dummy.next;
     }
 }`
+            },
+            {
+              language: "Python",
+              title: "Singly LL",
+              code: `class Node:
+    def __init__(self, val):
+        self.data = val
+        self.next = None
+
+def insert_at_head(head, val):
+    new_node = Node(val)
+    new_node.next = head
+    return new_node
+
+def insert_at_tail(head, val):
+    new_node = Node(val)
+    if not head: return new_node
+    curr = head
+    while curr.next:
+        curr = curr.next
+    curr.next = new_node
+    return head
+
+def reverse_list(head):
+    prev, curr = None, head
+    while curr:
+        next_node = curr.next
+        curr.next = prev
+        prev = curr
+        curr = next_node
+    return prev`
             }
           ]} />
         </div>
@@ -313,6 +344,63 @@ void insertAtTail(DNode*& head, int val) {
     curr->next = temp;
     temp->prev = curr;
 }`
+            },
+            {
+              language: "Java",
+              title: "Doubly LL",
+              code: `class DNode {
+    int data;
+    DNode next, prev;
+    DNode(int d) { data = d; next = prev = null; }
+}
+
+public class DoublyLinkedList {
+    public static DNode insertAtHead(DNode head, int val) {
+        DNode temp = new DNode(val);
+        if (head != null) {
+            head.prev = temp;
+        }
+        temp.next = head;
+        return temp;
+    }
+
+    public static void insertAtTail(DNode head, int val) {
+        if (head == null) return;
+        DNode temp = new DNode(val);
+        DNode curr = head;
+        while (curr.next != null) {
+            curr = curr.next;
+        }
+        curr.next = temp;
+        temp.prev = curr;
+    }
+}`
+            },
+            {
+              language: "Python",
+              title: "Doubly LL",
+              code: `class DNode:
+    def __init__(self, val):
+        self.data = val
+        self.next = None
+        self.prev = None
+
+def insert_at_head(head, val):
+    new_node = DNode(val)
+    if head:
+        head.prev = new_node
+    new_node.next = head
+    return new_node
+
+def insert_at_tail(head, val):
+    if not head: return DNode(val)
+    new_node = DNode(val)
+    curr = head
+    while curr.next:
+        curr = curr.next
+    curr.next = new_node
+    new_node.prev = curr
+    return head`
             }
           ]} />
         </div>
@@ -362,6 +450,79 @@ PolyNode* addPolynomials(PolyNode* p1, PolyNode* p2) {
     }
     return dummy.next;
 }`
+            },
+            {
+              language: "Java",
+              title: "Polynomial Addition",
+              code: `class PolyNode {
+    int coeff, exp;
+    PolyNode next;
+    PolyNode(int c, int e) { coeff = c; exp = e; next = null; }
+}
+
+public class PolynomialUtils {
+    public static PolyNode addPolynomials(PolyNode p1, PolyNode p2) {
+        PolyNode dummy = new PolyNode(0, 0);
+        PolyNode curr = dummy;
+        
+        while (p1 != null && p2 != null) {
+            if (p1.exp > p2.exp) {
+                curr.next = new PolyNode(p1.coeff, p1.exp);
+                p1 = p1.next;
+            } else if (p1.exp < p2.exp) {
+                curr.next = new PolyNode(p2.coeff, p2.exp);
+                p2 = p2.next;
+            } else {
+                curr.next = new PolyNode(p1.coeff + p2.coeff, p1.exp);
+                p1 = p1.next;
+                p2 = p2.next;
+            }
+            curr = curr.next;
+        }
+        while (p1 != null) {
+            curr.next = new PolyNode(p1.coeff, p1.exp);
+            p1 = p1.next;
+            curr = curr.next;
+        }
+        while (p2 != null) {
+            curr.next = new PolyNode(p2.coeff, p2.exp);
+            p2 = p2.next;
+            curr = curr.next;
+        }
+        return dummy.next;
+    }
+}`
+            },
+            {
+              language: "Python",
+              title: "Poly Addition",
+              code: `class PolyNode:
+    def __init__(self, c, e):
+        self.coeff = c
+        self.exp = e
+        self.next = None
+
+def add_polynomials(p1, p2):
+    dummy = PolyNode(0, 0)
+    curr = dummy
+    while p1 and p2:
+        if p1.exp > p2.exp:
+            curr.next = PolyNode(p1.coeff, p1.exp)
+            p1 = p1.next
+        elif p1.exp < p2.exp:
+            curr.next = PolyNode(p2.coeff, p2.exp)
+            p2 = p2.next
+        else:
+            curr.next = PolyNode(p1.coeff + p2.coeff, p1.exp)
+            p1, p2 = p1.next, p2.next
+        curr = curr.next
+    while p1:
+        curr.next = PolyNode(p1.coeff, p1.exp)
+        p1, curr = p1.next, curr.next
+    while p2:
+        curr.next = PolyNode(p2.coeff, p2.exp)
+        p2, curr = p2.next, curr.next
+    return dummy.next`
             }
           ]} />
         </div>
@@ -458,6 +619,28 @@ public static int[] nextGreater(int[] arr) {
     }
     return result;
 }`
+            },
+            {
+              language: "Python",
+              title: "Stack DS",
+              code: `class Stack:
+    def __init__(self, limit=1000):
+        self.stack = []
+        self.limit = limit
+    
+    def push(self, data):
+        if len(self.stack) >= self.limit: return False
+        self.stack.append(data)
+        return True
+    
+    def pop(self):
+        return self.stack.pop() if self.stack else -1
+    
+    def peek(self):
+        return self.stack[-1] if self.stack else -1
+    
+    def is_empty(self):
+        return len(self.stack) == 0`
             }
           ]} />
         </div>
@@ -491,6 +674,66 @@ public static int[] nextGreater(int[] arr) {
     while (!st.isEmpty()) res.append(st.pop());
     return res.toString();
 }`
+            },
+            {
+              language: "C++",
+              title: "Infix to Postfix",
+              code: `int precedence(char c) {
+    if (c == '^') return 3;
+    if (c == '*' || c == '/') return 2;
+    if (c == '+' || c == '-') return 1;
+    return -1;
+}
+
+string infixToPostfix(string s) {
+    stack<char> st;
+    string res;
+    for (char c : s) {
+        if (isalnum(c)) res += c;
+        else if (c == '(') st.push('(');
+        else if (c == ')') {
+            while (st.top() != '(') {
+                res += st.top(); st.pop();
+            }
+            st.pop();
+        } else {
+            while (!st.empty() && precedence(c) <= precedence(st.top())) {
+                res += st.top(); st.pop();
+            }
+            st.push(c);
+        }
+    }
+    while (!st.empty()) {
+        res += st.top(); st.pop();
+    }
+    return res;
+}`
+            },
+            {
+              language: "Python",
+              title: "Infix to Postfix",
+              code: `def precedence(c):
+    if c == '^': return 3
+    if c in '*/': return 2
+    if c in '+-': return 1
+    return -1
+
+def infix_to_postfix(exp):
+    stack = []
+    res = []
+    for c in exp:
+        if c.isalnum(): res.append(c)
+        elif c == '(': stack.append(c)
+        elif c == ')':
+            while stack and stack[-1] != '(':
+                res.append(stack.pop())
+            stack.pop()
+        else:
+            while stack and precedence(c) <= precedence(stack[-1]):
+                res.append(stack.pop())
+            stack.append(c)
+    while stack: res.append(stack.pop())
+    return "".join(res)`
             }
           ]} />
         </div>
@@ -513,6 +756,28 @@ public static int[] nextGreater(int[] arr) {
 }
 // towerOfHanoi(3, 'A', 'C', 'B');
 // Total moves = 2^n - 1 = 7`
+            },
+            {
+              language: "Java",
+              title: "Tower of Hanoi",
+              code: `public class RecursionUtils {
+    public static void towerOfHanoi(int n, char from, char to, char aux) {
+        if (n == 0) return;
+        
+        towerOfHanoi(n - 1, from, aux, to);
+        System.out.println("Move disk " + n + ": " + from + " → " + to);
+        towerOfHanoi(n - 1, aux, to, from);
+    }
+}`
+            },
+            {
+              language: "Python",
+              title: "Tower of Hanoi",
+              code: `def tower_of_hanoi(n, src, dest, aux):
+    if n == 0: return
+    tower_of_hanoi(n - 1, src, aux, dest)
+    print(f"Move disk {n}: {src} -> {dest}")
+    tower_of_hanoi(n - 1, aux, dest, src)`
             }
           ]} />
         </div>
@@ -579,6 +844,69 @@ int dequeue(CircularQueue& q) {
     }
     return data;
 }`
+            },
+            {
+              language: "Java",
+              title: "Circular Queue",
+              code: `public class CircularQueue {
+    int front, rear, size;
+    int[] arr;
+
+    public CircularQueue(int s) {
+        size = s;
+        front = rear = -1;
+        arr = new int[s];
+    }
+
+    public boolean isFull() {
+        return (rear + 1) % size == front;
+    }
+
+    public boolean isEmpty() {
+        return front == -1;
+    }
+
+    public void enqueue(int val) {
+        if (isFull()) return;
+        if (isEmpty()) front = 0;
+        rear = (rear + 1) % size;
+        arr[rear] = val;
+    }
+
+    public int dequeue() {
+        if (isEmpty()) return -1;
+        int data = arr[front];
+        if (front == rear) {
+            front = rear = -1;
+        } else {
+            front = (front + 1) % size;
+        }
+        return data;
+    }
+}`
+            },
+            {
+              language: "Python",
+              title: "Circular Queue",
+              code: `class CircularQueue:
+    def __init__(self, size):
+        self.size = size
+        self.queue = [None] * size
+        self.front = self.rear = -1
+    
+    def enqueue(self, data):
+        if (self.rear + 1) % self.size == self.front: return False
+        if self.front == -1: self.front = 0
+        self.rear = (self.rear + 1) % self.size
+        self.queue[self.rear] = data
+        return True
+    
+    def dequeue(self):
+        if self.front == -1: return -1
+        data = self.queue[self.front]
+        if self.front == self.rear: self.front = self.rear = -1
+        else: self.front = (self.front + 1) % self.size
+        return data`
             }
           ]} />
         </div>
@@ -714,6 +1042,94 @@ TreeNode* deleteNode(TreeNode* root, int key) {
     }
     return root;
 }`
+            },
+            {
+              language: "Java",
+              title: "BST & Traversals",
+              code: `class TreeNode {
+    int data;
+    TreeNode left, right;
+    TreeNode(int val) { data = val; left = right = null; }
+}
+
+public class BSTUtils {
+    public static TreeNode insert(TreeNode root, int val) {
+        if (root == null) return new TreeNode(val);
+        if (val < root.data) root.left = insert(root.left, val);
+        else if (val > root.data) root.right = insert(root.right, val);
+        return root;
+    }
+
+    public static void inorder(TreeNode root) {
+        if (root != null) {
+            inorder(root.left);
+            System.out.print(root.data + " ");
+            inorder(root.right);
+        }
+    }
+
+    public static void levelOrder(TreeNode root) {
+        if (root == null) return;
+        Queue<TreeNode> q = new LinkedList<>();
+        q.add(root);
+        while (!q.isEmpty()) {
+            TreeNode curr = q.poll();
+            System.out.print(curr.data + " ");
+            if (curr.left != null) q.add(curr.left);
+            if (curr.right != null) q.add(curr.right);
+        }
+    }
+
+    public static TreeNode deleteNode(TreeNode root, int key) {
+        if (root == null) return null;
+        if (key < root.data) root.left = deleteNode(root.left, key);
+        else if (key > root.data) root.right = deleteNode(root.right, key);
+        else {
+            if (root.left == null) return root.right;
+            if (root.right == null) return root.left;
+            TreeNode minNode = findMin(root.right);
+            root.data = minNode.data;
+            root.right = deleteNode(root.right, minNode.data);
+        }
+        return root;
+    }
+
+    private static TreeNode findMin(TreeNode n) {
+        while (n.left != null) n = n.left;
+        return n;
+    }
+}`
+            },
+            {
+              language: "Python",
+              title: "BST & Traversals",
+              code: `class TreeNode:
+    def __init__(self, val):
+        self.data = val
+        self.left = self.right = None
+
+def insert(node, val):
+    if not node: return TreeNode(val)
+    if val < node.data:
+        node.left = insert(node.left, val)
+    elif val > node.data:
+        node.right = insert(node.right, val)
+    return node
+
+def inorder(node):
+    if node:
+        inorder(node.left)
+        print(node.data, end=" ")
+        inorder(node.right)
+
+def level_order(root):
+    if not root: return
+    queue = [root]
+    while queue:
+        curr = queue.pop(0)
+        print(curr.data, end=" ")
+        if curr.left: queue.append(curr.left)
+        if curr.right: queue.append(curr.right)`
             }
           ]} />
         </div>
@@ -803,6 +1219,28 @@ PriorityQueue<int[]> pq = new PriorityQueue<>(
 pq.add(new int[]{1, 5});
 pq.add(new int[]{2, 1});
 pq.peek(); // {2, 1} (smallest priority)`
+          },
+          {
+            language: "Python",
+            title: "Heapify & Sort",
+            code: `def heapify(arr, n, i):
+    largest = i
+    l, r = 2*i + 1, 2*i + 2
+    if l < n and arr[l] > arr[largest]: largest = l
+    if r < n and arr[r] > arr[largest]: largest = r
+    if largest != i:
+        arr[i], arr[largest] = arr[largest], arr[i]
+        heapify(arr, n, largest)
+
+def heap_sort(arr):
+    n = len(arr)
+    # Build max heap
+    for i in range(n // 2 - 1, -1, -1):
+        heapify(arr, n, i)
+    # Extract elements
+    for i in range(n - 1, 0, -1):
+        arr[0], arr[i] = arr[i], arr[0]
+        heapify(arr, i, 0)`
           }
         ]} />
       </div>
@@ -904,6 +1342,79 @@ void topologicalSort(int V, vector<vector<int>>& adj) {
         }
     }
 }`
+            },
+            {
+              language: "Java",
+              title: "BFS & DFS",
+              code: `public class GraphUtils {
+    public static void BFS(int start, List<List<Integer>> adj) {
+        boolean[] visited = new boolean[adj.size()];
+        Queue<Integer> q = new LinkedList<>();
+        visited[start] = true;
+        q.add(start);
+        while (!q.isEmpty()) {
+            int curr = q.poll();
+            System.out.print(curr + " ");
+            for (int nb : adj.get(curr)) {
+                if (!visited[nb]) {
+                    visited[nb] = true;
+                    q.add(nb);
+                }
+            }
+        }
+    }
+
+    public static void DFS(int start, List<List<Integer>> adj) {
+        boolean[] visited = new boolean[adj.size()];
+        DFSUtil(start, adj, visited);
+    }
+
+    private static void DFSUtil(int v, List<List<Integer>> adj, boolean[] visited) {
+        visited[v] = true;
+        System.out.print(v + " ");
+        for (int nb : adj.get(v)) {
+            if (!visited[nb]) DFSUtil(nb, adj, visited);
+        }
+    }
+}`
+            },
+            {
+              language: "Python",
+              title: "BFS, DFS & Topo",
+              code: `from collections import deque
+
+def bfs(start, adj):
+    visited = [False] * len(adj)
+    queue = deque([start])
+    visited[start] = True
+    while queue:
+        u = queue.popleft()
+        print(u, end=" ")
+        for v in adj[u]:
+            if not visited[v]:
+                visited[v] = True
+                queue.append(v)
+
+def dfs(u, adj, visited=None):
+    if visited is None: visited = [False] * len(adj)
+    visited[u] = True
+    print(u, end=" ")
+    for v in adj[u]:
+        if not visited[v]: dfs(v, adj, visited)
+
+def topo_sort(V, adj):
+    in_degree = [0] * V
+    for u in range(V):
+        for v in adj[u]: in_degree[v] += 1
+    queue = deque([i for i in range(V) if in_degree[i] == 0])
+    res = []
+    while queue:
+        u = queue.popleft()
+        res.append(u)
+        for v in adj[u]:
+            in_degree[v] -= 1
+            if in_degree[v] == 0: queue.append(v)
+    return res`
             }
           ]} />
         </div>
@@ -998,6 +1509,30 @@ public static void merge(int[] arr, int l, int m, int r) {
     while (i < n1) arr[k++] = L[i++];
     while (j < n2) arr[k++] = R[j++];
 }`
+          },
+          {
+            language: "Python",
+            title: "Quick & Merge Sort",
+            code: `def quick_sort(arr):
+    if len(arr) <= 1: return arr
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quick_sort(left) + middle + quick_sort(right)
+
+def merge_sort(arr):
+    if len(arr) > 1:
+        mid = len(arr) // 2
+        L, R = arr[:mid], arr[mid:]
+        merge_sort(L); merge_sort(R)
+        i = j = k = 0
+        while i < len(L) and j < len(R):
+            if L[i] < R[j]: arr[k] = L[i]; i += 1
+            else: arr[k] = R[j]; j += 1
+            k += 1
+        while i < len(L): arr[k] = L[i]; i += 1; k += 1
+        while j < len(R): arr[k] = R[j]; j += 1; k += 1`
           }
         ]} />
 
@@ -1073,6 +1608,57 @@ void removeKey(vector<list<int>>& table, int key) {
 // int BUCKETS = 10;
 // vector<list<int>> hashTable(BUCKETS);
 // insertKey(hashTable, 15);`
+            },
+            {
+              language: "Java",
+              title: "Hash Table (Chaining)",
+              code: `public class HashTable {
+    private List<Integer>[] table;
+    private int bucketCount;
+
+    public HashTable(int buckets) {
+        this.bucketCount = buckets;
+        table = new LinkedList[buckets];
+        for (int i = 0; i < buckets; i++) table[i] = new LinkedList<>();
+    }
+
+    private int hashFunction(int key) {
+        return key % bucketCount;
+    }
+
+    public void insert(int key) {
+        table[hashFunction(key)].add(key);
+    }
+
+    public boolean search(int key) {
+        return table[hashFunction(key)].contains(key);
+    }
+
+    public void remove(int key) {
+        table[hashFunction(key)].remove((Integer)key);
+    }
+}`
+            },
+            {
+              language: "Python",
+              title: "Hash Table",
+              code: `class HashTable:
+    def __init__(self, size):
+        self.size = size
+        self.table = [[] for _ in range(size)]
+    
+    def _hash(self, key):
+        return key % self.size
+    
+    def insert(self, key):
+        self.table[self._hash(key)].append(key)
+    
+    def search(self, key):
+        return key in self.table[self._hash(key)]
+    
+    def remove(self, key):
+        bucket = self.table[self._hash(key)]
+        if key in bucket: bucket.remove(key)`
             }
           ]} />
         </div>
@@ -1209,6 +1795,29 @@ public static int editDistance(String a, String b) {
                       Math.min(dp[i-1][j], dp[i][j-1]));
     return dp[m][n];
 }`
+          },
+          {
+            language: "Python",
+            title: "DP Patterns",
+            code: `# 1. 0/1 Knapsack
+def knapsack(W, wt, val, n):
+    dp = [[0]*(W+1) for _ in range(n+1)]
+    for i in range(1, n+1):
+        for w in range(W+1):
+            if wt[i-1] <= w:
+                dp[i][w] = max(val[i-1] + dp[i-1][w-wt[i-1]], dp[i-1][w])
+            else: dp[i][w] = dp[i-1][w]
+    return dp[n][W]
+
+# 2. LCS
+def lcs(a, b):
+    m, n = len(a), len(b)
+    dp = [[0]*(n+1) for _ in range(m+1)]
+    for i in range(1, m+1):
+        for j in range(1, n+1):
+            if a[i-1] == b[j-1]: dp[i][j] = dp[i-1][j-1]+1
+            else: dp[i][j] = max(dp[i-1][j], dp[i][j-1])
+    return dp[m][n]`
           }
         ]} />
 
@@ -1271,6 +1880,68 @@ double fractionalKnapsack(int W, vector<pair<int,int>>& items) {
     }
     return totalValue;
 }`
+            },
+            {
+              language: "Java",
+              title: "Greedy Algorithms",
+              code: `public class GreedyUtils {
+    public static int activitySelection(int[] start, int[] end) {
+        int n = start.length;
+        int[][] activities = new int[n][2];
+        for (int i = 0; i < n; i++) activities[i] = new int[]{start[i], end[i]};
+        
+        Arrays.sort(activities, (a, b) -> a[1] - b[1]);
+        
+        int count = 1, lastEnd = activities[0][1];
+        for (int i = 1; i < n; i++) {
+            if (activities[i][0] >= lastEnd) {
+                count++;
+                lastEnd = activities[i][1];
+            }
+        }
+        return count;
+    }
+
+    public static double fractionalKnapsack(int W, int[] val, int[] wt) {
+        int n = val.length;
+        Double[][] ratio = new Double[n][2];
+        for (int i = 0; i < n; i++) ratio[i] = new Double[]{(double)val[i]/wt[i], (double)i};
+        
+        Arrays.sort(ratio, (a, b) -> Double.compare(b[0], a[0]));
+        
+        double totalValue = 0;
+        for (int i = 0; i < n; i++) {
+            int idx = ratio[i][1].intValue();
+            if (W >= wt[idx]) {
+                totalValue += val[idx];
+                W -= wt[idx];
+            } else {
+                totalValue += val[idx] * ((double)W / wt[idx]);
+                break;
+            }
+        }
+        return totalValue;
+    }
+}`
+            },
+            {
+              language: "Python",
+              title: "Greedy Algos",
+              code: `def activity_selection(start, end):
+    acts = sorted(zip(start, end), key=lambda x: x[1])
+    count, last_end = 1, acts[0][1]
+    for i in range(1, len(acts)):
+        if acts[i][0] >= last_end:
+            count += 1; last_end = acts[i][1]
+    return count
+
+def fractional_knapsack(W, val, wt):
+    items = sorted(zip(val, wt), key=lambda x: x[0]/x[1], reverse=True)
+    total_val = 0.0
+    for v, w in items:
+        if W >= w: total_val += v; W -= w
+        else: total_val += v * (W / w); break
+    return total_val`
             }
           ]} />
         </div>
@@ -1282,6 +1953,37 @@ double fractionalKnapsack(int W, vector<pair<int,int>>& items) {
           </p>
 
           <CodeTabs tabs={[
+            {
+              language: "C++",
+              title: "N-Queens & Subsets",
+              code: `bool isSafe(vector<vector<int>>& board, int row, int col, int n) {
+    for (int i = 0; i < col; i++) if (board[row][i]) return false;
+    for (int i = row, j = col; i >= 0 && j >= 0; i--, j--) if (board[i][j]) return false;
+    for (int i = row, j = col; i < n && j >= 0; i++, j--) if (board[i][j]) return false;
+    return true;
+}
+
+bool solveNQueens(vector<vector<int>>& board, int col, int n) {
+    if (col >= n) return true;
+    for (int i = 0; i < n; i++) {
+        if (isSafe(board, i, col, n)) {
+            board[i][col] = 1;
+            if (solveNQueens(board, col + 1, n)) return true;
+            board[i][col] = 0; // Backtrack
+        }
+    }
+    return false;
+}
+
+void findSubsets(vector<int>& nums, int idx, vector<int>& curr, vector<vector<int>>& res) {
+    res.push_back(curr);
+    for (int i = idx; i < (int)nums.size(); i++) {
+        curr.push_back(nums[i]);
+        findSubsets(nums, i + 1, curr, res);
+        curr.pop_back(); // Backtrack
+    }
+}`
+            },
             {
               language: "Java",
               title: "N-Queens & Subsets",
@@ -1321,6 +2023,38 @@ public class BacktrackingUtils {
         }
     }
 }`
+            },
+            {
+              language: "Python",
+              title: "N-Queens & Subsets",
+              code: `def is_safe(board, row, col, n):
+    for i in range(col):
+        if board[row][i] == 1: return False
+    for i, j in zip(range(row, -1, -1), range(col, -1, -1)):
+        if board[i][j] == 1: return False
+    for i, j in zip(range(row, n), range(col, -1, -1)):
+        if board[i][j] == 1: return False
+    return True
+
+def solve_n_queens(board, col, n):
+    if col >= n: return True
+    for i in range(n):
+        if is_safe(board, i, col, n):
+            board[i][col] = 1
+            if solve_n_queens(board, col + 1, n): return True
+            board[i][col] = 0
+    return False
+
+def get_subsets(nums):
+    res = []
+    def backtrack(start, curr):
+        res.append(list(curr))
+        for i in range(start, len(nums)):
+            curr.append(nums[i])
+            backtrack(i + 1, curr)
+            curr.pop()
+    backtrack(0, [])
+    return res`
             }
           ]} />
         </div>
@@ -1392,6 +2126,65 @@ bool startsWith(TrieNode* root, string prefix) {
     }
     return true; // Prefix exists
 }`
+            },
+            {
+              language: "Java",
+              title: "Trie (Prefix Tree)",
+              code: `class TrieNode {
+    TrieNode[] children = new TrieNode[26];
+    boolean isEnd = false;
+}
+
+public class Trie {
+    private TrieNode root = new TrieNode();
+
+    public void insert(String word) {
+        TrieNode curr = root;
+        for (char c : word.toCharArray()) {
+            int idx = c - 'a';
+            if (curr.children[idx] == null) curr.children[idx] = new TrieNode();
+            curr = curr.children[idx];
+        }
+        curr.isEnd = true;
+    }
+
+    public boolean search(String word) {
+        TrieNode curr = root;
+        for (char c : word.toCharArray()) {
+            int idx = c - 'a';
+            if (curr.children[idx] == null) return false;
+            curr = curr.children[idx];
+        }
+        return curr.isEnd;
+    }
+}`
+            },
+            {
+              language: "Python",
+              title: "Trie (Prefix Tree)",
+              code: `class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.is_end = False
+
+class Trie:
+    def __init__(self):
+        self.root = TrieNode()
+
+    def insert(self, word):
+        node = self.root
+        for char in word:
+            if char not in node.children:
+                node.children[char] = TrieNode()
+            node = node.children[char]
+        node.is_end = True
+
+    def search(self, word):
+        node = self.root
+        for char in word:
+            if char not in node.children: return False
+            node = node.children[char]
+        return node.is_end`
             }
           ]} />
         </div>
@@ -1453,6 +2246,60 @@ bool hasCycle(int V, vector<pair<int,int>>& edges) {
     }
     return false;
 }`
+            },
+            {
+              language: "Java",
+              title: "DSU (Union-Find)",
+              code: `public class DSU {
+    int[] parent, rank;
+
+    public DSU(int n) {
+        parent = new int[n];
+        rank = new int[n];
+        for (int i = 0; i < n; i++) parent[i] = i;
+    }
+
+    public int find(int x) {
+        if (parent[x] != x) parent[x] = find(parent[x]);
+        return parent[x];
+    }
+
+    public void union(int x, int y) {
+        int rootX = find(x), rootY = find(y);
+        if (rootX != rootY) {
+            if (rank[rootX] < rank[rootY]) parent[rootX] = rootY;
+            else if (rank[rootX] > rank[rootY]) parent[rootY] = rootX;
+            else {
+                parent[rootY] = rootX;
+                rank[rootX]++;
+            }
+        }
+    }
+}`
+            },
+            {
+              language: "Python",
+              title: "DSU (Union-Find)",
+              code: `class DSU:
+    def __init__(self, n):
+        self.parent = list(range(n))
+        self.rank = [0] * n
+
+    def find(self, x):
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])
+        return self.parent[x]
+
+    def union(self, x, y):
+        rootX, rootY = self.find(x), self.find(y)
+        if rootX != rootY:
+            if self.rank[rootX] < self.rank[rootY]:
+                self.parent[rootX] = rootY
+            elif self.rank[rootX] > self.rank[rootY]:
+                self.parent[rootY] = rootX
+            else:
+                self.parent[rootY] = rootX
+                self.rank[rootX] += 1`
             }
           ]} />
         </div>
@@ -1487,17 +2334,12 @@ bool hasCycle(int V, vector<pair<int,int>>& edges) {
             title: "Dijkstra's Algorithm",
             code: `vector<int> dijkstra(int src, int V, vector<vector<pair<int,int>>>& adj) {
     vector<int> dist(V, INT_MAX);
-    // Min-heap: {distance, vertex}
     priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;
-    
     dist[src] = 0;
     pq.push({0, src});
-    
     while (!pq.empty()) {
         auto [d, u] = pq.top(); pq.pop();
-        
-        if (d > dist[u]) continue; // Stale entry
-        
+        if (d > dist[u]) continue;
         for (auto [v, w] : adj[u]) {
             if (dist[u] + w < dist[v]) {
                 dist[v] = dist[u] + w;
@@ -1506,11 +2348,51 @@ bool hasCycle(int V, vector<pair<int,int>>& edges) {
         }
     }
     return dist;
-}
+}`
+          },
+          {
+            language: "Java",
+            title: "Dijkstra's Algorithm",
+            code: `public class Dijkstra {
+    public int[] dijkstra(int src, int V, List<List<int[]>> adj) {
+        int[] dist = new int[V];
+        Arrays.fill(dist, Integer.MAX_VALUE);
+        dist[src] = 0;
+        PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> a[0] - b[0]);
+        pq.add(new int[]{0, src});
+        while (!pq.isEmpty()) {
+            int[] top = pq.poll();
+            int d = top[0], u = top[1];
+            if (d > dist[u]) continue;
+            for (int[] edge : adj.get(u)) {
+                int v = edge[0], w = edge[1];
+                if (dist[u] + w < dist[v]) {
+                    dist[v] = dist[u] + w;
+                    pq.add(new int[]{dist[v], v});
+                }
+            }
+        }
+        return dist;
+    }
+}`
+          },
+          {
+            language: "Python",
+            title: "Dijkstra's Algo",
+            code: `import heapq
 
-// Usage:
-// adj[u] = {{v1, weight1}, {v2, weight2}, ...}
-// vector<int> distances = dijkstra(0, V, adj);`
+def dijkstra(src, V, adj):
+    dist = [float('inf')] * V
+    dist[src] = 0
+    pq = [(0, src)] # (distance, node)
+    while pq:
+        d, u = heapq.heappop(pq)
+        if d > dist[u]: continue
+        for v, w in adj[u]:
+            if dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+                heapq.heappush(pq, (dist[v], v))
+    return dist`
           },
           {
             language: "Java",
@@ -1520,40 +2402,66 @@ bool hasCycle(int V, vector<pair<int,int>>& edges) {
         int[] dist = new int[V];
         Arrays.fill(dist, Integer.MAX_VALUE);
         dist[src] = 0;
-        
-        // Relax all edges V-1 times
         for (int i = 0; i < V - 1; i++) {
-            for (int[] e : edges) { // {u, v, weight}
+            for (int[] e : edges) {
                 int u = e[0], v = e[1], w = e[2];
-                if (dist[u] != Integer.MAX_VALUE 
-                    && dist[u] + w < dist[v]) {
+                if (dist[u] != Integer.MAX_VALUE && dist[u] + w < dist[v])
                     dist[v] = dist[u] + w;
-                }
-            }
-        }
-        
-        // Check for negative-weight cycles
-        for (int[] e : edges) {
-            if (dist[e[0]] != Integer.MAX_VALUE 
-                && dist[e[0]] + e[2] < dist[e[1]]) {
-                throw new RuntimeException("Negative cycle detected!");
             }
         }
         return dist;
     }
 
-    // Floyd-Warshall (All-Pairs, O(V³))
     public static void floydWarshall(int[][] dist, int V) {
         for (int k = 0; k < V; k++)
             for (int i = 0; i < V; i++)
                 for (int j = 0; j < V; j++)
-                    if (dist[i][k] != Integer.MAX_VALUE && 
-                        dist[k][j] != Integer.MAX_VALUE && 
-                        dist[i][k] + dist[k][j] < dist[i][j]) {
-                        dist[i][j] = dist[i][k] + dist[k][j];
-                    }
+                    if (dist[i][k] != Integer.MAX_VALUE && dist[k][j] != Integer.MAX_VALUE)
+                        dist[i][j] = Math.min(dist[i][j], dist[i][k] + dist[k][j]);
     }
 }`
+          },
+          {
+            language: "C++",
+            title: "Bellman-Ford & Floyd-Warshall",
+            code: `struct Edge { int u, v, w; };
+
+vector<int> bellmanFord(int V, vector<Edge>& edges, int src) {
+    vector<int> dist(V, INT_MAX);
+    dist[src] = 0;
+    for (int i = 0; i < V - 1; i++) {
+        for (const auto& e : edges) {
+            if (dist[e.u] != INT_MAX && dist[e.u] + e.w < dist[e.v])
+                dist[e.v] = dist[e.u] + e.w;
+        }
+    }
+    return dist;
+}
+
+void floydWarshall(vector<vector<int>>& dist, int V) {
+    for (int k = 0; k < V; k++)
+        for (int i = 0; i < V; i++)
+            for (int j = 0; j < V; j++)
+                if (dist[i][k] != INT_MAX && dist[k][j] != INT_MAX)
+                    dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j]);
+}`
+          },
+          {
+            language: "Python",
+            title: "Bellman & Floyd",
+            code: `def bellman_ford(V, edges, src):
+    dist = [float('inf')] * V
+    dist[src] = 0
+    for _ in range(V-1):
+        for u, v, w in edges:
+            if dist[u] + w < dist[v]: dist[v] = dist[u] + w
+    return dist
+
+def floyd_warshall(dist, V):
+    for k in range(V):
+        for i in range(V):
+            for j in range(V):
+                dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])`
           }
         ]} />
 
@@ -1564,3 +2472,4 @@ bool hasCycle(int V, vector<pair<int,int>>& edges) {
     )
   }
 ];
+

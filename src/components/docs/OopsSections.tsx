@@ -128,6 +128,35 @@ public:
         return os;
     }
 };`
+          },
+          {
+            language: "Python",
+            title: "Class Anatomy",
+            code: `class Car:
+    def __init__(self, brand):
+        # Instance attributes (state)
+        self.brand = brand
+        self.speed = 0
+        self.engine_on = False
+
+    # Instance methods (behavior)
+    def start_engine(self):
+        self.engine_on = True
+        print(f"{self.brand} engine started!")
+
+    def accelerate(self, amount):
+        if self.engine_on:
+            self.speed += amount
+
+    # String representation (analogous to toString)
+    def __str__(self):
+        return f"{self.brand} [Speed: {self.speed} km/h]"
+
+# Usage:
+tesla = Car("Tesla Model S")
+tesla.start_engine()
+tesla.accelerate(60)
+print(tesla) # "Tesla Model S [Speed: 60 km/h]"`
           }
         ]} />
       </div>
@@ -249,6 +278,35 @@ public:
     // For manual resources (files, sockets), implement AutoCloseable 
     // and use try-with-resources.
 }`
+          },
+          {
+            language: "Python",
+            title: "Constructors & GC",
+            code: `class Student:
+    def __init__(self, name, age=18, major="Undeclared"):
+        # Python supports default arguments (replaces chaining)
+        self.name = name
+        self.age = age
+        self.major = major
+
+    # Python has no explicit destructors. 
+    # The __del__ method is called by the Garbage Collector.
+    def __del__(self):
+        print(f"Cleaning up {self.name}")
+
+# RAII pattern using Context Managers
+from contextlib import contextmanager
+
+@contextmanager
+def managed_resource():
+    print("Acquire")
+    try:
+        yield "Resource"
+    finally:
+        print("Release")
+
+with managed_resource() as r:
+    print(f"Using {r}")`
           }
         ]} />
 
@@ -380,6 +438,40 @@ public:
 
 // Note: the 'friend' keyword breaks encapsulation intentionally.
 // Use sparingly and only for tightly coupled utilities.`
+            },
+            {
+              language: "Python",
+              title: "@property Encapsulation",
+              code: `from datetime import datetime
+
+class BankAccount:
+    def __init__(self, acc_num, initial):
+        # Conventions:
+        # _internal (protected)
+        # __private (name mangled)
+        self.__balance = initial
+        self.__acc_number = acc_num
+        self.__log = []
+
+    # Managed attribute (Getter)
+    @property
+    def balance(self):
+        return self.__balance
+
+    # Managed attribute (Setter) with validation
+    @balance.setter
+    def balance(self, value):
+        if value < 0: raise ValueError("Negative balance!")
+        self.__balance = value
+
+    def deposit(self, amount):
+        if amount > 0:
+            self.balance += amount
+            self.__log.append(f"Deposited {amount}")
+
+    @property
+    def transaction_log(self):
+        return list(self.__log) # Return copy`
             }
           ]} />
         </div>
@@ -491,6 +583,32 @@ Animal myPet = new Dog("Rex", 3, "German Shepherd");
 myPet.speak();    // "Rex barks! Woof!" (dynamic dispatch)
 // myPet.fetch(); // COMPILE ERROR: Animal reference doesn't have fetch()
 ((Dog)myPet).fetch(); // Downcast to access Dog-specific methods`
+            },
+            {
+              language: "Python",
+              title: "Inheritance & multiple",
+              code: `class Animal:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+    
+    def speak(self):
+        print(f"{self.name} makes a sound")
+
+class Dog(Animal): # Inheritance
+    def __init__(self, name, age, breed):
+        super().__init__(name, age) # Call parent constructor
+        self.breed = breed
+    
+    def speak(self): # Overriding
+        print(f"{self.name} barks! Woof!")
+
+# Multiple Inheritance (Python unique!)
+class Flyer:
+    def fly(self): print("Flying...")
+
+class Bat(Animal, Flyer):
+    pass`
             }
           ]} />
 
@@ -641,6 +759,31 @@ if (myPay instanceof CryptoPayment cp) {
     // cp is automatically cast to CryptoPayment here
     cp.verifyBlockchain(); 
 }`
+            },
+            {
+              language: "Python",
+              title: "Duck Typing & Overriding",
+              code: `from abc import ABC, abstractmethod
+
+class Shape(ABC):
+    @abstractmethod
+    def area(self): pass
+
+class Circle(Shape):
+    def __init__(self, r): self.r = r
+    def area(self): return 3.14 * self.r ** 2
+
+class Square(Shape):
+    def __init__(self, s): self.s = s
+    def area(self): return self.s ** 2
+
+# Duck Typing: If it walks like a duck...
+def print_area(shape):
+    print(f"Area: {shape.area()}")
+
+shapes = [Circle(5), Square(4)]
+for s in shapes:
+    print_area(s)`
             }
           ]} />
 
@@ -788,6 +931,30 @@ public:
         // Implementation for parsing string into state
     }
 };`
+            },
+            {
+              language: "Python",
+              title: "ABC & Interfaces",
+              code: `from abc import ABC, abstractmethod
+
+class Drivable(ABC):
+    @abstractmethod
+    def accelerate(self): pass
+    
+    @abstractmethod
+    def brake(self): pass
+
+class Vehicle(ABC):
+    def __init__(self, brand):
+        self.brand = brand
+    
+    @abstractmethod
+    def refuel(self): pass
+
+class Tesla(Vehicle, Drivable):
+    def refuel(self): print("Charging...")
+    def accelerate(self): print("Instant torque!")
+    def brake(self): print("Regen braking")`
             }
           ]} />
         </div>
@@ -912,6 +1079,34 @@ int Logger::logCount = 0;
 Logger::getInstance().log("Server started");
 Logger::getInstance().log("Connection accepted");
 cout << Logger::getLogCount(); // Outputs 2`
+          },
+          {
+            language: "Python",
+            title: "Static & Singleton",
+            code: `class Player:
+    total_players = 0 # Class variable
+
+    def __init__(self, name):
+        self.name = name
+        Player.total_players += 1
+
+    @staticmethod
+    def get_info():
+        return "Generic player utilities"
+
+    @classmethod
+    def from_string(cls, data):
+        # Factory method
+        name = data.split(":")[0]
+        return cls(name)
+
+# Singleton Pattern
+class Database:
+    _instance = None
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance`
           }
         ]} />
 
@@ -949,6 +1144,69 @@ cout << Logger::getLogCount(); // Outputs 2`
         
 
         <CodeTabs tabs={[
+          {
+            language: "C++",
+            title: "Factory, Observer & Strategy Patterns",
+            code: `// ========== FACTORY METHOD ==========
+class Shape {
+public:
+    virtual void draw() = 0;
+    virtual ~Shape() {}
+};
+
+class Circle : public Shape {
+public:
+    void draw() override { cout << "○" << endl; }
+};
+
+class ShapeFactory {
+public:
+    static unique_ptr<Shape> create(string type) {
+        if (type == "circle") return make_unique<Circle>();
+        if (type == "square") return make_unique<Square>();
+        return nullptr;
+    }
+};
+
+// ========== OBSERVER PATTERN ==========
+class Observer {
+public:
+    virtual void update(string event, string data) = 0;
+    virtual ~Observer() {}
+};
+
+class EventBus {
+    map<string, vector<Observer*>> listeners;
+public:
+    void subscribe(string event, Observer* obs) {
+        listeners[event].push_back(obs);
+    }
+    void publish(string event, string data) {
+        if (listeners.count(event)) {
+            for (auto obs : listeners[event]) obs->update(event, data);
+        }
+    }
+};
+
+// ========== STRATEGY PATTERN ==========
+class SortStrategy {
+public:
+    virtual void sort(vector<int>& arr) = 0;
+    virtual ~SortStrategy() {}
+};
+
+class QuickSort : public SortStrategy {
+public:
+    void sort(vector<int>& arr) override { /* quick sort */ }
+};
+
+class Sorter {
+    unique_ptr<SortStrategy> strategy;
+public:
+    void setStrategy(unique_ptr<SortStrategy> s) { strategy = std::move(s); }
+    void performSort(vector<int>& arr) { if(strategy) strategy->sort(arr); }
+};`
+          },
           {
             language: "Java",
             title: "Factory, Observer & Strategy Patterns",
@@ -1010,6 +1268,32 @@ class Sorter {
 // Swap algorithms at runtime without changing the Sorter!
 Sorter sorter = new Sorter(new QuickSortStrategy());
 sorter.setStrategy(new MergeSortStrategy()); // Strategy changed dynamically!`
+          },
+          {
+            language: "Python",
+            title: "Python Patterns",
+            code: `from abc import ABC, abstractmethod
+
+# 1. Factory Method
+class ShapeFactory:
+    @staticmethod
+    def create(type):
+        if type == "circle": return Circle()
+        if type == "square": return Square()
+
+# 2. Strategy Pattern
+class SortStrategy(ABC):
+    @abstractmethod
+    def sort(self, arr): pass
+
+class QuickSort(SortStrategy):
+    def sort(self, arr): print("Quick Sorting")
+
+class Sorter:
+    def __init__(self, strategy):
+        self.strategy = strategy
+    def perform_sort(self, arr):
+        self.strategy.sort(arr)`
           }
         ]} />
 
@@ -1138,6 +1422,28 @@ void print(Args... args) {
     cout << endl;
 }
 // print(1, "hello", 3.14); // Outputs: 1 hello 3.14`
+          },
+          {
+            language: "Python",
+            title: "Type Hinting & Generics",
+            code: `from typing import TypeVar, Generic, List
+
+T = TypeVar('T')
+
+class Stack(Generic[T]):
+    def __init__(self):
+        self.items: List[T] = []
+    
+    def push(self, item: T):
+        self.items.append(item)
+    
+    def pop(self) -> T:
+        return self.items.pop()
+
+# Type hinting (checked by tools like mypy)
+int_stack = Stack[int]()
+int_stack.push(10)
+# int_stack.push("hello") # Static type error`
           }
         ]} />
 

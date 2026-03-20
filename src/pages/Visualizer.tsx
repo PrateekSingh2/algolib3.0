@@ -1,4 +1,6 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabaseClient } from '@/lib/supabase';
 import {
   Activity,
   ArrowRightLeft,
@@ -74,17 +76,52 @@ const Visualizer = () => {
     return () => media.removeEventListener('change', sync);
   }, []);
 
-  // Session Storage Check for Welcome Modal
-  useEffect(() => {
-    const hasSeenWelcome = sessionStorage.getItem('algoviz_welcome_seen');
-    if (!hasSeenWelcome) {
-      setShowWelcome(true);
-    }
-  }, []);
+  const { user, profile, refreshProfile } = useAuth();
 
-  const handleCloseWelcome = () => {
-    sessionStorage.setItem('algoviz_welcome_seen', 'true');
-    setShowWelcome(false);
+  useEffect(() => {
+    const syncWelcomeState = async () => {
+      if (user) {
+        if (!profile?.has_seen_welcome) {
+          setShowWelcome(true);
+        }
+        return;
+      }
+
+      const hasSeenWelcome = localStorage.getItem('algoviz_welcome_seen');
+      setShowWelcome(!hasSeenWelcome);
+    };
+
+    syncWelcomeState();
+  }, [user, profile]);
+
+  const handleCloseWelcome = async () => {
+    try {
+      if (user) {
+        const profileFilter = profile?.id
+          ? `id=eq.${encodeURIComponent(profile.id)}`
+          : user.email
+            ? `email=eq.${encodeURIComponent(user.email)}`
+            : null;
+
+        if (!profileFilter) {
+          setShowWelcome(false);
+          return;
+        }
+
+        await supabaseClient.update(
+          'users',
+          profileFilter,
+          { has_seen_welcome: true },
+        );
+        await refreshProfile();
+      } else {
+        localStorage.setItem('algoviz_welcome_seen', 'true');
+      }
+    } catch (error) {
+      console.error('Failed to persist welcome state', error);
+    } finally {
+      setShowWelcome(false);
+    }
   };
 
   const menu = useMemo(

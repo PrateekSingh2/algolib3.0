@@ -13,44 +13,53 @@ const InstallPrompt = () => {
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // 1. Check if dismissed THIS SESSION (Clears when tab closes!)
-    if (sessionStorage.getItem("algolib_pwa_dismissed") === "true") {
-      return;
-    }
+    const checkPromptStatus = () => {
+      // 1. Check if dismissed THIS SESSION
+      if (sessionStorage.getItem("algolib_pwa_dismissed") === "true") {
+        return;
+      }
 
-    // 2. Check if already installed
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
-    if (isStandalone) {
-      return;
-    }
+      // 2. Check if already installed
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+      if (isStandalone) {
+        return;
+      }
 
-    // 3. Check for iOS
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const iosDevice = /iphone|ipad|ipod/.test(userAgent);
-    setIsIOS(iosDevice);
+      // 3. Check for iOS
+      const userAgent = window.navigator.userAgent.toLowerCase();
+      const iosDevice = /iphone|ipad|ipod/.test(userAgent);
+      setIsIOS(iosDevice);
 
-    if (iosDevice) {
-      setShowPrompt(true);
-      return;
-    }
+      if (iosDevice) {
+        setShowPrompt(true);
+        return;
+      }
 
-    // 4. Handle Android / Chrome Event
-    const handlePrompt = (e: Event) => {
-      e.preventDefault();
-      window.deferredPWAInstallPrompt = e;
-      setShowPrompt(true);
+      // 4. Handle Android / Chrome Event
+      const handlePrompt = (e: Event) => {
+        e.preventDefault();
+        window.deferredPWAInstallPrompt = e;
+        setShowPrompt(true);
+      };
+
+      // If index.html caught it early or it's already available
+      if (window.deferredPWAInstallPrompt) {
+        setShowPrompt(true);
+      } else {
+        window.addEventListener("beforeinstallprompt", handlePrompt);
+      }
+
+      return () => {
+        window.removeEventListener("beforeinstallprompt", handlePrompt);
+      };
     };
 
-    // If index.html caught it early
-    if (window.deferredPWAInstallPrompt) {
-      setShowPrompt(true);
-    }
+    // Add a 3-second delay "at start" to ensure browser readiness
+    const timer = setTimeout(() => {
+      checkPromptStatus();
+    }, 3000);
 
-    window.addEventListener("beforeinstallprompt", handlePrompt);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handlePrompt);
-    };
+    return () => clearTimeout(timer);
   }, []);
 
   const handleInstallClick = async () => {
@@ -83,7 +92,7 @@ const InstallPrompt = () => {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="fixed bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-96 z-[9999]"
+        className="fixed bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-96 z-[99999]"
       >
         <div className="bg-[#0A0A1A]/95 backdrop-blur-xl border border-[#00d2ff]/30 rounded-2xl p-4 shadow-[0_10px_40px_rgba(0,210,255,0.15)] flex items-center justify-between gap-4">
           
@@ -107,6 +116,7 @@ const InstallPrompt = () => {
             <button
               onClick={handleDismiss}
               className="p-2 text-gray-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              aria-label="Dismiss installation prompt"
             >
               <X className="w-4 h-4" />
             </button>

@@ -166,6 +166,32 @@ enum Planet {
         return 6.67300E-11 * mass / (radius * radius);
     }
 }`
+            },
+            {
+              language: "Python",
+              title: "Constants & Enums",
+              code: `from enum import Enum, auto
+
+# Constants (Naming convention: ALL_CAPS)
+PI = 3.14159265358979
+MAX_BUFFER = 1024 # Python has no 'const' keyword
+
+# Enum Class (Python 3.4+)
+class Color(Enum):
+    RED = 1
+    GREEN = 2
+    BLUE = 3
+
+# Enum with auto-values
+class Direction(Enum):
+    NORTH = auto()
+    SOUTH = auto()
+    EAST = auto()
+    WEST = auto()
+
+# Usage
+print(Color.RED.name)  # "RED"
+print(Color.RED.value) # 1`
             }
           ]} />
         </div>
@@ -225,6 +251,42 @@ string status = (age >= 18) ? "Adult" : "Minor";
 
 // Comma operator (evaluates left, returns right)
 int a = (1, 2, 3); // a = 3`
+            },
+            {
+              language: "Java",
+              title: "Short-Circuit & Ternary",
+              code: `// Safe null-pointer check using short-circuit
+String text = null;
+
+// Without short-circuit, text.length() would throw NullPointerException
+if (text != null && text.length() > 0) {
+    // text.length() is ONLY evaluated if text is not null
+    System.out.println("Valid text!");
+}
+
+// Ternary operator (compact if/else)
+int age = 20;
+String status = (age >= 18) ? "Adult" : "Minor";`
+            },
+            {
+              language: "Python",
+              title: "Short-Circuit & Ternary",
+              code: `# Safe null check using 'and'
+text = None
+
+# Python's 'and' / 'or' short-circuit
+if text is not None and len(text) > 0:
+    print("Valid text!")
+
+# Ternary expression (Modern Python)
+age = 20
+status = "Adult" if age >= 18 else "Minor"
+
+# Identity vs Equality
+a = [1, 2]
+b = [1, 2]
+print(a == b) # True (Values)
+print(a is b) # False (Memory Location)`
             }
           ]} />
         </div>
@@ -273,6 +335,32 @@ String dayType = switch (day) {
     default -> throw new IllegalArgumentException("Invalid day");
 };
 // No break needed, no fallthrough possible!`
+            },
+            {
+              language: "Python",
+              title: "Match Case (3.10+)",
+              code: `day = 3
+
+# Traditional Dictionary Mapping (Pre-3.10)
+days = {1: "Mon", 2: "Tue", 3: "Wed"}
+print(days.get(day, "Weekend"))
+
+# Structural Pattern Matching (Python 3.10+)
+match day:
+    case 1 | 2 | 3 | 4 | 5:
+        day_type = "Weekday"
+    case 6 | 7:
+        day_type = "Weekend"
+    case _:
+        raise ValueError("Invalid day")
+
+# Advanced Pattern Matching
+point = (0, 5)
+match point:
+    case (0, 0): print("Origin")
+    case (0, y): print(f"Y-axis at {y}")
+    case (x, 0): print(f"X-axis at {x}")
+    case _: print("Somewhere else")`
             }
           ]} />
         </div>
@@ -343,6 +431,31 @@ do {
     System.out.print("Enter positive: ");
     input = sc.nextInt();
 } while (input <= 0);`
+            },
+            {
+              language: "Python",
+              title: "Pythonic Loops",
+              code: `# range(start, stop, step)
+for i in range(0, 10, 2):
+    print(i) # 0, 2, 4, 6, 8
+
+# Iterating with index (enumerate)
+names = ["Alice", "Bob"]
+for idx, name in enumerate(names):
+    print(f"{idx}: {name}")
+
+# Zip (Iterate multiple lists)
+ages = [25, 30]
+for name, age in zip(names, ages):
+    print(f"{name} is {age}")
+
+# List Comprehensions (Powerful!)
+squares = [x**2 for x in range(10) if x % 2 == 0]
+
+# While loop (no do-while in Python)
+while True:
+    val = int(input("Enter positive: "))
+    if val > 0: break # Emulate do-while behavior`
             }
           ]} />
           <WarningBlock>
@@ -415,6 +528,26 @@ static long factorial(int n) {
     if (n <= 1) return 1;  // Base case
     return n * factorial(n - 1);  // Recursive case
 }`
+            },
+            {
+              language: "Python",
+              title: "Arguments & Recur",
+              code: `# Variable number of arguments (*args)
+def sum_all(*numbers):
+    return sum(numbers)
+
+# Keyword arguments (**kwargs)
+def print_config(**kwargs):
+    for key, value in kwargs.items():
+        print(f"{key}: {value}")
+
+# Default arguments
+def greet(name, msg="Hello"):
+    print(f"{msg}, {name}")
+
+# Recursion
+def factorial(n):
+    return 1 if n <= 1 else n * factorial(n-1)`
             }
           ]} />
         </div>
@@ -450,6 +583,46 @@ int x = 5;
 int* p = &x;
 int** pp = &p;
 cout << **pp; // 5`
+            },
+            {
+              language: "Java",
+              title: "References & Arrays",
+              code: `// Java uses References instead of Pointers
+int[] arr = {10, 20, 30};
+int[] ref = arr; // ref points to the same array object
+
+System.out.println(ref[0]); // 10
+
+// Dynamic memory allocation is handled by 'new'
+int[] dynArr = new int[100]; 
+dynArr[0] = 42;
+// No explicit 'delete'. Garbage Collector handles cleanup.
+
+// References can be null
+String s = null;
+// s.length(); // Throws NullPointerException`
+            },
+            {
+              language: "Python",
+              title: "References & Lists",
+              code: `# Everything in Python is an OBJECT
+# Variables are references to objects
+a = [1, 2, 3]
+b = a # b references the same list
+b.append(4)
+print(a) # [1, 2, 3, 4]
+
+# Dynamic lists (not arrays)
+arr = [0] * 100 # Pre-allocation
+arr[0] = 42
+
+# Slicing (Powerful feature)
+nums = [10, 20, 30, 40]
+print(nums[1:3]) # [20, 30]
+
+# List methods
+nums.insert(0, 5)
+nums.pop()`
             }
           ]} />
           <WarningBlock>Accessing memory beyond your array bounds (e.g., <code>arr[5]</code> on a size-3 array) leads to a <strong>Segmentation Fault</strong>, or worse—silently corrupting adjacent memory. This is a major source of security vulnerabilities (buffer overflow attacks).</WarningBlock>
@@ -476,6 +649,50 @@ delete[] grid;
 
 // Modern C++ approach: vector of vectors
 vector<vector<int>> v(3, vector<int>(4, 0)); // 3x4, init 0`
+            },
+            {
+              language: "Java",
+              title: "2D & Jagged Arrays",
+              code: `// Fixed 2D array
+int[][] matrix = new int[3][4];
+matrix[1][2] = 42;
+
+// Jagged arrays (each row can have different length)
+int[][] jagged = new int[3][];
+jagged[0] = new int[2];
+jagged[1] = new int[5];
+jagged[2] = new int[3];
+
+// Initializing jagged array directly
+int[][] triangle = {
+    {1},
+    {1, 2},
+    {1, 2, 3}
+};`
+            },
+            {
+              language: "Python",
+              title: "Nested Lists",
+              code: `# Standard 2D List
+matrix = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+]
+
+# List Comprehension for 2D initialization
+rows, cols = 3, 4
+grid = [[0 for _ in range(cols)] for _ in range(rows)]
+
+# Access
+grid[1][2] = 42
+
+# Jagged (variable lengths)
+jagged = [
+    [1],
+    [1, 2],
+    [1, 2, 3]
+]`
             }
           ]} />
         </div>
@@ -572,6 +789,34 @@ String b = "Hello";
 // a == b is TRUE (same pool reference)
 String c = new String("Hello");
 // a == c is FALSE (different objects in memory)`
+            },
+            {
+              language: "Python",
+              title: "Modern Strings",
+              code: `s = "Hello"
+s.lower()   # "hello"
+s.strip()   # Remove whitespace
+s.split(",") # Tokenization
+
+# Slicing
+print(s[0:2]) # "He"
+print(s[::-1]) # "olleH" (Reverse)
+
+# f-strings (Python 3.6+)
+name, age = "Alice", 25
+print(f"{name} is {age} years old")
+
+# Multiline strings
+sql = """
+SELECT * 
+FROM users 
+WHERE id = 1
+"""
+
+# Strings are IMMUTABLE like Java
+# Use "".join() for efficiency
+parts = ["a", "b", "c"]
+result = "-".join(parts)`
             }
           ]} />
         </div>
@@ -645,8 +890,50 @@ bool bit3 = (flags >> 3) & 1;  // Extract bit 3
 flags |= (1 << 5);             // Set bit 5 to 1
 flags &= ~(1 << 2);            // Clear bit 2 to 0
 flags ^= (1 << 4);             // Toggle bit 4`
-          }
-        ]} />
+          },
+          {
+            language: "Java",
+            title: "Bit Manipulation",
+            code: `// Basic operations follow C++
+int n = 5;
+boolean isOdd = (n & 1) == 1;
+
+// Bitwise shifts
+int x = 5 << 3;  // 5 * 8 = 40
+int y = 40 >> 2; // 40 / 4 = 10
+
+// Unsigned right shift (Java specific)
+int z = -1 >>> 1; // Fills with 0 regardless of sign
+
+// Bit masking
+int flags = 0b10110100;
+boolean bit3 = ((flags >> 3) & 1) == 1;
+flags |= (1 << 5);  // Set bit 5
+flags &= ~(1 << 2); // Clear bit 2
+flags ^= (1 << 4);  // Toggle bit 4`
+            },
+            {
+              language: "Python",
+              title: "Bit Manipulation",
+              code: `n = 5
+is_odd = (n & 1 == 1)
+
+# Shifts
+x = 5 << 3  # 5 * 8 = 40
+y = 40 >> 2 # 40 / 4 = 10
+
+# Python integers have arbitrary precision
+# Bit manipulation works the same
+flags = 0b10110100
+bit3 = bool((flags >> 3) & 1)
+flags |= (1 << 5)   # Set bit 5
+flags &= ~(1 << 2)  # Clear bit 2
+flags ^= (1 << 4)   # Toggle bit 4
+
+# Binary representation
+print(bin(flags)) # '0b11010000'`
+            }
+          ]} />
 
         <ProTip>
           <strong>Two's Complement:</strong> Negative numbers are stored by inverting all bits and adding 1. For example, -5 in 8-bit: <code>5 = 00000101 → invert → 11111010 → +1 → 11111011</code>. This allows the same hardware circuit to perform both addition and subtraction seamlessly.
@@ -681,15 +968,12 @@ Student s = {"Alice", 20, 3.9};
 cout << s.name;  // "Alice"
 
 // Struct Padding & Alignment
-// The compiler might insert empty padding bytes between members
-// to align them in memory for faster CPU access.
 struct PaddedData {
     char c;      // 1 byte
-    // 3 bytes padding inserted here
     int i;       // 4 bytes
-}; // Total size = 8 bytes, not 5!
+}; // Total size = 8 bytes due to alignment
 
-// Struct with methods (C++ allows this!)
+// Struct with methods
 struct Point {
     double x, y;
     double distanceTo(Point other) {
@@ -697,16 +981,58 @@ struct Point {
     }
 };
 
-// Union (shared memory for multiple types to save space)
+// Union (shared memory)
 union Data {
-    int i;     // 4 bytes
-    float f;   // 4 bytes
-    char c;    // 1 byte
-}; // Size = 4 bytes (largest member dictates total size)
+    int i;
+    float f;
+    char c;
+};`
+            },
+            {
+              language: "Java",
+              title: "Records & Data Classes",
+              code: `// Records (Java 14+) - Pure data container
+public record Student(String name, int age, double gpa) {}
 
-// Typedef (type alias)
-typedef unsigned long ulong;
-using Vec2D = vector<vector<int>>; // Modern C++ alias`
+Student s = new Student("Alice", 20, 3.9);
+System.out.println(s.name()); // "Alice"
+
+// Simple Class (Traditional alternative)
+class Point {
+    double x, y;
+    Point(double x, double y) { this.x = x; this.y = y; }
+    double distanceTo(Point other) {
+        return Math.sqrt(Math.pow(x-other.x, 2) + Math.pow(y-other.y, 2));
+    }
+}`
+            },
+            {
+              language: "Python",
+              title: "Dataclasses & Tuples",
+              code: `from dataclasses import dataclass
+from typing import NamedTuple
+
+# 1. NamedTuple (Immutable)
+class Student(NamedTuple):
+    name: str
+    age: int
+    gpa: float
+
+s = Student("Alice", 20, 3.9)
+
+# 2. Dataclass (Modern Python 3.7+)
+@dataclass
+class Point:
+    x: float
+    y: float
+    
+    def distance_to(self, other):
+        import math
+        return math.sqrt((self.x-other.x)**2 + (self.y-other.y)**2)
+
+p1 = Point(0, 0)
+p2 = Point(3, 4)
+print(p1.distance_to(p2)) # 5.0`
             }
           ]} />
         </div>
@@ -792,6 +1118,29 @@ ObjectOutputStream oos = new ObjectOutputStream(
     new FileOutputStream("obj.dat"));
 oos.writeObject(myObject);
 oos.close();`
+            },
+            {
+              language: "Python",
+              title: "Context Managers",
+              code: `# 'with' statement handles file closing automatically
+with open("data.txt", "w", encoding="utf-8") as f:
+    f.write("Line 1\\n")
+    f.write("Line 2\\n")
+
+# Reading line by line
+with open("data.txt", "r") as f:
+    for line in f:
+        print(line.strip())
+
+# Reading all lines
+with open("data.txt", "r") as f:
+    content = f.read()
+
+# JSON handling (Modern Serialization)
+import json
+data = {"id": 1, "name": "Alice"}
+with open("data.json", "w") as f:
+    json.dump(data, f) # Serialize`
             }
           ]} />
         </div>
@@ -907,8 +1256,34 @@ try {
 } catch (IOException | SQLException e) {
     logger.error("I/O or DB error", e);
 }`
-          }
-        ]} />
+            },
+            {
+              language: "Python",
+              title: "Try/Except/Finally",
+              code: `try:
+    result = 10 / 0
+except ZeroDivisionError as e:
+    print(f"Math error: {e}")
+except Exception as e:
+    print(f"General error: {e}")
+else:
+    # Runs ONLY if no exception occurred
+    print("Success!")
+finally:
+    # ALWAYS runs
+    print("Cleanup")
+
+# Custom Exception
+class WithdrawalError(Exception):
+    def __init__(self, amount):
+        self.amount = amount
+        super().__init__(f"Cannot withdraw {amount}")
+
+# Raising exceptions
+if balance < 100:
+    raise WithdrawalError(100)`
+            }
+          ]} />
 
         <WarningBlock>
           <strong>Never catch and ignore:</strong> Writing <code>catch (Exception e) {"{}"}</code> swallows errors silently, making bugs nearly impossible to diagnose. At minimum, log the exception. This is called "exception eating" and is considered one of the worst anti-patterns.
@@ -935,40 +1310,69 @@ try {
           {
             language: "C++",
             title: "Preprocessor Directives",
-            code: `// Include guards (prevent double-inclusion of header files)
+            code: `// Include guards
 #ifndef MY_HEADER_H
 #define MY_HEADER_H
-// ... declarations ...
 #endif
 
-// Modern alternative (supported by most compilers)
-#pragma once
-
-// Macros (text replacement before compilation)
+// Macros
 #define PI 3.14159
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define DEBUG_LOG(msg) cerr << "[DEBUG] " << msg << endl
 
 // Conditional compilation
 #ifdef _WIN32
     #include <windows.h>
-#elif __linux__
-    #include <unistd.h>
-#elif __APPLE__
-    #include <TargetConditionals.h>
 #endif
 
 // Predefined macros
-cout << __FILE__ << endl;   // Current filename
-cout << __LINE__ << endl;   // Current line number
-cout << __DATE__ << endl;   // Compilation date
-cout << __cplusplus << endl; // C++ standard version
+cout << __FILE__ << " : " << __LINE__;`
+          },
+          {
+            language: "Java",
+            title: "No Preprocessor (Java way)",
+            code: `// No Preprocessor in Java. Uses imports & constants.
 
-// Stringification & Token pasting
-#define STRINGIFY(x) #x       // STRINGIFY(hello) → "hello"
-#define CONCAT(a,b) a##b      // CONCAT(var,1) → var1`
-          }
-        ]} />
+// Macros -> Use static final variables/methods
+public static final double PI = 3.14159;
+public static int max(int a, int b) { return Math.max(a, b); }
+
+// Conditional Logic -> Use runtime checks or Build Tools
+String os = System.getProperty("os.name").toLowerCase();
+if (os.contains("win")) {
+    // Windows specific logic
+}
+
+// Compiler hints -> Use Annotations
+@Override
+@Deprecated
+@SuppressWarnings("unchecked")
+public void myMethod() {}`
+            },
+            {
+              language: "Python",
+              title: "Pythonic Alternatives",
+              code: `# 1. Constants (Convention)
+DEBUG_MODE = True
+
+# 2. Conditional Imports
+import os
+if os.name == 'nt':
+    import msvcrt # Windows only
+else:
+    import termios # Unix only
+
+# 3. Decorators (Compiler hints/behavior)
+def log_call(func):
+    def wrapper(*args, **kwargs):
+        print(f"Calling {func.__name__}")
+        return func(*args, **kwargs)
+    return wrapper
+
+@log_call
+def data_process():
+    pass`
+            }
+          ]} />
 
         <div>
           <h3 className="text-cyan-400 text-2xl font-bold mb-4">Manual Memory Management (C/C++)</h3>
@@ -977,34 +1381,67 @@ cout << __cplusplus << endl; // C++ standard version
               language: "C++",
               title: "Memory Management",
               code: `// C-style allocation
-int* arr = (int*)malloc(10 * sizeof(int)); // Uninitialized
-int* zeroed = (int*)calloc(10, sizeof(int)); // Zero-initialized
-arr = (int*)realloc(arr, 20 * sizeof(int));  // Resize
-free(arr); // Release
+int* arr = (int*)malloc(10 * sizeof(int));
+free(arr);
 
-// C++ style (Use this instead!)
+// C++ style
 int* cppArr = new int[10];
 delete[] cppArr;
 
-// MEMORY LEAKS: allocated but never freed
+// Memory Leak example
 void leak() {
-    int* p = new int[1000];
-    return; // Memory lost forever!
+    int* p = new int[100];
+    return; // p's address lost, memory not freed
 }
 
-// DANGLING POINTER: pointing to freed memory
+// Dangling Pointer
 int* p = new int(42);
 delete p;
-// *p = 10; // UNDEFINED BEHAVIOR! p is dangling
+p = nullptr; // Reset to avoid dangling`
+            },
+            {
+              language: "Java",
+              title: "GC & Resource Management",
+              code: `// No manual free() or delete
+Object obj = new Object();
+obj = null; // Eligible for Garbage Collection
 
-// DOUBLE FREE: freeing same memory twice
-int* q = new int(5);
-delete q;
-// delete q; // CRASH or memory corruption!
+// Encouraging GC (not guaranteed)
+System.gc();
 
-// Solution: Set to nullptr after delete
-delete p;
-p = nullptr; // Safe: delete nullptr is a no-op`
+// Resource cleanup (files, sockets)
+try (FileInputStream fis = new FileInputStream("test.txt")) {
+    // Process file...
+} // Automatically closed here (RAII equivalent)
+
+// Weak References (optional caching)
+WeakReference<byte[]> weak = new WeakReference<>(new byte[1024]);`
+            },
+            {
+              language: "Python",
+              title: "GC & Lifecycle",
+              code: `import sys
+import gc
+
+# 1. Reference Counting
+x = [1, 2, 3]
+print(sys.getrefcount(x)) # Count of references
+
+# 2. Garbage Collection
+gc.collect() # Manually trigger GC
+
+# 3. Object Lifecycle (__del__)
+class Resource:
+    def __del__(self):
+        print("Closing resource...")
+
+# 4. Weak References (prevents cycles)
+import weakref
+r = Resource()
+w = weakref.ref(r)
+print(w()) # Access object
+del r
+print(w()) # None (collected)`
             }
           ]} />
         </div>
