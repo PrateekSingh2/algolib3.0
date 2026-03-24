@@ -516,7 +516,7 @@ const UnauthenticatedLanding = () => {
           <div className="flex flex-col md:flex-row-reverse items-center gap-10 md:gap-16">
             <div className="w-full md:w-1/2 aspect-video bg-[#0a0a0a] rounded-3xl border border-white/[0.05] overflow-hidden relative group shadow-2xl flex items-start justify-center p-0">
                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,210,255,0.1),transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-10" />
-               <img src="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-03-19%20140529.png" alt="Competitive Arena" className="w-full h-full object-cover object-center opacity-100 mix-blend-lighten group-hover:scale-105 transition-transform duration-700" />
+               <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80" alt="Competitive Arena" className="w-full h-full object-cover object-center opacity-70 mix-blend-lighten group-hover:scale-105 transition-transform duration-700" />
             </div>
             <div className="w-full md:w-1/2 flex flex-col items-start">
                <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center mb-6 shadow-inner">
@@ -671,6 +671,60 @@ const AppRoutes = () => {
 };
 
 const App = () => {
+  // --- 1. NUCLEAR AUTO-UPDATE SCRIPT ---
+  useEffect(() => {
+    const forceUpdateIfNeeded = async () => {
+      // ⚠️ CHANGE THIS VERSION NUMBER EVERY TIME YOU PUSH TO GITHUB
+      const LATEST_VERSION = "1.0.1"; 
+      
+      const localVersion = localStorage.getItem("algolib_system_version");
+
+      if (localVersion !== LATEST_VERSION) {
+        console.warn("⚠️ System Outdated. Initiating Auto-Update & Cache Purge...");
+
+        // 1. Kill all active Service Workers (Busts the PWA Cache Trap)
+        if ('serviceWorker' in navigator) {
+          try {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+              await registration.unregister();
+              console.log("Service Worker Terminated.");
+            }
+          } catch (e) {
+            console.error("Failed to unregister SW:", e);
+          }
+        }
+
+        // 2. Wipe the browser's Cache Storage (where old HTML/CSS/JS is stuck)
+        if ('caches' in window) {
+          try {
+            const cacheNames = await caches.keys();
+            for (const name of cacheNames) {
+              await caches.delete(name);
+            }
+            console.log("Old Asset Caches Purged.");
+          } catch (e) {
+            console.error("Failed to clear caches:", e);
+          }
+        }
+
+        // 3. Set the new version so it doesn't infinite loop
+        localStorage.setItem("algolib_system_version", LATEST_VERSION);
+
+        // 4. Force a hard reload of the page from the server
+        window.location.reload(); 
+      }
+    };
+
+    // Run the check immediately on load
+    forceUpdateIfNeeded();
+
+    // Re-check when user focuses the tab
+    window.addEventListener("focus", forceUpdateIfNeeded);
+    return () => window.removeEventListener("focus", forceUpdateIfNeeded);
+  }, []);
+
+  // --- 2. VISIT COUNTER ---
   useEffect(() => {
     const initializeVisit = async () => {
       try {
