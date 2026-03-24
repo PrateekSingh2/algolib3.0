@@ -171,7 +171,6 @@ const LinkedListVisualizer = () => {
   const handleInsert = (position: 'head' | 'index' | 'end') => {
     if (isAnimating) return;
     setIsAnimating(true);
-    if (!showHUD) setShowHUD(true);
     
     let targetIdx = position === 'head' ? 0 : position === 'end' ? nodes.length : Math.max(0, Math.min(inputIndex, nodes.length));
     const newNode = { id: Math.floor(Math.random()*90 + 10).toString(), value: inputValue, isNew: true };
@@ -243,7 +242,6 @@ const LinkedListVisualizer = () => {
   const handleDelete = (position: 'head' | 'index' | 'end') => {
     if (isAnimating || nodes.length === 0) return;
     setIsAnimating(true);
-    if (!showHUD) setShowHUD(true);
     
     let targetIdx = position === 'head' ? 0 : position === 'end' ? nodes.length - 1 : Math.max(0, Math.min(inputIndex, nodes.length - 1));
 

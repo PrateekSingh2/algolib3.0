@@ -11,6 +11,7 @@ class TreeNode {
     value: number;
     left: TreeNode | null;
     right: TreeNode | null;
+    parent: TreeNode | null;
     xOffset: number; 
     y: number;
     height: number;
@@ -20,6 +21,7 @@ class TreeNode {
         this.value = val;
         this.left = null;
         this.right = null;
+        this.parent = null;
         this.xOffset = 0; 
         this.y = 0;
         this.height = 1;
@@ -34,7 +36,7 @@ type TreeMode = 'bst' | 'avl';
 type VisualFrame = {
   root: TreeNode | null;
   phantom: {val: number, id: string} | null;
-  highlightNode: string | null;
+  highlightNodes: string[];
   visitedNodes: Set<string>;
   foundNode: string | null;
   codeLines: CodeLine[];
@@ -44,27 +46,34 @@ type VisualFrame = {
   outputTitle: string;
 };
 
-// --- ADVANCED HINGLISH EXECUTION MATRIX ---
-const SNIPPETS = {
+// --- ALGORITHM EXECUTION MATRIX ---
+const SNIPPETS: Record<string, { id: string, text: string, explanation: string, active: boolean }[]> = {
   insert: [
-    { id: '1', text: 'Node temp = new Node(val);', explanation: 'Spawn Zone mein naya node ready kiya.', active: false },
-    { id: '2', text: 'if (root == null) root = temp;', explanation: 'Tree khali hai! Naya node hi ab hamara Root banega.', active: false },
-    { id: '3', text: 'while(ptr != null)', explanation: 'Sahi jagah dhoondhne ke liye scanning shuru...', active: false },
-    { id: '4', text: 'if (val < ptr.val) ptr = ptr.left;', explanation: 'Value chhoti hai -> LEFT branch ki taraf mudo!', active: false },
-    { id: '5', text: 'else ptr = ptr.right;', explanation: 'Value badi hai -> RIGHT branch ki taraf mudo!', active: false },
-    { id: '6', text: 'ptr.child = temp;', explanation: 'Khali jagah mil gayi! Naye node ko branch se attach kar diya.', active: false }
+    { id: '1', text: 'Node temp = new Node(val);', explanation: 'Allocated memory for new node with given value.', active: false },
+    { id: '2', text: 'if (root == null) root = temp;', explanation: 'Tree is empty. Assigning new node as the Root.', active: false },
+    { id: '3', text: 'while(ptr != null)', explanation: 'Traversing the tree to find the correct insertion point...', active: false },
+    { id: '4', text: 'if (val < ptr.val) ptr = ptr.left;', explanation: 'Value is less than current node. Traversing left.', active: false },
+    { id: '5', text: 'else ptr = ptr.right;', explanation: 'Value is greater than current node. Traversing right.', active: false },
+    { id: '6', text: 'ptr.child = temp;', explanation: 'Found empty leaf position. Linking new node to the tree.', active: false }
   ],
   search: [
-    { id: '1', text: 'Node ptr = root;', explanation: 'Scanner ko Root node par drop kiya.', active: false },
-    { id: '2', text: 'if (ptr.val == target) return true;', explanation: 'TARGET MIL GAYA! Mission Successful.', active: false },
-    { id: '3', text: 'if (target < ptr.val) ptr = ptr.left;', explanation: 'Target chhota hai -> LEFT branch mein scan karo.', active: false },
-    { id: '4', text: 'else ptr = ptr.right;', explanation: 'Target bada hai -> RIGHT branch mein scan karo.', active: false },
-    { id: '5', text: 'return false;', explanation: 'Pura path check kar liya, par Target nahi mila (404 Not Found).', active: false }
+    { id: '1', text: 'Node ptr = root;', explanation: 'Initializing search pointer at the Root node.', active: false },
+    { id: '2', text: 'if (ptr.val == target) return true;', explanation: 'Target value matched current node. Search successful.', active: false },
+    { id: '3', text: 'if (target < ptr.val) ptr = ptr.left;', explanation: 'Target is smaller. Continuing search in left subtree.', active: false },
+    { id: '4', text: 'else ptr = ptr.right;', explanation: 'Target is larger. Continuing search in right subtree.', active: false },
+    { id: '5', text: 'return false;', explanation: 'Reached leaf node without match. Target not found.', active: false }
   ],
   delete: [
-    { id: '1', text: 'Node target = search(val);', explanation: 'Delete karne ke liye pehle target ko scan kar rahe hain...', active: false },
-    { id: '2', text: 'if (target == null) return;', explanation: 'Target exist hi nahi karta!', active: false },
-    { id: '3', text: 'rearrange_pointers(target);', explanation: 'Target mil gaya! Pointers ko bypass karke node ko free kar diya.', active: false }
+    { id: '1', text: 'Node target = search(val);', explanation: 'Searching for the target node to delete...', active: false },
+    { id: '2', text: 'if (target == null) return;', explanation: 'Target node not found in the tree. Aborting operation.', active: false },
+    { id: '3', text: 'rearrange_pointers(target);', explanation: 'Target located. Rearranging pointers to bypass and remove node.', active: false }
+  ],
+  avl: [
+    { id: 'avl.check', text: 'while(node) { check_balance(node); }', explanation: 'Scanning up the tree to update heights and check balance factors.', active: false },
+    { id: 'avl.ll', text: 'right_rotate(node);', explanation: 'Left-Heavy Imbalance (LL). Performing Right Rotation.', active: false },
+    { id: 'avl.rr', text: 'left_rotate(node);', explanation: 'Right-Heavy Imbalance (RR). Performing Left Rotation.', active: false },
+    { id: 'avl.lr', text: 'left_rotate(node.left); right_rotate(node);', explanation: 'Left-Right Imbalance. Two-step rotation (LR).', active: false },
+    { id: 'avl.rl', text: 'right_rotate(node.right); left_rotate(node);', explanation: 'Right-Left Imbalance. Two-step rotation (RL).', active: false }
   ]
 };
 
@@ -76,16 +85,17 @@ const CyberGrid = () => (
   </div>
 );
 
-// Helper for deep cloning Tree structure to preserve visual state frames
-const cloneTree = (node: TreeNode | null): TreeNode | null => {
+// Helper for deep cloning Tree structure
+const cloneTreeWithParents = (node: TreeNode | null, parent: TreeNode | null = null): TreeNode | null => {
     if (!node) return null;
     const newNode = new TreeNode(node.value);
     newNode.id = node.id;
     newNode.height = node.height;
     newNode.xOffset = node.xOffset;
     newNode.y = node.y;
-    newNode.left = cloneTree(node.left);
-    newNode.right = cloneTree(node.right);
+    newNode.parent = parent;
+    newNode.left = cloneTreeWithParents(node.left, newNode);
+    newNode.right = cloneTreeWithParents(node.right, newNode);
     return newNode;
 };
 
@@ -93,12 +103,12 @@ const BSTVisualizer = () => {
   const [root, setRoot] = useState<TreeNode | null>(null);
   const [inputValue, setInputValue] = useState<number | ''>('');
   
-  // Game HUD State
-  const [showHUD, setShowHUD] = useState(false); 
+  // HUD State
+  const [showHUD, setShowHUD] = useState(true); 
   const [treeMode, setTreeMode] = useState<TreeMode>('bst');
 
   // Engine State
-  const [isPaused, setIsPaused] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
   // FRAME-BASED ANIMATION ENGINE
@@ -110,7 +120,7 @@ const BSTVisualizer = () => {
   const [codeLines, setCodeLines] = useState<CodeLine[]>([]);
   const [variables, setVariables] = useState<VariableState[]>([]);
   const [phantom, setPhantom] = useState<{val: number, id: string} | null>(null);
-  const [highlightNode, setHighlightNode] = useState<string | null>(null);
+  const [highlightNodes, setHighlightNodes] = useState<string[]>([]);
   const [visitedNodes, setVisitedNodes] = useState<Set<string>>(new Set());
   const [foundNode, setFoundNode] = useState<string | null>(null);
   const [outputLog, setOutputLog] = useState<string[]>([]);
@@ -122,7 +132,7 @@ const BSTVisualizer = () => {
 
   useEffect(() => { generateRandom(); }, []);
   
-  // Scoped interior scrolling to prevent mobile layout jumps
+  // Scoped interior scrolling
   useEffect(() => { 
     if (interpreterScrollRef.current) {
         interpreterScrollRef.current.scrollTo({ top: interpreterScrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -141,7 +151,7 @@ const BSTVisualizer = () => {
         const f = frames[frameIdx];
         setRoot(f.root);
         setPhantom(f.phantom);
-        setHighlightNode(f.highlightNode);
+        setHighlightNodes(f.highlightNodes);
         setVisitedNodes(f.visitedNodes);
         setFoundNode(f.foundNode);
         setCodeLines(f.codeLines);
@@ -150,10 +160,10 @@ const BSTVisualizer = () => {
         setOutputLog(f.outputLog);
         setOutputTitle(f.outputTitle);
         
-        // Final frame cleanup timeout
+        // Final frame cleanup
         if (frameIdx === frames.length - 1) {
             const tm = setTimeout(() => {
-                setHighlightNode(null);
+                setHighlightNodes([]);
                 setVisitedNodes(new Set());
                 setFoundNode(null);
                 setIsAnimating(false);
@@ -173,12 +183,11 @@ const BSTVisualizer = () => {
     if (!isPaused && isAnimating && frames.length > 0 && frameIdx < frames.length - 1) {
         timer = setTimeout(() => {
             setFrameIdx(prev => prev + 1);
-        }, 1200);
+        }, 1300); // 1.3s delay to let the user read the step
     }
     return () => clearTimeout(timer);
   }, [isPaused, isAnimating, frameIdx, frames]);
 
-  // Center the workspace horizontally on initial load
   const centerWorkspace = () => {
     if (scrollContainerRef.current) {
         const container = scrollContainerRef.current;
@@ -193,15 +202,15 @@ const BSTVisualizer = () => {
     return () => clearTimeout(timeout);
   }, []);
 
-  // Auto-scroll camera to follow the active scanning node
+  // Auto-scroll camera
   useEffect(() => {
-    if (highlightNode && root && scrollContainerRef.current) {
+    if (highlightNodes.length > 0 && root && scrollContainerRef.current) {
         const findNode = (n: TreeNode | null, targetId: string): TreeNode | null => {
             if (!n) return null;
             if (n.id === targetId) return n;
             return findNode(n.left, targetId) || findNode(n.right, targetId);
         };
-        const active = findNode(root, highlightNode);
+        const active = findNode(root, highlightNodes[0]);
         if (active) {
             const container = scrollContainerRef.current;
             const absoluteX = (container.scrollWidth / 2) + active.xOffset;
@@ -214,7 +223,7 @@ const BSTVisualizer = () => {
             });
         }
     }
-  }, [highlightNode, root]);
+  }, [highlightNodes, root]);
 
   const generateRandom = () => setInputValue(Math.floor(Math.random() * 99) + 1);
 
@@ -225,53 +234,51 @@ const BSTVisualizer = () => {
       if (node) node.height = 1 + Math.max(getHeight(node.left), getHeight(node.right));
   };
 
-  const rightRotate = (y: TreeNode) => {
+  const getAbsoluteRoot = (node: TreeNode | null): TreeNode | null => {
+      if (!node) return null;
+      let curr = node;
+      while (curr.parent) curr = curr.parent;
+      return curr;
+  };
+
+  const rightRotate = (y: TreeNode): TreeNode => {
       let x = y.left!;
       let T2 = x.right;
+
       x.right = y;
       y.left = T2;
+
+      x.parent = y.parent;
+      if (y.parent) {
+          if (y === y.parent.right) y.parent.right = x;
+          else y.parent.left = x;
+      }
+      y.parent = x;
+      if (T2) T2.parent = y;
+
       updateHeight(y);
       updateHeight(x);
       return x;
   };
 
-  const leftRotate = (x: TreeNode) => {
+  const leftRotate = (x: TreeNode): TreeNode => {
       let y = x.right!;
       let T2 = y.left;
+
       y.left = x;
       x.right = T2;
+
+      y.parent = x.parent;
+      if (x.parent) {
+          if (x === x.parent.left) x.parent.left = y;
+          else x.parent.right = y;
+      }
+      x.parent = y;
+      if (T2) T2.parent = x;
+
       updateHeight(x);
       updateHeight(y);
       return y;
-  };
-
-  const balanceTree = (node: TreeNode | null): TreeNode | null => {
-      if (!node) return null;
-      node.left = balanceTree(node.left);
-      node.right = balanceTree(node.right);
-      updateHeight(node);
-
-      let balance = getBalance(node);
-
-      if (balance > 1 && getBalance(node.left) >= 0) return rightRotate(node);
-      if (balance > 1 && getBalance(node.left) < 0) {
-          node.left = leftRotate(node.left!);
-          return rightRotate(node);
-      }
-      if (balance < -1 && getBalance(node.right) <= 0) return leftRotate(node);
-      if (balance < -1 && getBalance(node.right) > 0) {
-          node.right = rightRotate(node.right!);
-          return leftRotate(node);
-      }
-      return node;
-  };
-
-  const updatePositions = (node: TreeNode | null, xOffset: number, y: number, gap: number) => {
-      if (!node) return;
-      node.xOffset = xOffset;
-      node.y = y;
-      updatePositions(node.left, xOffset - gap, y + 100, gap * 0.55); 
-      updatePositions(node.right, xOffset + gap, y + 100, gap * 0.55);
   };
 
   const checkDuplicate = (node: TreeNode | null, val: number): boolean => {
@@ -280,225 +287,417 @@ const BSTVisualizer = () => {
       return val < node.value ? checkDuplicate(node.left, val) : checkDuplicate(node.right, val);
   };
 
+  // --- NEW DYNAMIC SPACING ALGORITHM ---
+  const getTreeHeight = (node: TreeNode | null): number => {
+      if (!node) return 0;
+      return 1 + Math.max(getTreeHeight(node.left), getTreeHeight(node.right));
+  };
+
+  const updatePositions = (node: TreeNode | null, xOffset: number, y: number, depth: number, totalHeight: number) => {
+      if (!node) return;
+      node.xOffset = xOffset;
+      node.y = y;
+      
+      // Gap dynamically scales based on tree height to prevent overlaps
+      const power = Math.max(0, totalHeight - depth);
+      const gap = Math.pow(2, power - 1) * 45; // 45px base horizontal unit space
+      
+      updatePositions(node.left, xOffset - gap, y + 90, depth + 1, totalHeight); 
+      updatePositions(node.right, xOffset + gap, y + 90, depth + 1, totalHeight);
+  };
+
   // --- OPERATIONS ---
   const handleInsert = () => {
       if (inputValue === '' || isAnimating) return;
       const val = Number(inputValue);
       
       if (root && checkDuplicate(root, val)) {
-          setMessage(`ERROR: Value ${val} pehle se exist karti hai!`);
+          setMessage(`ERROR: Value ${val} already exists in the tree.`);
           generateRandom(); return;
       }
 
       setIsAnimating(true);
-      if (!showHUD) setShowHUD(true); 
-      
-      if (root && scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTo({ left: (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth) / 2, top: 0, behavior: 'smooth' });
-      }
+      if (scrollContainerRef.current) scrollContainerRef.current.scrollTo({ left: (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth) / 2, top: 0, behavior: 'smooth' });
 
       const title = "INSERTION_LOG";
-      let currentLog = [...outputLog, `> Init insertion for [${val}]`];
+      let currentLog = [...outputLog, `> Allocating memory for node [${val}]...`];
       let newFrames: VisualFrame[] = [];
-      const snippet = SNIPPETS.insert;
+      let currentSnippetGroup = 'insert';
 
-      let currentRoot = root ? cloneTree(root) : null;
+      let currentRoot = root ? cloneTreeWithParents(root) : null;
+      let insertedNode: TreeNode | null = null;
       let currentPhantom: {val: number, id: string} | null = { val, id: 'spawned' };
       let currentVisited = new Set<string>();
 
-      const addFrame = (lineId: string, vars: VariableState[], high: string | null = null) => {
-          const currentLine = snippet.find(l => l.id === lineId);
+      const addFrame = (currentAbsRoot: TreeNode | null, lineId: string | null, msg: string, highNodes: string[] = [], vars: VariableState[] = []) => {
+          if (currentAbsRoot) {
+              const th = getTreeHeight(currentAbsRoot);
+              updatePositions(currentAbsRoot, 0, 60, 1, th);
+          }
+          const snippet = SNIPPETS[currentSnippetGroup];
+          const currentLine = lineId ? snippet.find(l => l.id === lineId) : null;
+          
           newFrames.push({
-              root: cloneTree(currentRoot),
+              root: cloneTreeWithParents(currentAbsRoot),
               phantom: currentPhantom ? { ...currentPhantom } : null,
-              highlightNode: high,
-              visitedNodes: new Set(currentVisited),
+              highlightNodes: highNodes,
+              visitedNodes: new Set([...currentVisited]),
               foundNode: null,
               codeLines: snippet.map(line => ({ ...line, active: line.id === lineId })),
               variables: vars.map(v => ({...v})),
-              message: currentLine ? currentLine.explanation : 'Processing...',
+              message: msg || (currentLine ? currentLine.explanation : 'Processing...'),
               outputLog: [...currentLog],
               outputTitle: title
           });
       };
 
-      addFrame('1', [{ name: 'temp', value: `${val}`, color: '#00ff88' }]);
+      addFrame(currentRoot, '1', `Allocated memory for new node [${val}].`, [], [{ name: 'temp', value: `${val}`, color: '#00ff88' }]);
 
       if (!currentRoot) {
-          addFrame('2', [{ name: 'temp', value: `${val}`, color: '#00ff88' }]);
-          const newNode = new TreeNode(val);
-          currentRoot = newNode;
-          updatePositions(currentRoot, 0, 60, 260);
+          insertedNode = new TreeNode(val);
+          currentRoot = insertedNode;
+          addFrame(currentRoot, '2', `Tree is empty. Assigning new node as the Root.`, [], [{ name: 'temp', value: `${val}`, color: '#00ff88' }]);
           currentPhantom = null;
-          currentLog.push(`> [${val}] Set as ROOT`);
+          currentLog.push(`> Node [${val}] set as the initial ROOT.`);
       } else {
-          let current: TreeNode | null = currentRoot;
-          addFrame('3', [
-              { name: 'ptr', value: `${current!.value}`, color: '#00f5ff' },
+          let curr = currentRoot;
+          addFrame(currentRoot, '3', `Traversing the tree to find the correct insertion point...`, [curr.id], [
+              { name: 'ptr', value: `${curr.value}`, color: '#00f5ff' },
               { name: 'val', value: `${val}`, color: '#00ff88' }
           ]);
 
           while (true) {
-              let high = current!.id;
-              currentVisited.add(current!.id);
-
-              if (val < current!.value) {
-                  addFrame('4', [{ name: 'action', value: `GO LEFT`, color: '#facc15' }], high);
-                  if (!current!.left) {
-                      addFrame('6', [{ name: 'action', value: `GO LEFT`, color: '#facc15' }], high);
-                      current!.left = new TreeNode(val);
-                      currentLog.push(`> [${val}] Inserted LEFT of [${current!.value}]`);
+              currentVisited.add(curr.id);
+              if (val < curr.value) {
+                  addFrame(currentRoot, '4', `Value is less than current node. Traversing left.`, [curr.id], [{ name: 'action', value: `GO LEFT`, color: '#facc15' }]);
+                  if (!curr.left) {
+                      curr.left = new TreeNode(val);
+                      curr.left.parent = curr;
+                      insertedNode = curr.left;
+                      addFrame(currentRoot, '6', `Found empty leaf position. Linking new node to the tree.`, [curr.id, curr.left.id], [{ name: 'action', value: `LINK LEFT`, color: '#facc15' }]);
+                      currentLog.push(`> Linked node [${val}] to the LEFT of [${curr.value}].`);
                       break;
                   }
-                  current = current!.left;
+                  curr = curr.left;
               } else {
-                  addFrame('5', [{ name: 'action', value: `GO RIGHT`, color: '#facc15' }], high);
-                  if (!current!.right) {
-                      addFrame('6', [{ name: 'action', value: `GO RIGHT`, color: '#facc15' }], high);
-                      current!.right = new TreeNode(val);
-                      currentLog.push(`> [${val}] Inserted RIGHT of [${current!.value}]`);
+                  addFrame(currentRoot, '5', `Value is greater than current node. Traversing right.`, [curr.id], [{ name: 'action', value: `GO RIGHT`, color: '#facc15' }]);
+                  if (!curr.right) {
+                      curr.right = new TreeNode(val);
+                      curr.right.parent = curr;
+                      insertedNode = curr.right;
+                      addFrame(currentRoot, '6', `Found empty leaf position. Linking new node to the tree.`, [curr.id, curr.right.id], [{ name: 'action', value: `LINK RIGHT`, color: '#facc15' }]);
+                      currentLog.push(`> Linked node [${val}] to the RIGHT of [${curr.value}].`);
                       break;
                   }
-                  current = current!.right;
+                  curr = curr.right;
               }
           }
           currentPhantom = null;
       }
 
-      // Compute Final Position and Balance Tree
-      if (treeMode === 'avl') {
-          currentLog.push(`> AVL: Checking Balance Factors...`);
-          currentRoot = balanceTree(currentRoot);
-      } else {
-          const updateH = (n: TreeNode | null) => {
-             if(!n) return 0;
-             n.height = 1 + Math.max(updateH(n.left), updateH(n.right));
-             return n.height;
-          };
-          updateH(currentRoot);
-      }
-      updatePositions(currentRoot, 0, 60, 260); 
+      // Rebalancing Engine
+      if (treeMode === 'avl' && insertedNode) {
+          currentSnippetGroup = 'avl';
+          currentLog.push(`> Analyzing Balance Factors (BF) across affected path...`);
+          
+          let curr: TreeNode | null = insertedNode.parent;
+          while (curr) {
+              updateHeight(curr);
+              let bf = getBalance(curr);
+              
+              if (bf > 1 || bf < -1) {
+                  currentLog.push(`> Imbalance at [${curr.value}] (BF: ${bf}).`);
+                  addFrame(getAbsoluteRoot(curr), 'avl.check', `Imbalance detected at Node [${curr.value}]. Balance Factor: ${bf}.`, [curr.id]);
 
-      // Push final resolution frame
-      newFrames.push({
-          root: cloneTree(currentRoot),
-          phantom: null,
-          highlightNode: null,
-          visitedNodes: new Set(),
-          foundNode: null,
-          codeLines: [],
-          variables: [],
-          message: "MISSION_PASSED: Node Inserted",
-          outputLog: [...currentLog],
-          outputTitle: title
-      });
+                  if (bf > 1 && getBalance(curr.left) >= 0) {
+                      currentLog.push(`> Executing Right Rotation (LL Case).`);
+                      addFrame(getAbsoluteRoot(curr), 'avl.ll', `LL Case: Executing Right Rotation around [${curr.value}].`, [curr.id, curr.left?.id].filter(Boolean) as string[]);
+                      curr = rightRotate(curr);
+                      addFrame(getAbsoluteRoot(curr), 'avl.ll', `Right Rotation Complete.`, [curr.id]);
+                  } else if (bf > 1 && getBalance(curr.left) < 0) {
+                      currentLog.push(`> Executing Left-Right Rotation (LR Case).`);
+                      addFrame(getAbsoluteRoot(curr), 'avl.lr', `LR Case (Step 1): Left Rotation on child [${curr.left?.value}].`, [curr.left?.id].filter(Boolean) as string[]);
+                      leftRotate(curr.left!);
+                      addFrame(getAbsoluteRoot(curr), 'avl.lr', `Left Rotation Complete. Tree temporarily in LL State.`, [curr.left?.id].filter(Boolean) as string[]);
+                      
+                      addFrame(getAbsoluteRoot(curr), 'avl.lr', `LR Case (Step 2): Right Rotation around [${curr.value}].`, [curr.id, curr.left?.id].filter(Boolean) as string[]);
+                      curr = rightRotate(curr);
+                      addFrame(getAbsoluteRoot(curr), 'avl.lr', `Left-Right Rotation Complete.`, [curr.id]);
+                  } else if (bf < -1 && getBalance(curr.right) <= 0) {
+                      currentLog.push(`> Executing Left Rotation (RR Case).`);
+                      addFrame(getAbsoluteRoot(curr), 'avl.rr', `RR Case: Executing Left Rotation around [${curr.value}].`, [curr.id, curr.right?.id].filter(Boolean) as string[]);
+                      curr = leftRotate(curr);
+                      addFrame(getAbsoluteRoot(curr), 'avl.rr', `Left Rotation Complete.`, [curr.id]);
+                  } else if (bf < -1 && getBalance(curr.right) > 0) {
+                      currentLog.push(`> Executing Right-Left Rotation (RL Case).`);
+                      addFrame(getAbsoluteRoot(curr), 'avl.rl', `RL Case (Step 1): Right Rotation on child [${curr.right?.value}].`, [curr.right?.id].filter(Boolean) as string[]);
+                      rightRotate(curr.right!);
+                      addFrame(getAbsoluteRoot(curr), 'avl.rl', `Right Rotation Complete. Tree temporarily in RR State.`, [curr.right?.id].filter(Boolean) as string[]);
+                      
+                      addFrame(getAbsoluteRoot(curr), 'avl.rl', `RL Case (Step 2): Left Rotation around [${curr.value}].`, [curr.id, curr.right?.id].filter(Boolean) as string[]);
+                      curr = leftRotate(curr);
+                      addFrame(getAbsoluteRoot(curr), 'avl.rl', `Right-Left Rotation Complete.`, [curr.id]);
+                  }
+              }
+              curr = curr.parent;
+          }
+      } else {
+          let curr = insertedNode?.parent;
+          while(curr) {
+              updateHeight(curr);
+              curr = curr.parent;
+          }
+      }
+
+      currentRoot = getAbsoluteRoot(insertedNode || currentRoot);
+      currentSnippetGroup = 'insert';
+      addFrame(currentRoot, null, "EXECUTION_COMPLETE: Node successfully inserted.", [], []);
 
       setFrames(newFrames);
       setFrameIdx(0);
+  };
+
+  const deleteNodeInPlace = (root: TreeNode | null, val: number): { newRoot: TreeNode | null, rebalanceStart: TreeNode | null } => {
+      if (!root) return { newRoot: null, rebalanceStart: null };
+      let curr: TreeNode | null = root;
+      while (curr && curr.value !== val) {
+          if (val < curr.value) curr = curr.left;
+          else curr = curr.right;
+      }
+      if (!curr) return { newRoot: root, rebalanceStart: null };
+
+      let nodeToRebalanceFrom: TreeNode | null = null;
+      let newRoot = root;
+
+      if (!curr.left && !curr.right) {
+          nodeToRebalanceFrom = curr.parent;
+          if (!curr.parent) newRoot = null;
+          else if (curr.parent.left === curr) curr.parent.left = null;
+          else curr.parent.right = null;
+      } else if (!curr.left || !curr.right) {
+          let child = curr.left || curr.right;
+          child!.parent = curr.parent;
+          nodeToRebalanceFrom = curr.parent;
+          if (!curr.parent) newRoot = child;
+          else if (curr.parent.left === curr) curr.parent.left = child;
+          else curr.parent.right = child;
+      } else {
+          let successor = curr.right;
+          while (successor.left) successor = successor.left;
+          
+          curr.value = successor.value; 
+          nodeToRebalanceFrom = successor.parent;
+          
+          let child = successor.right;
+          if (child) child.parent = successor.parent;
+          
+          if (successor.parent === curr) {
+              nodeToRebalanceFrom = curr; 
+              curr.right = child; 
+          } else {
+              successor.parent!.left = child;
+          }
+      }
+      
+      return { newRoot, rebalanceStart: nodeToRebalanceFrom };
   };
 
   const handleDelete = () => {
     if (inputValue === '' || !root || isAnimating) return;
     const val = Number(inputValue);
     setIsAnimating(true);
-    if (!showHUD) setShowHUD(true); 
-    
-    if (root && scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTo({ left: (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth) / 2, top: 0, behavior: 'smooth' });
-    }
+    if (scrollContainerRef.current) scrollContainerRef.current.scrollTo({ left: (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth) / 2, top: 0, behavior: 'smooth' });
 
     const title = "DELETE_PROTOCOL";
-    let currentLog = [...outputLog, `> Initiating strike on [${val}]`];
+    let currentLog = [...outputLog, `> Initiating deletion sequence for node [${val}]...`];
     let newFrames: VisualFrame[] = [];
-    const snippet = SNIPPETS.delete;
-    let currentRoot = cloneTree(root);
+    let currentSnippetGroup = 'delete';
+    let currentRoot = cloneTreeWithParents(root);
 
-    const addFrame = (lineId: string) => {
-        const currentLine = snippet.find(l => l.id === lineId);
+    const addFrame = (currentAbsRoot: TreeNode | null, lineId: string | null, msg: string, highNodes: string[] = []) => {
+        if (currentAbsRoot) {
+            const th = getTreeHeight(currentAbsRoot);
+            updatePositions(currentAbsRoot, 0, 60, 1, th);
+        }
+        const snippet = SNIPPETS[currentSnippetGroup];
+        const currentLine = lineId ? snippet.find(l => l.id === lineId) : null;
+        
         newFrames.push({
-            root: cloneTree(currentRoot),
+            root: cloneTreeWithParents(currentAbsRoot),
             phantom: null,
-            highlightNode: null,
+            highlightNodes: highNodes,
             visitedNodes: new Set(),
             foundNode: null,
             codeLines: snippet.map(line => ({ ...line, active: line.id === lineId })),
             variables: [],
-            message: currentLine ? currentLine.explanation : 'Processing...',
+            message: msg || (currentLine ? currentLine.explanation : 'Processing...'),
             outputLog: [...currentLog],
             outputTitle: title
         });
     };
 
-    addFrame('1');
+    addFrame(currentRoot, '1', `Searching for the target node [${val}] to delete...`, []);
     
     if (!checkDuplicate(currentRoot, val)) {
-        currentLog.push(`> Abort: Target [${val}] missing.`);
-        addFrame('2');
-        
-        newFrames.push({
-            root: cloneTree(currentRoot),
-            phantom: null,
-            highlightNode: null,
-            visitedNodes: new Set(),
-            foundNode: null,
-            codeLines: [],
-            variables: [],
-            message: "ABORTED: Node not found",
-            outputLog: [...currentLog],
-            outputTitle: title
-        });
+        currentLog.push(`> Abort: Target node [${val}] does not exist in the tree.`);
+        addFrame(currentRoot, '2', `Target node not found in the tree. Aborting operation.`, []);
+        addFrame(currentRoot, null, "ABORTED: Node not found.", []);
         setFrames(newFrames);
         setFrameIdx(0);
         return;
     }
 
-    addFrame('3');
-
-    const deleteNode = (node: TreeNode | null, v: number): TreeNode | null => {
-        if (!node) return null;
-        if (v < node.value) { node.left = deleteNode(node.left, v); return node; }
-        else if (v > node.value) { node.right = deleteNode(node.right, v); return node; }
-        else {
-            if (!node.left && !node.right) return null;
-            if (!node.left) return node.right;
-            if (!node.right) return node.left;
-            let temp = node.right;
-            while (temp.left) temp = temp.left;
-            node.value = temp.value;
-            node.right = deleteNode(node.right, temp.value);
-            return node;
-        }
-    };
-
-    currentRoot = deleteNode(currentRoot, val);
+    addFrame(currentRoot, '3', `Target located. Rearranging pointers to bypass and remove node.`, []);
     
-    if (treeMode === 'avl') {
-        currentRoot = balanceTree(currentRoot);
-    } else {
-        const updateH = (n: TreeNode | null) => {
-             if(!n) return 0;
-             n.height = 1 + Math.max(updateH(n.left), updateH(n.right));
-             return n.height;
-        };
-        updateH(currentRoot);
+    let { newRoot: updatedRoot, rebalanceStart: startNode } = deleteNodeInPlace(currentRoot, val);
+    currentRoot = getAbsoluteRoot(updatedRoot || startNode); 
+    
+    addFrame(currentRoot, '3', `Node physically removed. Updating structure.`, []);
+    
+    // Rebalancing Engine
+    if (treeMode === 'avl' && startNode) {
+        currentSnippetGroup = 'avl';
+        currentLog.push(`> Analyzing Balance Factors (BF) across affected path...`);
+        
+        let curr: TreeNode | null = startNode;
+        while (curr) {
+            updateHeight(curr);
+            let bf = getBalance(curr);
+            
+            if (bf > 1 || bf < -1) {
+                currentLog.push(`> Imbalance at [${curr.value}] (BF: ${bf}).`);
+                addFrame(getAbsoluteRoot(curr), 'avl.check', `Imbalance detected at Node [${curr.value}]. Balance Factor: ${bf}.`, [curr.id]);
+
+                if (bf > 1 && getBalance(curr.left) >= 0) {
+                    currentLog.push(`> Executing Right Rotation (LL Case).`);
+                    addFrame(getAbsoluteRoot(curr), 'avl.ll', `LL Case: Executing Right Rotation around [${curr.value}].`, [curr.id, curr.left?.id].filter(Boolean) as string[]);
+                    curr = rightRotate(curr);
+                    addFrame(getAbsoluteRoot(curr), 'avl.ll', `Right Rotation Complete.`, [curr.id]);
+                } else if (bf > 1 && getBalance(curr.left) < 0) {
+                    currentLog.push(`> Executing Left-Right Rotation (LR Case).`);
+                    addFrame(getAbsoluteRoot(curr), 'avl.lr', `LR Case (Step 1): Left Rotation on child [${curr.left?.value}].`, [curr.left?.id].filter(Boolean) as string[]);
+                    leftRotate(curr.left!);
+                    addFrame(getAbsoluteRoot(curr), 'avl.lr', `Left Rotation Complete. Tree temporarily in LL State.`, [curr.left?.id].filter(Boolean) as string[]);
+                    
+                    addFrame(getAbsoluteRoot(curr), 'avl.lr', `LR Case (Step 2): Right Rotation around [${curr.value}].`, [curr.id, curr.left?.id].filter(Boolean) as string[]);
+                    curr = rightRotate(curr);
+                    addFrame(getAbsoluteRoot(curr), 'avl.lr', `Left-Right Rotation Complete.`, [curr.id]);
+                } else if (bf < -1 && getBalance(curr.right) <= 0) {
+                    currentLog.push(`> Executing Left Rotation (RR Case).`);
+                    addFrame(getAbsoluteRoot(curr), 'avl.rr', `RR Case: Executing Left Rotation around [${curr.value}].`, [curr.id, curr.right?.id].filter(Boolean) as string[]);
+                    curr = leftRotate(curr);
+                    addFrame(getAbsoluteRoot(curr), 'avl.rr', `Left Rotation Complete.`, [curr.id]);
+                } else if (bf < -1 && getBalance(curr.right) > 0) {
+                    currentLog.push(`> Executing Right-Left Rotation (RL Case).`);
+                    addFrame(getAbsoluteRoot(curr), 'avl.rl', `RL Case (Step 1): Right Rotation on child [${curr.right?.value}].`, [curr.right?.id].filter(Boolean) as string[]);
+                    rightRotate(curr.right!);
+                    addFrame(getAbsoluteRoot(curr), 'avl.rl', `Right Rotation Complete. Tree temporarily in RR State.`, [curr.right?.id].filter(Boolean) as string[]);
+                    
+                    addFrame(getAbsoluteRoot(curr), 'avl.rl', `RL Case (Step 2): Left Rotation around [${curr.value}].`, [curr.id, curr.right?.id].filter(Boolean) as string[]);
+                    curr = leftRotate(curr);
+                    addFrame(getAbsoluteRoot(curr), 'avl.rl', `Right-Left Rotation Complete.`, [curr.id]);
+                }
+            }
+            curr = curr.parent;
+        }
+    } else if (startNode) {
+        let curr: TreeNode | null = startNode;
+        while(curr) {
+            updateHeight(curr);
+            curr = curr.parent;
+        }
     }
 
-    updatePositions(currentRoot, 0, 60, 260);
-    currentLog.push(`> SUCCESS: Target [${val}] eradicated.`);
+    currentRoot = getAbsoluteRoot(updatedRoot || startNode);
+    currentSnippetGroup = 'delete';
+    currentLog.push(`> SUCCESS: Node [${val}] successfully deleted.`);
+    addFrame(currentRoot, null, "TARGET_ELIMINATED: Node successfully deleted.", []);
 
-    newFrames.push({
-        root: cloneTree(currentRoot),
-        phantom: null,
-        highlightNode: null,
-        visitedNodes: new Set(),
-        foundNode: null,
-        codeLines: [],
-        variables: [],
-        message: "TARGET_ELIMINATED",
-        outputLog: [...currentLog],
-        outputTitle: title
-    });
+    setFrames(newFrames);
+    setFrameIdx(0);
+  };
 
+  const handleSearch = () => {
+    if (inputValue === '' || !root || isAnimating) return;
+    const val = Number(inputValue);
+    setIsAnimating(true);
+    if (scrollContainerRef.current) scrollContainerRef.current.scrollTo({ left: (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth) / 2, top: 0, behavior: 'smooth' });
+
+    const title = "SEARCH_PROTOCOL";
+    let currentLog = [...outputLog, `> Initiating search for node [${val}]...`];
+    let newFrames: VisualFrame[] = [];
+    const snippet = SNIPPETS.search;
+    let currentRoot = cloneTreeWithParents(root);
+    let currentVisited = new Set<string>();
+
+    const addFrame = (lineId: string, msg: string, highNodes: string[] = []) => {
+        if (currentRoot) {
+            const th = getTreeHeight(currentRoot);
+            updatePositions(currentRoot, 0, 60, 1, th);
+        }
+        const currentLine = snippet.find(l => l.id === lineId);
+        newFrames.push({
+            root: cloneTreeWithParents(currentRoot),
+            phantom: null,
+            highlightNodes: highNodes,
+            visitedNodes: new Set([...currentVisited]),
+            foundNode: null,
+            codeLines: snippet.map(line => ({ ...line, active: line.id === lineId })),
+            variables: [],
+            message: msg || (currentLine ? currentLine.explanation : 'Processing...'),
+            outputLog: [...currentLog],
+            outputTitle: title
+        });
+    };
+
+    addFrame('1', `Initializing search pointer at the Root node.`, [currentRoot!.id]);
+    
+    let curr: TreeNode | null = currentRoot;
+    while (curr) {
+        currentVisited.add(curr.id);
+        if (curr.value === val) {
+            currentLog.push(`> SUCCESS: Target node [${val}] found.`);
+            addFrame('2', `Target value matched current node. Search successful.`, [curr.id]);
+            
+            newFrames.push({
+                root: cloneTreeWithParents(currentRoot),
+                phantom: null,
+                highlightNodes: [],
+                visitedNodes: new Set([...currentVisited]),
+                foundNode: curr.id, 
+                codeLines: [],
+                variables: [],
+                message: "SEARCH_COMPLETE: Target Located.",
+                outputLog: [...currentLog],
+                outputTitle: title
+            });
+            break;
+        } else if (val < curr.value) {
+            addFrame('3', `Target is smaller. Continuing search in left subtree.`, [curr.id]);
+            curr = curr.left;
+        } else {
+            addFrame('4', `Target is larger. Continuing search in right subtree.`, [curr.id]);
+            curr = curr.right;
+        }
+    }
+    
+    if (!curr) {
+        currentLog.push(`> FAILED: Target node [${val}] not found.`);
+        addFrame('5', `Reached leaf node without match. Target not found.`, []);
+        newFrames.push({
+            root: cloneTreeWithParents(currentRoot),
+            phantom: null,
+            highlightNodes: [],
+            visitedNodes: new Set([...currentVisited]),
+            foundNode: null,
+            codeLines: [],
+            variables: [],
+            message: "SEARCH_FAILED: Target not found.",
+            outputLog: [...currentLog],
+            outputTitle: title
+        });
+    }
+    
     setFrames(newFrames);
     setFrameIdx(0);
   };
@@ -531,8 +730,7 @@ const BSTVisualizer = () => {
 
   const renderNodes = (node: TreeNode | null): JSX.Element[] => {
       if (!node) return [];
-      const isVisited = visitedNodes.has(node.id);
-      const isActive = highlightNode === node.id;
+      const isActive = highlightNodes.includes(node.id);
       const isFound = foundNode === node.id;
       
       const bf = getBalance(node);
@@ -547,14 +745,10 @@ const BSTVisualizer = () => {
 
       const nodes = [
           <motion.div key={node.id} initial={{ scale: 0 }}
-              animate={{ scale: isActive ? 1.1 : 1 }}
+              animate={{ scale: isActive ? 1.1 : 1, left: `calc(50% + ${node.xOffset}px)`, top: node.y }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
               className={`absolute w-12 h-12 lg:w-16 lg:h-16 -ml-6 -mt-6 lg:-ml-8 lg:-mt-8 rounded-full flex flex-col items-center justify-center border-4 shadow-xl z-20 bg-[#09090b]`}
-              style={{ 
-                  left: `calc(50% + ${node.xOffset}px)`, top: node.y,
-                  borderColor: borderColor,
-                  boxShadow: isActive ? '0 0 30px rgba(250,204,21,0.4)' : 'none'
-              }}
+              style={{ borderColor, boxShadow: isActive ? '0 0 30px rgba(250,204,21,0.4)' : 'none' }}
           >
               <span className="text-[7px] lg:text-[9px] text-gray-400 font-mono absolute top-1">h: {node.height}</span>
               <span className="font-black text-lg lg:text-xl text-white mt-1">{node.value}</span>
@@ -567,7 +761,7 @@ const BSTVisualizer = () => {
               </div>
               {isRoot && <div className="absolute -top-5 lg:-top-6 text-[9px] lg:text-[11px] font-black text-cyan-500">ROOT</div>}
               {isActive && (
-                  <div className="absolute -left-10 lg:-left-12 top-4 bg-yellow-500 text-black px-1.5 py-0.5 rounded text-[7px] lg:text-[8px] font-black shadow-lg">SCAN</div>
+                  <div className="absolute -left-12 lg:-left-14 top-4 bg-yellow-500 text-black px-1.5 py-0.5 rounded text-[7px] lg:text-[8px] font-black shadow-lg">ACTIVE</div>
               )}
           </motion.div>
       ];
@@ -647,12 +841,15 @@ const BSTVisualizer = () => {
                   </div>
                </div>
                
-               <div className="grid grid-cols-2 gap-2 mt-2">
-                  <button onClick={handleInsert} disabled={isAnimating} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
-                     <Plus size={16}/> INSERT
+               <div className="grid grid-cols-3 gap-2 mt-2">
+                  <button onClick={handleInsert} disabled={isAnimating} className="p-2 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[9px] font-black uppercase flex flex-col items-center justify-center gap-1 disabled:opacity-50">
+                     <Plus size={14}/> INSERT
                   </button>
-                  <button onClick={handleDelete} disabled={isAnimating} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
-                     <Trash2 size={16}/> DELETE
+                  <button onClick={handleSearch} disabled={isAnimating} className="p-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded hover:bg-amber-500/20 text-[9px] font-black uppercase flex flex-col items-center justify-center gap-1 disabled:opacity-50">
+                     <Search size={14}/> SEARCH
+                  </button>
+                  <button onClick={handleDelete} disabled={isAnimating} className="p-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[9px] font-black uppercase flex flex-col items-center justify-center gap-1 disabled:opacity-50">
+                     <Trash2 size={14}/> DELETE
                   </button>
                </div>
             </div>
@@ -672,7 +869,7 @@ const BSTVisualizer = () => {
                         <span className="text-gray-600 italic mt-1">Awaiting execution...</span>
                     ) : (
                         outputLog.map((log, i) => (
-                           <div key={i} className={`flex items-start ${log.includes('SUCCESS') || log.includes('AVL') ? 'text-emerald-400 font-bold' : log.includes('FAILED') || log.includes('Abort') ? 'text-red-400' : 'text-gray-400'}`}>
+                           <div key={i} className={`flex items-start ${log.includes('SUCCESS') || log.includes('COMPLETE') ? 'text-emerald-400 font-bold' : log.includes('FAILED') || log.includes('Abort') ? 'text-red-400' : 'text-gray-400'}`}>
                                <span className="opacity-50 mr-2 shrink-0">{String(i).padStart(2, '0')}</span>
                                {log}
                            </div>
@@ -701,7 +898,7 @@ const BSTVisualizer = () => {
              </button>
           </div>
 
-          {/* Central Arena: The Infinite Tree Canvas (Scrollable & Tracked) */}
+          {/* Central Arena: The Infinite Tree Canvas */}
           <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
              
              {/* Auto-Scrolling Camera Container */}
@@ -744,7 +941,7 @@ const BSTVisualizer = () => {
                          <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
                             <div className="flex items-center gap-1.5 lg:gap-2 text-cyan-400">
                                 <Terminal size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/>
-                                <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
+                                <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Execution_Trace</span>
                             </div>
                          </div>
                          <div ref={interpreterScrollRef} className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
@@ -759,7 +956,7 @@ const BSTVisualizer = () => {
 
                      <div className="w-[130px] lg:w-[350px] shrink-0 border border-cyan-500/30 bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner h-full overflow-hidden">
                         <div className="absolute top-2 right-2 lg:top-3 lg:right-4 flex items-center gap-1.5 lg:gap-2 text-[8px] lg:text-[10px] font-mono text-cyan-500 uppercase tracking-widest">
-                            <Box size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Spawn_Zone</span><span className="lg:hidden">Heap</span>
+                            <Box size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Memory_Allocation</span><span className="lg:hidden">Heap</span>
                         </div>
                         <AnimatePresence>
                            {phantom && (
@@ -775,7 +972,7 @@ const BSTVisualizer = () => {
                         </AnimatePresence>
                         {!phantom && (
                             <div className="text-cyan-500/30 font-mono text-[9px] lg:text-xs flex items-center gap-1.5 lg:gap-2 mt-4">
-                                <Zap size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Memory Ready</span><span className="lg:hidden">Empty</span>
+                                <Zap size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Heap Ready</span><span className="lg:hidden">Empty</span>
                             </div>
                         )}
                      </div>

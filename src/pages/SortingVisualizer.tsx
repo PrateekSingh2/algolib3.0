@@ -362,7 +362,7 @@ const SortingVisualizer = () => {
     setIsSorting(true);
     setIsPaused(false);
     sortingRef.current = true;
-    if (!showHUD) setShowHUD(true); // Auto-show HUD when sort starts
+    // if (!showHUD) setShowHUD(true); // Auto-show HUD when sort starts
     setSortedIndices([]);
     const arrCopy = [...array];
 

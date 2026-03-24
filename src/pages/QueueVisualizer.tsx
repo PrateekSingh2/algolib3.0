@@ -139,7 +139,7 @@ const QueueVisualizer = () => {
   const handleEnqueue = () => {
     if (isAnimating || queue.length >= MAX_CAPACITY) return;
     setIsAnimating(true);
-    if (!showHUD) setShowHUD(true);
+    // if (!showHUD) setShowHUD(true);
     
     const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
     const newNode = { id: Math.random().toString(), val: inputValue, color: randomColor };
@@ -201,7 +201,7 @@ const QueueVisualizer = () => {
   const handleDequeue = () => {
     if (isAnimating || queue.length === 0) return;
     setIsAnimating(true);
-    if (!showHUD) setShowHUD(true);
+    // if (!showHUD) setShowHUD(true);
     
     let currentQueue = [...queue];
     let currentLog = [...outputLog];

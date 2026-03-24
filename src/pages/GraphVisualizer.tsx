@@ -252,7 +252,7 @@ const GraphVisualizer = () => {
       if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
       resetVisuals();
       setIsAnimating(true);
-      if (!showHUD) setShowHUD(true);
+    //   if (!showHUD) setShowHUD(true);
 
       let newFrames: VisualFrame[] = [];
       let currentLog = [`> Initiating BFS Radar: [${startNodeId}] -> [${targetNodeId}]`];
@@ -341,7 +341,7 @@ const GraphVisualizer = () => {
       if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
       resetVisuals();
       setIsAnimating(true);
-      if (!showHUD) setShowHUD(true);
+    //   if (!showHUD) setShowHUD(true);
 
       let newFrames: VisualFrame[] = [];
       let currentLog = [`> Initiating DFS Dive: [${startNodeId}] -> [${targetNodeId}]`];
@@ -433,7 +433,7 @@ const GraphVisualizer = () => {
       if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
       resetVisuals();
       setIsAnimating(true);
-      if (!showHUD) setShowHUD(true);
+    //   if (!showHUD) setShowHUD(true);
 
       let newFrames: VisualFrame[] = [];
       let currentLog = [`> Initiating Dijkstra Protocol: [${startNodeId}] -> [${targetNodeId}]`];
@@ -533,7 +533,7 @@ const GraphVisualizer = () => {
       if (isAnimating || !nodes.find(n => n.id === startNodeId)) return;
       resetVisuals();
       setIsAnimating(true);
-      if (!showHUD) setShowHUD(true);
+    //   if (!showHUD) setShowHUD(true);
 
       let newFrames: VisualFrame[] = [];
       let currentLog = [`> Initiating A* Heuristic Protocol: [${startNodeId}] -> [${targetNodeId}]`];

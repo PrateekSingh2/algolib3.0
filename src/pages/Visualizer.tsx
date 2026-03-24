@@ -20,7 +20,8 @@ import {
   ArrowRight,
   CheckCircle2,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  BoxSelect // Added for Heap
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
@@ -33,8 +34,10 @@ const QueueVisualizer = lazy(() => import('./QueueVisualizer'));
 const SortingVisualizer = lazy(() => import('./SortingVisualizer'));
 const BSTVisualizer = lazy(() => import('./BSTVisualizer'));
 const GraphVisualizer = lazy(() => import('./GraphVisualizer'));
+const HeapVisualizer = lazy(() => import('./HeapVisualizer')); // Added Heap
 
-type VisualizerKey = 'll' | 'stack' | 'queue' | 'sorting' | 'bst' | 'graph';
+// Added 'heap' to VisualizerKey
+type VisualizerKey = 'll' | 'stack' | 'queue' | 'sorting' | 'bst' | 'graph' | 'heap';
 
 const AlienBackground = ({ mobile }: { mobile: boolean }) => (
   <div className="fixed inset-0 -z-10 bg-[#020205] overflow-hidden">
@@ -131,6 +134,7 @@ const Visualizer = () => {
       { id: 'queue' as VisualizerKey, label: 'QUEUE_FIFO', icon: ArrowRightLeft, component: <QueueVisualizer /> },
       { id: 'sorting' as VisualizerKey, label: 'SORTING_ALG', icon: BarChart3, component: <SortingVisualizer /> },
       { id: 'bst' as VisualizerKey, label: 'BINARY_TREE', icon: Binary, component: <BSTVisualizer /> },
+      { id: 'heap' as VisualizerKey, label: 'BINARY_HEAP', icon: BoxSelect, component: <HeapVisualizer /> }, // Added Heap
       { id: 'graph' as VisualizerKey, label: 'GRAPH_NET', icon: Network, component: <GraphVisualizer /> },
     ],
     [],

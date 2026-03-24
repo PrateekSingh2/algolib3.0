@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
-import { Play, Send, ChevronDown, Lock, Clock, CheckCircle2, Terminal, ArrowLeft, Loader2, X, Trash2, Code2 } from 'lucide-react';
+import { Play, Send, ChevronDown, Lock, Clock, CheckCircle2, Terminal, ArrowLeft, Loader2, X, Trash2, Code2, AlertTriangle } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { createClient } from '@supabase/supabase-js';
 import Navbar from "@/components/Navbar";
@@ -80,6 +80,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   const [wrongAttempts, setWrongAttempts] = useState<Record<string, number>>({});
   
   const [showEndedPopup, setShowEndedPopup] = useState(false);
+  const [showCheatWarning, setShowCheatWarning] = useState(false);
   const [leftTab, setLeftTab] = useState<'statement' | 'testcases'>('statement');
 
   useEffect(() => {
@@ -88,6 +89,21 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // --- CHEAT DETECTION / TAB SWITCH LISTENER ---
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // If the user hides the document (switches tab/minimizes) during an active contest
+      if (document.hidden && contestStatus === 'active') {
+        setShowCheatWarning(true);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [contestStatus]);
 
   useEffect(() => {
     const fetchMatrix = async () => {
@@ -319,6 +335,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   return (
     <div className="h-screen w-screen bg-zinc-950 text-zinc-300 font-sans flex flex-col overflow-hidden relative">
       <AnimatePresence>
+        {/* CONTEST ENDED POPUP */}
         {showEndedPopup && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-900 border border-zinc-700 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
@@ -326,6 +343,18 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                 <h2 className="text-2xl font-bold text-white mb-2">Contest Ended</h2>
                 <p className="text-zinc-400 mb-6 text-sm">The contest time has expired. Submissions for points are now disabled, but you can still run your code for practice.</p>
                 <button onClick={() => setShowEndedPopup(false)} className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors">Acknowledge</button>
+             </motion.div>
+          </motion.div>
+        )}
+
+        {/* CHEAT WARNING POPUP */}
+        {showCheatWarning && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-900 border border-zinc-700 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl relative">
+                <AlertTriangle size={48} className="text-amber-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-white mb-2">Warning</h2>
+                <p className="text-zinc-400 mb-6 text-sm">you are trying to switch tab, and cheat; kindly do not perform this action again.</p>
+                <button onClick={() => setShowCheatWarning(false)} className="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition-colors">I Understand</button>
              </motion.div>
           </motion.div>
         )}
@@ -399,6 +428,14 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                 </button>
              </div>
           </div>
+        </div>
+
+        {/* CHEATING WARNING BANNER */}
+        <div className="bg-rose-500/10 border-b border-rose-500/20 px-4 py-2 flex items-center justify-center gap-2 shrink-0">
+          <Lock size={14} className="text-rose-400" />
+          <span className="text-rose-400 text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-center">
+            Your activity is being recorded. dont try to cheat, otherwise you will be disqualified from contest
+          </span>
         </div>
 
         {/* MAIN BODY */}

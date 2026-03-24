@@ -121,7 +121,7 @@ const StackVisualizer = () => {
   const handlePush = () => {
     if (isAnimating || stack.length >= MAX_CAPACITY) return;
     setIsAnimating(true);
-    if (!showHUD) setShowHUD(true);
+   //  if (!showHUD) setShowHUD(true);
     
     const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
     const newNode = { id: Math.random().toString(), val: inputValue, color: randomColor };
@@ -176,7 +176,7 @@ const StackVisualizer = () => {
   const handlePop = () => {
     if (isAnimating || stack.length === 0) return;
     setIsAnimating(true);
-    if (!showHUD) setShowHUD(true);
+   //  if (!showHUD) setShowHUD(true);
 
     let currentStack = [...stack];
     let newFrames: VisualFrame[] = [];

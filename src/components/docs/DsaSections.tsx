@@ -7,53 +7,6 @@ import { HighlightText, ProTip, WarningBlock, ComplexityTable, CodeTabs, DocSect
 
 export const DSA_SECTIONS: DocSection[] = [
   {
-    id: "visualizer-guide",
-    title: "How to Use the Visualizer",
-    icon: <MonitorPlay />,
-    searchContent: "how to use visualizer guide interface controls play pause speed slider input data step by step tutorial",
-    render: (highlight) => (
-      <div className="space-y-8">
-        <p className="text-lg text-slate-400">
-          <HighlightText text="AlgoLib isn't just a static reference; it's a dynamic laboratory. To fully grasp memory manipulation, you must observe it in motion. Here is how to navigate the visualization interface." highlight={highlight} />
-        </p>
-        <div className="p-6 rounded-xl border border-slate-800 bg-slate-900 relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-cyan-500 opacity-50" />
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
-            <div className="flex-1 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] shrink-0">1</div>
-                <h4 className="font-bold text-slate-50 text-sm">Execution Scrubber</h4>
-              </div>
-              <p className="text-xs text-slate-400">
-                <HighlightText text="Treat the timeline like a video player. Step forward to observe a pointer update, or pause to analyze the stack frame." highlight={highlight} />
-              </p>
-            </div>
-            <div className="hidden md:block w-px h-24 bg-slate-800" />
-            <div className="flex-1 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 border border-purple-500/50 shrink-0">2</div>
-                <h4 className="font-bold text-slate-50 text-sm">Time Dilation</h4>
-              </div>
-              <p className="text-xs text-slate-400">
-                <HighlightText text="Dynamically adjust framerates. Slow down the engine during complex tree rotations, or speed up array sorting to see macroscopic patterns." highlight={highlight} />
-              </p>
-            </div>
-            <div className="hidden md:block w-px h-24 bg-slate-800" />
-            <div className="flex-1 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 border border-emerald-500/50 shrink-0">3</div>
-                <h4 className="font-bold text-slate-50 text-sm">Data Injection</h4>
-              </div>
-              <p className="text-xs text-slate-400">
-                <HighlightText text="Test algorithms against worst-case scenarios. Input reverse-sorted arrays to watch Quick Sort devolve into O(N²)." highlight={highlight} />
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  },
-  {
     id: "foundations",
     title: "Foundations & Array Math",
     icon: <Terminal />,
