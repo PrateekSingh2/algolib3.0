@@ -94,8 +94,14 @@ const Admin = () => {
   const [mode, setMode] = useState<"create" | "edit">("create");
   const [activeCodeTab, setActiveCodeTab] = useState<"java" | "cpp" | "python">("java");
   const [tags, setTags] = useState<string[]>([]);
+  const [jdoodleKeys, setJdoodleKeys] = useState({ clientId: "", clientSecret: "" });
+  const [isSavingKeys, setIsSavingKeys] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [formData, setFormData] = useState({ id: "", title: "", category: "", timeComplexity: "O(n)", spaceComplexity: "O(1)", description: "", details: "", codeJava: "", codeCpp: "", codePython: "" });
+
+  const [showPasscodeModal, setShowPasscodeModal] = useState(false);
+  const [adminPasscode, setAdminPasscode] = useState("");
+  const [showUnauthorizedModal, setShowUnauthorizedModal] = useState(false);
 
   const [contestView, setContestView] = useState<"editor" | "manager">("editor");
   const [cId, setCId] = useState("");
@@ -184,6 +190,16 @@ const Admin = () => {
     }
   }, [activeTab, isAdmin, insightsData.length]);
 
+  useEffect(() => {
+    if (activeTab === "secrets" as any && isAdmin) {
+      const fetchKeys = async () => {
+        const { data } = await supabase.from('system_secrets').select('*').eq('id', 'jdoodle').single();
+        if (data) setJdoodleKeys({ clientId: data.client_id, clientSecret: data.client_secret });
+      };
+      fetchKeys();
+    }
+  }, [activeTab, isAdmin]);
+
   const aggregatedActivityData = useMemo(() => {
       const totals: Record<string, number> = {}; let totalPlatformMinutes = 0;
       insightsData.forEach(user => { if (user.activityUsage) { Object.entries(user.activityUsage).forEach(([activity, minutes]) => { if(typeof minutes === 'number') { totals[activity] = (totals[activity] || 0) + minutes; totalPlatformMinutes += minutes; } }); } });
@@ -216,6 +232,42 @@ const Admin = () => {
         await setDoc(doc(firestoreDB, "system_settings", "announcement"), { message: broadcastMsg, type: broadcastType, active: broadcastActive, link: broadcastLink, updatedAt: new Date() });
         setStatusMsg("Broadcast Status Updated"); setTimeout(() => setStatusMsg(""), 3000);
     } catch (error) { alert("Failed to update broadcast settings."); } finally { setIsSavingBroadcast(false); }
+  };
+
+  // 1. Validates input and OPENS the modal
+  const handleSaveKeysClick = () => {
+    if (!jdoodleKeys.clientId || !jdoodleKeys.clientSecret) {
+        return alert("Both fields are required.");
+    }
+    setAdminPasscode(""); // Clear previous input
+    setShowPasscodeModal(true); // Show the custom popup
+  };
+
+  // 2. EXECUTES the Supabase RPC call with the passcode
+  const executeSaveKeys = async () => {
+    if (!adminPasscode) return;
+    
+    setShowPasscodeModal(false); // Hide modal immediately
+    setIsSavingKeys(true);
+    
+    try {
+      const { data, error } = await supabase.rpc('update_api_secrets', {
+        new_client_id: jdoodleKeys.clientId,
+        new_client_secret: jdoodleKeys.clientSecret,
+        provided_passcode: adminPasscode
+      });
+
+      if (error) throw error; 
+
+      setStatusMsg("API Secrets Updated Successfully!");
+      setTimeout(() => setStatusMsg(""), 3000);
+    } catch (err: any) {
+      // Show the forced logout modal instead of a standard alert
+      setShowUnauthorizedModal(true);
+    } finally {
+      setIsSavingKeys(false);
+      setAdminPasscode(""); // Clear passcode for security
+    }
   };
 
   const fetchFromGist = async () => {
@@ -498,6 +550,75 @@ const Admin = () => {
                 </motion.div>
             </motion.div>
         )}
+
+        {/* Admin Authorization Passcode Modal */}
+        {showPasscodeModal && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} className="w-full max-w-sm bg-zinc-950 border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+                    {/* Decorative background glow */}
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-500/10 blur-[60px] rounded-full pointer-events-none"></div>
+
+                    <div className="flex flex-col items-center text-center mb-6 relative z-10">
+                        <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center mb-4 shadow-inner">
+                            <Lock size={24} className="text-purple-400" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-1">Admin Authorization</h3>
+                        <p className="text-xs text-zinc-400">Enter your master passcode to confirm critical changes to the API matrix.</p>
+                    </div>
+
+                    <div className="space-y-5 relative z-10">
+                        <div>
+                            <input
+                                type="password"
+                                value={adminPasscode}
+                                onChange={(e) => setAdminPasscode(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && executeSaveKeys()}
+                                placeholder="••••••••"
+                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3.5 text-center text-xl tracking-[0.3em] text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all placeholder:text-zinc-700 placeholder:tracking-normal placeholder:text-sm"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button onClick={() => setShowPasscodeModal(false)} className="flex-1 py-3 bg-zinc-900 border border-white/5 hover:bg-white/5 hover:border-white/10 rounded-xl text-sm font-medium text-zinc-300 transition-colors">Cancel</button>
+                            <button 
+                                onClick={executeSaveKeys} 
+                                disabled={!adminPasscode} 
+                                className="flex-1 py-3 bg-purple-500 hover:bg-purple-400 disabled:opacity-50 disabled:hover:bg-purple-500 text-black rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all flex items-center justify-center gap-2"
+                            >
+                                <Check size={16} /> Authorize
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+            </motion.div>
+        )}
+
+        {/* Security Breach / Unauthorized Modal */}
+        {showUnauthorizedModal && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-red-500/30 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl relative overflow-hidden">
+                    {/* Red security header bar */}
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-red-500"></div>
+                    
+                    <ShieldAlert size={48} className="text-red-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-bold text-white mb-2">Unauthorized Access</h2>
+                    <p className="text-zinc-400 mb-6 text-sm">
+                        Invalid admin passcode detected. For security reasons, your session will now be terminated.
+                    </p>
+                    
+                    <button 
+                        onClick={async () => {
+                            setShowUnauthorizedModal(false);
+                            await logout(); // Forces Firebase to log the user out
+                        }} 
+                        className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors shadow-[0_0_15px_rgba(239,68,68,0.3)] tracking-wide"
+                    >
+                        Acknowledge & Logout
+                    </button>
+                </motion.div>
+            </motion.div>
+        )}
       </AnimatePresence>
 
       <main className="pt-28 pb-20 px-6 container mx-auto max-w-7xl relative z-10">
@@ -519,7 +640,7 @@ const Admin = () => {
         </div>
 
         <div className="flex overflow-x-auto custom-scrollbar mb-8 bg-zinc-900/30 p-1.5 rounded-2xl border border-white/5 w-fit">
-            {[ { id: 'forge', label: 'Data Forge', icon: Code }, { id: 'contests', label: 'Contest Forge', icon: Trophy }, { id: 'moderation', label: 'Moderation', icon: ShieldCheck }, { id: 'broadcast', label: 'Broadcast', icon: Radio }, { id: 'insights', label: 'Insights', icon: BarChart3 } ].map(tab => (
+            {[ { id: 'forge', label: 'Data Forge', icon: Code }, { id: 'contests', label: 'Contest Forge', icon: Trophy }, { id: 'moderation', label: 'Moderation', icon: ShieldCheck }, { id: 'broadcast', label: 'Broadcast', icon: Radio }, { id: 'insights', label: 'Insights', icon: BarChart3 }, { id: 'secrets', label: 'API Secrets', icon: Lock } ].map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-xl transition-all whitespace-nowrap ${activeTab === tab.id ? 'text-white bg-white/10' : 'text-zinc-500 hover:text-zinc-300'}`}>
                 <tab.icon size={16} />{tab.label}
               </button>
@@ -1013,6 +1134,65 @@ const Admin = () => {
                         </div>
                     </>
                 )}
+            </motion.div>
+        )}
+
+        {/* ========================================== */}
+        {/* TAB 6: API SECRETS                         */}
+        {/* ========================================== */}
+        {activeTab === "secrets" as any && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 max-w-3xl mx-auto">
+                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-lg space-y-8">
+                    
+                    <div className="flex items-center justify-between pb-6 border-b border-white/5">
+                        <div>
+                            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <Lock size={18} className="text-purple-400" /> JDoodle Execution Engine
+                            </h2>
+                            <p className="text-xs text-zinc-400 mt-1">Manage dynamic API credentials for real-time code execution.</p>
+                        </div>
+                        {statusMsg && <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-medium"><Check size={14}/> {statusMsg}</span>}
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex items-start gap-3">
+                            <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+                            <p className="text-xs text-amber-400/90 leading-relaxed font-medium">
+                                Updates made here instantly affect all active contest participants. Ensure the keys are valid before saving to prevent submission failures.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className={labelClass}>Client ID</label>
+                            <input 
+                                value={jdoodleKeys.clientId} 
+                                onChange={(e) => setJdoodleKeys({...jdoodleKeys, clientId: e.target.value})} 
+                                className={`${inputClass} font-mono`} 
+                                placeholder="Paste JDoodle Client ID here" 
+                            />
+                        </div>
+
+                        <div>
+                            <label className={labelClass}>Client Secret</label>
+                            <input 
+                                type="password"
+                                value={jdoodleKeys.clientSecret} 
+                                onChange={(e) => setJdoodleKeys({...jdoodleKeys, clientSecret: e.target.value})} 
+                                className={`${inputClass} font-mono`} 
+                                placeholder="Paste JDoodle Client Secret here" 
+                            />
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={handleSaveKeysClick} 
+                        disabled={isSavingKeys} 
+                        className="w-full py-3.5 bg-white text-black hover:bg-zinc-200 font-bold rounded-xl transition-all shadow-lg flex justify-center items-center gap-2"
+                    >
+                        {isSavingKeys ? <Loader2 className="animate-spin" size={18}/> : <Save size={18} />}
+                        Update Active Credentials
+                    </button>
+                </div>
             </motion.div>
         )}
 

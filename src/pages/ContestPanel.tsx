@@ -188,24 +188,43 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     setOutput(''); 
   };
 
+  // --- CHANGED: DYNAMIC API FETCHING IMPLEMENTED HERE ---
   const executeCodeJDoodle = async (lang: string, source: string, stdin: string) => {
-    const clientId = import.meta.env.VITE_JDOODLE_CLIENT_ID;
-    const clientSecret = import.meta.env.VITE_JDOODLE_CLIENT_SECRET;
-    if (!clientId || !clientSecret) throw new Error("JDoodle Credentials Missing.");
+    
+    // Fetch dynamic keys from Supabase
+    const { data: secretData, error: secretError } = await supabase
+      .from('system_secrets')
+      .select('client_id, client_secret')
+      .eq('id', 'jdoodle')
+      .single();
+
+    if (secretError || !secretData) {
+      throw new Error("Execution engine configuration missing. Please check API secrets.");
+    }
+
+    const clientId = secretData.client_id;
+    const clientSecret = secretData.client_secret;
+
     const jdoodleConfig: Record<string, { language: string, versionIndex: string }> = {
       'c++': { language: 'cpp', versionIndex: '5' },
       'python': { language: 'python3', versionIndex: '4' },
       'java': { language: 'java', versionIndex: '4' }
     };
+    
     const config = jdoodleConfig[lang];
     const proxyUrl = '/api/jdoodle/v1/execute';
+    
     try {
         const res = await fetch(proxyUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({
-              clientId: clientId, clientSecret: clientSecret,
-              script: source, stdin: stdin, language: config.language, versionIndex: config.versionIndex
+              clientId: clientId, 
+              clientSecret: clientSecret,
+              script: source, 
+              stdin: stdin, 
+              language: config.language, 
+              versionIndex: config.versionIndex
             })
         });
         if (!res.ok) throw new Error(`API Error: HTTP ${res.status}`);
@@ -213,6 +232,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         return { output: (data.output || '').trim(), statusCode: data.statusCode };
     } catch (e: any) { throw new Error(`${e.message}`); }
   };
+  // --------------------------------------------------------
 
   const handleEvaluation = async (isSubmit = false) => {
     const now = Date.now();
@@ -251,37 +271,25 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         const { output, statusCode } = await executeCodeJDoodle(language, code, rawIn);
         const normalizedActual = output.replace(/\s+/g, '');
         
-        // --- UPDATED MULTIPLE ANSWERS LOGIC (LINE-BY-LINE) ---
         let isCorrect = false;
         
         if (hasMultiple) {
-          // 1. Split both Expected and Actual outputs into arrays of lines
-          // We use filter(Boolean) to remove any accidental trailing empty lines
           const expectedLines = expOut.split('\n').map(l => l.trim()).filter(Boolean);
           const actualLines = output.split('\n').map(l => l.trim()).filter(Boolean);
 
-          // 2. Ensure they output the correct number of lines
           if (expectedLines.length === actualLines.length && actualLines.length > 0) {
-            
-            // 3. Evaluate every line independently
             isCorrect = expectedLines.every((expLine, index) => {
-              const actLine = actualLines[index].replace(/\s+/g, ''); // normalize actual line
-              
-              // Split the expected line by ||| and check if the actual line matches any of them
+              const actLine = actualLines[index].replace(/\s+/g, ''); 
               const possibleAnswers = expLine.split('|||').map(ans => ans.replace(/\s+/g, ''));
               return possibleAnswers.includes(actLine);
             });
-
           } else {
-            isCorrect = false; // Failed because line counts don't match
+            isCorrect = false; 
           }
-
         } else {
-          // Standard single-answer logic
           const normalizedExpected = expOut.replace(/\s+/g, '');
           isCorrect = normalizedActual === normalizedExpected && normalizedExpected !== '';
         }
-        // -----------------------------------------------------
 
         if (statusCode !== 200 && statusCode !== undefined) {
           consoleBuffer += `❌ Error\n${output}\n`;
@@ -295,7 +303,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
           if (isPub) consoleBuffer += `Exp: ${expOut}\nActual: ${output}\n`;
           allPassed = false;
         }
-      } catch (err: any) { consoleBuffer += `❌ System Error\n`; allPassed = false; }
+      } catch (err: any) { consoleBuffer += `❌ System Error: ${err.message}\n`; allPassed = false; }
       setOutput(consoleBuffer);
       if (!allPassed) break;
       await new Promise(r => setTimeout(r, 1000));
@@ -310,7 +318,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       const currentWrongCount = wrongAttempts[currentProblem.id] || 0;
 
       if (!allPassed) {
-        // Increment wrong attempt counter
         setWrongAttempts(prev => ({
           ...prev,
           [currentProblem.id]: currentWrongCount + 1
@@ -321,10 +328,8 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         consoleBuffer += `\nFinal Score: Accepted (${passedCount}/${casesToRun.length})`;
         if (user) {
           try {
-              // Calculate points ensuring they don't drop below 0
               const pointsEarned = Math.max(0, defaultPts - (currentWrongCount * defaultPenalty));
               
-              // Correctly calculate time taken in seconds from the start of the contest
               let timeTakenSeconds = 0;
               if (contest?.start_time) {
                   const startTimeMs = new Date(contest.start_time).getTime();
@@ -362,7 +367,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   const displayPoints = activeProblem?.points || defaultPoints;
   const displayPenalty = activeProblem?.penalty || defaultPenalty;
   
-  // Calculate dynamic display points
   const currentWrongCount = wrongAttempts[activeProblem?.id] || 0;
   const availablePoints = Math.max(0, displayPoints - (currentWrongCount * displayPenalty));
 
@@ -395,9 +399,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       </AnimatePresence>
 
       <div className="flex-1 flex flex-col w-full h-full relative">
-        {/* RESPONSIVE TOP BAR */}
         <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-zinc-800 bg-zinc-900 shrink-0 shadow-lg z-20 transition-all">
-          {/* Top Row / Main items */}
           <div className="flex items-center justify-between w-full p-3 md:px-4 md:h-14 md:w-auto">
             <div className="flex items-center gap-3 md:gap-4">
               <Link to="/contests" className="p-2 hover:bg-zinc-800 rounded-lg border border-zinc-800 transition-colors text-zinc-400 hover:text-white"><ArrowLeft size={18} /></Link>
@@ -408,17 +410,14 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
               </div>
             </div>
 
-            {/* Actions for Mobile layout */}
             <div className="flex md:hidden items-center gap-2">
                <div className="flex items-center gap-1.5 bg-zinc-800/80 border border-zinc-700 rounded-md px-2 py-1 font-mono text-[11px] font-bold text-white">
                   <Clock size={12} className={`${contestStatus === 'active' && timeRemaining < 300 ? 'text-rose-500 animate-pulse' : 'text-zinc-400'}`} />
                   <span>{contestStatus === 'ended' ? "Ended" : formatTime(timeRemaining)}</span>
                </div>
-               {/* Run Button - Always available */}
                <button onClick={() => handleEvaluation(false)} disabled={isRunning} className="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-md border border-zinc-700 disabled:opacity-30 transition-all">
                   <Play size={14} className="text-emerald-400" />
                </button>
-               {/* Submit Button - Disabled if ended */}
                <button 
                  onClick={() => handleEvaluation(true)} 
                  disabled={isRunning || contestStatus === 'ended'} 
@@ -429,7 +428,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
             </div>
           </div>
 
-          {/* Bottom Row on Mobile / Inline on Desktop for Problem Tabs */}
           <div className="flex items-center gap-2 px-3 pb-3 pt-1 md:p-0 overflow-x-auto no-scrollbar md:mx-4 border-t border-zinc-800 md:border-none flex-1">
               {problems.map((p, idx) => (
                   <button 
@@ -442,7 +440,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
               ))}
           </div>
 
-          {/* Actions for Desktop layout */}
           <div className="hidden md:flex items-center gap-3 px-4">
              <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 font-mono text-sm font-bold text-white">
                 <Clock size={16} className={`${contestStatus === 'active' && timeRemaining < 300 ? 'text-rose-500 animate-pulse' : 'text-zinc-500'}`} />
@@ -463,8 +460,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
              </div>
           </div>
         </div>
-
-        {/* CHEATING WARNING BANNER */}
+        
         <div className="bg-rose-500/10 border-b border-rose-500/20 px-4 py-2 flex items-center justify-center gap-2 shrink-0">
           <Lock size={14} className="text-rose-400" />
           <span className="text-rose-400 text-[10px] md:text-[11px] font-bold uppercase tracking-widest text-center">
@@ -472,7 +468,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
           </span>
         </div>
 
-        {/* MAIN BODY */}
         <div className="flex-1 min-h-0">
           <PanelGroup direction={isMobile ? "vertical" : "horizontal"}>
             <Panel defaultSize={isMobile ? 35 : 40} minSize={15} maxSize={85} className="flex flex-col bg-zinc-950/80 border-r border-zinc-800">
@@ -488,7 +483,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                        <div className="flex flex-wrap items-center gap-2 mb-6">
                           <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-bold uppercase border border-emerald-500/20">{activeProblem?.difficulty}</span>
                           
-                          {/* DYNAMIC POINTS & PENALTY TAG */}
                           <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border shadow-[0_0_10px_rgba(245,158,11,0.1)] ${currentWrongCount > 0 ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
                             {availablePoints} PTS AVAILABLE (-{displayPenalty} PER WRONG)
                           </span>
