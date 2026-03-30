@@ -675,7 +675,7 @@ const App = () => {
   useEffect(() => {
     const forceUpdateIfNeeded = async () => {
       // ⚠️ CHANGE THIS VERSION NUMBER EVERY TIME YOU PUSH TO GITHUB
-      const LATEST_VERSION = "1.0.1"; 
+      const LATEST_VERSION = "1.0.4"; 
       
       const localVersion = localStorage.getItem("algolib_system_version");
 

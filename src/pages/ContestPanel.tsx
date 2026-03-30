@@ -198,7 +198,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       'java': { language: 'java', versionIndex: '4' }
     };
     const config = jdoodleConfig[lang];
-    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://api.jdoodle.com/v1/execute');
+    const proxyUrl = '/api/jdoodle/v1/execute';
     try {
         const res = await fetch(proxyUrl, {
             method: 'POST',
