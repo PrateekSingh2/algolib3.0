@@ -516,7 +516,7 @@ const UnauthenticatedLanding = () => {
           <div className="flex flex-col md:flex-row-reverse items-center gap-10 md:gap-16">
             <div className="w-full md:w-1/2 aspect-video bg-[#0a0a0a] rounded-3xl border border-white/[0.05] overflow-hidden relative group shadow-2xl flex items-start justify-center p-0">
                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,210,255,0.1),transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-10" />
-               <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80" alt="Competitive Arena" className="w-full h-full object-cover object-center opacity-70 mix-blend-lighten group-hover:scale-105 transition-transform duration-700" />
+               <img src="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-03-25%20144851.png" alt="Competitive Arena" className="w-full h-full object-cover object-center opacity-70 mix-blend-lighten group-hover:scale-105 transition-transform duration-700" />
             </div>
             <div className="w-full md:w-1/2 flex flex-col items-start">
                <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center mb-6 shadow-inner">

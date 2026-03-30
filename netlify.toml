@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "/api/jdoodle/*"
+  to = "https://api.jdoodle.com/:splat"
+  status = 200
+  force = true

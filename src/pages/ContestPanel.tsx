@@ -244,11 +244,45 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       const rawIn = String(tc.raw_input || tc.rawInput || '').replace(/\\n/g, '\n');
       const expOut = String(tc.expected_output || tc.expected || '').trim();
       const isPub = tc.is_public === true || tc.is_public === 'true';
+
+      const hasMultiple = tc.has_multiple_answers === true || tc.has_multiple_answers === 'true';
+      
       try {
         const { output, statusCode } = await executeCodeJDoodle(language, code, rawIn);
         const normalizedActual = output.replace(/\s+/g, '');
-        const normalizedExpected = expOut.replace(/\s+/g, '');
-        const isCorrect = normalizedActual === normalizedExpected && normalizedExpected !== '';
+        
+        // --- UPDATED MULTIPLE ANSWERS LOGIC (LINE-BY-LINE) ---
+        let isCorrect = false;
+        
+        if (hasMultiple) {
+          // 1. Split both Expected and Actual outputs into arrays of lines
+          // We use filter(Boolean) to remove any accidental trailing empty lines
+          const expectedLines = expOut.split('\n').map(l => l.trim()).filter(Boolean);
+          const actualLines = output.split('\n').map(l => l.trim()).filter(Boolean);
+
+          // 2. Ensure they output the correct number of lines
+          if (expectedLines.length === actualLines.length && actualLines.length > 0) {
+            
+            // 3. Evaluate every line independently
+            isCorrect = expectedLines.every((expLine, index) => {
+              const actLine = actualLines[index].replace(/\s+/g, ''); // normalize actual line
+              
+              // Split the expected line by ||| and check if the actual line matches any of them
+              const possibleAnswers = expLine.split('|||').map(ans => ans.replace(/\s+/g, ''));
+              return possibleAnswers.includes(actLine);
+            });
+
+          } else {
+            isCorrect = false; // Failed because line counts don't match
+          }
+
+        } else {
+          // Standard single-answer logic
+          const normalizedExpected = expOut.replace(/\s+/g, '');
+          isCorrect = normalizedActual === normalizedExpected && normalizedExpected !== '';
+        }
+        // -----------------------------------------------------
+
         if (statusCode !== 200 && statusCode !== undefined) {
           consoleBuffer += `❌ Error\n${output}\n`;
           allPassed = false;

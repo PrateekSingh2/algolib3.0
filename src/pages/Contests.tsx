@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
-import { Trophy, Clock, Calendar, ChevronRight, Activity, Code2, Sparkles, ArrowRight, Loader2, BarChart2, X, Medal, HeartHandshake } from 'lucide-react';
+import { Trophy, Clock, Calendar, ChevronRight, Activity, Code2, Sparkles, ArrowRight, Loader2, BarChart2, X, Medal, HeartHandshake, Lock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import AppFooter from '@/components/AppFooter';
 
@@ -35,11 +35,9 @@ export default function Contests() {
         const cachedResponse = await cache.match(VIDEO_URL);
 
         if (cachedResponse) {
-          // Video is found in local cache, create a local blob URL
           const blob = await cachedResponse.blob();
           setVideoSrc(URL.createObjectURL(blob));
         } else {
-          // Fetch from network, cache it, then display
           const fetchResponse = await fetch(VIDEO_URL);
           if (fetchResponse.ok) {
             cache.put(VIDEO_URL, fetchResponse.clone());
@@ -49,20 +47,18 @@ export default function Contests() {
         }
       } catch (error) {
         console.error("Video caching failed, falling back to network URL:", error);
-        // Fallback directly to the URL if the Cache API fails or is unsupported
         setVideoSrc(VIDEO_URL);
       }
     };
 
     loadAndCacheVideo();
 
-    // Cleanup blob URL on unmount to prevent memory leaks
     return () => {
       if (videoSrc && videoSrc.startsWith('blob:')) {
         URL.revokeObjectURL(videoSrc);
       }
     };
-  }, []); // Empty dependency array ensures this runs once
+  }, []);
 
   useEffect(() => {
     const fetchContests = async () => {
@@ -77,7 +73,8 @@ export default function Contests() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contests' }, () => { fetchContests(); })
       .subscribe();
 
-    const timer = setInterval(() => { setCurrentTime(new Date().getTime()); }, 10000);
+    // Changed to 1000ms (1 second) to make the countdown smooth
+    const timer = setInterval(() => { setCurrentTime(new Date().getTime()); }, 1000);
     return () => { supabase.removeChannel(channel); clearInterval(timer); };
   }, []);
 
@@ -92,7 +89,6 @@ export default function Contests() {
       }
       
       const pIds = pData.map(p => p.id);
-      // Order by created_at ascending ensures we process the FIRST successful submission
       const { data: lData } = await supabase.from('leaderboard').select('*').in('problem_id', pIds).order('created_at', { ascending: true });
 
       if (lData) {
@@ -114,7 +110,6 @@ export default function Contests() {
           }
         });
 
-        // Sort by Score (Desc), then by Time Taken (Asc)
         const sorted = Object.values(userMap).sort((a, b) => {
            if (b.score !== a.score) return b.score - a.score;
            return a.time - b.time; 
@@ -144,9 +139,22 @@ export default function Contests() {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Helper function to calculate time left for upcoming contests
+  const getTimeLeft = (startTime: string) => {
+    const diff = new Date(startTime).getTime() - currentTime;
+    if (diff <= 0) return "Starting...";
+    
+    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const m = Math.floor((diff / 1000 / 60) % 60);
+    const s = Math.floor((diff / 1000) % 60);
+    
+    if (d > 0) return `${d}d ${h}h ${m}m`;
+    return `${h}h ${m}m ${s}s`;
+  };
+
   return (
     <div className="min-h-screen bg-[#050505] text-zinc-200 font-sans selection:bg-sky-500/30 overflow-hidden relative">
-      {/* Cool background video with dynamic cached source */}
       {videoSrc && (
         <video
           autoPlay
@@ -157,9 +165,7 @@ export default function Contests() {
           src={videoSrc}
         />
       )}
-      {/* Gradient overlay: dark at top (for readability), fades to solid at bottom so cards are clean */}
       <div className="fixed inset-0 z-[1] pointer-events-none bg-gradient-to-b from-black/70 via-black/50 to-[#050505]" />
-      {/* Subtle scanlines */}
       <div className="fixed inset-0 z-[1] pointer-events-none bg-[repeating-linear-gradient(0deg,transparent,transparent_3px,rgba(0,0,0,0.08)_3px,rgba(0,0,0,0.08)_4px)]" />
 
       <Navbar />
@@ -344,10 +350,11 @@ export default function Contests() {
                         <Clock size={14} className="text-sky-400"/> {formatDate(c.start_time)}
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                        <Link to={`/contest/${c.id}`} className="flex-1 inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white font-medium py-3 rounded-xl transition-colors border border-white/5 group-hover:border-white/10">
-                          View Details
-                        </Link>
+                    {/* CHANGED: Replaced the Link with a locked button showing the countdown */}
+                    <div className="flex gap-2 mt-auto">
+                      <button disabled className="w-full inline-flex items-center justify-center gap-2 bg-white/5 text-zinc-500 font-medium py-3 rounded-xl transition-colors border border-white/5 cursor-not-allowed">
+                        <Lock size={16} className="text-zinc-600" /> Starts in {getTimeLeft(c.start_time)}
+                      </button>
                     </div>
                   </div>
                 ))}

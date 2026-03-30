@@ -11,6 +11,14 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    // 🔥 ADDED PROXY CONFIGURATION HERE TO FIX LOCALHOST CORS
+    proxy: {
+      '/api/jdoodle': {
+        target: 'https://api.jdoodle.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/jdoodle/, '')
+      }
+    }
   },
   plugins: [
     react(),
