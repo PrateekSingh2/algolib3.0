@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, get, set, runTransaction } from "firebase/database";
-// NEW: Import Auth and Firestore
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+// Import signInWithRedirect for the Brave Browser fallback
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -25,14 +25,28 @@ const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 const firestoreDB = getFirestore(app);
 
-// NEW: Auth helper functions
+// AUTH LOGIC WITH BRAVE BROWSER FALLBACK
 const loginWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     console.log("Logged in successfully:", result.user.displayName);
   } catch (error: any) {
     console.error("Full Auth Error:", error);
-    alert(`Sign-in failed: ${error.message} (Code: ${error.code})`);
+    
+    // If Brave/Safari blocks the popup or 3rd party cookies, fallback to Redirect
+    if (
+      error.code === 'auth/popup-blocked' || 
+      error.code === 'auth/popup-closed-by-user' || 
+      error.code === 'auth/unauthorized-domain' ||
+      error.message.includes('cross-origin')
+    ) {
+      console.warn("Browser blocked popup or cookies. Falling back to Redirect mode...");
+      alert("Privacy shields detected. Redirecting to secure login...");
+      
+      await signInWithRedirect(auth, googleProvider);
+    } else {
+      alert(`Sign-in failed: ${error.message} (Code: ${error.code})`);
+    }
   }
 };
 

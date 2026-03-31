@@ -28,7 +28,6 @@ const FALLBACK_TEST_CASES = [
 // --- MARKDOWN PARSER (MIDNIGHT THEME) ---
 const renderMarkdown = (text: string, isSmall = false) => {
   if (!text) return null;
-  // Handle explicit escaped \n characters from JSON databases
   const cleanText = text.replace(/\\n/g, '\n');
   return cleanText.split('\n').map((line, i) => {
     let isHeader = false;
@@ -76,7 +75,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   const [contestStatus, setContestStatus] = useState<'upcoming' | 'active' | 'ended'>('upcoming');
   const [lastRunTime, setLastRunTime] = useState<number>(0);
   
-  // Track wrong attempts per problem
   const [wrongAttempts, setWrongAttempts] = useState<Record<string, number>>({});
   
   const [showEndedPopup, setShowEndedPopup] = useState(false);
@@ -90,19 +88,14 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // --- CHEAT DETECTION / TAB SWITCH LISTENER ---
   useEffect(() => {
     const handleVisibilityChange = () => {
-      // If the user hides the document (switches tab/minimizes) during an active contest
       if (document.hidden && contestStatus === 'active') {
         setShowCheatWarning(true);
       }
     };
-
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [contestStatus]);
 
   useEffect(() => {
@@ -171,7 +164,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       }
     };
 
-    updateTimer(); // Initial check
+    updateTimer(); 
     const timer = setInterval(updateTimer, 1000);
     return () => clearInterval(timer);
   }, [contest]);
@@ -188,51 +181,47 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     setOutput(''); 
   };
 
-  // --- CHANGED: DYNAMIC API FETCHING IMPLEMENTED HERE ---
-  const executeCodeJDoodle = async (lang: string, source: string, stdin: string) => {
-    
-    // Fetch dynamic keys from Supabase
-    const { data: secretData, error: secretError } = await supabase
-      .from('system_secrets')
-      .select('client_id, client_secret')
-      .eq('id', 'jdoodle')
-      .single();
+  // --- NEW: CUSTOM HUGGING FACE ENGINE FETCH ---
+  const executeCodeCustom = async (lang: string, source: string, stdin: string) => {
+    // Make sure it keeps the "/execute" at the end!
+    const ENGINE_API_URL = "https://rajawatprateek-algolib-engine.hf.space/execute";
 
-    if (secretError || !secretData) {
-      throw new Error("Execution engine configuration missing. Please check API secrets.");
-    }
-
-    const clientId = secretData.client_id;
-    const clientSecret = secretData.client_secret;
-
-    const jdoodleConfig: Record<string, { language: string, versionIndex: string }> = {
-      'c++': { language: 'cpp', versionIndex: '5' },
-      'python': { language: 'python3', versionIndex: '4' },
-      'java': { language: 'java', versionIndex: '4' }
-    };
-    
-    const config = jdoodleConfig[lang];
-    const proxyUrl = '/api/jdoodle/v1/execute';
-    
     try {
-        const res = await fetch(proxyUrl, {
+        const res = await fetch(ENGINE_API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            mode: 'cors', // Prevents strict CORS preflight blocking
+            headers: { 
+              'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
-              clientId: clientId, 
-              clientSecret: clientSecret,
-              script: source, 
-              stdin: stdin, 
-              language: config.language, 
-              versionIndex: config.versionIndex
+              language: lang,
+              code: source,
+              input: stdin
             })
         });
-        if (!res.ok) throw new Error(`API Error: HTTP ${res.status}`);
+
+        if (!res.ok) {
+            throw new Error(`Engine Offline or Overloaded: HTTP ${res.status}`);
+        }
+
         const data = await res.json();
-        return { output: (data.output || '').trim(), statusCode: data.statusCode };
-    } catch (e: any) { throw new Error(`${e.message}`); }
+        
+        // Output Sanitization (Removes the backend's hidden UUIDs from Java errors)
+        let cleanOutput = (data.output || '').trim();
+        if (lang === 'java') {
+            // Replaces "Main_1234abcd5678..." back to "Main" so compiler errors look normal
+            cleanOutput = cleanOutput.replace(/Main_[a-fA-F0-9]+/g, 'Main');
+        }
+
+        return { 
+            output: cleanOutput, 
+            statusCode: data.statusCode 
+        };
+    } catch (e: any) { 
+        throw new Error(`Connection to execution matrix failed: ${e.message}`); 
+    }
   };
-  // --------------------------------------------------------
+  // ---------------------------------------------
 
   const handleEvaluation = async (isSubmit = false) => {
     const now = Date.now();
@@ -249,9 +238,11 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       if (onLoginRequest) onLoginRequest();
       return;
     }
+    
     setIsRunning(true);
     let consoleBuffer = isSubmit ? '🚀 Initiating Submission suite...\n' : '⚙️ Running test cases...\n';
     setOutput(consoleBuffer);
+    
     let casesToRun = isSubmit ? testCases : testCases.filter(tc => tc.is_public === true || tc.is_public === 'true' || tc.isPublic === true || tc.isPublic === 'true');
     if (casesToRun.length === 0 && testCases.length > 0) casesToRun = [testCases[0]];
     let allPassed = true;
@@ -264,11 +255,11 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       const rawIn = String(tc.raw_input || tc.rawInput || '').replace(/\\n/g, '\n');
       const expOut = String(tc.expected_output || tc.expected || '').trim();
       const isPub = tc.is_public === true || tc.is_public === 'true';
-
       const hasMultiple = tc.has_multiple_answers === true || tc.has_multiple_answers === 'true';
       
       try {
-        const { output, statusCode } = await executeCodeJDoodle(language, code, rawIn);
+        // --- USING THE NEW CUSTOM ENGINE ---
+        const { output, statusCode } = await executeCodeCustom(language, code, rawIn);
         const normalizedActual = output.replace(/\s+/g, '');
         
         let isCorrect = false;
@@ -303,7 +294,11 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
           if (isPub) consoleBuffer += `Exp: ${expOut}\nActual: ${output}\n`;
           allPassed = false;
         }
-      } catch (err: any) { consoleBuffer += `❌ System Error: ${err.message}\n`; allPassed = false; }
+      } catch (err: any) { 
+        consoleBuffer += `❌ System Error: ${err.message}\n`; 
+        allPassed = false; 
+      }
+      
       setOutput(consoleBuffer);
       if (!allPassed) break;
       await new Promise(r => setTimeout(r, 1000));
@@ -571,13 +566,13 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
           </PanelGroup>
         </div>
       </div>
-      <style>{`
+      <style dangerouslySetInnerHTML={{__html: `
         .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-      `}</style>
+      `}} />
     </div>
   );
 }

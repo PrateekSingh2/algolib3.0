@@ -9,7 +9,7 @@ import {
   Loader2, Zap, Lock, ChevronRight, Terminal, Network, Cpu, Sparkles, 
   Code2, Code, Users, ArrowRight, LayoutDashboard, Globe, Workflow, Braces, 
   Cookie, X, Settings2, BookOpen, MessageSquare, Activity, HelpCircle, 
-  ChevronDown, ListFilter, Trophy,
+  ChevronDown, ListFilter, Trophy, AlertTriangle, // Added AlertTriangle for ErrorBoundary
   Sun,
   Moon
 } from "lucide-react";
@@ -402,7 +402,7 @@ const UnauthenticatedLanding = () => {
         <div className="text-center max-w-5xl mx-auto mt-16 md:mt-24 px-6 flex flex-col items-center relative z-20">
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.02] mb-10 backdrop-blur-md shadow-2xl transition-all hover:bg-white/[0.04] cursor-default">
             <Sparkles className="w-3.5 h-3.5 text-white/70" />
-            <span className="text-[11px] text-white/70 font-mono tracking-widest uppercase">Engine V2 Architecture Live</span>
+            <span className="text-[11px] text-white/70 font-mono tracking-widest uppercase">Your all-in-one solution</span>
           </motion.div>
           
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-6xl md:text-8xl lg:text-[7.5rem] font-bold tracking-tighter mb-8 leading-[0.95]">
@@ -516,7 +516,7 @@ const UnauthenticatedLanding = () => {
           <div className="flex flex-col md:flex-row-reverse items-center gap-10 md:gap-16">
             <div className="w-full md:w-1/2 aspect-video bg-[#0a0a0a] rounded-3xl border border-white/[0.05] overflow-hidden relative group shadow-2xl flex items-start justify-center p-0">
                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,210,255,0.1),transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-10" />
-               <img src="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-03-25%20144851.png" alt="Competitive Arena" className="w-full h-full object-cover object-center opacity-70 mix-blend-lighten group-hover:scale-105 transition-transform duration-700" />
+               <img src="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-03-25%20144851.png?updatedAt=1774430390335" alt="Competitive Arena" className="w-full h-full object-cover object-center opacity-70 mix-blend-lighten group-hover:scale-105 transition-transform duration-700" />
             </div>
             <div className="w-full md:w-1/2 flex flex-col items-start">
                <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center mb-6 shadow-inner">
@@ -595,6 +595,45 @@ const UnauthenticatedLanding = () => {
   );
 };
 
+// ==========================================
+// ERROR BOUNDARY FIX (PREVENTS BLACK SCREEN)
+// ==========================================
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("React Navigation Crash Intercepted:", error, errorInfo);
+    // If a chunk fails to load, force a quick reload to fix it
+    if (error.message && error.message.includes('Failed to fetch dynamically imported module')) {
+       window.location.reload();
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Fallback UI instead of a blank black screen
+      return (
+        <div className="h-screen w-screen bg-black flex flex-col items-center justify-center text-white">
+           <AlertTriangle size={48} className="text-amber-500 mb-4" />
+           <h2 className="text-xl font-bold mb-2">Navigation Glitch Detected</h2>
+           <p className="text-zinc-400 mb-6 text-sm">The engine encountered an error while switching tabs.</p>
+           <button onClick={() => window.location.reload()} className="bg-white text-black px-6 py-2 rounded-full font-bold">
+             Reboot Engine
+           </button>
+        </div>
+      );
+    }
+    return this.props.children; 
+  }
+}
+
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -633,7 +672,11 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
     return <UnauthenticatedLanding />;
   }
 
-  return <>{children}</>;
+  return (
+    <ErrorBoundary>
+      {children}
+    </ErrorBoundary>
+  );
 };
 
 const AppRoutes = () => {
@@ -675,14 +718,13 @@ const App = () => {
   useEffect(() => {
     const forceUpdateIfNeeded = async () => {
       // ⚠️ CHANGE THIS VERSION NUMBER EVERY TIME YOU PUSH TO GITHUB
-      const LATEST_VERSION = "2.1.5"; 
+      const LATEST_VERSION = "3.2.5"; 
       
       const localVersion = localStorage.getItem("algolib_system_version");
 
       if (localVersion !== LATEST_VERSION) {
         console.warn("⚠️ System Outdated. Initiating Auto-Update & Cache Purge...");
 
-        // 1. Kill all active Service Workers (Busts the PWA Cache Trap)
         if ('serviceWorker' in navigator) {
           try {
             const registrations = await navigator.serviceWorker.getRegistrations();
@@ -695,7 +737,6 @@ const App = () => {
           }
         }
 
-        // 2. Wipe the browser's Cache Storage (where old HTML/CSS/JS is stuck)
         if ('caches' in window) {
           try {
             const cacheNames = await caches.keys();
@@ -708,18 +749,12 @@ const App = () => {
           }
         }
 
-        // 3. Set the new version so it doesn't infinite loop
         localStorage.setItem("algolib_system_version", LATEST_VERSION);
-
-        // 4. Force a hard reload of the page from the server
         window.location.reload(); 
       }
     };
 
-    // Run the check immediately on load
     forceUpdateIfNeeded();
-
-    // Re-check when user focuses the tab
     window.addEventListener("focus", forceUpdateIfNeeded);
     return () => window.removeEventListener("focus", forceUpdateIfNeeded);
   }, []);
