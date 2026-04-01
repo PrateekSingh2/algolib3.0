@@ -156,9 +156,9 @@ const Navbar = () => {
 
   const navLinks = [
     { name: "Home", path: "/", icon: Home },
-    { name: "Compiler", path: "/compiler", icon: Code2 },
     { name: "Visualizer", path: "/visualizer", icon: Cpu },
     { name: "Contests", path: "/contests", icon: Terminal },
+    { name: "Compiler", path: "/compiler", icon: Code2 },
     { name: "Community", path: "/discussion", icon: MessageCircle },
     { name: "Notes", path: "/notes", icon: BookOpen },
   ];

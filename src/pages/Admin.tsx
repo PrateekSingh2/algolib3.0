@@ -31,10 +31,24 @@ interface ReplyType { id: string; authorId: string; authorName: string; authorAv
 interface Post { id: string; title: string; body: string; authorName: string; authorId: string; upvotes: string[]; downvotes?: string[]; replies: ReplyType[]; createdAt: any; }
 interface UserActivityData { id: string; email?: string; displayName?: string; lifetimeActiveTimeMins?: number; lastActiveDate?: any; activityUsage?: Record<string, number>; }
 interface AdminUser { email: string; added_by: string; created_at: string; }
-
 // --- Contest Types ---
-interface TestCaseData { displayInput: string; rawInput: string; expected: string; explanation: string; isPublic: boolean; hasMultipleAnswers: boolean; }
-interface ProblemData { dbId?: string; title: string; description: string; difficulty: string; testCases: TestCaseData[]; }
+interface TestCaseData { displayInput: string; rawInput: string; expected: string; explanation: string; isPublic: boolean; hasMultipleAnswers: boolean; imageUrl?: string; }
+interface ProblemData { dbId?: string; title: string; description: string; inputFormat: string; outputFormat: string; constraints: string; difficulty: string; testCases: TestCaseData[]; }
+
+// --- CLOUDINARY UPLOAD HELPER ---
+const uploadToCloudinary = async (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", "ml_default"); // Ensure you have an unsigned preset named ml_default in Cloudinary
+  
+  const res = await fetch("https://api.cloudinary.com/v1_1/dmmv8phgq/image/upload", {
+    method: "POST",
+    body: formData
+  });
+  if (!res.ok) throw new Error("Cloudinary upload failed");
+  const data = await res.json();
+  return data.secure_url;
+};
 
 // --- 1. NEURAL BACKGROUND ---
 const NeuralBackground = () => {
@@ -108,7 +122,7 @@ const Admin = () => {
   const [cStart, setCStart] = useState("");
   const [cEnd, setCEnd] = useState("");
   const [problems, setProblems] = useState<ProblemData[]>([
-      { title: "", description: "", difficulty: "Easy", testCases: [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false }] }
+      { title: "", description: "", inputFormat: "", outputFormat: "", constraints: "", difficulty: "Easy", testCases: [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false, imageUrl: "" }] }
   ]);
   const [existingContests, setExistingContests] = useState<any[]>([]);
   const [isDeployingContest, setIsDeployingContest] = useState(false);
@@ -145,7 +159,6 @@ const Admin = () => {
     if(savedConfig) setGistConfig(JSON.parse(savedConfig));
   }, []);
 
-  // Updated Dynamic Authentication Check
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
@@ -252,7 +265,6 @@ const Admin = () => {
     } catch (error) { alert("Failed to update broadcast settings."); } finally { setIsSavingBroadcast(false); }
   };
 
-  // --- New Admin Control Functions ---
   const handleAddAdminClick = () => {
       if (!newAdminEmail || !newAdminEmail.includes('@')) return alert("Valid email required.");
       setAdminPasscode("");
@@ -373,7 +385,7 @@ const Admin = () => {
 
   const resetContestEditor = () => {
     setCId(""); setCTitle(""); setCStart(""); setCEnd("");
-    setProblems([{ title: "", description: "", difficulty: "Easy", testCases: [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false }] }]);
+    setProblems([{ title: "", description: "", inputFormat: "", outputFormat: "", constraints: "", difficulty: "Easy", testCases: [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false, imageUrl: "" }] }]);
     setContestView("editor");
   };
 
@@ -395,16 +407,32 @@ const Admin = () => {
                   expected: tc.expected_output || "",
                   explanation: tc.explanation || "", 
                   isPublic: tc.is_public,
-                  hasMultipleAnswers: tc.has_multiple_answers || false
+                  hasMultipleAnswers: tc.has_multiple_answers || false,
+                  imageUrl: tc.image_url || ""
               }));
+
+              let descObj = { description: p.description, inputFormat: "", outputFormat: "", constraints: "" };
+              try {
+                  const parsed = JSON.parse(p.description);
+                  if (parsed.description !== undefined) {
+                      descObj = parsed;
+                  }
+              } catch (e) {
+                  // Fallback to old pure string format
+              }
+
               loadedProblems.push({
-                  dbId: p.id, title: p.title, description: p.description, difficulty: p.difficulty,
-                  testCases: formattedTcs.length > 0 ? formattedTcs : [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false }]
+                  dbId: p.id, title: p.title, difficulty: p.difficulty,
+                  description: descObj.description,
+                  inputFormat: descObj.inputFormat,
+                  outputFormat: descObj.outputFormat,
+                  constraints: descObj.constraints,
+                  testCases: formattedTcs.length > 0 ? formattedTcs : [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false, imageUrl: "" }]
               });
           }
           setProblems(loadedProblems);
       } else {
-          setProblems([{ title: "", description: "", difficulty: "Easy", testCases: [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false }] }]);
+          setProblems([{ title: "", description: "", inputFormat: "", outputFormat: "", constraints: "", difficulty: "Easy", testCases: [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false, imageUrl: "" }] }]);
       }
       setContestView("editor");
       setStatusMsg("");
@@ -478,14 +506,21 @@ const Admin = () => {
           let p = problems[i];
           let probId = p.dbId;
           
+          const combinedDesc = JSON.stringify({
+              description: p.description,
+              inputFormat: p.inputFormat,
+              outputFormat: p.outputFormat,
+              constraints: p.constraints
+          });
+
           if (probId) {
               const { error: pUpdateErr } = await supabase.from('problems').update({ 
-                  title: p.title, description: p.description, difficulty: p.difficulty 
+                  title: p.title, description: combinedDesc, difficulty: p.difficulty 
               }).eq('id', probId);
               if (pUpdateErr) throw new Error("Problem Update: " + pUpdateErr.message);
           } else {
               const { data, error } = await supabase.from('problems').insert([{ 
-                  contest_id: currentContestId, title: p.title, description: p.description, difficulty: p.difficulty 
+                  contest_id: currentContestId, title: p.title, description: combinedDesc, difficulty: p.difficulty 
               }]).select();
               if(error) throw new Error("Problem Insert: " + error.message);
               probId = data[0].id;
@@ -500,12 +535,13 @@ const Admin = () => {
               expected_output: tc.expected, 
               explanation: tc.explanation, 
               is_public: tc.isPublic,
-              has_multiple_answers: tc.hasMultipleAnswers || false
+              has_multiple_answers: tc.hasMultipleAnswers || false,
+              image_url: tc.imageUrl || null
           }));
           
           if(tcsToInsert.length > 0) {
               const { error: tcInsErr } = await supabase.from('test_cases').insert(tcsToInsert);
-              if (tcInsErr) throw new Error("Test Case Insert: " + tcInsErr.message);
+              if (tcInsErr) throw new Error("Test Case Insert: " + tcInsErr.message + " (Ensure test_cases table has image_url column)");
           }
       }
       
@@ -520,10 +556,10 @@ const Admin = () => {
     }
   };
 
-  const addProblem = () => setProblems([...problems, { title: "", description: "", difficulty: "Easy", testCases: [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false }] }]);
+  const addProblem = () => setProblems([...problems, { title: "", description: "", inputFormat: "", outputFormat: "", constraints: "", difficulty: "Easy", testCases: [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false, imageUrl: "" }] }]);
   const removeProblem = (pIndex: number) => { if (problems.length > 1) setProblems(problems.filter((_, i) => i !== pIndex)); };
   const updateProblem = (pIndex: number, field: string, value: any) => { const newP = [...problems]; newP[pIndex] = { ...newP[pIndex], [field]: value }; setProblems(newP); };
-  const addTestCase = (pIndex: number) => { const newP = [...problems]; newP[pIndex].testCases.push({ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: false, hasMultipleAnswers: false }); setProblems(newP); };
+  const addTestCase = (pIndex: number) => { const newP = [...problems]; newP[pIndex].testCases.push({ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: false, hasMultipleAnswers: false, imageUrl: "" }); setProblems(newP); };
   const removeTestCase = (pIndex: number, tcIndex: number) => { const newP = [...problems]; newP[pIndex].testCases = newP[pIndex].testCases.filter((_, i) => i !== tcIndex); setProblems(newP); };
   const updateTestCase = (pIndex: number, tcIndex: number, field: string, value: any) => { const newP = [...problems]; newP[pIndex].testCases[tcIndex] = { ...newP[pIndex].testCases[tcIndex], [field]: value }; setProblems(newP); };
 
@@ -940,9 +976,27 @@ const Admin = () => {
                                                 <option value="Easy">Easy</option><option value="Medium">Medium</option><option value="Hard">Hard</option>
                                             </select>
                                         </div>
-                                        <div className="md:col-span-3">
-                                            <label className={labelClass}>Markdown Description</label>
-                                            <textarea value={p.description} onChange={(e) => updateProblem(pIndex, 'description', e.target.value)} rows={4} className={`${inputClass} font-mono text-xs`} />
+                                        
+                                        {/* SECTIONED DESCRIPTION */}
+                                        <div className="md:col-span-3 space-y-4 bg-black/20 p-4 rounded-xl border border-white/5">
+                                            <div>
+                                                <label className={labelClass}>1. Problem Description</label>
+                                                <textarea value={p.description} onChange={(e) => updateProblem(pIndex, 'description', e.target.value)} rows={3} className={`${inputClass} font-mono text-xs`} placeholder="Main problem statement..." />
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className={labelClass}>2. Input Format</label>
+                                                    <textarea value={p.inputFormat} onChange={(e) => updateProblem(pIndex, 'inputFormat', e.target.value)} rows={2} className={`${inputClass} font-mono text-xs`} placeholder="e.g. First line contains N..." />
+                                                </div>
+                                                <div>
+                                                    <label className={labelClass}>3. Output Format</label>
+                                                    <textarea value={p.outputFormat} onChange={(e) => updateProblem(pIndex, 'outputFormat', e.target.value)} rows={2} className={`${inputClass} font-mono text-xs`} placeholder="e.g. Print a single integer..." />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className={labelClass}>4. Constraints</label>
+                                                <textarea value={p.constraints} onChange={(e) => updateProblem(pIndex, 'constraints', e.target.value)} rows={2} className={`${inputClass} font-mono text-xs`} placeholder="e.g. 1 <= N <= 10^5" />
+                                            </div>
                                         </div>
                                     </div>
 
@@ -963,15 +1017,53 @@ const Admin = () => {
                                                             <input type="checkbox" checked={tc.isPublic} onChange={(e) => updateTestCase(pIndex, tcIndex, 'isPublic', e.target.checked)} className="rounded bg-zinc-900" /> Public (Visible)
                                                         </label>
                                                         <label className="flex items-center gap-2 text-[10px] text-zinc-300 cursor-pointer w-fit">
-                                                            <input type="checkbox" checked={tc.hasMultipleAnswers} onChange={(e) => updateTestCase(pIndex, tcIndex, 'hasMultipleAnswers', e.target.checked)} className="rounded bg-zinc-900" /> Allow Multiple Answers (Separate with |||)
+                                                            <input type="checkbox" checked={tc.hasMultipleAnswers} onChange={(e) => updateTestCase(pIndex, tcIndex, 'hasMultipleAnswers', e.target.checked)} className="rounded bg-zinc-900" /> Allow Multiple Answers
                                                         </label>
                                                     </div>
 
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                                         <div><label className={labelClass}>Display Input</label><textarea value={tc.displayInput} onChange={(e) => updateTestCase(pIndex, tcIndex, 'displayInput', e.target.value)} className={`${inputClass} font-mono text-[10px] p-2`} rows={2} /></div>
                                                         <div><label className={labelClass}>Raw Stdin</label><textarea value={tc.rawInput} onChange={(e) => updateTestCase(pIndex, tcIndex, 'rawInput', e.target.value)} className={`${inputClass} font-mono text-[10px] p-2`} rows={2} /></div>
                                                         <div><label className={labelClass}>Expected Output</label><textarea value={tc.expected} onChange={(e) => updateTestCase(pIndex, tcIndex, 'expected', e.target.value)} className={`${inputClass} font-mono text-[10px] p-2`} rows={3} placeholder={tc.hasMultipleAnswers ? "Answer1 ||| Answer2" : "Expected Output"} /></div>
-                                                        <div><label className={labelClass}>Explanation</label><textarea value={tc.explanation} onChange={(e) => updateTestCase(pIndex, tcIndex, 'explanation', e.target.value)} className={`${inputClass} text-[10px] p-2 custom-scrollbar`} rows={3} placeholder="Explanation (Markdown supported, use \n for new lines)" /></div>
+                                                        <div><label className={labelClass}>Explanation</label><textarea value={tc.explanation} onChange={(e) => updateTestCase(pIndex, tcIndex, 'explanation', e.target.value)} className={`${inputClass} text-[10px] p-2 custom-scrollbar`} rows={3} placeholder="Explanation (Markdown supported)" /></div>
+                                                    </div>
+
+                                                    {/* CLOUDINARY UPLOAD SECTION */}
+                                                    <div>
+                                                        <label className={labelClass}>Visual Reference (Optional Image)</label>
+                                                        <div className="flex items-center gap-4 bg-zinc-950 p-3 rounded-xl border border-white/5">
+                                                            <input 
+                                                                type="file" 
+                                                                accept="image/*" 
+                                                                onChange={async (e) => {
+                                                                    const file = e.target.files?.[0];
+                                                                    if(file) {
+                                                                        setStatusMsg("Uploading Image...");
+                                                                        try {
+                                                                            const url = await uploadToCloudinary(file);
+                                                                            updateTestCase(pIndex, tcIndex, 'imageUrl', url);
+                                                                            setStatusMsg("Image Saved!");
+                                                                        } catch (e) {
+                                                                            alert("Upload Failed. Check Cloudinary settings.");
+                                                                            setStatusMsg("");
+                                                                        }
+                                                                        setTimeout(() => setStatusMsg(""), 3000);
+                                                                    }
+                                                                }}
+                                                                className="text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-sky-500/10 file:text-sky-400 hover:file:bg-sky-500/20 cursor-pointer w-full md:w-auto"
+                                                            />
+                                                            {tc.imageUrl && (
+                                                                <div className="relative group">
+                                                                    <img src={tc.imageUrl} className="h-10 w-10 rounded border border-white/10 object-cover" alt="Preview" />
+                                                                    <button 
+                                                                        onClick={() => updateTestCase(pIndex, tcIndex, 'imageUrl', '')}
+                                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                    >
+                                                                        <X size={10}/>
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}
