@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
-import { Play, Send, ChevronDown, Lock, Clock, CheckCircle2, Terminal, ArrowLeft, Loader2, X, Trash2, Code2, AlertTriangle } from 'lucide-react';
+import { Play, Send, ChevronDown, Lock, Clock, CheckCircle2, Terminal, ArrowLeft, Loader2, X, Trash2, Code2, AlertTriangle, Target } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { createClient } from '@supabase/supabase-js';
 import Navbar from "@/components/Navbar";
@@ -56,6 +56,75 @@ const renderMarkdown = (text: string, isSmall = false) => {
   });
 };
 
+// --- NEW: STRUCTURED TERMINAL LOG SYSTEM ---
+type LogEntry = {
+  type: 'system' | 'case_header' | 'success' | 'error' | 'expected' | 'actual_pass' | 'actual_fail' | 'summary_pass' | 'summary_fail' | 'points' | 'penalty' | 'time';
+  content: string;
+};
+
+const renderTerminalLog = (log: LogEntry, i: number) => {
+  switch (log.type) {
+    case 'system':
+      return <div key={i} className="text-purple-400 font-bold text-[13px] mb-5 bg-purple-500/10 py-2.5 px-4 rounded-lg border border-purple-500/20 inline-block shadow-sm">{log.content}</div>;
+    
+    case 'case_header':
+      return <div key={i} className="text-sky-400 font-bold mt-6 mb-2 border-l-[3px] border-sky-500 pl-3 bg-gradient-to-r from-sky-500/10 to-transparent py-1.5 flex items-center gap-2 text-[14px] uppercase tracking-wider">▶ {log.content}</div>;
+    
+    case 'success':
+      return <div key={i} className="text-emerald-400 font-bold flex items-center gap-2 my-2 text-[13px]"><CheckCircle2 size={16}/> {log.content}</div>;
+    
+    case 'error':
+      return (
+        <div key={i} className="text-rose-400 font-bold flex items-start gap-2 my-2 bg-rose-500/5 p-3 rounded-lg border border-rose-500/10">
+          <X size={16} className="mt-0.5 shrink-0"/> 
+          <pre className="font-mono whitespace-pre-wrap text-[13px]">{log.content}</pre>
+        </div>
+      );
+    
+    case 'expected':
+      return (
+        <div key={i} className="text-zinc-300 bg-sky-500/5 px-4 py-3 rounded-xl border border-sky-500/10 border-l-2 border-l-sky-500/50 mt-3 shadow-sm">
+          <div className="text-sky-500/90 font-bold mb-2 text-[10px] uppercase tracking-widest flex items-center gap-1.5"><Target size={12}/> EXPECTED OUTPUT</div>
+          <pre className="font-mono whitespace-pre-wrap text-[13px] leading-relaxed text-sky-100">{log.content || " "}</pre>
+        </div>
+      );
+    
+    case 'actual_pass':
+      return (
+        <div key={i} className="text-zinc-300 bg-emerald-500/5 px-4 py-3 rounded-xl border border-emerald-500/10 border-l-2 border-l-emerald-500/50 mt-3 mb-4 shadow-sm">
+          <div className="text-emerald-500/90 font-bold mb-2 text-[10px] uppercase tracking-widest flex items-center gap-1.5"><CheckCircle2 size={12}/> ACTUAL OUTPUT</div>
+          <pre className="font-mono whitespace-pre-wrap text-[13px] leading-relaxed text-emerald-100">{log.content || " "}</pre>
+        </div>
+      );
+    
+    case 'actual_fail':
+      return (
+        <div key={i} className="text-zinc-300 bg-rose-500/5 px-4 py-3 rounded-xl border border-rose-500/10 border-l-2 border-l-rose-500/50 mt-3 mb-4 shadow-sm">
+          <div className="text-rose-500/90 font-bold mb-2 text-[10px] uppercase tracking-widest flex items-center gap-1.5"><X size={12}/> ACTUAL OUTPUT</div>
+          <pre className="font-mono whitespace-pre-wrap text-[13px] leading-relaxed text-rose-100">{log.content || " "}</pre>
+        </div>
+      );
+    
+    case 'summary_pass':
+      return <div key={i} className="text-emerald-400 font-extrabold text-[15px] mt-8 bg-emerald-500/10 p-5 rounded-xl border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.15)] inline-block w-full sm:w-auto tracking-wide">🏆 {log.content}</div>;
+    
+    case 'summary_fail':
+      return <div key={i} className="text-rose-400 font-extrabold text-[15px] mt-8 bg-rose-500/10 p-5 rounded-xl border border-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.15)] inline-block w-full sm:w-auto tracking-wide">💀 {log.content}</div>;
+    
+    case 'points':
+      return <div key={i} className="text-yellow-400 font-bold mt-4 text-[14px]">⭐ {log.content}</div>;
+    
+    case 'penalty':
+      return <div key={i} className="text-amber-400 font-medium italic mt-2 text-[13px]">⚠️ {log.content}</div>;
+    
+    case 'time':
+      return <div key={i} className="text-cyan-400 font-medium mt-2 text-[13px]">⏱️ {log.content}</div>;
+    
+    default:
+      return <div key={i} className="text-zinc-400 font-mono text-[13px]">{log.content}</div>;
+  }
+};
+
 export default function ContestPanel({ user, onLoginRequest }: { user: any, onLoginRequest: any }) {
   const { contestId } = useParams();
   
@@ -67,7 +136,10 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
 
   const [language, setLanguage] = useState('c++'); 
   const [code, setCode] = useState(userTemplates['c++']);
-  const [output, setOutput] = useState('');
+  
+  // CHANGED: Output is now an array of logs instead of a giant string
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  
   const [isRunning, setIsRunning] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   
@@ -92,8 +164,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     const handleVisibilityChange = async () => {
       if (document.hidden && contestStatus === 'active') {
         setShowCheatWarning(true);
-        
-        // Log Warning to Database
         if (user && contestId) {
             try {
               await supabase.rpc('log_contest_warning', {
@@ -157,12 +227,10 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
 
   useEffect(() => {
     if (!contest) return;
-    
     const updateTimer = () => {
       const now = new Date().getTime();
       const start = new Date(contest.start_time).getTime();
       const end = new Date(contest.end_time).getTime();
-      
       if (now < start) {
         setContestStatus('upcoming');
         setTimeRemaining(Math.floor((start - now) / 1000));
@@ -177,7 +245,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         setTimeRemaining(0);
       }
     };
-
     updateTimer(); 
     const timer = setInterval(updateTimer, 1000);
     return () => clearInterval(timer);
@@ -192,50 +259,29 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
 
   const handleLanguageChange = (e: any) => {
     setLanguage(e.target.value);
-    setOutput(''); 
+    setLogs([]); 
   };
 
-  // --- NEW: CUSTOM HUGGING FACE ENGINE FETCH ---
   const executeCodeCustom = async (lang: string, source: string, stdin: string) => {
-    // Make sure it keeps the "/execute" at the end!
     const ENGINE_API_URL = "https://rajawatprateek-algolib-engine.hf.space/execute";
-
     try {
         const res = await fetch(ENGINE_API_URL, {
             method: 'POST',
-            mode: 'cors', // Prevents strict CORS preflight blocking
-            headers: { 
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              language: lang,
-              code: source,
-              input: stdin
-            })
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ language: lang, code: source, input: stdin })
         });
-
-        if (!res.ok) {
-            throw new Error(`Engine Offline or Overloaded: HTTP ${res.status}`);
-        }
-
+        if (!res.ok) throw new Error(`Engine Offline or Overloaded: HTTP ${res.status}`);
         const data = await res.json();
-        
-        // Output Sanitization (Removes the backend's hidden UUIDs from Java errors)
         let cleanOutput = (data.output || '').trim();
         if (lang === 'java') {
-            // Replaces "Main_1234abcd5678..." back to "Main" so compiler errors look normal
             cleanOutput = cleanOutput.replace(/Main_[a-fA-F0-9]+/g, 'Main');
         }
-
-        return { 
-            output: cleanOutput, 
-            statusCode: data.statusCode 
-        };
+        return { output: cleanOutput, statusCode: data.statusCode };
     } catch (e: any) { 
         throw new Error(`Connection to execution matrix failed: ${e.message}`); 
     }
   };
-  // ---------------------------------------------
 
   const handleEvaluation = async (isSubmit = false) => {
     const now = Date.now();
@@ -254,25 +300,32 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     }
     
     setIsRunning(true);
-    let consoleBuffer = isSubmit ? '🚀 Initiating Submission suite...\n' : '⚙️ Running test cases...\n';
-    setOutput(consoleBuffer);
+    
+    // Initialize Local State Array for live updates
+    let currentLogs: LogEntry[] = [];
+    const addLog = (type: LogEntry['type'], content: string) => {
+        currentLogs = [...currentLogs, { type, content }];
+        setLogs(currentLogs);
+    };
+
+    addLog('system', isSubmit ? '🚀 Initiating Submission Suite...' : '⚙️ Compiling and running test cases...');
     
     let casesToRun = isSubmit ? testCases : testCases.filter(tc => tc.is_public === true || tc.is_public === 'true' || tc.isPublic === true || tc.isPublic === 'true');
     if (casesToRun.length === 0 && testCases.length > 0) casesToRun = [testCases[0]];
+    
     let allPassed = true;
     let passedCount = 0;
     
     for (let i = 0; i < casesToRun.length; i++) {
       const tc = casesToRun[i];
-      consoleBuffer += `\n▶ Case ${i + 1}: `;
-      setOutput(consoleBuffer);
+      addLog('case_header', `Case ${i + 1}`);
+      
       const rawIn = String(tc.raw_input || tc.rawInput || '').replace(/\\n/g, '\n');
       const expOut = String(tc.expected_output || tc.expected || '').trim();
       const isPub = tc.is_public === true || tc.is_public === 'true';
       const hasMultiple = tc.has_multiple_answers === true || tc.has_multiple_answers === 'true';
       
       try {
-        // --- USING THE NEW CUSTOM ENGINE ---
         const { output, statusCode } = await executeCodeCustom(language, code, rawIn);
         const normalizedActual = output.replace(/\s+/g, '');
         
@@ -297,25 +350,29 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         }
 
         if (statusCode !== 200 && statusCode !== undefined) {
-          consoleBuffer += `❌ Error\n${output}\n`;
+          addLog('error', `Runtime Error / Exception:\n\n${output}`);
           allPassed = false;
         } else if (isCorrect) {
-          consoleBuffer += `✅ Passed\n`;
-          if (isPub) consoleBuffer += `Actual: ${output}\n`;
+          addLog('success', 'Passed');
+          if (isPub) {
+             addLog('actual_pass', output);
+          }
           passedCount++;
         } else {
-          consoleBuffer += `❌ Failed\n`;
-          if (isPub) consoleBuffer += `Exp: ${expOut}\nActual: ${output}\n`;
+          addLog('error', 'Failed');
+          if (isPub) {
+             addLog('expected', expOut);
+             addLog('actual_fail', output);
+          }
           allPassed = false;
         }
       } catch (err: any) { 
-        consoleBuffer += `❌ System Error: ${err.message}\n`; 
+        addLog('error', `System Infrastructure Error:\n${err.message}`);
         allPassed = false; 
       }
       
-      setOutput(consoleBuffer);
       if (!allPassed) break;
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 800)); // Smooth delay for visual effect
     }
     
     if (isSubmit) {
@@ -331,10 +388,10 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
           ...prev,
           [currentProblem.id]: currentWrongCount + 1
         }));
-        consoleBuffer += `\nFinal Score: Rejected (${passedCount}/${casesToRun.length})`;
-        consoleBuffer += `\n⚠️ Penalty applied: -${defaultPenalty} points for future correct submission.`;
+        addLog('summary_fail', `Final Score: Rejected (${passedCount}/${casesToRun.length})`);
+        addLog('penalty', `Penalty applied: -${defaultPenalty} points for future correct submission.`);
       } else {
-        consoleBuffer += `\nFinal Score: Accepted (${passedCount}/${casesToRun.length})`;
+        addLog('summary_pass', `Final Score: Accepted (${passedCount}/${casesToRun.length})`);
         if (user) {
           try {
               const pointsEarned = Math.max(0, defaultPts - (currentWrongCount * defaultPenalty));
@@ -357,13 +414,12 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                   language_used: language
               }]);
               
-              consoleBuffer += `\n🏆 Points Awarded: ${pointsEarned} (Base: ${defaultPts}, Penalties: -${currentWrongCount * defaultPenalty})`;
-              consoleBuffer += `\n⏱️ Time Taken: ${formatTime(timeTakenSeconds)}`;
+              addLog('points', `Points Awarded: ${pointsEarned} (Base: ${defaultPts}, Penalties: -${currentWrongCount * defaultPenalty})`);
+              addLog('time', `Time Taken: ${formatTime(timeTakenSeconds)}`);
           } catch (e) {}
         }
       }
     }
-    setOutput(consoleBuffer);
     setIsRunning(false);
   };
 
@@ -441,7 +497,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
               {problems.map((p, idx) => (
                   <button 
                     key={p.id || idx} 
-                    onClick={() => { setActiveProblemIndex(idx); setOutput(''); }}
+                    onClick={() => { setActiveProblemIndex(idx); setLogs([]); }}
                     className={`whitespace-nowrap px-3 md:px-4 py-1.5 text-xs font-bold rounded-full transition-all border ${activeProblemIndex === idx ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-700'}`}
                   >
                     Problem {String.fromCharCode(65 + idx)}
@@ -539,7 +595,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
 
             <Panel minSize={15} className="flex flex-col bg-zinc-950">
                <PanelGroup direction="vertical">
-                 <Panel defaultSize={70} minSize={20} className="flex flex-col">
+                 <Panel defaultSize={65} minSize={20} className="flex flex-col">
                     <div className="h-10 md:h-12 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-3 md:px-4 shrink-0">
                        <select value={language} onChange={handleLanguageChange} className="bg-transparent text-emerald-400 text-[11px] md:text-xs font-bold outline-none cursor-pointer hover:bg-zinc-800 px-2 py-1 rounded transition-colors uppercase tracking-widest">
                           <option value="c++">C++ 17</option>
@@ -566,13 +622,24 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                     <div className="w-10 h-0.5 bg-zinc-700 rounded-full"></div>
                  </PanelResizeHandle>
                  
-                 <Panel className="bg-zinc-950/80 flex flex-col" minSize={10}>
-                    <div className="h-9 md:h-10 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-3 md:px-4 shrink-0">
-                       <span className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase flex gap-2 items-center"><Terminal size={12}/> Output Log</span>
-                       {output && <button onClick={() => setOutput('')} className="text-[9px] font-bold text-rose-400 hover:text-rose-300 transition-colors border border-rose-500/30 px-2 py-0.5 rounded tracking-widest uppercase">Clear</button>}
+                 <Panel className="bg-[#050505] flex flex-col" minSize={10}>
+                    <div className="h-9 md:h-10 bg-[#09090b] border-b border-white/5 flex items-center justify-between px-3 md:px-4 shrink-0 shadow-sm z-10">
+                       <span className="text-[10px] font-bold text-zinc-500 tracking-widest uppercase flex gap-2 items-center"><Terminal size={12}/> Console Output</span>
+                       {logs.length > 0 && <button onClick={() => setLogs([])} className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-wider">Clear</button>}
                     </div>
-                    <div className="flex-1 overflow-y-auto overflow-x-auto custom-scrollbar p-4 md:p-6 font-mono text-[12px] md:text-[13px] text-zinc-300 leading-relaxed bg-zinc-950">
-                       {output ? output.split('\n').map((l, i) => <div key={i} className="whitespace-pre">{l || <span>&nbsp;</span>}</div>) : <div className="text-zinc-700 italic uppercase tracking-widest text-[10px]">$ Waiting for process...</div>}
+                    
+                    {/* CHANGED: Now rendering structured objects instead of split strings */}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 bg-[#020202] shadow-inner relative">
+                       {logs.length > 0 ? (
+                           <div className="flex flex-col">
+                               {logs.map((l, i) => renderTerminalLog(l, i))}
+                           </div>
+                       ) : (
+                           <div className="h-full flex flex-col items-center justify-center text-center gap-3 text-zinc-600 opacity-60">
+                               <Terminal size={32} />
+                               <div className="italic uppercase tracking-widest text-[10px]">$ Waiting for execution...</div>
+                           </div>
+                       )}
                     </div>
                  </Panel>
                </PanelGroup>
