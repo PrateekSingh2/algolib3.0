@@ -11,6 +11,7 @@ export interface AppUserProfile {
   display_name?: string | null;
   avatar_url?: string | null;
   has_seen_welcome?: boolean;
+  is_profile_complete?: boolean; // <-- NEW COLUMN ADDED HERE
   college?: string | null;
   age?: number | null;
   gender?: string | null;
@@ -90,7 +91,8 @@ const ensureProfile = async (firebaseUser: User): Promise<AppUserProfile | null>
     full_name: firebaseUser.displayName,
     display_name: firebaseUser.displayName,
     avatar_url: firebaseUser.photoURL,
-    has_seen_welcome: false,
+    has_seen_welcome: false, 
+    is_profile_complete: false, // <-- INITIALIZES TO FALSE FOR NEW USERS
   };
 
   try {
@@ -98,12 +100,13 @@ const ensureProfile = async (firebaseUser: User): Promise<AppUserProfile | null>
   } catch (error) {
     if (!isBenignSupabaseColumnOrCastError(error)) throw error;
 
-    // Fallback for legacy/mismatched schemas; insert the smallest payload likely to pass.
+    // Fallback for legacy/mismatched schemas
     return tryInsertProfile({
       full_name: firebaseUser.displayName,
       display_name: firebaseUser.displayName,
       avatar_url: firebaseUser.photoURL,
       has_seen_welcome: false,
+      is_profile_complete: false, // <-- INITIALIZES TO FALSE
     });
   }
 };

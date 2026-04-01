@@ -89,14 +89,28 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   }, []);
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       if (document.hidden && contestStatus === 'active') {
         setShowCheatWarning(true);
+        
+        // Log Warning to Database
+        if (user && contestId) {
+            try {
+              await supabase.rpc('log_contest_warning', {
+                p_firebase_uid: user.uid || user.id,
+                p_contest_id: contestId,
+                p_email: user.email || '',
+                p_display_name: user.displayName || 'Unknown'
+              });
+            } catch (e) {
+              console.error(e);
+            }
+        }
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [contestStatus]);
+  }, [contestStatus, user, contestId]);
 
   useEffect(() => {
     const fetchMatrix = async () => {

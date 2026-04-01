@@ -23,7 +23,8 @@ import {
   Activity,
   Sparkles,
   Sun,
-  Moon
+  Moon,
+  Code2
 } from "lucide-react";
 
 const timeAgo = (timestamp: number) => {
@@ -88,6 +89,10 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
+    // --- DATA PROTECTION ---
+    // Do not fetch notifications if the user is not fully onboarded or not logged in
+    if (!user || profile?.is_profile_complete === false) return;
+
     const q = query(collection(firestoreDB, "community_posts"), orderBy("createdAt", "desc"), limit(15));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let count = 0;
@@ -114,7 +119,7 @@ const Navbar = () => {
     });
 
     return () => unsubscribe();
-  }, [lastReadTime, user]);
+  }, [lastReadTime, user, profile?.is_profile_complete]); // Added dependency
 
   const handleToggleNotif = () => {
     setIsNotifOpen((prev) => !prev);
@@ -151,6 +156,7 @@ const Navbar = () => {
 
   const navLinks = [
     { name: "Home", path: "/", icon: Home },
+    { name: "Compiler", path: "/compiler", icon: Code2 },
     { name: "Visualizer", path: "/visualizer", icon: Cpu },
     { name: "Contests", path: "/contests", icon: Terminal },
     { name: "Community", path: "/discussion", icon: MessageCircle },
@@ -192,7 +198,6 @@ const Navbar = () => {
               <UserPen size={16} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" /> Edit Profile
             </Link>
             
-            {/* Added: Theme Toggle inside Profile Menu */}
             <button 
               onClick={(e) => { e.preventDefault(); toggleTheme(); }} 
               className="w-full text-left flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.06] transition-all group"
@@ -316,18 +321,21 @@ const Navbar = () => {
           <div className="flex items-center gap-1 pr-1.5">
             <Link to="/developer" title="Developer" className="p-2.5 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors">&lt;/&gt;</Link>
 
-            <div className="relative" ref={desktopNotifRef}>
-              <button onClick={handleToggleNotif} title="Notifications" className={`p-2.5 rounded-full transition-colors relative ${isNotifOpen ? 'bg-white/[0.08] text-white' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]'}`}>
-                <Bell className="w-[16px] h-[16px]" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-2.5 right-2.5 flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500 border border-[#09090b]"></span>
-                  </span>
-                )}
-              </button>
-              <NotificationPanel />
-            </div>
+            {/* --- VISUAL PROTECTION (DESKTOP) --- */}
+            {user && profile?.is_profile_complete && (
+              <div className="relative" ref={desktopNotifRef}>
+                <button onClick={handleToggleNotif} title="Notifications" className={`p-2.5 rounded-full transition-colors relative ${isNotifOpen ? 'bg-white/[0.08] text-white' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]'}`}>
+                  <Bell className="w-[16px] h-[16px]" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-2.5 right-2.5 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500 border border-[#09090b]"></span>
+                    </span>
+                  )}
+                </button>
+                <NotificationPanel />
+              </div>
+            )}
 
             {user ? (
               <div className="relative ml-1.5" ref={profileMenuRef}>
@@ -361,18 +369,21 @@ const Navbar = () => {
           
           <div className="flex items-center gap-1">
             
-            <div className="relative" ref={mobileNotifRef}>
-              <button onClick={handleToggleNotif} className={`p-2 rounded-xl transition-colors relative ${isNotifOpen ? 'bg-white/[0.08] text-white' : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'}`}>
-                <Bell size={18} />
-                {unreadCount > 0 && (
-                   <span className="absolute top-2 right-2.5 flex h-2 w-2">
-                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                     <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500 border border-[#09090b]"></span>
-                   </span>
-                )}
-              </button>
-              <NotificationPanel isMobile={true} />
-            </div>
+            {/* --- VISUAL PROTECTION (MOBILE) --- */}
+            {user && profile?.is_profile_complete && (
+              <div className="relative" ref={mobileNotifRef}>
+                <button onClick={handleToggleNotif} className={`p-2 rounded-xl transition-colors relative ${isNotifOpen ? 'bg-white/[0.08] text-white' : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'}`}>
+                  <Bell size={18} />
+                  {unreadCount > 0 && (
+                     <span className="absolute top-2 right-2.5 flex h-2 w-2">
+                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                       <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500 border border-[#09090b]"></span>
+                     </span>
+                  )}
+                </button>
+                <NotificationPanel isMobile={true} />
+              </div>
+            )}
 
             {user && (
               <div className="relative" ref={mobileProfileMenuRef}>

@@ -75,7 +75,7 @@ const SortingVisualizer = () => {
   const [array, setArray] = useState<number[]>([]);
   const [algo, setAlgo] = useState<AlgorithmType>('bubble');
   const [isSorting, setIsSorting] = useState(false);
-  const [isPaused, setIsPaused] = useState(false); // Changed to default false
+  const [isPaused, setIsPaused] = useState(true);
   
   // Game HUD - Hidden by Default
   const [showHUD, setShowHUD] = useState(false);
@@ -95,7 +95,6 @@ const SortingVisualizer = () => {
 
   // Engine Refs
   const sortingRef = useRef(false);
-  const pausedRef = useRef(false); // NEW: Synchronous tracking to fix the 1-click bug
   const stepTrigger = useRef<() => void>(() => {});
   const interpreterEndRef = useRef<HTMLDivElement>(null);
   const outputEndRef = useRef<HTMLDivElement>(null);
@@ -112,10 +111,7 @@ const SortingVisualizer = () => {
   const resetArray = () => {
     sortingRef.current = false;
     setIsSorting(false);
-    setIsPaused(false);
-    pausedRef.current = false;
-    resolveStep(); // Free any stuck promises from previous runs
-    
+    setIsPaused(true);
     const newArr = Array.from({ length: arraySize }, () => Math.floor(Math.random() * 95) + 5);
     setArray(newArr);
     setSortedIndices([]);
@@ -141,8 +137,7 @@ const SortingVisualizer = () => {
         setCodeLines(CODE_SNIPPETS[algo].map(l => ({ ...l, active: l.id === lineId })));
     }
 
-    // FIX: Using pausedRef instead of isPaused allows the loop to read it synchronously
-    if (pausedRef.current) {
+    if (isPaused) {
       await new Promise<void>((resolve) => { stepTrigger.current = resolve; });
     } else {
       const delay = Math.max(5, 500 - (speed * 4.9)); 
@@ -360,27 +355,14 @@ const SortingVisualizer = () => {
     }
   };
 
-  // --- RUNNER (FIXED FOR 1-CLICK INSTANT START) ---
+  // --- RUNNER ---
   const startSort = async () => {
-    if (isSorting) {
-        // Toggle Pause/Resume logic
-        if (pausedRef.current) {
-            pausedRef.current = false;
-            setIsPaused(false);
-            resolveStep(); // Unblocks the waiting Promise instantly
-        } else {
-            pausedRef.current = true;
-            setIsPaused(true);
-        }
-        return; 
-    }
+    if (isSorting && isPaused) { setIsPaused(false); return; }
     
-    // Start Fresh
     setIsSorting(true);
     setIsPaused(false);
-    pausedRef.current = false;
     sortingRef.current = true;
-    
+    // if (!showHUD) setShowHUD(true); // Auto-show HUD when sort starts
     setSortedIndices([]);
     const arrCopy = [...array];
 
@@ -399,8 +381,6 @@ const SortingVisualizer = () => {
         setActiveIndices([]);
         setOpType('idle');
         setIsSorting(false);
-        setIsPaused(false);
-        pausedRef.current = false;
         setCodeLines(CODE_SNIPPETS[algo].map(l => ({ ...l, active: false })));
     }
   };
@@ -476,7 +456,7 @@ const SortingVisualizer = () => {
                   }`}
                >
                   {isSorting && !isPaused ? <Pause size={14} fill="currentColor"/> : <Play size={14} fill="currentColor"/>}
-                  {isSorting && !isPaused ? 'PAUSE' : isSorting ? 'RESUME' : 'START'}
+                  {isSorting && !isPaused ? 'START' : isSorting ? 'RESUME' : 'INITIATE'}
                </button>
                
                <button onClick={resolveStep} disabled={!isPaused || !isSorting}

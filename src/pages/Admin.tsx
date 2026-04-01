@@ -7,14 +7,14 @@ import {
 import { auth, firestoreDB, loginWithGoogle, logout } from "../lib/firebase"; 
 import { createClient } from '@supabase/supabase-js';
 import { 
-  Lock, Terminal, Clock, HardDrive, Copy, Check, 
-  Cpu, Hash, ShieldCheck, Save, RefreshCw, 
-  AlertCircle, X, Code, FileJson, CloudLightning, 
-  Settings, Loader2, Edit3, ShieldAlert, Fingerprint, 
-  ChevronRight, Unlock, Search, Users, Activity,
-  LayoutDashboard, Database, ChevronUp, MessageSquare, AlertTriangle, Trash2,
+  Lock, Terminal, Clock, Copy, Check, 
+  Hash, ShieldCheck, Save, RefreshCw, 
+  X, Code, FileJson, CloudLightning, 
+  Settings, Loader2, Edit3, ShieldAlert, 
+  Search, Users, Activity,
+  Database, ChevronUp, MessageSquare, AlertTriangle, Trash2,
   Megaphone, Radio, ExternalLink, Eye, BarChart3, PieChart as PieChartIcon, 
-  Download, User as UserIcon, AlignLeft, Send, Github, Trophy, Plus, Calendar, List
+  Download, User as UserIcon, AlignLeft, Send, Github, Trophy, Plus, Calendar, List, UserPlus, UserMinus
 } from "lucide-react";
 
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -24,20 +24,13 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// ==========================================
-// SECURITY: DEFINE YOUR ADMIN EMAILS HERE
-// ==========================================
-const ADMIN_EMAILS = [
-  "prateeksinghrajawat2006@gmail.com", 
-  "shivanshmax@gmail.com"
-];
-
 const CHART_COLORS = ['#38bdf8', '#34d399', '#818cf8', '#fb923c', '#f87171', '#facc15', '#f472b6', '#60a5fa'];
 
 // --- Types ---
 interface ReplyType { id: string; authorId: string; authorName: string; authorAvatar: string; content: string; createdAt: number; isAccepted?: boolean; }
 interface Post { id: string; title: string; body: string; authorName: string; authorId: string; upvotes: string[]; downvotes?: string[]; replies: ReplyType[]; createdAt: any; }
 interface UserActivityData { id: string; email?: string; displayName?: string; lifetimeActiveTimeMins?: number; lastActiveDate?: any; activityUsage?: Record<string, number>; }
+interface AdminUser { email: string; added_by: string; created_at: string; }
 
 // --- Contest Types ---
 interface TestCaseData { displayInput: string; rawInput: string; expected: string; explanation: string; isPublic: boolean; hasMultipleAnswers: boolean; }
@@ -89,13 +82,25 @@ const Admin = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"forge" | "contests" | "moderation" | "broadcast" | "insights">("forge");
+  const [activeTab, setActiveTab] = useState<"forge" | "contests" | "moderation" | "broadcast" | "insights" | "admins">("forge");
 
   const [mode, setMode] = useState<"create" | "edit">("create");
   const [activeCodeTab, setActiveCodeTab] = useState<"java" | "cpp" | "python">("java");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [formData, setFormData] = useState({ id: "", title: "", category: "", timeComplexity: "O(n)", spaceComplexity: "O(1)", description: "", details: "", codeJava: "", codeCpp: "", codePython: "" });
+
+  const [adminPasscode, setAdminPasscode] = useState("");
+  const [showUnauthorizedModal, setShowUnauthorizedModal] = useState(false);
+
+  // New Admin Control States
+  const [adminsList, setAdminsList] = useState<AdminUser[]>([]);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [showAddAdminPasscodeModal, setShowAddAdminPasscodeModal] = useState(false);
+  const [isAddingAdmin, setIsAddingAdmin] = useState(false);
+  const [adminToRemove, setAdminToRemove] = useState<string | null>(null);
+  const [showRemoveAdminPasscodeModal, setShowRemoveAdminPasscodeModal] = useState(false);
+  const [isRemovingAdmin, setIsRemovingAdmin] = useState(false);
 
   const [contestView, setContestView] = useState<"editor" | "manager">("editor");
   const [cId, setCId] = useState("");
@@ -140,15 +145,44 @@ const Admin = () => {
     if(savedConfig) setGistConfig(JSON.parse(savedConfig));
   }, []);
 
+  // Updated Dynamic Authentication Check
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser && currentUser.email && ADMIN_EMAILS.includes(currentUser.email)) setIsAdmin(true);
-      else setIsAdmin(false);
+      
+      if (currentUser && currentUser.email) {
+        try {
+            const { data, error } = await supabase.from('admins').select('email');
+            const validEmails = data ? data.map(d => d.email) : [];
+            const fallbackAdmins = ["prateeksinghrajawat2006@gmail.com", "shivanshmax@gmail.com"];
+            
+            if (validEmails.includes(currentUser.email) || fallbackAdmins.includes(currentUser.email)) {
+                setIsAdmin(true);
+            } else {
+                setIsAdmin(false);
+            }
+        } catch (e) {
+            console.error("Failed to authenticate admin status:", e);
+            setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
       setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "admins" && isAdmin) {
+      loadAdminsList();
+    }
+  }, [activeTab, isAdmin]);
+
+  const loadAdminsList = async () => {
+      const { data } = await supabase.from('admins').select('*').order('created_at', { ascending: false });
+      if (data) setAdminsList(data);
+  };
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -216,6 +250,88 @@ const Admin = () => {
         await setDoc(doc(firestoreDB, "system_settings", "announcement"), { message: broadcastMsg, type: broadcastType, active: broadcastActive, link: broadcastLink, updatedAt: new Date() });
         setStatusMsg("Broadcast Status Updated"); setTimeout(() => setStatusMsg(""), 3000);
     } catch (error) { alert("Failed to update broadcast settings."); } finally { setIsSavingBroadcast(false); }
+  };
+
+  // --- New Admin Control Functions ---
+  const handleAddAdminClick = () => {
+      if (!newAdminEmail || !newAdminEmail.includes('@')) return alert("Valid email required.");
+      setAdminPasscode("");
+      setShowAddAdminPasscodeModal(true);
+  };
+
+  const executeAddAdmin = async () => {
+      if (!adminPasscode) return;
+      setShowAddAdminPasscodeModal(false);
+      setIsAddingAdmin(true);
+
+      try {
+          const { data: verified, error: verifyErr } = await supabase.rpc('verify_admin_passcode', {
+              provided_passcode: adminPasscode
+          });
+
+          if (verifyErr || !verified) throw new Error("Unauthorized Passcode");
+
+          const { error: insertErr } = await supabase.from('admins').insert([{
+              email: newAdminEmail.toLowerCase(),
+              added_by: user?.email
+          }]);
+
+          if (insertErr) {
+              if (insertErr.code === '23505') throw new Error("User is already an admin!");
+              throw insertErr;
+          }
+
+          setStatusMsg("New Admin Granted Access!");
+          setNewAdminEmail("");
+          setTimeout(() => setStatusMsg(""), 3000);
+          
+          loadAdminsList(); 
+      } catch (err: any) {
+          if (err.message === "Unauthorized Passcode") {
+              setShowUnauthorizedModal(true);
+          } else {
+              alert(err.message);
+          }
+      } finally {
+          setIsAddingAdmin(false);
+          setAdminPasscode("");
+      }
+  };
+
+  const handleRemoveAdminClick = (email: string) => {
+      setAdminToRemove(email);
+      setAdminPasscode("");
+      setShowRemoveAdminPasscodeModal(true);
+  };
+
+  const executeRemoveAdmin = async () => {
+      if (!adminPasscode || !adminToRemove) return;
+      setShowRemoveAdminPasscodeModal(false);
+      setIsRemovingAdmin(true);
+
+      try {
+          const { error } = await supabase.rpc('remove_admin_with_passcode', {
+              email_to_remove: adminToRemove,
+              provided_passcode: adminPasscode
+          });
+
+          if (error) throw error;
+
+          setStatusMsg("Admin Privileges Revoked!");
+          setTimeout(() => setStatusMsg(""), 3000);
+          
+          loadAdminsList(); 
+      } catch (err: any) {
+          if (err.message.includes("Unauthorized Passcode")) {
+              setShowUnauthorizedModal(true);
+          } else {
+              alert(err.message || "Operation failed.");
+          }
+      } finally {
+          setIsRemovingAdmin(false);
+          setAdminPasscode("");
+          setAdminToRemove(null);
+      }
   };
 
   const fetchFromGist = async () => {
@@ -498,6 +614,117 @@ const Admin = () => {
                 </motion.div>
             </motion.div>
         )}
+
+        {/* Add New Admin Passcode Modal */}
+        {showAddAdminPasscodeModal && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} className="w-full max-w-sm bg-zinc-950 border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/10 blur-[60px] rounded-full pointer-events-none"></div>
+
+                    <div className="flex flex-col items-center text-center mb-6 relative z-10">
+                        <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center mb-4 shadow-inner">
+                            <ShieldCheck size={24} className="text-emerald-400" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-1">Verify Identity</h3>
+                        <p className="text-xs text-zinc-400">Enter master passcode to grant system access to a new administrator.</p>
+                    </div>
+
+                    <div className="space-y-5 relative z-10">
+                        <div>
+                            <input
+                                type="password"
+                                value={adminPasscode}
+                                onChange={(e) => setAdminPasscode(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && executeAddAdmin()}
+                                placeholder="••••••••"
+                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3.5 text-center text-xl tracking-[0.3em] text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all placeholder:text-zinc-700 placeholder:tracking-normal placeholder:text-sm"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button onClick={() => setShowAddAdminPasscodeModal(false)} className="flex-1 py-3 bg-zinc-900 border border-white/5 hover:bg-white/5 hover:border-white/10 rounded-xl text-sm font-medium text-zinc-300 transition-colors">Cancel</button>
+                            <button 
+                                onClick={executeAddAdmin} 
+                                disabled={!adminPasscode || isAddingAdmin} 
+                                className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:hover:bg-emerald-500 text-black rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all flex items-center justify-center gap-2"
+                            >
+                                {isAddingAdmin ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} 
+                                Grant Access
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+            </motion.div>
+        )}
+
+        {/* Remove Admin Passcode Modal */}
+        {showRemoveAdminPasscodeModal && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} className="w-full max-w-sm bg-zinc-950 border border-white/10 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-red-500/10 blur-[60px] rounded-full pointer-events-none"></div>
+
+                    <div className="flex flex-col items-center text-center mb-6 relative z-10">
+                        <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center mb-4 shadow-inner">
+                            <UserMinus size={24} className="text-red-400" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-1">Revoke Access</h3>
+                        <p className="text-xs text-zinc-400">Enter master passcode to remove <strong>{adminToRemove}</strong>.</p>
+                    </div>
+
+                    <div className="space-y-5 relative z-10">
+                        <div>
+                            <input
+                                type="password"
+                                value={adminPasscode}
+                                onChange={(e) => setAdminPasscode(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && executeRemoveAdmin()}
+                                placeholder="••••••••"
+                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3.5 text-center text-xl tracking-[0.3em] text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 transition-all placeholder:text-zinc-700 placeholder:tracking-normal placeholder:text-sm"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button onClick={() => setShowRemoveAdminPasscodeModal(false)} className="flex-1 py-3 bg-zinc-900 border border-white/5 hover:bg-white/5 hover:border-white/10 rounded-xl text-sm font-medium text-zinc-300 transition-colors">Cancel</button>
+                            <button 
+                                onClick={executeRemoveAdmin} 
+                                disabled={!adminPasscode || isRemovingAdmin} 
+                                className="flex-1 py-3 bg-red-500 hover:bg-red-400 disabled:opacity-50 disabled:hover:bg-red-500 text-black rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(239,68,68,0.2)] transition-all flex items-center justify-center gap-2"
+                            >
+                                {isRemovingAdmin ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />} 
+                                Revoke
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+            </motion.div>
+        )}
+
+        {/* Security Breach / Unauthorized Modal */}
+        {showUnauthorizedModal && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-red-500/30 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-red-500"></div>
+                    
+                    <ShieldAlert size={48} className="text-red-500 mx-auto mb-4" />
+                    <h2 className="text-xl font-bold text-white mb-2">Unauthorized Access</h2>
+                    <p className="text-zinc-400 mb-6 text-sm">
+                        Invalid admin passcode detected. For security reasons, your session will now be terminated.
+                    </p>
+                    
+                    <button 
+                        onClick={async () => {
+                            setShowUnauthorizedModal(false);
+                            await logout();
+                        }} 
+                        className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors shadow-[0_0_15px_rgba(239,68,68,0.3)] tracking-wide"
+                    >
+                        Retry
+                    </button>
+                </motion.div>
+            </motion.div>
+        )}
       </AnimatePresence>
 
       <main className="pt-28 pb-20 px-6 container mx-auto max-w-7xl relative z-10">
@@ -519,7 +746,14 @@ const Admin = () => {
         </div>
 
         <div className="flex overflow-x-auto custom-scrollbar mb-8 bg-zinc-900/30 p-1.5 rounded-2xl border border-white/5 w-fit">
-            {[ { id: 'forge', label: 'Data Forge', icon: Code }, { id: 'contests', label: 'Contest Forge', icon: Trophy }, { id: 'moderation', label: 'Moderation', icon: ShieldCheck }, { id: 'broadcast', label: 'Broadcast', icon: Radio }, { id: 'insights', label: 'Insights', icon: BarChart3 } ].map(tab => (
+            {[ 
+                { id: 'forge', label: 'Data Forge', icon: Code }, 
+                { id: 'contests', label: 'Contest Forge', icon: Trophy }, 
+                { id: 'moderation', label: 'Moderation', icon: ShieldCheck }, 
+                { id: 'broadcast', label: 'Broadcast', icon: Radio }, 
+                { id: 'insights', label: 'Insights', icon: BarChart3 }, 
+                { id: 'admins', label: 'Access Control', icon: UserPlus } 
+            ].map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-xl transition-all whitespace-nowrap ${activeTab === tab.id ? 'text-white bg-white/10' : 'text-zinc-500 hover:text-zinc-300'}`}>
                 <tab.icon size={16} />{tab.label}
               </button>
@@ -671,11 +905,11 @@ const Admin = () => {
                           </div>
                           <div>
                               <label className={labelClass}>Start Time (Local)</label>
-                              <input type="datetime-local" value={cStart} onChange={(e) => setCStart(e.target.value)} className={inputClass} />
+                              <input type="datetime-local" value={cStart} onChange={(e) => setCStart(e.target.value)} className={`${inputClass} [color-scheme:dark]`} />
                           </div>
                           <div>
                               <label className={labelClass}>End Time (Local)</label>
-                              <input type="datetime-local" value={cEnd} onChange={(e) => setCEnd(e.target.value)} className={inputClass} />
+                              <input type="datetime-local" value={cEnd} onChange={(e) => setCEnd(e.target.value)} className={`${inputClass} [color-scheme:dark]`} />
                           </div>
                       </div>
                     </div>
@@ -736,11 +970,7 @@ const Admin = () => {
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                         <div><label className={labelClass}>Display Input</label><textarea value={tc.displayInput} onChange={(e) => updateTestCase(pIndex, tcIndex, 'displayInput', e.target.value)} className={`${inputClass} font-mono text-[10px] p-2`} rows={2} /></div>
                                                         <div><label className={labelClass}>Raw Stdin</label><textarea value={tc.rawInput} onChange={(e) => updateTestCase(pIndex, tcIndex, 'rawInput', e.target.value)} className={`${inputClass} font-mono text-[10px] p-2`} rows={2} /></div>
-                                                        
-                                                        {/* CHANGED: Expected Output is now a Textarea */}
                                                         <div><label className={labelClass}>Expected Output</label><textarea value={tc.expected} onChange={(e) => updateTestCase(pIndex, tcIndex, 'expected', e.target.value)} className={`${inputClass} font-mono text-[10px] p-2`} rows={3} placeholder={tc.hasMultipleAnswers ? "Answer1 ||| Answer2" : "Expected Output"} /></div>
-                                                        
-                                                        {/* CHANGED: Explanation is now a Textarea */}
                                                         <div><label className={labelClass}>Explanation</label><textarea value={tc.explanation} onChange={(e) => updateTestCase(pIndex, tcIndex, 'explanation', e.target.value)} className={`${inputClass} text-[10px] p-2 custom-scrollbar`} rows={3} placeholder="Explanation (Markdown supported, use \n for new lines)" /></div>
                                                     </div>
                                                 </div>
@@ -1013,6 +1243,110 @@ const Admin = () => {
                         </div>
                     </>
                 )}
+            </motion.div>
+        )}
+
+        {/* ========================================== */}
+        {/* TAB 6: ACCESS CONTROL                      */}
+        {/* ========================================== */}
+        {activeTab === "admins" && (
+             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 max-w-4xl mx-auto">
+                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-lg space-y-8">
+                    
+                    <div className="flex items-center justify-between pb-6 border-b border-white/5">
+                        <div>
+                            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <ShieldCheck size={18} className="text-emerald-400" /> Platform Administrators
+                            </h2>
+                            <p className="text-xs text-zinc-400 mt-1">Manage global access and view audit trails of assigned admins.</p>
+                        </div>
+                        {statusMsg && <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-medium"><Check size={14}/> {statusMsg}</span>}
+                    </div>
+
+                    {/* Add New Admin Section */}
+                    <div className="p-5 bg-black/20 border border-white/5 rounded-2xl flex flex-col md:flex-row items-end gap-4">
+                        <div className="flex-1 w-full">
+                            <label className={labelClass}>Grant Access via Email</label>
+                            <input 
+                                value={newAdminEmail} 
+                                onChange={(e) => setNewAdminEmail(e.target.value)} 
+                                className={inputClass} 
+                                placeholder="new.admin@gmail.com" 
+                            />
+                        </div>
+                        <button 
+                            onClick={handleAddAdminClick}
+                            className="w-full md:w-auto py-3.5 px-6 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl transition-all shadow-lg flex justify-center items-center gap-2 text-sm"
+                        >
+                            <UserPlus size={16} /> Assign Role
+                        </button>
+                    </div>
+
+                    {/* List of Admins */}
+                    <div>
+                        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                            <Users size={16} className="text-zinc-400"/> Current Administrators
+                        </h3>
+                        
+                        <div className="overflow-x-auto border border-white/5 rounded-2xl">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-zinc-950/50 text-xs text-zinc-500 font-medium border-b border-white/5">
+                                    <tr>
+                                        <th className="p-4 pl-6 w-1/2">Administrator Signature</th>
+                                        <th className="p-4">Added By (Audit)</th>
+                                        <th className="p-4 pr-6 text-right">Timestamp / Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5 bg-transparent">
+                                    {adminsList.map((admin) => (
+                                        <tr key={admin.email} className="hover:bg-white/[0.02] transition-colors">
+                                            <td className="p-4 pl-6">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center text-xs font-bold text-zinc-300">
+                                                        {admin.email.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-zinc-200 font-medium">{admin.email}</p>
+                                                        {user?.email === admin.email && <span className="text-[10px] bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full mt-1 inline-block">Current Session</span>}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="text-zinc-400 text-xs font-mono bg-white/5 px-2 py-1 rounded">
+                                                    {admin.added_by}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 pr-6 text-right">
+                                                <div className="flex items-center justify-end gap-3 text-zinc-500 text-xs">
+                                                    <span>{new Date(admin.created_at).toLocaleDateString()}</span>
+                                                    
+                                                    {/* ONLY show remove button if NOT a founder */}
+                                                    {admin.added_by !== 'system_init' ? (
+                                                        <button 
+                                                            onClick={() => handleRemoveAdminClick(admin.email)}
+                                                            className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                            title="Revoke Access"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    ) : (
+                                                        <span className="p-1.5 text-emerald-500/50 cursor-not-allowed" title="System Founder (Protected)">
+                                                            <ShieldCheck size={14} />
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {adminsList.length === 0 && (
+                                         <tr><td colSpan={3} className="p-8 text-center text-zinc-500 text-sm">Loading security matrix...</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
             </motion.div>
         )}
 

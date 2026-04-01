@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState, useMemo, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, ChevronDown, User, AtSign, MapPin, 
   Map, Globe2, Github, Calendar, Hash, Loader2, 
@@ -57,6 +57,10 @@ const InputWrapper = ({ label, icon: Icon, children, fullWidth = false }: any) =
 
 const EditProfile = () => {
   const { user, profile, refreshProfile } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isFirstTime = location.state?.isFirstTime || false;
+
   const [form, setForm] = useState<ProfileFormState>(emptyState);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" | "" }>({ text: "", type: "" });
@@ -144,14 +148,26 @@ const EditProfile = () => {
 
     try {
       await supabaseClient.update("users", profileFilter, {
-        full_name: form.full_name.trim() || null, display_name: form.display_name.trim() || null,
-        college: form.college.trim() || null, age: form.age ? Number(form.age) : null,
-        gender: form.gender.trim() || null, city: form.city.trim() || null,
-        state: form.state.trim() || null, country: form.country.trim() || null,
-        github_url: form.github_url.trim() || null, bio: form.bio.trim() || null,
+        full_name: form.full_name.trim() || null, 
+        display_name: form.display_name.trim() || null,
+        college: form.college.trim() || null, 
+        age: form.age ? Number(form.age) : null,
+        gender: form.gender.trim() || null, 
+        city: form.city.trim() || null,
+        state: form.state.trim() || null, 
+        country: form.country.trim() || null,
+        github_url: form.github_url.trim() || null, 
+        bio: form.bio.trim() || null,
+        is_profile_complete: true // <-- CHANGED: Updates the correct new column
       });
+      
       await refreshProfile();
-      setMessage({ text: "Profile updated successfully.", type: "success" });
+      
+      if (isFirstTime) {
+        navigate('/');
+      } else {
+        setMessage({ text: "Profile updated successfully.", type: "success" });
+      }
     } catch (error) {
       setMessage({ text: "Failed to update profile.", type: "error" });
     } finally {
@@ -166,12 +182,22 @@ const EditProfile = () => {
       
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 pt-28 sm:px-6">
         <div className="mb-8">
-          <Link to="/profile" className="inline-flex items-center gap-2 text-zinc-400 hover:text-cyan-400 transition-colors text-sm font-medium group">
-            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-            Back to Profile
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tight mt-6">Settings</h1>
-          <p className="mt-2 text-zinc-400">Manage your system parameters and personal data.</p>
+          {/* Hide the Back button if they are trapped in onboarding */}
+          {!isFirstTime && (
+            <Link to="/profile" className="inline-flex items-center gap-2 text-zinc-400 hover:text-cyan-400 transition-colors text-sm font-medium group">
+              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+              Back to Profile
+            </Link>
+          )}
+          
+          <h1 className="text-3xl font-bold tracking-tight mt-6">
+            {isFirstTime ? "Welcome to AlgoLib!" : "Settings"}
+          </h1>
+          <p className="mt-2 text-zinc-400">
+            {isFirstTime 
+              ? "Please complete your developer profile to initialize your matrix and access global features." 
+              : "Manage your system parameters and personal data."}
+          </p>
         </div>        
         
         <form onSubmit={handleSubmit} className="flex flex-col relative z-10">
@@ -379,7 +405,7 @@ const EditProfile = () => {
             className="w-full sm:w-auto h-11 px-8 rounded-full bg-cyan-400 text-[#030308] text-sm font-bold hover:bg-cyan-300 hover:shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-none transition-all flex items-center justify-center gap-2"
           >
             {saving && <Loader2 size={16} className="animate-spin" />}
-            {saving ? "Syncing Config..." : "Save Changes"}
+            {saving ? "Syncing Config..." : (isFirstTime ? "Complete Setup" : "Save Changes")}
           </button>
         </div>
       </div>

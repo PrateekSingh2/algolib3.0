@@ -5,6 +5,8 @@ import { createClient } from '@supabase/supabase-js';
 import { Trophy, Clock, Calendar, ChevronRight, Activity, Code2, Sparkles, ArrowRight, Loader2, BarChart2, X, Medal, HeartHandshake, Lock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import AppFooter from '@/components/AppFooter';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -22,10 +24,20 @@ export default function Contests() {
   const [currentTime, setCurrentTime] = useState(new Date().getTime());
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
 
+  const [currentUser, setCurrentUser] = useState<any>(null); // NEW: Auth tracking
+  
   // Leaderboard State
   const [selectedLeaderboard, setSelectedLeaderboard] = useState<any | null>(null);
   const [lbData, setLbData] = useState<any[]>([]);
   const [loadingLb, setLoadingLb] = useState(false);
+
+  // Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Video Caching Logic
   useEffect(() => {
@@ -73,11 +85,11 @@ export default function Contests() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contests' }, () => { fetchContests(); })
       .subscribe();
 
-    // Changed to 1000ms (1 second) to make the countdown smooth
     const timer = setInterval(() => { setCurrentTime(new Date().getTime()); }, 1000);
     return () => { supabase.removeChannel(channel); clearInterval(timer); };
   }, []);
 
+  // --- UPDATED LEADERBOARD FETCH ---
   useEffect(() => {
     if (!selectedLeaderboard) return;
     const fetchLeaderboard = async () => {
@@ -91,12 +103,25 @@ export default function Contests() {
       const pIds = pData.map(p => p.id);
       const { data: lData } = await supabase.from('leaderboard').select('*').in('problem_id', pIds).order('created_at', { ascending: true });
 
-      if (lData) {
+      if (lData && lData.length > 0) {
         const userMap: Record<string, any> = {};
+        
+        // 1. Fetch real names from the database
+        const userUids = [...new Set(lData.map(entry => entry.user_uid))];
+        const { data: dbUsers } = await supabase.from('users').select('firebase_uid, display_name, full_name').in('firebase_uid', userUids);
+        
+        const dbUserMap: Record<string, string> = {};
+        if (dbUsers) {
+            dbUsers.forEach((u: any) => {
+                dbUserMap[u.firebase_uid] = u.display_name || u.full_name;
+            });
+        }
         
         lData.forEach(entry => {
           if (!userMap[entry.user_uid]) {
-            userMap[entry.user_uid] = { uid: entry.user_uid, name: entry.display_name, score: 0, time: 0, langs: new Set(), solvedProblems: new Set() };
+            // 2. Set Name Priority: Supabase User Table -> Leaderboard Default -> Fallback
+            const realName = dbUserMap[entry.user_uid] || entry.display_name || 'Anonymous User';
+            userMap[entry.user_uid] = { uid: entry.user_uid, name: realName, score: 0, time: 0, langs: new Set(), solvedProblems: new Set() };
           }
           const u = userMap[entry.user_uid];
           
@@ -116,6 +141,8 @@ export default function Contests() {
         });
         
         setLbData(sorted);
+      } else {
+        setLbData([]);
       }
       setLoadingLb(false);
     };
@@ -139,7 +166,6 @@ export default function Contests() {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Helper function to calculate time left for upcoming contests
   const getTimeLeft = (startTime: string) => {
     const diff = new Date(startTime).getTime() - currentTime;
     if (diff <= 0) return "Starting...";
@@ -209,17 +235,22 @@ export default function Contests() {
                     </thead>
                     <tbody className="divide-y divide-white/5">
                       {lbData.map((user, idx) => (
-                        <tr key={user.uid} className="hover:bg-white/[0.02] transition-colors group">
+                        <tr key={user.uid} className={`transition-colors group ${currentUser?.uid === user.uid ? 'bg-sky-500/10 border-l-[3px] border-sky-400' : 'hover:bg-white/[0.02]'}`}>
                           <td className="py-4 pl-4 text-center">
                             {idx === 0 ? <Medal size={20} className="text-yellow-400 mx-auto drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" /> : 
                              idx === 1 ? <Medal size={20} className="text-zinc-300 mx-auto drop-shadow-[0_0_8px_rgba(212,212,216,0.5)]" /> : 
                              idx === 2 ? <Medal size={20} className="text-amber-600 mx-auto drop-shadow-[0_0_8px_rgba(217,119,6,0.5)]" /> : 
-                             <span className="font-bold text-zinc-500 group-hover:text-zinc-300">{idx + 1}</span>}
+                             <span className={`font-bold ${currentUser?.uid === user.uid ? 'text-sky-400' : 'text-zinc-500 group-hover:text-zinc-300'}`}>{idx + 1}</span>}
                           </td>
                           <td className="py-4">
                             <div className="font-bold text-white flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-500 to-purple-500 flex items-center justify-center text-[10px] text-white shadow-sm">{user.name.charAt(0).toUpperCase()}</div>
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-500 to-purple-500 flex items-center justify-center text-[10px] text-white shadow-sm">
+                                {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                              </div>
                               {user.name}
+                              {currentUser?.uid === user.uid && (
+                                <span className="ml-2 text-[9px] bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full uppercase tracking-wider border border-sky-500/30">You</span>
+                              )}
                             </div>
                           </td>
                           <td className="py-4 text-center font-mono font-bold text-emerald-400">{user.score}</td>
@@ -350,7 +381,6 @@ export default function Contests() {
                         <Clock size={14} className="text-sky-400"/> {formatDate(c.start_time)}
                       </div>
                     </div>
-                    {/* CHANGED: Replaced the Link with a locked button showing the countdown */}
                     <div className="flex gap-2 mt-auto">
                       <button disabled className="w-full inline-flex items-center justify-center gap-2 bg-white/5 text-zinc-500 font-medium py-3 rounded-xl transition-colors border border-white/5 cursor-not-allowed">
                         <Lock size={16} className="text-zinc-600" /> Starts in {getTimeLeft(c.start_time)}
