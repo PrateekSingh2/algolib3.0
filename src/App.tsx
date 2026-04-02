@@ -683,7 +683,7 @@ const AppRoutes = () => {
 const App = () => {
   useEffect(() => {
     const forceUpdateIfNeeded = async () => {
-      const LATEST_VERSION = "2.1.5"; 
+      const LATEST_VERSION = "3.2.8"; 
       const localVersion = localStorage.getItem("algolib_system_version");
 
       if (localVersion !== LATEST_VERSION) {
