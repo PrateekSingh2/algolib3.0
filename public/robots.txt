@@ -8,6 +8,7 @@ Disallow: /profile
 Disallow: /edit-profile
 Disallow: /hq
 Disallow: /view/*
+Disallow: /contest/*
 
 # Explicit Bot Allowances (Optional but good for specialized crawling)
 User-agent: Googlebot

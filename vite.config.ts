@@ -3,6 +3,11 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
+// 🔥 FIX: Bypass the plugin's broken ES Module by forcing a CommonJS import
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const vitePrerender = require('vite-plugin-prerender');
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -11,7 +16,7 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
-    // 🔥 ADDED PROXY CONFIGURATION HERE TO FIX LOCALHOST CORS
+    // PROXY CONFIGURATION HERE TO FIX LOCALHOST CORS
     proxy: {
       '/api/jdoodle': {
         target: 'https://api.jdoodle.com',
@@ -22,6 +27,13 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    
+    // 🔥 PRE-RENDER PLUGIN ADDED HERE
+    vitePrerender({
+      staticDir: path.join(__dirname, 'dist'),
+      routes: ['/compiler'],
+    }),
+
     VitePWA({
       registerType: 'autoUpdate', 
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
@@ -71,9 +83,6 @@ export default defineConfig(({ mode }) => ({
             // Isolate BaaS SDKs
             if (id.includes('firebase')) return 'firebase-core';
             if (id.includes('@supabase')) return 'supabase-core';
-            
-            // Note: We deliberately let Vite handle React, Framer Motion, 
-            // and Lucide automatically to prevent 'forwardRef' undefined errors.
           }
         }
       }

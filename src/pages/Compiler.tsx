@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import Editor from '@monaco-editor/react';
-import { Play, Loader2, X, Trash2, Moon, Sun, Maximize2, Minimize, Copy } from 'lucide-react';
+import { Play, Loader2, X, Trash2, Moon, Sun, Maximize2, Minimize, Copy, Save, Zap } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import Navbar from "@/components/Navbar";
@@ -105,10 +106,13 @@ export default function Compiler() {
   const [activeLang, setActiveLang] = useState<LangConfig>(LANGUAGES[0]);
   const [openTabs, setOpenTabs] = useState<LangConfig[]>([LANGUAGES[0]]);
   const [editorFontSize, setEditorFontSize] = useState<number>(14);
+  const [terminalFontSize, setTerminalFontSize] = useState<number>(13);
   const [codes, setCodes] = useState<Record<string, string>>(
     Object.fromEntries(LANGUAGES.map(l => [l.id, l.template]))
   );
+  
   const [output, setOutput] = useState('');
+  const [executionStatus, setExecutionStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
   const [isRunning, setIsRunning] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [input, setInput] = useState('');
@@ -148,7 +152,6 @@ export default function Compiler() {
         options: {
           isWholeLine: true,
           className: 'error-line-highlight',
-          glyphMarginClassName: 'error-glyph-margin',
           hoverMessage: { value: '**Syntax / Execution Error** detected near this line.' }
         }
       });
@@ -190,6 +193,29 @@ export default function Compiler() {
     toast.success("Code copied to clipboard!");
   };
 
+  const handleSaveFile = () => {
+    const currentCode = codes[activeLang.id];
+    
+    const extension = activeLang.filename.split('.').pop() || 'txt';
+    
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+    const fileName = `code_${dateStr}_${timeStr}.${extension}`;
+    
+    const blob = new Blob([currentCode], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success(`Saved as ${fileName}`);
+  };
+
   const code = codes[activeLang.id];
   const setCode = (val: string) => setCodes(prev => ({ ...prev, [activeLang.id]: val }));
 
@@ -199,6 +225,7 @@ export default function Compiler() {
     }
     setActiveLang(lang);
     setOutput('');
+    setExecutionStatus('idle');
     highlightErrorIfAny('');
   };
 
@@ -219,12 +246,15 @@ export default function Compiler() {
   const handleRunCode = async () => {
     if (isRunning) return;
     setIsRunning(true);
-    setOutput('Running...');
+    setExecutionStatus('running');
+    setOutput('Submitting to execution queue...');
     highlightErrorIfAny('');
 
     const ENGINE_API_URL = 'https://rajawatprateek-algolib-engine.hf.space/execute';
+    const STATUS_API_URL = 'https://rajawatprateek-algolib-engine.hf.space/status';
 
     try {
+      // 1. Submit Code to get a Job Ticket
       const res = await fetch(ENGINE_API_URL, {
         method: 'POST',
         mode: 'cors',
@@ -236,18 +266,47 @@ export default function Compiler() {
         }),
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to reach server.`);
+      
+      const { jobId } = await res.json();
+      
+      // 2. Poll for Status every 1 second
+      let isFinished = false;
+      while (!isFinished) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay
+        
+        const statusRes = await fetch(`${STATUS_API_URL}/${jobId}`);
+        if (!statusRes.ok) throw new Error("Failed to fetch job status.");
+        
+        const statusData = await statusRes.json();
 
-      const data = await res.json();
-      let cleanOutput = (data.output || '').trim();
-      if (activeLang.id === 'java') {
-        cleanOutput = cleanOutput.replace(/Main_[a-fA-F0-9]+/g, 'Main');
+        if (statusData.status === 'queued') {
+            setOutput(`[Queue] Waiting for server resources... Position: ${statusData.position}`);
+        } else if (statusData.status === 'running') {
+            setOutput(`[Executing] Code is now running...`);
+        } else if (statusData.status === 'success' || statusData.status === 'error') {
+            isFinished = true;
+            let cleanOutput = (statusData.output || '').trim();
+
+            if (activeLang.id === 'java') {
+              cleanOutput = cleanOutput.replace(/Main_[a-fA-F0-9]+/g, 'Main');
+            }
+            
+            if (statusData.status === 'error' || statusData.statusCode === 500) {
+              throw new Error(cleanOutput || "Execution Error");
+            }
+            
+            setOutput(cleanOutput || '(no output)');
+            setExecutionStatus('success');
+            highlightErrorIfAny(cleanOutput);
+        }
       }
-      setOutput(cleanOutput || '(no output)');
-      highlightErrorIfAny(cleanOutput);
+      
     } catch (e: any) {
-      setOutput(`Error: ${e.message}`);
-      highlightErrorIfAny(e.message || '');
+      const errMsg = e.message;
+      setOutput(errMsg.toLowerCase().startsWith('error') ? errMsg : `Error: ${errMsg}`);
+      setExecutionStatus('error');
+      highlightErrorIfAny(errMsg);
     } finally {
       setIsRunning(false);
     }
@@ -258,6 +317,31 @@ export default function Compiler() {
 
   return (
     <div className={`compiler-root ${isFullscreen ? 'is-fullscreen' : ''}`} data-theme={darkMode ? 'light' : 'dark'} ref={compilerRef}>
+      {/* 2. Add the Helmet block at the very top of your returned JSX */}
+      <Helmet>
+        <title>Free Online Compiler | C, C++, Java, Python & JavaScript | AlgoLib</title>
+        <meta name="title" content="Free Online Compiler | C, C++, Java, Python, & JavaScript | AlgoLib" />
+        <meta name="description" content="Write, compile, and execute code instantly with AlgoLib's lightning-fast online compiler. Supports C, C++, Java, Python, and JavaScript with a built-in terminal." />
+        <meta name="keywords" content="Online Compiler, IDE, C Compiler, C++ Compiler, Java IDE, Python Interpreter, JavaScript Editor, Code Editor" />
+        
+        {/* Canonical URL tells Google this is the master copy of this page */}
+        <link rel="canonical" href="https://algolib.netlify.app/compiler" />
+
+        {/* Open Graph / Social Media */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://algolib.netlify.app/compiler" />
+        <meta property="og:title" content="Lightning Fast Online Compiler | AlgoLib" />
+        <meta property="og:description" content="Write, compile, and execute code instantly. Supports C, C++, Java, Python, and JavaScript" />
+        {/* You can use a specific screenshot of your compiler here */}
+        <meta property="og:image" content="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-04-03%20000611.png" />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://algolib.netlify.app/compiler" />
+        <meta name="twitter:title" content="Lightning Fast Online Compiler | AlgoLib" />
+        <meta name="twitter:description" content="Write, compile, and execute code instantly. Supports C, C++, Java, Python, and JavaScript" />
+        <meta name="twitter:image" content="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-04-03%20000611.png" />
+      </Helmet>
       <div 
         className={`compiler-navbar-wrapper ${navVisible ? 'visible' : 'hidden'}`}
         onMouseEnter={() => {
@@ -291,7 +375,11 @@ export default function Compiler() {
               }}
               title="Show Navigation"
             >
-              <Icon icon="mdi:flash" width="22" height="22" />
+              <Zap 
+                size={22}
+                className="transition-colors hover:text-blue-500" 
+                fill="currentColor" 
+              />
             </button>
           )}
           {LANGUAGES.map(lang => (
@@ -316,7 +404,10 @@ export default function Compiler() {
           <div className="compiler-topbar">
             {/* Logo Brand */}
             <div className="topbar-brand">
-              <Icon icon="mdi:flash" width="22" height="22" />
+              <Zap
+                className="transition-colors hover:text-blue-500" 
+                fill="currentColor" 
+              />
               <span className="topbar-brand-text">
                 <span className="topbar-brand-algo">ALGO</span>
                 <span className="topbar-brand-lib">LIB</span>
@@ -372,6 +463,16 @@ export default function Compiler() {
               <button className="topbar-icon-btn action-hide-mobile" title="Copy Code" onClick={handleCopy}>
                 <Copy size={16} />
               </button>
+              
+              <button
+                className="save-btn"
+                onClick={handleSaveFile}
+                title="Save Code"
+              >
+                <Save size={14} />
+                <span className="action-hide-mobile">Save</span>
+              </button>
+
               <button
                 className="run-btn"
                 onClick={handleRunCode}
@@ -406,9 +507,12 @@ export default function Compiler() {
                   automaticLayout: true,
                   scrollBeyondLastLine: false,
                   lineNumbers: 'on',
-                  glyphMargin: true,
+                  lineNumbersMinChars: 2, 
+                  folding: true, // Disables code folding margin entirely
+                  glyphMargin: false, // Removes the glyph margin to recover space
+                  lineDecorationsWidth: 0, // Removes extra spacing
                   renderLineHighlight: 'line',
-                  wordWrap: 'off',
+                  wordWrap: 'on',
                   tabSize: 4,
                   smoothScrolling: true,
                 }}
@@ -429,26 +533,57 @@ export default function Compiler() {
                   <span className="terminal-dot green" />
                   <span className="terminal-title">Terminal</span>
                 </div>
-                <button
-                  className="terminal-clear-btn"
-                  onClick={() => { setOutput(''); setInput(''); }}
-                  title="Clear terminal"
-                >
-                  <Trash2 size={13} />
-                  <span>Clear</span>
-                </button>
+                
+                <div className="terminal-topbar-right" style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    className="terminal-clear-btn"
+                    onClick={() => setTerminalFontSize(prev => Math.max(10, prev - 2))}
+                    title="Decrease Terminal Font Size"
+                  >
+                    <span style={{ fontSize: '12px', fontWeight: 'bold' }}>T-</span>
+                  </button>
+                  <button
+                    className="terminal-clear-btn"
+                    onClick={() => setTerminalFontSize(prev => Math.min(30, prev + 2))}
+                    title="Increase Terminal Font Size"
+                  >
+                    <span style={{ fontSize: '13px', fontWeight: 'bold' }}>T+</span>
+                  </button>
+                  <button
+                    className="terminal-clear-btn"
+                    onClick={() => { setOutput(''); setInput(''); setExecutionStatus('idle'); }}
+                    title="Clear terminal"
+                  >
+                    <Trash2 size={13} />
+                    <span>Clear</span>
+                  </button>
+                </div>
               </div>
 
               {/* Terminal Body */}
-              <div className="terminal-body">
+              <div className="terminal-body" style={{ fontSize: `${terminalFontSize}px` }}>
                 {/* Separated Output area */}
                 <div className="terminal-output-container">
                   <div className="terminal-output">
-                    {output
-                      ? <span className={output.toLowerCase().startsWith('error') ? 'term-error' : 'term-out'}>{output}</span>
-                      : <span className="term-hint">// Run your code — output appears here</span>
-                    }
-                    {isRunning && <span className="term-hint blink"> ▌</span>}
+                    {executionStatus === 'idle' && (
+                      <span className="term-hint">// Run your code — output appears here</span>
+                    )}
+                    
+                    {executionStatus === 'running' && (
+                      <span className="term-hint">Running...<span className="blink"> ▌</span></span>
+                    )}
+                    
+                    {executionStatus === 'error' && (
+                      <span className="term-error">{output}</span>
+                    )}
+                    
+                    {executionStatus === 'success' && (
+                      <>
+                        <span className="term-out">{output}</span>
+                        <br /><br />
+                        <span className="term-success">======== Code executed successfully ========</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -456,9 +591,10 @@ export default function Compiler() {
                 <div className="terminal-stdin-container">
                   <div className="stdin-header">Standard Input</div>
                   <div className="terminal-input-row">
-                    <span className="terminal-prompt">{'▸'}</span>
+                    <span className="terminal-prompt" style={{ fontSize: `${terminalFontSize}px` }}>{'▸'}</span>
                     <textarea
                       className="terminal-input"
+                      style={{ fontSize: `${terminalFontSize}px` }}
                       value={input}
                       onChange={e => setInput(e.target.value)}
                       placeholder="stdin  (type program input, press Run)"
@@ -499,15 +635,6 @@ export default function Compiler() {
         .error-line-highlight {
           background: rgba(255, 59, 48, 0.15) !important;
           box-shadow: inset 0 0 10px rgba(255, 59, 48, 0.4);
-        }
-        .error-glyph-margin {
-          background: #ff3b30;
-          border-radius: 50%;
-          width: 8px !important;
-          height: 8px !important;
-          margin-left: 10px;
-          margin-top: 6px;
-          box-shadow: 0 0 10px rgba(255, 59, 48, 0.8), 0 0 20px rgba(255, 59, 48, 0.4);
         }
 
         /* ─── Shell (below Navbar) ──────────────────────────────── */
@@ -683,8 +810,8 @@ export default function Compiler() {
           letter-spacing: -0.5px;
           font-size: 15px;
         }
-        .topbar-brand-algo { font-weight: 800; }
-        .topbar-brand-lib { font-weight: 600; color: #86868b; }
+        .topbar-brand-algo { font-weight: 800; color: #11601e; }
+        .topbar-brand-lib { font-weight: 600; color: #5dd172; }
         
         /* TABS */
         .topbar-tabs {
@@ -764,6 +891,26 @@ export default function Compiler() {
         .topbar-icon-btn:hover { background: #f2f2f7; color: #1d1d1f; }
         .compiler-root[data-theme='dark'] .topbar-icon-btn { color: #98989d; }
         .compiler-root[data-theme='dark'] .topbar-icon-btn:hover { background: #38383a; color: #ffffff; }
+
+        /* SAVE BUTTON (Bordered) */
+        .save-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 12px;
+          margin-right: 4px;
+          background: transparent;
+          color: #1d1d1f;
+          border: 1px solid #c7c7cc;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .save-btn:hover { background: #f2f2f7; border-color: #86868b; }
+        .compiler-root[data-theme='dark'] .save-btn { color: #ffffff; border-color: #48484a; }
+        .compiler-root[data-theme='dark'] .save-btn:hover { background: #2c2c2e; border-color: #86868b; }
 
         .run-btn {
           display: flex;
@@ -891,7 +1038,6 @@ export default function Compiler() {
           display: flex;
           flex-direction: column;
           font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
-          font-size: 13px; 
           line-height: 1.6;
           overflow: hidden;
         }
@@ -938,6 +1084,9 @@ export default function Compiler() {
         
         .term-hint  { color: #86868b; font-style: italic; }
         .compiler-root[data-theme='dark'] .term-hint { color: #98989d; }
+
+        .term-success { color: #34c759; font-weight: 600; }
+        .compiler-root[data-theme='dark'] .term-success { color: #30d158; }
         
         .blink { animation: blink-cursor 1s step-end infinite; }
         @keyframes blink-cursor { 0%,100% { opacity:1; } 50% { opacity:0; } }
@@ -950,7 +1099,6 @@ export default function Compiler() {
         
         .terminal-prompt {
           color: #34c759; /* Apple green */
-          font-size: 14px;
           font-weight: 700;
           line-height: 1.6;
           user-select: none;
@@ -966,7 +1114,6 @@ export default function Compiler() {
           outline: none;
           color: #1d1d1f;
           font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
-          font-size: 13px; 
           line-height: 1.6;
           resize: none;
           overflow: hidden;
@@ -1037,6 +1184,7 @@ export default function Compiler() {
           .compiler-topbar { padding-left: 8px; }
           .topbar-actions { padding-right: 8px; gap: 4px; overflow-x: auto; }
           .action-hide-mobile { display: none; } /* Hide less important tools */
+          .save-btn { padding: 5px 8px; } /* Slimmer save btn on mobile */
           .run-btn { padding: 6px 12px; margin-right: 0; }
           
           /* Rotate resize handle for vertical stack */

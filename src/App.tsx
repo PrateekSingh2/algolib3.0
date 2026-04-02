@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Link, Navigate } from "react-router-dom";
+import { HelmetProvider } from 'react-helmet-async';
 import { loginWithGoogle } from "./lib/firebase"; 
 import { 
   Loader2, Zap, Lock, ChevronRight, Terminal, Network, Cpu, Sparkles, 
@@ -742,21 +743,23 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <CookieConsent />
-            <AuthGuard>
-              <AppRoutes />
-            </AuthGuard>
-            <InstallPrompt />
-          </BrowserRouter>
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <CookieConsent />
+              <AuthGuard>
+                <AppRoutes />
+              </AuthGuard>
+              <InstallPrompt />
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 };
 
