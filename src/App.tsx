@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as Sonner, toast } from "sonner"; // Ensure toast is imported from sonner
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Link, Navigate } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
 import { loginWithGoogle } from "./lib/firebase"; 
+import { useRegisterSW } from 'virtual:pwa-register/react'; // NEW: PWA Hook
 import { 
   Loader2, Zap, Lock, ChevronRight, Terminal, Network, Cpu, Sparkles, 
   Code2, Code, Users, ArrowRight, LayoutDashboard, Globe, Workflow, Braces, 
@@ -40,7 +41,7 @@ const EditProfile = lazy(() => import("./pages/EditProfile"));
 const Profile = lazy(() => import("./pages/Profile"));
 const ContestPanel = lazy(() => import("./pages/ContestPanel"));
 const Contests = lazy(() => import("./pages/Contests"));
-const Compiler = lazy(() => import("./pages/Compiler")); // <--- NEW COMPILER IMPORT
+const Compiler = lazy(() => import("./pages/Compiler")); 
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Cookies = lazy(() => import("./pages/Cookies"));
@@ -601,9 +602,9 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, profile, loading } = useAuth();
   const location = useLocation();
 
-  // --- ADDED '/compiler' TO PUBLIC ROUTES SO ANYONE CAN USE IT ---
+  // --- /compiler is mapped here allowing unauthenticated access ---
   const publicRoutes = ['/terms', '/privacy', '/cookies', '/developer', '/support', '/docs', '/compiler'];
-  const isPublicRoute = publicRoutes.includes(location.pathname);
+  const isPublicRoute = publicRoutes.includes(location.pathname.replace(/\/$/, '')); // Protected against trailing slashes
 
   const getCleanPath = (path: string) => {
     if (path.startsWith('/view/')) return 'snippet_library';
@@ -669,7 +670,7 @@ const AppRoutes = () => {
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/contests" element={<Contests />} />
         <Route path="/contest/:contestId" element={<ContestPanel user={user} onLoginRequest={handleLoginRequest} />} />
-        <Route path="/compiler" element={<Compiler />} /> {/* <-- ADDED COMPILER ROUTE */}
+        <Route path="/compiler" element={<Compiler />} />
                   
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
@@ -681,49 +682,56 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => {
+// --- SAAS-GRADE BACKGROUND PWA UPDATER ---
+const PWAUpdater = () => {
+  const {
+    needRefresh: [needRefresh],
+    updateServiceWorker,
+  } = useRegisterSW({
+    onRegistered(swRegistration) {
+      // 1. Check for updates every time the user clicks back into the tab
+      window.addEventListener('focus', () => {
+        if (swRegistration) swRegistration.update();
+      });
+
+      // 2. Check for updates every 1 hour if they leave the tab open in the background
+      const intervalMS = 60 * 60 * 1000;
+      setInterval(() => {
+        if (swRegistration) swRegistration.update();
+      }, intervalMS);
+    }
+  });
+
   useEffect(() => {
-    const forceUpdateIfNeeded = async () => {
-      const LATEST_VERSION = "4.1.1"; 
-      const localVersion = localStorage.getItem("algolib_system_version");
-
-      if (localVersion !== LATEST_VERSION) {
-        console.warn("⚠️ System Outdated. Initiating Auto-Update & Cache Purge...");
-
-        if ('serviceWorker' in navigator) {
-          try {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (const registration of registrations) {
-              await registration.unregister();
-              console.log("Service Worker Terminated.");
+    if (needRefresh) {
+      toast.message("Platform Update Available", {
+        duration: Infinity, // Forces it to stay on screen
+        description: "A new version of AlgoLib has been deployed. Update to apply new features.",
+        action: {
+          label: "Update & Restart",
+          onClick: async () => {
+            // Physically nuke all old caches to guarantee a clean slate
+            if ('caches' in window) {
+              try {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+                console.log("Stale caches purged.");
+              } catch (e) {
+                console.error("Cache purge failed:", e);
+              }
             }
-          } catch (e) {
-            console.error("Failed to unregister SW:", e);
-          }
-        }
+            // Trigger the service worker takeover and reload
+            updateServiceWorker(true);
+          },
+        },
+      });
+    }
+  }, [needRefresh, updateServiceWorker]);
 
-        if ('caches' in window) {
-          try {
-            const cacheNames = await caches.keys();
-            for (const name of cacheNames) {
-              await caches.delete(name);
-            }
-            console.log("Old Asset Caches Purged.");
-          } catch (e) {
-            console.error("Failed to clear caches:", e);
-          }
-        }
+  return null;
+};
 
-        localStorage.setItem("algolib_system_version", LATEST_VERSION);
-        window.location.reload(); 
-      }
-    };
-
-    forceUpdateIfNeeded();
-    window.addEventListener("focus", forceUpdateIfNeeded);
-    return () => window.removeEventListener("focus", forceUpdateIfNeeded);
-  }, []);
-
+const App = () => {
   useEffect(() => {
     const initializeVisit = async () => {
       try {
@@ -750,6 +758,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <PWAUpdater />
               <CookieConsent />
               <AuthGuard>
                 <AppRoutes />
