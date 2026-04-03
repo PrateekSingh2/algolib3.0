@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import Editor from '@monaco-editor/react';
-import { Play, Loader2, X, Trash2, Moon, Sun, Maximize2, Minimize, Copy, Save, Zap } from 'lucide-react';
+import { Play, X, Trash2, Moon, Sun, Maximize2, Minimize, Copy, Save, Zap, AlignLeft, Square } from 'lucide-react';
 import { Icon } from '@iconify/react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import Navbar from "@/components/Navbar";
@@ -125,6 +125,10 @@ export default function Compiler() {
   const compilerRef = useRef<HTMLDivElement>(null);
   const hideTimeoutRef = useRef<any>(null);
 
+  // Execution controls for forceful stop
+  const abortRef = useRef<boolean>(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Handle responsive layout detection
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -193,6 +197,79 @@ export default function Compiler() {
     toast.success("Code copied to clipboard!");
   };
 
+  const handleFormatCode = () => {
+    if (!editorRef.current) return;
+
+    const lang = activeLang.id;
+
+    // Monaco natively supports JS formatting
+    if (lang === 'javascript') {
+      editorRef.current.trigger('keyboard', 'editor.action.formatDocument', null);
+      toast.success("Code formatted successfully");
+      return;
+    }
+
+    // Python is whitespace sensitive, auto-formatting by brace counting breaks it
+    if (lang === 'python') {
+      toast.error("Auto-format unavailable for Python (whitespace-sensitive)");
+      return;
+    }
+
+    // Smart Custom Formatter for C, C++, Java
+    try {
+      const model = editorRef.current.getModel();
+      const currentCode = model.getValue();
+      
+      let indentLevel = 0;
+      let formattedLines = [];
+      const lines = currentCode.split('\n');
+
+      for (let line of lines) {
+        let trimmed = line.trim();
+        
+        if (!trimmed) {
+          formattedLines.push('');
+          continue;
+        }
+
+        // Decrease indent if line starts with closing brace
+        if (trimmed.startsWith('}')) {
+          indentLevel = Math.max(0, indentLevel - 1);
+        }
+
+        // Apply current indent
+        const indentStr = '    '.repeat(indentLevel);
+        formattedLines.push(indentStr + trimmed);
+
+        // Adjust indent for next lines based on braces in this line
+        const openBraces = (trimmed.match(/\{/g) || []).length;
+        const closeBraces = (trimmed.match(/\}/g) || []).length;
+        
+        if (!trimmed.startsWith('}')) {
+          indentLevel += (openBraces - closeBraces);
+        } else {
+          // If it started with '}', we already decremented. So net change is open - (close - 1)
+          indentLevel += openBraces - (closeBraces - 1);
+        }
+        
+        indentLevel = Math.max(0, indentLevel);
+      }
+      
+      const formattedCode = formattedLines.join('\n');
+      
+      // Use executeEdits to apply format without breaking Undo history
+      editorRef.current.executeEdits('formatter', [{
+        range: model.getFullModelRange(),
+        text: formattedCode,
+        forceMoveMarkers: true
+      }]);
+      
+      toast.success("Code formatted successfully");
+    } catch (e) {
+      toast.error("Failed to format code");
+    }
+  };
+
   const handleSaveFile = () => {
     const currentCode = codes[activeLang.id];
     
@@ -243,6 +320,19 @@ export default function Compiler() {
     }
   };
 
+  const handleStopCode = () => {
+    if (isRunning) {
+      abortRef.current = true;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      setIsRunning(false);
+      setExecutionStatus('error');
+      setOutput('[Execution forcefully stopped by user]');
+      toast.info("Execution stopped");
+    }
+  };
+
   const handleRunCode = async () => {
     if (isRunning) return;
     setIsRunning(true);
@@ -250,11 +340,13 @@ export default function Compiler() {
     setOutput('Submitting to execution queue...');
     highlightErrorIfAny('');
 
+    abortRef.current = false;
+    abortControllerRef.current = new AbortController();
+
     const ENGINE_API_URL = 'https://rajawatprateek-algolib-engine.hf.space/execute';
     const STATUS_API_URL = 'https://rajawatprateek-algolib-engine.hf.space/status';
 
     try {
-      // 1. Submit Code to get a Job Ticket
       const res = await fetch(ENGINE_API_URL, {
         method: 'POST',
         mode: 'cors',
@@ -264,18 +356,25 @@ export default function Compiler() {
           code,
           input,
         }),
+        signal: abortControllerRef.current.signal
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to reach server.`);
       
       const { jobId } = await res.json();
       
-      // 2. Poll for Status every 1 second
       let isFinished = false;
       while (!isFinished) {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay
+        if (abortRef.current) throw new Error("Execution forcefully stopped by user.");
+
+        await new Promise(resolve => setTimeout(resolve, 1000)); 
         
-        const statusRes = await fetch(`${STATUS_API_URL}/${jobId}`);
+        if (abortRef.current) throw new Error("Execution forcefully stopped by user.");
+
+        const statusRes = await fetch(`${STATUS_API_URL}/${jobId}`, {
+          signal: abortControllerRef.current.signal
+        });
+        
         if (!statusRes.ok) throw new Error("Failed to fetch job status.");
         
         const statusData = await statusRes.json();
@@ -303,54 +402,110 @@ export default function Compiler() {
       }
       
     } catch (e: any) {
-      const errMsg = e.message;
-      setOutput(errMsg.toLowerCase().startsWith('error') ? errMsg : `Error: ${errMsg}`);
-      setExecutionStatus('error');
-      highlightErrorIfAny(errMsg);
+      if (e.name === 'AbortError' || abortRef.current) {
+        setOutput('[Execution forcefully stopped by user]');
+        setExecutionStatus('error');
+        highlightErrorIfAny('');
+      } else {
+        const errMsg = e.message;
+        setOutput(errMsg.toLowerCase().startsWith('error') ? errMsg : `Error: ${errMsg}`);
+        setExecutionStatus('error');
+        highlightErrorIfAny(errMsg);
+      }
     } finally {
       setIsRunning(false);
     }
   };
 
-  const bg = darkMode ? '#f5f5f7' : '#000000';
-  const editorTheme = darkMode ? 'vs' : 'vs-dark';
+  const bg = darkMode ? '#0a0a0a' : '#f8fafc';
+  const editorTheme = darkMode ? 'vs-dark' : 'vs';
 
   return (
-    <div className={`compiler-root ${isFullscreen ? 'is-fullscreen' : ''}`} data-theme={darkMode ? 'light' : 'dark'} ref={compilerRef}>
-      {/* 2. Add the Helmet block at the very top of your returned JSX */}
+    <div className={`compiler-root ${isFullscreen ? 'is-fullscreen' : ''}`} data-theme={darkMode ? 'dark' : 'light'} ref={compilerRef}>
       <Helmet>
-        <title>Free Online Compiler | C, C++, Java, Python & JavaScript | AlgoLib</title>
-        <meta name="title" content="Free Online Compiler | C, C++, Java, Python, & JavaScript | AlgoLib" />
-        <meta name="description" content="Write, compile, and execute code instantly with AlgoLib's lightning-fast online compiler. Supports C, C++, Java, Python, and JavaScript with a built-in terminal." />
-        <meta name="keywords" content="Online Compiler, IDE, C Compiler, C++ Compiler, Java IDE, Python Interpreter, JavaScript Editor, Code Editor" />
+        {/* ─── Primary Meta Tags ─── */}
+        <title>AlgoLib Compiler | Lightning-Fast Online IDE & Code Runner</title>
+        <meta name="title" content="AlgoLib Compiler | Lightning-Fast Online IDE & Code Runner" />
+        <meta 
+          name="description" 
+          content="Write, compile, and execute code instantly with AlgoLib's high-performance online compiler. Features an interactive terminal, auto-formatting, and support for C, C++, Java, Python, and JavaScript." 
+        />
+        <meta 
+          name="keywords" 
+          content="online compiler, free online IDE, code runner, run C++ online, Python interpreter, Java compiler, JavaScript console, algorithm visualization, code library, AlgoLib" 
+        />
+        <meta name="author" content="AlgoLib Team" />
         
-        {/* Canonical URL tells Google this is the master copy of this page */}
+        {/* ─── Technical & Crawling Directives ─── */}
         <link rel="canonical" href="https://algolib.netlify.app/compiler" />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+        <meta name="theme-color" content="#0a0a0a" /> {/* Matches your dark theme background */}
 
-        {/* Open Graph / Social Media */}
+        {/* ─── Open Graph / Facebook / LinkedIn ─── */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://algolib.netlify.app/compiler" />
-        <meta property="og:title" content="Lightning Fast Online Compiler | AlgoLib" />
-        <meta property="og:description" content="Write, compile, and execute code instantly. Supports C, C++, Java, Python, and JavaScript" />
-        {/* You can use a specific screenshot of your compiler here */}
+        <meta property="og:site_name" content="AlgoLib" />
+        <meta property="og:title" content="AlgoLib Compiler | Lightning-Fast Online IDE" />
+        <meta 
+          property="og:description" 
+          content="Write, compile, and execute C, C++, Java, Python, and JS instantly. Build and test your algorithms with a professional-grade online IDE." 
+        />
+        {/* Make sure this image URL is accessible and represents the UI well */}
         <meta property="og:image" content="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-04-03%20000611.png" />
-        
-        {/* Twitter */}
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="AlgoLib Online Compiler Interface" />
+
+        {/* ─── Twitter Card ─── */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content="https://algolib.netlify.app/compiler" />
-        <meta name="twitter:title" content="Lightning Fast Online Compiler | AlgoLib" />
-        <meta name="twitter:description" content="Write, compile, and execute code instantly. Supports C, C++, Java, Python, and JavaScript" />
+        <meta name="twitter:title" content="AlgoLib Compiler | Lightning-Fast Online IDE" />
+        <meta 
+          name="twitter:description" 
+          content="Write, compile, and execute C, C++, Java, Python, and JS instantly. Build and test your algorithms with a professional-grade online IDE." 
+        />
         <meta name="twitter:image" content="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-04-03%20000611.png" />
+
+        {/* ─── Application & Apple Meta Tags ─── */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="AlgoLib" />
+
+        {/* ─── Structured Data (JSON-LD) for Google Rich Snippets ─── */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "AlgoLib Compiler",
+            "url": "https://algolib.netlify.app/compiler",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Any",
+            "description": "A high-performance online code compiler and execution environment supporting C, C++, Java, Python, and JavaScript. Integrated with algorithm visualization tools.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "featureList": [
+              "Interactive Terminal",
+              "Multi-language Support (C++, Java, Python, JS)",
+              "Syntax Highlighting",
+              "Code Formatting",
+              "Dark/Light Mode"
+            ],
+            "creator": {
+              "@type": "Organization",
+              "name": "AlgoLib"
+            }
+          })}
+        </script>
       </Helmet>
+
       <div 
         className={`compiler-navbar-wrapper ${navVisible ? 'visible' : 'hidden'}`}
-        onMouseEnter={() => {
-          setNavVisible(true);
-          clearTimeout(hideTimeoutRef.current);
-        }}
-        onMouseMove={() => {
-          clearTimeout(hideTimeoutRef.current);
-        }}
+        onMouseEnter={() => { setNavVisible(true); clearTimeout(hideTimeoutRef.current); }}
+        onMouseMove={() => clearTimeout(hideTimeoutRef.current)}
         onMouseLeave={() => {
           clearTimeout(hideTimeoutRef.current);
           hideTimeoutRef.current = setTimeout(() => setNavVisible(false), 2000);
@@ -365,37 +520,28 @@ export default function Compiler() {
           {!navVisible && !isMobile && (
             <button
               className="sidebar-brand-btn"
-              onClick={() => {
-                setNavVisible(true);
-                clearTimeout(hideTimeoutRef.current);
-              }}
-              onMouseEnter={() => {
-                setNavVisible(true);
-                clearTimeout(hideTimeoutRef.current);
-              }}
+              onClick={() => { setNavVisible(true); clearTimeout(hideTimeoutRef.current); }}
+              onMouseEnter={() => { setNavVisible(true); clearTimeout(hideTimeoutRef.current); }}
               title="Show Navigation"
             >
-              <Zap 
-                size={22}
-                className="transition-colors hover:text-blue-500" 
-                fill="currentColor" 
-              />
+              <Zap size={20} className="brand-zap" fill="currentColor" />
             </button>
           )}
-          {LANGUAGES.map(lang => (
-            <button
-              key={lang.id}
-              className={`sidebar-lang-btn ${activeLang.id === lang.id ? 'active' : ''}`}
-              onClick={() => handleLangSwitch(lang)}
-              title={lang.label}
-              style={activeLang.id === lang.id ? { [isMobile ? 'borderBottomColor' : 'borderLeftColor']: lang.color } : {}}
-            >
-              <span className="sidebar-lang-icon">
-                <Icon icon={lang.icon} width="24" height="24" />
-              </span>
-              <span className="sidebar-lang-label">{lang.label}</span>
-            </button>
-          ))}
+          <div className="sidebar-lang-container">
+            {LANGUAGES.map(lang => (
+              <button
+                key={lang.id}
+                className={`sidebar-lang-btn ${activeLang.id === lang.id ? 'active' : ''}`}
+                onClick={() => handleLangSwitch(lang)}
+                title={lang.label}
+              >
+                <div className="sidebar-active-indicator" style={{ backgroundColor: activeLang.id === lang.id ? lang.color : 'transparent' }} />
+                <span className="sidebar-lang-icon">
+                  <Icon icon={lang.icon} width="22" height="22" />
+                </span>
+              </button>
+            ))}
+          </div>
         </aside>
 
         {/* ── Main Area ── */}
@@ -404,13 +550,10 @@ export default function Compiler() {
           <div className="compiler-topbar">
             {/* Logo Brand */}
             <div className="topbar-brand">
-              <Zap
-                className="transition-colors hover:text-blue-500" 
-                fill="currentColor" 
-              />
+              <Zap className="brand-zap" fill="currentColor" size={18} />
               <span className="topbar-brand-text">
-                <span className="topbar-brand-algo">ALGO</span>
-                <span className="topbar-brand-lib">LIB</span>
+                <span className="topbar-brand-algo">Algo</span>
+                <span className="topbar-brand-lib">Lib</span>
               </span>
             </div>
 
@@ -422,9 +565,10 @@ export default function Compiler() {
                   className={`file-tab ${activeLang.id === tab.id ? 'active' : ''}`}
                   onClick={() => handleLangSwitch(tab)}
                 >
+                  <Icon icon={tab.icon} width="14" height="14" className="tab-icon" />
                   <span className="file-tab-name">{tab.filename}</span>
                   <button className="file-tab-close" onClick={(e) => handleCloseTab(e, tab.id)} title="Close tab">
-                    <X size={12} />
+                    <X size={14} />
                   </button>
                 </div>
               ))}
@@ -432,57 +576,54 @@ export default function Compiler() {
 
             {/* Actions */}
             <div className="topbar-actions">
-              <button
-                className="topbar-icon-btn action-hide-mobile"
-                onClick={() => setEditorFontSize(prev => Math.max(10, prev - 2))}
-                title="Decrease Font Size"
-              >
-                <span style={{ fontSize: '13px', fontWeight: 'bold' }}>A-</span>
-              </button>
-              <button
-                className="topbar-icon-btn action-hide-mobile"
-                onClick={() => setEditorFontSize(prev => Math.min(30, prev + 2))}
-                title="Increase Font Size"
-              >
-                <span style={{ fontSize: '15px', fontWeight: 'bold' }}>A+</span>
-              </button>
-              <button
-                className="topbar-icon-btn"
-                onClick={toggleFullscreen}
-                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-              >
-                {isFullscreen ? <Minimize size={16} /> : <Maximize2 size={16} />}
-              </button>
-              <button
-                className="topbar-icon-btn"
-                onClick={() => setDarkMode(d => !d)}
-                title="Toggle theme"
-              >
-                {darkMode ? <Moon size={16} /> : <Sun size={16} />}
-              </button>
-              <button className="topbar-icon-btn action-hide-mobile" title="Copy Code" onClick={handleCopy}>
-                <Copy size={16} />
-              </button>
-              
-              <button
-                className="save-btn"
-                onClick={handleSaveFile}
-                title="Save Code"
-              >
-                <Save size={14} />
-                <span className="action-hide-mobile">Save</span>
+              <div className="action-group hidden md:flex">
+                <button className="topbar-icon-btn" onClick={() => setEditorFontSize(prev => Math.max(10, prev - 2))} title="Decrease Font">
+                  <span className="font-icon">A-</span>
+                </button>
+                <button className="topbar-icon-btn" onClick={() => setEditorFontSize(prev => Math.min(30, prev + 2))} title="Increase Font">
+                  <span className="font-icon">A+</span>
+                </button>
+              </div>
+
+              <div className="action-group">
+                <button className="topbar-icon-btn hidden md:flex" onClick={handleCopy} title="Copy Code">
+                  <Copy size={15} />
+                </button>
+                <button className="topbar-icon-btn" onClick={toggleFullscreen} title="Fullscreen">
+                  {isFullscreen ? <Minimize size={15} /> : <Maximize2 size={15} />}
+                </button>
+                <button className="topbar-icon-btn" onClick={() => setDarkMode(d => !d)} title="Toggle theme">
+                  {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+                </button>
+              </div>
+
+              <div className="action-divider" />
+
+              <button className="action-btn secondary-btn" onClick={handleFormatCode} title="Format Code">
+                <AlignLeft size={14} />
+                <span className="hidden md:inline">Format</span>
               </button>
 
+              <button className="action-btn secondary-btn" onClick={handleSaveFile} title="Save Code">
+                <Save size={14} />
+                <span className="hidden md:inline">Save</span>
+              </button>
+
+              {isRunning && (
+                <button className="action-btn stop-btn" onClick={handleStopCode} title="Stop Execution">
+                  <Square size={12} fill="currentColor" />
+                  <span>Stop</span>
+                </button>
+              )}
+
               <button
-                className="run-btn"
+                className="action-btn run-btn"
                 onClick={handleRunCode}
                 disabled={isRunning}
+                style={{ display: isRunning ? 'none' : 'flex' }}
               >
-                {isRunning
-                  ? <Loader2 size={15} className="spin" />
-                  : <Play size={15} fill="white" />
-                }
-                Run
+                <Play size={14} fill="currentColor" />
+                <span>Run</span>
               </button>
             </div>
           </div>
@@ -490,114 +631,97 @@ export default function Compiler() {
           {/* Editor + Output */}
           <PanelGroup direction={isMobile ? "vertical" : "horizontal"} className="compiler-panels">
             {/* Editor */}
-            <Panel defaultSize={55} minSize={30} className="editor-panel">
-              <Editor
-                height="100%"
-                theme={editorTheme}
-                language={activeLang.monacoLang}
-                value={code}
-                onChange={v => setCode(v || '')}
-                onMount={e => (editorRef.current = e)}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: editorFontSize,
-                  fontFamily: "'Fira Code', 'Consolas', monospace",
-                  fontLigatures: true,
-                  padding: { top: 16, bottom: 16 },
-                  automaticLayout: true,
-                  scrollBeyondLastLine: false,
-                  lineNumbers: 'on',
-                  lineNumbersMinChars: 2, 
-                  folding: true, // Disables code folding margin entirely
-                  glyphMargin: false, // Removes the glyph margin to recover space
-                  lineDecorationsWidth: 0, // Removes extra spacing
-                  renderLineHighlight: 'line',
-                  wordWrap: 'on',
-                  tabSize: 4,
-                  smoothScrolling: true,
-                }}
-              />
+            <Panel defaultSize={60} minSize={30} className="editor-panel">
+              <div className="editor-wrapper">
+                <Editor
+                  height="100%"
+                  theme={editorTheme}
+                  language={activeLang.monacoLang}
+                  value={code}
+                  onChange={v => setCode(v || '')}
+                  onMount={e => (editorRef.current = e)}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: editorFontSize,
+                    fontFamily: "'Fira Code', 'JetBrains Mono', 'Consolas', monospace",
+                    fontLigatures: true,
+                    padding: { top: 20, bottom: 20 },
+                    automaticLayout: true,
+                    scrollBeyondLastLine: false,
+                    lineNumbers: 'on',
+                    cursorBlinking: 'smooth',
+                    cursorSmoothCaretAnimation: 'on',
+                    smoothScrolling: true,
+                    formatOnPaste: true,
+                    formatOnType: true,
+                    renderLineHighlight: 'all',
+                    wordWrap: 'on',
+                    scrollbar: {
+                      verticalScrollbarSize: 8,
+                      horizontalScrollbarSize: 8,
+                    }
+                  }}
+                />
+              </div>
             </Panel>
 
-            <PanelResizeHandle className="resize-handle-vertical">
+            <PanelResizeHandle className="resize-handle">
               <div className="resize-handle-bar" />
             </PanelResizeHandle>
 
             {/* Terminal Panel */}
             <Panel minSize={20} className="terminal-panel">
-              {/* Terminal Header */}
               <div className="terminal-topbar">
                 <div className="terminal-topbar-left">
-                  <span className="terminal-dot red" />
-                  <span className="terminal-dot yellow" />
-                  <span className="terminal-dot green" />
+                  <div className="window-controls">
+                    <span className="dot red" />
+                    <span className="dot yellow" />
+                    <span className="dot green" />
+                  </div>
                   <span className="terminal-title">Terminal</span>
                 </div>
                 
-                <div className="terminal-topbar-right" style={{ display: 'flex', gap: '4px' }}>
-                  <button
-                    className="terminal-clear-btn"
-                    onClick={() => setTerminalFontSize(prev => Math.max(10, prev - 2))}
-                    title="Decrease Terminal Font Size"
-                  >
-                    <span style={{ fontSize: '12px', fontWeight: 'bold' }}>T-</span>
+                <div className="terminal-topbar-right">
+                  <button className="terminal-icon-btn" onClick={() => setTerminalFontSize(prev => Math.max(10, prev - 2))} title="Decrease Font">
+                    T-
                   </button>
-                  <button
-                    className="terminal-clear-btn"
-                    onClick={() => setTerminalFontSize(prev => Math.min(30, prev + 2))}
-                    title="Increase Terminal Font Size"
-                  >
-                    <span style={{ fontSize: '13px', fontWeight: 'bold' }}>T+</span>
+                  <button className="terminal-icon-btn" onClick={() => setTerminalFontSize(prev => Math.min(30, prev + 2))} title="Increase Font">
+                    T+
                   </button>
-                  <button
-                    className="terminal-clear-btn"
-                    onClick={() => { setOutput(''); setInput(''); setExecutionStatus('idle'); }}
-                    title="Clear terminal"
-                  >
+                  <button className="terminal-clear-btn" onClick={() => { setOutput(''); setInput(''); setExecutionStatus('idle'); }} title="Clear console">
                     <Trash2 size={13} />
                     <span>Clear</span>
                   </button>
                 </div>
               </div>
 
-              {/* Terminal Body */}
               <div className="terminal-body" style={{ fontSize: `${terminalFontSize}px` }}>
-                {/* Separated Output area */}
                 <div className="terminal-output-container">
                   <div className="terminal-output">
-                    {executionStatus === 'idle' && (
-                      <span className="term-hint">// Run your code — output appears here</span>
-                    )}
-                    
-                    {executionStatus === 'running' && (
-                      <span className="term-hint">Running...<span className="blink"> ▌</span></span>
-                    )}
-                    
-                    {executionStatus === 'error' && (
-                      <span className="term-error">{output}</span>
-                    )}
-                    
+                    {executionStatus === 'idle' && <span className="term-hint">~ Waiting for execution...</span>}
+                    {executionStatus === 'running' && <span className="term-hint">Executing <span className="blink">...</span></span>}
+                    {executionStatus === 'error' && <span className="term-error">{output}</span>}
                     {executionStatus === 'success' && (
                       <>
                         <span className="term-out">{output}</span>
-                        <br /><br />
-                        <span className="term-success">======== Code executed successfully ========</span>
+                        <div className="term-success-divider">
+                          <span className="term-success">Process finished with exit code 0</span>
+                        </div>
                       </>
                     )}
                   </div>
                 </div>
 
-                {/* Separated Stdin area */}
                 <div className="terminal-stdin-container">
-                  <div className="stdin-header">Standard Input</div>
+                  <div className="stdin-header">Standard Input (stdin)</div>
                   <div className="terminal-input-row">
-                    <span className="terminal-prompt" style={{ fontSize: `${terminalFontSize}px` }}>{'▸'}</span>
+                    <span className="terminal-prompt" style={{ fontSize: `${terminalFontSize}px` }}>$</span>
                     <textarea
                       className="terminal-input"
                       style={{ fontSize: `${terminalFontSize}px` }}
                       value={input}
                       onChange={e => setInput(e.target.value)}
-                      placeholder="stdin  (type program input, press Run)"
+                      placeholder="Enter input here before running..."
                       spellCheck={false}
                       rows={1}
                       onInput={e => {
@@ -615,598 +739,466 @@ export default function Compiler() {
       </div>
 
       <style>{`
-        /* ─── Root & Typography ────────────────────────────────── */
+        /* ─── Root & Typography ─── */
         .compiler-root {
           display: flex;
           flex-direction: column;
           height: 100vh;
           width: 100vw;
           overflow: hidden;
-          background: #f5f5f7; /* Apple light background */
-          font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+          background: #f8fafc;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
           -webkit-font-smoothing: antialiased;
+          transition: background-color 0.3s ease;
         }
         .compiler-root[data-theme='dark'] {
-          background: #000000; /* Apple pure black background */
-          color: #f5f5f7;
+          background: #0a0a0a;
+          color: #f1f5f9;
         }
 
-        /* ─── Editor Error Highlighting ─────────────────────────── */
         .error-line-highlight {
-          background: rgba(255, 59, 48, 0.15) !important;
-          box-shadow: inset 0 0 10px rgba(255, 59, 48, 0.4);
+          background: rgba(239, 68, 68, 0.15) !important;
+          border-left: 3px solid #ef4444;
         }
 
-        /* ─── Shell (below Navbar) ──────────────────────────────── */
+        /* ─── Shell ─── */
         .compiler-shell {
           display: flex;
           flex: 1;
           overflow: hidden;
-          transition: margin-top 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+          transition: margin-top 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .compiler-shell.nav-visible { margin-top: 80px; }
-        .compiler-shell.nav-hidden { margin-top: 16px; }
+        .compiler-shell.nav-visible { margin-top: 72px; }
+        .compiler-shell.nav-hidden { margin-top: 12px; }
 
         .compiler-navbar-wrapper {
           position: fixed;
           top: 0; left: 0; right: 0;
-          height: 80px;
+          height: 72px;
           z-index: 100;
-          transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1), transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
         }
         .compiler-navbar-wrapper.hidden {
           opacity: 0;
           pointer-events: none;
-          transform: translateY(-40px);
+          transform: translateY(-100%);
         }
 
-        .sidebar-brand-btn {
-          width: 44px;
-          height: 44px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          border: none;
-          background: #1d1d1f; 
-          border-radius: 12px;
-          cursor: pointer;
-          color: #ffffff;
-          transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-          margin-bottom: 8px;
-          animation: popIn 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-          flex-shrink: 0;
-        }
-        .compiler-root[data-theme='dark'] .sidebar-brand-btn { background: #ffffff; color: #000000; }
-        .sidebar-brand-btn:hover { transform: scale(1.05); }
-        @keyframes popIn {
-          from { opacity: 0; transform: scale(0.8); }
-          to { opacity: 1; transform: scale(1); }
-        }
-
-        /* ─── Sidebar ───────────────────────────────────────────── */
+        /* ─── Sidebar ─── */
         .compiler-sidebar {
-          width: 60px;
-          background: transparent;
+          width: 64px;
           display: flex;
           flex-direction: column;
           align-items: center;
           padding: 16px 0;
-          gap: 12px;
-          overflow-y: auto;
-          overflow-x: hidden;
+          gap: 20px;
           z-index: 10;
           flex-shrink: 0;
         }
 
+        .sidebar-brand-btn {
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(0,0,0,0.1);
+          background: #ffffff; 
+          border-radius: 10px;
+          cursor: pointer;
+          color: #0f172a;
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .compiler-root[data-theme='dark'] .sidebar-brand-btn { 
+          background: #111111; 
+          color: #ffffff; 
+          border-color: rgba(255,255,255,0.08);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .sidebar-brand-btn:hover { transform: translateY(-2px); }
+
+        .brand-zap { transition: color 0.2s; }
+        .sidebar-brand-btn:hover .brand-zap { color: #3b82f6; }
+
+        .sidebar-lang-container {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          width: 100%;
+          align-items: center;
+        }
+
         .sidebar-lang-btn {
+          position: relative;
           width: 44px;
           height: 44px;
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 4px;
           border: none;
           background: transparent;
-          border-radius: 12px;
+          border-radius: 10px;
           cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-          color: #86868b;
+          transition: all 0.2s ease;
+          color: #64748b;
         }
-        .compiler-root[data-theme='dark'] .sidebar-lang-btn {
-          color: #98989d;
-        }
-        .sidebar-lang-btn:hover {
-          background: #e5e5ea;
-          color: #1d1d1f;
-          transform: scale(1.05);
-        }
-        .compiler-root[data-theme='dark'] .sidebar-lang-btn:hover {
-          background: #1c1c1e;
-          color: #ffffff;
-        }
+        .compiler-root[data-theme='dark'] .sidebar-lang-btn { color: #94a3b8; }
+        
+        .sidebar-lang-btn:hover { background: rgba(0,0,0,0.04); color: #0f172a; }
+        .compiler-root[data-theme='dark'] .sidebar-lang-btn:hover { background: rgba(255,255,255,0.05); color: #f8fafc; }
         
         .sidebar-lang-btn.active {
           background: #ffffff;
-          color: #0066cc;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+          color: #0f172a;
         }
         .compiler-root[data-theme='dark'] .sidebar-lang-btn.active {
-          background: #2c2c2e;
-          color: #0a84ff;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          background: #1e1e1e;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          color: #ffffff;
         }
 
-        .sidebar-lang-icon { font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; }
-        .sidebar-lang-label { display: none; } /* Hide labels for cleaner Mac-like dock look */
+        .sidebar-active-indicator {
+          position: absolute;
+          left: -10px;
+          top: 50%;
+          transform: translateY(-50%) scaleY(0);
+          width: 3px;
+          height: 20px;
+          border-radius: 0 4px 4px 0;
+          transition: transform 0.2s ease;
+        }
+        .sidebar-lang-btn.active .sidebar-active-indicator { transform: translateY(-50%) scaleY(1); }
 
-        /* ─── Main Content Wrapper (The 'Window') ───────────────── */
+        /* ─── Main Content Window ─── */
         .compiler-main {
           flex: 1;
           display: flex;
           flex-direction: column;
-          margin: 16px 16px 16px 0;
-          border-radius: 14px;
+          margin: 12px 12px 12px 0;
+          border-radius: 16px;
           background: #ffffff;
           overflow: hidden;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0,0,0,0.03);
-          border: 1px solid rgba(0, 0, 0, 0.05);
+          box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0,0,0,0.04);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          position: relative;
         }
         .compiler-root[data-theme='dark'] .compiler-main {
-          background: #1c1c1e;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 1px 3px rgba(0,0,0,0.3);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: #0d0d0d;
+          box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05);
+          border: none;
         }
 
-        /* ─── Fullscreen Overrides ──────────────────────────────── */
-        .compiler-root.is-fullscreen .compiler-sidebar {
-          display: none;
-        }
-        .compiler-root.is-fullscreen .compiler-main {
-          margin: 0 !important;
-          border-radius: 0 !important;
-          border: none !important;
-          box-shadow: none !important;
-        }
-        .compiler-root.is-fullscreen .compiler-shell {
-          margin-top: 0 !important;
-        }
-
-        /* ─── Top Bar ───────────────────────────────────────────── */
+        /* ─── Top Bar (Glassmorphic) ─── */
         .compiler-topbar {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          height: 48px;
-          border-bottom: 1px solid #e5e5ea;
-          background: rgba(255, 255, 255, 0.8);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          padding: 0 12px 0 0;
-          flex-shrink: 0;
+          height: 52px;
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-bottom: 1px solid rgba(0,0,0,0.06);
+          padding: 0 16px 0 0;
+          z-index: 20;
         }
         .compiler-root[data-theme='dark'] .compiler-topbar {
-          background: rgba(28, 28, 30, 0.8);
-          border-bottom-color: #38383a;
+          background: rgba(13, 13, 13, 0.7);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
         }
 
-        /* BRAND LABEL */
         .topbar-brand {
           display: flex;
           align-items: center;
-          padding: 0 16px;
-          gap: 6px;
-          color: #1d1d1f;
-          border-right: 1px solid #e5e5ea;
+          padding: 0 20px;
+          gap: 8px;
+          color: #0f172a;
           height: 100%;
+          position: relative;
         }
-        .compiler-root[data-theme='dark'] .topbar-brand {
-          color: #ffffff;
-          border-right-color: #38383a;
+        .topbar-brand::after {
+          content: ''; position: absolute; right: 0; top: 25%; height: 50%; width: 1px;
+          background: rgba(0,0,0,0.1);
         }
-        .topbar-brand-text {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-          letter-spacing: -0.5px;
-          font-size: 15px;
-        }
-        .topbar-brand-algo { font-weight: 800; color: #11601e; }
-        .topbar-brand-lib { font-weight: 600; color: #5dd172; }
+        .compiler-root[data-theme='dark'] .topbar-brand { color: #ffffff; }
+        .compiler-root[data-theme='dark'] .topbar-brand::after { background: rgba(255,255,255,0.1); }
         
-        /* TABS */
+        .topbar-brand-text { font-size: 14px; letter-spacing: -0.3px; }
+        .topbar-brand-algo { font-weight: 700; }
+        .topbar-brand-lib { font-weight: 500; opacity: 0.8; }
+
+        /* ─── Tabs ─── */
         .topbar-tabs {
           display: flex;
           align-items: stretch;
           height: 100%;
-          gap: 0;
           flex: 1;
           overflow-x: auto;
+          scrollbar-width: none;
         }
-        .topbar-tabs::-webkit-scrollbar { display: none; }
         .file-tab {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 0 16px;
-          border-right: 1px solid #e5e5ea;
+          padding: 0 20px;
           background: transparent;
           font-size: 13px;
           font-weight: 500;
-          color: #86868b;
+          color: #64748b;
           cursor: pointer;
           user-select: none;
-          transition: background 0.2s;
+          transition: all 0.2s ease;
+          position: relative;
         }
-        .compiler-root[data-theme='dark'] .file-tab {
-          border-right-color: #38383a;
-          color: #98989d;
+        .compiler-root[data-theme='dark'] .file-tab { color: #94a3b8; }
+        
+        .file-tab::after {
+          content: ''; position: absolute; right: 0; top: 30%; height: 40%; width: 1px;
+          background: rgba(0,0,0,0.06);
         }
-        .file-tab:hover { background: rgba(0,0,0,0.02); }
-        .compiler-root[data-theme='dark'] .file-tab:hover { background: rgba(255,255,255,0.02); }
+        .compiler-root[data-theme='dark'] .file-tab::after { background: rgba(255,255,255,0.06); }
+
+        .file-tab:hover { background: rgba(0,0,0,0.02); color: #0f172a; }
+        .compiler-root[data-theme='dark'] .file-tab:hover { background: rgba(255,255,255,0.02); color: #e2e8f0; }
+        
         .file-tab.active {
+          color: #0f172a;
           background: transparent;
-          color: #1d1d1f;
-          font-weight: 600;
         }
-        .compiler-root[data-theme='dark'] .file-tab.active {
-          color: #ffffff;
+        .compiler-root[data-theme='dark'] .file-tab.active { color: #ffffff; }
+        
+        .file-tab.active::before {
+          content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+          background: #3b82f6;
+          border-radius: 2px 2px 0 0;
         }
-        .file-tab-name { font-family: 'SF Mono', 'Consolas', monospace; font-size: 13px; }
+
+        .tab-icon { opacity: 0.8; }
+        .file-tab-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
         
         .file-tab-close {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: transparent;
-          border: none;
-          color: #86868b;
-          cursor: pointer;
-          border-radius: 4px;
-          padding: 2px;
-          opacity: 0;
-          transition: all 0.2s;
+          display: flex; align-items: center; justify-content: center;
+          border: none; background: transparent; color: inherit;
+          cursor: pointer; padding: 2px; border-radius: 4px;
+          opacity: 0; transform: scale(0.8); transition: all 0.2s;
         }
-        .file-tab:hover .file-tab-close { opacity: 1; }
-        .file-tab-close:hover { background: #ff3b30; color: #ffffff; }
+        .file-tab:hover .file-tab-close { opacity: 0.6; transform: scale(1); }
+        .file-tab-close:hover { opacity: 1 !important; background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
+        /* ─── Topbar Actions ─── */
         .topbar-actions {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding-left: 8px;
+          gap: 12px;
+          padding-left: 12px;
         }
-        .topbar-icon-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: transparent;
-          border: none;
-          color: #86868b;
-          cursor: pointer;
-          padding: 6px;
-          border-radius: 8px;
-          font-size: 14px;
-          transition: all 0.2s;
-        }
-        .topbar-icon-btn:hover { background: #f2f2f7; color: #1d1d1f; }
-        .compiler-root[data-theme='dark'] .topbar-icon-btn { color: #98989d; }
-        .compiler-root[data-theme='dark'] .topbar-icon-btn:hover { background: #38383a; color: #ffffff; }
 
-        /* SAVE BUTTON (Bordered) */
-        .save-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 5px 12px;
-          margin-right: 4px;
-          background: transparent;
-          color: #1d1d1f;
-          border: 1px solid #c7c7cc;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
+        .action-group { display: flex; align-items: center; gap: 4px; }
+        .action-divider { width: 1px; height: 20px; background: rgba(0,0,0,0.1); margin: 0 4px; }
+        .compiler-root[data-theme='dark'] .action-divider { background: rgba(255,255,255,0.1); }
+
+        .topbar-icon-btn {
+          display: flex; align-items: center; justify-content: center;
+          background: transparent; border: none; color: #64748b;
+          cursor: pointer; padding: 8px; border-radius: 8px;
+          transition: all 0.2s ease;
         }
-        .save-btn:hover { background: #f2f2f7; border-color: #86868b; }
-        .compiler-root[data-theme='dark'] .save-btn { color: #ffffff; border-color: #48484a; }
-        .compiler-root[data-theme='dark'] .save-btn:hover { background: #2c2c2e; border-color: #86868b; }
+        .topbar-icon-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
+        .compiler-root[data-theme='dark'] .topbar-icon-btn { color: #94a3b8; }
+        .compiler-root[data-theme='dark'] .topbar-icon-btn:hover { background: rgba(255,255,255,0.08); color: #ffffff; }
+        .font-icon { font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+
+        /* ── Shared Secondary Button for Format & Save ── */
+        .action-btn {
+          display: flex; align-items: center; gap: 8px;
+          padding: 6px 14px; border-radius: 10px;
+          font-size: 13px; font-weight: 600; cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          border: 1px solid transparent;
+        }
+
+        .secondary-btn {
+          background: #f1f5f9; color: #334155;
+          border-color: rgba(0,0,0,0.05);
+        }
+        .secondary-btn:hover { background: #e2e8f0; color: #0f172a; transform: translateY(-1px); }
+        .compiler-root[data-theme='dark'] .secondary-btn {
+          background: rgba(255,255,255,0.05); color: #e2e8f0;
+          border-color: rgba(255,255,255,0.1);
+        }
+        .compiler-root[data-theme='dark'] .secondary-btn:hover {
+          background: rgba(255,255,255,0.1); color: #ffffff;
+          border-color: rgba(255,255,255,0.2);
+        }
 
         .run-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 6px 16px;
-          margin-right: 8px;
-          background: #007aff; /* Apple Blue */
-          color: #ffffff;
-          border: none;
-          border-radius: 14px; /* Apple pill style */
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
-          box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+          color: white;
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
-        .run-btn:hover:not(:disabled) { 
-          background: #0066cc; 
-          transform: scale(1.02);
-          box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
-        }
-        .run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-
-        /* ─── Panels ────────────────────────────────────────────── */
-        .compiler-panels {
-          flex: 1;
-          overflow: hidden;
-          display: flex;
-        }
-        .editor-panel {
-          overflow: hidden;
-          background: transparent;
+        .run-btn:hover:not(:disabled) {
+          box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+          transform: translateY(-1px);
+          filter: brightness(1.1);
         }
 
-        .resize-handle-vertical {
-          width: 5px;
-          background: transparent; 
-          cursor: col-resize;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          position: relative;
+        .stop-btn {
+          background: rgba(239, 68, 68, 0.1);
+          color: #ef4444;
+          border-color: rgba(239, 68, 68, 0.2);
         }
-        .resize-handle-vertical::after {
-          content: "";
-          position: absolute;
-          left: 2px;
-          top: 0;
-          bottom: 0;
-          width: 1px;
-          background: #e5e5ea;
-          transition: background 0.2s;
-        }
-        .compiler-root[data-theme='dark'] .resize-handle-vertical::after { background: #38383a; }
-        .resize-handle-vertical:hover::after { background: #007aff; width: 2px; left: 1.5px; }
+        .compiler-root[data-theme='dark'] .stop-btn { background: rgba(239, 68, 68, 0.15); }
+        .stop-btn:hover { background: rgba(239, 68, 68, 0.2); color: #dc2626; }
+        .compiler-root[data-theme='dark'] .stop-btn:hover { color: #f87171; background: rgba(239, 68, 68, 0.25); }
 
-        /* ─── Terminal Panel ─────────────────────────────────────── */
-        .terminal-panel {
-          display: flex;
-          flex-direction: column;
-          background: #fcfcfc;
-          overflow: hidden;
-        }
-        .compiler-root[data-theme='dark'] .terminal-panel { background: #1c1c1e; }
+        /* ─── Panels ─── */
+        .compiler-panels { flex: 1; display: flex; }
+        .editor-panel { display: flex; flex-direction: column; background: transparent; }
+        .editor-wrapper { flex: 1; position: relative; }
 
-        .terminal-topbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          height: 40px;
-          background: transparent;
-          padding: 0 16px;
-          flex-shrink: 0;
+        .resize-handle {
+          width: 8px; background: transparent; cursor: col-resize;
+          display: flex; align-items: center; justify-content: center; z-index: 10;
         }
-        .terminal-topbar-left {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .terminal-dot {
-          width: 12px;
-          height: 12px;
-          border-radius: 50%;
-          display: inline-block;
-          border: 1px solid rgba(0,0,0,0.1);
-        }
-        .compiler-root[data-theme='dark'] .terminal-dot { border-color: rgba(0,0,0,0.3); }
-        .terminal-dot.red    { background: #ff5f56; }
-        .terminal-dot.yellow { background: #ffbd2e; }
-        .terminal-dot.green  { background: #27c93f; }
-        
-        .terminal-title {
-          font-size: 13px;
-          font-weight: 600;
-          color: #86868b;
-          letter-spacing: 0.02em;
-          margin-left: 8px;
-        }
-        ::placeholder { color: #86868b; font-weight: 400; }
-        .compiler-root[data-theme='dark'] .terminal-title { color: #98989d; }
-
-        .terminal-clear-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          background: transparent;
-          border: none;
-          color: #86868b;
-          cursor: pointer;
-          font-size: 12px;
-          font-weight: 500;
-          padding: 4px 8px;
-          border-radius: 6px;
+        .resize-handle-bar {
+          width: 2px; height: 100%; background: rgba(0,0,0,0.06);
           transition: all 0.2s;
         }
-        .terminal-clear-btn:hover { background: #e5e5ea; color: #1d1d1f; }
-        .compiler-root[data-theme='dark'] .terminal-clear-btn { color: #98989d; }
-        .compiler-root[data-theme='dark'] .terminal-clear-btn:hover { background: #38383a; color: #ffffff; }
+        .compiler-root[data-theme='dark'] .resize-handle-bar { background: rgba(255,255,255,0.06); }
+        .resize-handle:hover .resize-handle-bar, .resize-handle:active .resize-handle-bar {
+          background: #3b82f6; width: 4px; box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+        }
 
-        /* Terminal Body Splitting */
+        /* ─── Terminal Panel ─── */
+        .terminal-panel {
+          display: flex; flex-direction: column;
+          background: #f8fafc; border-left: 1px solid transparent;
+        }
+        .compiler-root[data-theme='dark'] .terminal-panel { background: #080808; }
+
+        .terminal-topbar {
+          display: flex; align-items: center; justify-content: space-between;
+          height: 44px; padding: 0 16px; border-bottom: 1px solid rgba(0,0,0,0.06);
+          background: rgba(0,0,0,0.01);
+        }
+        .compiler-root[data-theme='dark'] .terminal-topbar { border-bottom-color: rgba(255,255,255,0.06); background: transparent; }
+
+        .terminal-topbar-left { display: flex; align-items: center; gap: 12px; }
+        .window-controls { display: flex; gap: 6px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot.red { background: #ff5f56; }
+        .dot.yellow { background: #ffbd2e; }
+        .dot.green { background: #27c93f; }
+        
+        .terminal-title { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .compiler-root[data-theme='dark'] .terminal-title { color: #64748b; }
+
+        .terminal-topbar-right { display: flex; gap: 6px; }
+        .terminal-icon-btn {
+          background: transparent; border: none; color: #64748b;
+          font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+          cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: 0.2s;
+        }
+        .terminal-icon-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
+        .compiler-root[data-theme='dark'] .terminal-icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        .terminal-clear-btn {
+          display: flex; align-items: center; gap: 6px;
+          background: transparent; border: none; color: #64748b;
+          cursor: pointer; font-size: 12px; font-weight: 500;
+          padding: 4px 10px; border-radius: 6px; transition: 0.2s;
+        }
+        .terminal-clear-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
+        .compiler-root[data-theme='dark'] .terminal-clear-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        /* Terminal Body */
         .terminal-body {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          font-family: 'SF Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
-          line-height: 1.6;
+          flex: 1; display: flex; flex-direction: column;
+          font-family: 'JetBrains Mono', 'Fira Code', 'Menlo', monospace; line-height: 1.6;
           overflow: hidden;
         }
         
-        .terminal-output-container {
-          flex: 1;
-          padding: 8px 16px 16px 16px;
-          overflow-y: auto;
-        }
+        .terminal-output-container { flex: 1; padding: 16px; overflow-y: auto; }
+        .terminal-output { white-space: pre-wrap; word-break: break-word; }
         
+        .term-hint { color: #94a3b8; font-style: italic; }
+        .compiler-root[data-theme='dark'] .term-hint { color: #475569; }
+        
+        .term-out { color: #0f172a; }
+        .compiler-root[data-theme='dark'] .term-out { color: #e2e8f0; }
+        
+        .term-error { color: #ef4444; }
+        
+        .term-success-divider { margin-top: 16px; padding-top: 8px; border-top: 1px dashed rgba(0,0,0,0.1); }
+        .compiler-root[data-theme='dark'] .term-success-divider { border-top-color: rgba(255,255,255,0.1); }
+        .term-success { color: #10b981; font-size: 0.9em; opacity: 0.8; }
+        .compiler-root[data-theme='dark'] .term-success { color: #34d399; }
+
+        .blink { animation: blink 1s step-end infinite; }
+        @keyframes blink { 0%,100% {opacity:1} 50% {opacity:0} }
+
+        /* Stdin Area */
         .terminal-stdin-container {
-          flex-shrink: 0;
-          border-top: 1px solid #e5e5ea;
-          padding: 12px 16px 16px 16px;
-          background: #f7f7f9;
+          flex-shrink: 0; border-top: 1px solid rgba(0,0,0,0.06);
+          padding: 12px 16px; background: #ffffff;
         }
         .compiler-root[data-theme='dark'] .terminal-stdin-container {
-          border-top-color: #38383a;
-          background: #19191b;
+          border-top-color: rgba(255,255,255,0.06); background: #0d0d0d;
         }
 
         .stdin-header {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-          font-size: 11px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: #86868b;
-          font-weight: 700;
+          font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;
           margin-bottom: 8px;
         }
 
-        .terminal-output {
-          white-space: pre-wrap;
-          word-break: break-word;
-          min-height: 20px;
-        }
-        
-        /* Terminal text colors */
-        .term-out   { color: #1d1d1f; }
-        .compiler-root[data-theme='dark'] .term-out { color: #ffffff; }
-        
-        .term-error { color: #ff3b30; font-weight: 500; }
-        .compiler-root[data-theme='dark'] .term-error { color: #ff453a; }
-        
-        .term-hint  { color: #86868b; font-style: italic; }
-        .compiler-root[data-theme='dark'] .term-hint { color: #98989d; }
-
-        .term-success { color: #34c759; font-weight: 600; }
-        .compiler-root[data-theme='dark'] .term-success { color: #30d158; }
-        
-        .blink { animation: blink-cursor 1s step-end infinite; }
-        @keyframes blink-cursor { 0%,100% { opacity:1; } 50% { opacity:0; } }
-
-        .terminal-input-row {
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-        }
-        
-        .terminal-prompt {
-          color: #34c759; /* Apple green */
-          font-weight: 700;
-          line-height: 1.6;
-          user-select: none;
-          flex-shrink: 0;
-          margin-top: 1px;
-        }
-        .compiler-root[data-theme='dark'] .terminal-prompt { color: #30d158; }
+        .terminal-input-row { display: flex; align-items: flex-start; gap: 10px; }
+        .terminal-prompt { color: #3b82f6; font-weight: 700; user-select: none; margin-top: 1px; }
         
         .terminal-input {
-          flex: 1;
-          background: transparent;
-          border: none;
-          outline: none;
-          color: #1d1d1f;
-          font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
-          line-height: 1.6;
-          resize: none;
-          overflow: hidden;
-          min-height: 22px;
+          flex: 1; background: transparent; border: none; outline: none;
+          color: #0f172a; font-family: inherit; line-height: 1.6;
+          resize: none; overflow: hidden; min-height: 24px;
         }
-        .compiler-root[data-theme='dark'] .terminal-input { color: #ffffff; }
-        .terminal-input::placeholder { color: #c7c7cc; font-style: italic; }
-        .compiler-root[data-theme='dark'] .terminal-input::placeholder { color: #48484a; }
+        .compiler-root[data-theme='dark'] .terminal-input { color: #e2e8f0; }
+        .terminal-input::placeholder { color: #94a3b8; }
+        .compiler-root[data-theme='dark'] .terminal-input::placeholder { color: #475569; }
 
-        /* ─── Spin animation ────────────────────────────────────── */
-        .spin { animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ─── Scrollbars ────────────────────────────────────────── */
-        ::-webkit-scrollbar { width: 8px; height: 8px; } /* Thicker for projectors */
+        /* ─── Scrollbars ─── */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .compiler-root[data-theme='dark'] ::-webkit-scrollbar-thumb { background: #4b5563; }
-        .compiler-root[data-theme='dark'] ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+        ::-webkit-scrollbar-thumb:hover { background-color: rgba(0,0,0,0.3); }
+        .compiler-root[data-theme='dark'] ::-webkit-scrollbar-thumb { background-color: rgba(255,255,255,0.15); }
+        .compiler-root[data-theme='dark'] ::-webkit-scrollbar-thumb:hover { background-color: rgba(255,255,255,0.3); }
 
-        /* ─── Mobile Responsiveness ──────────────────────────────── */
+        /* ─── Mobile Responsiveness ─── */
         @media (max-width: 768px) {
-          .compiler-shell {
-            flex-direction: column;
-            margin-top: 0 !important; /* Override navbar logic for mobile */
-          }
-          .compiler-navbar-wrapper {
-            display: none; /* Hide top navbar to save space on mobile editor view */
-          }
+          .compiler-shell { flex-direction: column; margin-top: 0 !important; }
+          .compiler-navbar-wrapper { display: none; }
           
-          /* Turn sidebar into bottom tab bar */
           .compiler-sidebar {
-            width: 100%;
-            height: 60px;
-            flex-direction: row;
-            justify-content: space-around;
-            padding: 8px 12px;
-            overflow-x: auto;
-            overflow-y: hidden;
-            order: 3; /* Move to bottom */
-            border-top: 1px solid #e5e5ea;
-            background: #ffffff;
-            z-index: 20;
+            width: 100%; height: 60px; flex-direction: row; padding: 8px 16px;
+            overflow-x: auto; order: 3; background: #ffffff;
+            border-top: 1px solid rgba(0,0,0,0.06); gap: 8px;
           }
-          .compiler-root[data-theme='dark'] .compiler-sidebar {
-            background: #1c1c1e;
-            border-top-color: #38383a;
-          }
-          .sidebar-brand-btn { display: none; }
-          .sidebar-lang-btn {
-            border-left: none !important; /* Remove vertical active bar */
-            border-bottom: 2px solid transparent; /* Prepare bottom active bar */
-            height: 100%;
-            border-radius: 8px;
-          }
+          .compiler-root[data-theme='dark'] .compiler-sidebar { background: #0d0d0d; border-top-color: rgba(255,255,255,0.06); }
           
-          /* Main content takes upper portion */
-          .compiler-main {
-            margin: 0;
-            border-radius: 0;
-            border: none;
-            order: 2; /* Middle */
+          .sidebar-lang-container { flex-direction: row; }
+          .sidebar-active-indicator {
+            left: 50%; top: auto; bottom: -4px; width: 20px; height: 3px;
+            transform: translateX(-50%) scaleX(0); border-radius: 4px 4px 0 0;
           }
+          .sidebar-lang-btn.active .sidebar-active-indicator { transform: translateX(-50%) scaleX(1); }
           
-          /* Optimize topbar for small screens */
-          .topbar-brand { display: none; } /* Hide AlgoLib logo on mobile to save space */
-          .compiler-topbar { padding-left: 8px; }
-          .topbar-actions { padding-right: 8px; gap: 4px; overflow-x: auto; }
-          .action-hide-mobile { display: none; } /* Hide less important tools */
-          .save-btn { padding: 5px 8px; } /* Slimmer save btn on mobile */
-          .run-btn { padding: 6px 12px; margin-right: 0; }
+          .compiler-main { margin: 0; border-radius: 0; border: none; order: 2; }
+          .topbar-brand { display: none; }
+          .action-group.hidden { display: none; }
           
-          /* Rotate resize handle for vertical stack */
-          .resize-handle-vertical {
-            width: 100%;
-            height: 14px;
-            cursor: row-resize;
-            flex-direction: column;
-          }
-          .resize-handle-vertical::after {
-            left: 0;
-            right: 0;
-            top: 6px;
-            width: 100%;
-            height: 2px;
-          }
-          .resize-handle-vertical:hover::after {
-            height: 4px;
-            top: 5px;
-            width: 100%;
-            left: 0;
-          }
+          .resize-handle { width: 100%; height: 12px; cursor: row-resize; flex-direction: column; }
+          .resize-handle-bar { width: 100%; height: 2px; }
+          .resize-handle:hover .resize-handle-bar { height: 4px; width: 100%; }
         }
       `}</style>
     </div>

@@ -190,7 +190,6 @@ export async function fetchAlgorithms(): Promise<Algorithm[]> {
   try {
     const res = await fetch(GIST_URL);
     const data = await res.json();
-    console.log("Fetched from Gist:", data);
 
     // Handle both single object and array responses
     let algorithms = Array.isArray(data) ? data : [data];
@@ -206,8 +205,6 @@ export async function fetchAlgorithms(): Promise<Algorithm[]> {
       algo.id && algo.title && algo.category && algo.description
     );
 
-    console.log("Valid algorithms from Gist:", algorithms.length);
-    console.log("Categories:", algorithms.map((a: any) => a.category));
 
     // If no valid algorithms from Gist, use fallback
     if (algorithms.length === 0) {
@@ -217,7 +214,6 @@ export async function fetchAlgorithms(): Promise<Algorithm[]> {
       cachedAlgorithms = algorithms as Algorithm[];
     }
 
-    console.log("Final cached algorithms:", cachedAlgorithms.length, cachedAlgorithms.map(a => a.category));
     return cachedAlgorithms;
   } catch (error) {
     console.error("Failed to fetch algorithms from Gist, using fallback:", error);
