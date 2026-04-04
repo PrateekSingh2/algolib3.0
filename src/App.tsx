@@ -708,7 +708,7 @@ const PWAUpdater = () => {
         duration: Infinity, // Forces it to stay on screen
         description: "A new version of AlgoLib has been deployed. Update to apply new features.",
         action: {
-          label: "Update & Restart",
+          label: "⭮ Sync Update",
           onClick: async () => {
             // Physically nuke all old caches to guarantee a clean slate
             if ('caches' in window) {

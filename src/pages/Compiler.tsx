@@ -113,6 +113,7 @@ export default function Compiler() {
   
   const [output, setOutput] = useState('');
   const [executionStatus, setExecutionStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  const [executionMetrics, setExecutionMetrics] = useState<{ time?: string | number; memory?: string | number } | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [input, setInput] = useState('');
@@ -303,6 +304,7 @@ export default function Compiler() {
     setActiveLang(lang);
     setOutput('');
     setExecutionStatus('idle');
+    setExecutionMetrics(null);
     highlightErrorIfAny('');
   };
 
@@ -338,6 +340,7 @@ export default function Compiler() {
     setIsRunning(true);
     setExecutionStatus('running');
     setOutput('Submitting to execution queue...');
+    setExecutionMetrics(null);
     highlightErrorIfAny('');
 
     abortRef.current = false;
@@ -397,6 +400,10 @@ export default function Compiler() {
             
             setOutput(cleanOutput || '(no output)');
             setExecutionStatus('success');
+            setExecutionMetrics({
+              time: statusData.time ?? statusData.executionTime,
+              memory: statusData.memory ?? statusData.memoryUsage
+            });
             highlightErrorIfAny(cleanOutput);
         }
       }
@@ -432,7 +439,7 @@ export default function Compiler() {
         />
         <meta 
           name="keywords" 
-          content="online compiler, free online IDE, code runner, run C++ online, Python interpreter, Java compiler, JavaScript console, algorithm visualization, code library, AlgoLib" 
+          content="online compiler, free online IDE, code runner, run C++ online, Python interpreter, Java compiler, JavaScript console, algorithm visualization, code library, AlgoLib, Algolib Compiler" 
         />
         <meta name="author" content="AlgoLib Team" />
         
@@ -440,7 +447,7 @@ export default function Compiler() {
         <link rel="canonical" href="https://algolib.netlify.app/compiler" />
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-        <meta name="theme-color" content="#0a0a0a" /> {/* Matches your dark theme background */}
+        <meta name="theme-color" content="#0a0a0a" />
 
         {/* ─── Open Graph / Facebook / LinkedIn ─── */}
         <meta property="og:type" content="website" />
@@ -451,7 +458,6 @@ export default function Compiler() {
           property="og:description" 
           content="Write, compile, and execute C, C++, Java, Python, and JS instantly. Build and test your algorithms with a professional-grade online IDE." 
         />
-        {/* Make sure this image URL is accessible and represents the UI well */}
         <meta property="og:image" content="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-04-03%20000611.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
@@ -565,7 +571,7 @@ export default function Compiler() {
                   className={`file-tab ${activeLang.id === tab.id ? 'active' : ''}`}
                   onClick={() => handleLangSwitch(tab)}
                 >
-                  <Icon icon={tab.icon} width="14" height="14" className="tab-icon" />
+                  <Icon icon={tab.icon} width="15" height="15" className="tab-icon" />
                   <span className="file-tab-name">{tab.filename}</span>
                   <button className="file-tab-close" onClick={(e) => handleCloseTab(e, tab.id)} title="Close tab">
                     <X size={14} />
@@ -587,31 +593,31 @@ export default function Compiler() {
 
               <div className="action-group">
                 <button className="topbar-icon-btn hidden md:flex" onClick={handleCopy} title="Copy Code">
-                  <Copy size={15} />
+                  <Copy size={16} strokeWidth={2} />
                 </button>
                 <button className="topbar-icon-btn" onClick={toggleFullscreen} title="Fullscreen">
-                  {isFullscreen ? <Minimize size={15} /> : <Maximize2 size={15} />}
+                  {isFullscreen ? <Minimize size={16} strokeWidth={2} /> : <Maximize2 size={16} strokeWidth={2} />}
                 </button>
                 <button className="topbar-icon-btn" onClick={() => setDarkMode(d => !d)} title="Toggle theme">
-                  {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+                  {darkMode ? <Sun size={16} strokeWidth={2} /> : <Moon size={16} strokeWidth={2} />}
                 </button>
               </div>
 
               <div className="action-divider" />
 
               <button className="action-btn secondary-btn" onClick={handleFormatCode} title="Format Code">
-                <AlignLeft size={14} />
+                <AlignLeft size={15} strokeWidth={2.5} />
                 <span className="hidden md:inline">Format</span>
               </button>
 
               <button className="action-btn secondary-btn" onClick={handleSaveFile} title="Save Code">
-                <Save size={14} />
+                <Save size={15} strokeWidth={2.5} />
                 <span className="hidden md:inline">Save</span>
               </button>
 
               {isRunning && (
                 <button className="action-btn stop-btn" onClick={handleStopCode} title="Stop Execution">
-                  <Square size={12} fill="currentColor" />
+                  <Square size={13} fill="currentColor" />
                   <span>Stop</span>
                 </button>
               )}
@@ -622,7 +628,7 @@ export default function Compiler() {
                 disabled={isRunning}
                 style={{ display: isRunning ? 'none' : 'flex' }}
               >
-                <Play size={14} fill="currentColor" />
+                <Play size={15} fill="currentColor" />
                 <span>Run</span>
               </button>
             </div>
@@ -688,7 +694,7 @@ export default function Compiler() {
                   <button className="terminal-icon-btn" onClick={() => setTerminalFontSize(prev => Math.min(30, prev + 2))} title="Increase Font">
                     T+
                   </button>
-                  <button className="terminal-clear-btn" onClick={() => { setOutput(''); setInput(''); setExecutionStatus('idle'); }} title="Clear console">
+                  <button className="terminal-clear-btn" onClick={() => { setOutput(''); setInput(''); setExecutionStatus('idle'); setExecutionMetrics(null); }} title="Clear console">
                     <Trash2 size={13} />
                     <span>Clear</span>
                   </button>
@@ -705,7 +711,21 @@ export default function Compiler() {
                       <>
                         <span className="term-out">{output}</span>
                         <div className="term-success-divider">
-                          <span className="term-success">Process finished with exit code 0</span>
+                          <span className="term-success">Process finished with exit code 0.</span>
+                          {executionMetrics && (executionMetrics.time !== undefined || executionMetrics.memory !== undefined) && (
+                            <span className="term-metrics">
+                              <span className="metric-separator"></span>
+                              {executionMetrics.time !== undefined && (
+                                <span>{'\n'}⏱ Time: {executionMetrics.time}{typeof executionMetrics.time === 'number' ? 's' : ''}</span>
+                              )}
+                              {(executionMetrics.time !== undefined && executionMetrics.memory !== undefined) && (
+                                <span className="metric-separator">•</span>
+                              )}
+                              {executionMetrics.memory !== undefined && (
+                                <span>📦 Memory: {(Number(executionMetrics.memory) / 1024).toFixed(2)}{typeof executionMetrics.memory === 'number' ? ' MB' : ''}</span>
+                              )}
+                            </span>
+                          )}
                         </div>
                       </>
                     )}
@@ -752,7 +772,7 @@ export default function Compiler() {
           transition: background-color 0.3s ease;
         }
         .compiler-root[data-theme='dark'] {
-          background: #0a0a0a;
+          background: #0f172a; /* Sophisticated SaaS dark mode background */
           color: #f1f5f9;
         }
 
@@ -811,7 +831,7 @@ export default function Compiler() {
           box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
         .compiler-root[data-theme='dark'] .sidebar-brand-btn { 
-          background: #111111; 
+          background: #1e293b; 
           color: #ffffff; 
           border-color: rgba(255,255,255,0.08);
           box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -854,7 +874,7 @@ export default function Compiler() {
           color: #0f172a;
         }
         .compiler-root[data-theme='dark'] .sidebar-lang-btn.active {
-          background: #1e1e1e;
+          background: #1e293b;
           box-shadow: 0 4px 12px rgba(0,0,0,0.3);
           color: #ffffff;
         }
@@ -877,61 +897,59 @@ export default function Compiler() {
           display: flex;
           flex-direction: column;
           margin: 12px 12px 12px 0;
-          border-radius: 16px;
+          border-radius: 12px;
           background: #ffffff;
           overflow: hidden;
-          box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0,0,0,0.04);
-          border: 1px solid rgba(0, 0, 0, 0.06);
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+          border: 1px solid #e2e8f0; /* Crisp SaaS border */
           position: relative;
         }
         .compiler-root[data-theme='dark'] .compiler-main {
-          background: #0d0d0d;
-          box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05);
-          border: none;
+          background: #0f172a;
+          box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.5);
+          border: 1px solid #1e293b;
         }
 
-        /* ─── Top Bar (Glassmorphic) ─── */
+        /* ─── SaaS Enhanced Top Bar ─── */
         .compiler-topbar {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          height: 52px;
-          background: rgba(255, 255, 255, 0.85);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border-bottom: 1px solid rgba(0,0,0,0.06);
+          height: 56px; /* Optimized height for elegant spacing */
+          background: #ffffff;
+          border-bottom: 1px solid #e2e8f0;
           padding: 0 16px 0 0;
           z-index: 20;
         }
         .compiler-root[data-theme='dark'] .compiler-topbar {
-          background: rgba(13, 13, 13, 0.7);
-          border-bottom: 1px solid rgba(255,255,255,0.08);
+          background: #0f172a;
+          border-bottom: 1px solid #1e293b;
         }
 
         .topbar-brand {
           display: flex;
           align-items: center;
-          padding: 0 20px;
-          gap: 8px;
+          padding: 0 24px;
+          gap: 10px;
           color: #0f172a;
           height: 100%;
           position: relative;
         }
         .topbar-brand::after {
-          content: ''; position: absolute; right: 0; top: 25%; height: 50%; width: 1px;
-          background: rgba(0,0,0,0.1);
+          content: ''; position: absolute; right: 0; top: 30%; height: 40%; width: 1px;
+          background: #e2e8f0; /* Crisp separator line */
         }
         .compiler-root[data-theme='dark'] .topbar-brand { color: #ffffff; }
-        .compiler-root[data-theme='dark'] .topbar-brand::after { background: rgba(255,255,255,0.1); }
+        .compiler-root[data-theme='dark'] .topbar-brand::after { background: #1e293b; }
         
-        .topbar-brand-text { font-size: 14px; letter-spacing: -0.3px; }
-        .topbar-brand-algo { font-weight: 700; }
+        .topbar-brand-text { font-size: 15px; letter-spacing: -0.2px; }
+        .topbar-brand-algo { font-weight: 800; }
         .topbar-brand-lib { font-weight: 500; opacity: 0.8; }
 
-        /* ─── Tabs ─── */
+        /* ─── SaaS Style Tabs ─── */
         .topbar-tabs {
           display: flex;
-          align-items: stretch;
+          align-items: stretch; /* Stretch to fill height so border aligns to bottom edge */
           height: 100%;
           flex: 1;
           overflow-x: auto;
@@ -940,41 +958,47 @@ export default function Compiler() {
         .file-tab {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 0 20px;
+          gap: 10px;
+          padding: 0 24px;
           background: transparent;
-          font-size: 13px;
+          font-size: 13.5px;
           font-weight: 500;
           color: #64748b;
           cursor: pointer;
           user-select: none;
           transition: all 0.2s ease;
           position: relative;
+          border-bottom: 2px solid transparent; /* Prepare for active indicator */
         }
         .compiler-root[data-theme='dark'] .file-tab { color: #94a3b8; }
         
         .file-tab::after {
-          content: ''; position: absolute; right: 0; top: 30%; height: 40%; width: 1px;
-          background: rgba(0,0,0,0.06);
+          content: ''; position: absolute; right: 0; top: 35%; height: 30%; width: 1px;
+          background: #e2e8f0;
         }
-        .compiler-root[data-theme='dark'] .file-tab::after { background: rgba(255,255,255,0.06); }
+        .compiler-root[data-theme='dark'] .file-tab::after { background: #1e293b; }
 
-        .file-tab:hover { background: rgba(0,0,0,0.02); color: #0f172a; }
-        .compiler-root[data-theme='dark'] .file-tab:hover { background: rgba(255,255,255,0.02); color: #e2e8f0; }
+        .file-tab:hover { 
+          background: #f8fafc; 
+          color: #334155; 
+        }
+        .compiler-root[data-theme='dark'] .file-tab:hover { 
+          background: #1e293b; 
+          color: #e2e8f0; 
+        }
         
         .file-tab.active {
           color: #0f172a;
           background: transparent;
+          font-weight: 600; /* Bolder active tab text */
+          border-bottom: 2px solid #3b82f6; /* Bottom blue indicator exactly like screenshot */
         }
-        .compiler-root[data-theme='dark'] .file-tab.active { color: #ffffff; }
-        
-        .file-tab.active::before {
-          content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-          background: #3b82f6;
-          border-radius: 2px 2px 0 0;
+        .compiler-root[data-theme='dark'] .file-tab.active { 
+          color: #ffffff; 
+          border-bottom: 2px solid #3b82f6;
         }
 
-        .tab-icon { opacity: 0.8; }
+        .tab-icon { opacity: 0.9; }
         .file-tab-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
         
         .file-tab-close {
@@ -986,70 +1010,80 @@ export default function Compiler() {
         .file-tab:hover .file-tab-close { opacity: 0.6; transform: scale(1); }
         .file-tab-close:hover { opacity: 1 !important; background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
-        /* ─── Topbar Actions ─── */
+        /* ─── Topbar Actions (Refined Layout) ─── */
         .topbar-actions {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding-left: 12px;
+          gap: 14px;
+          padding-left: 16px;
         }
 
         .action-group { display: flex; align-items: center; gap: 4px; }
-        .action-divider { width: 1px; height: 20px; background: rgba(0,0,0,0.1); margin: 0 4px; }
-        .compiler-root[data-theme='dark'] .action-divider { background: rgba(255,255,255,0.1); }
+        .action-divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 4px; }
+        .compiler-root[data-theme='dark'] .action-divider { background: #1e293b; }
 
         .topbar-icon-btn {
           display: flex; align-items: center; justify-content: center;
-          background: transparent; border: none; color: #64748b;
-          cursor: pointer; padding: 8px; border-radius: 8px;
+          background: transparent; border: none; color: #475569;
+          cursor: pointer; padding: 8px; border-radius: 6px;
           transition: all 0.2s ease;
         }
-        .topbar-icon-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
+        .topbar-icon-btn:hover { background: #f1f5f9; color: #0f172a; }
         .compiler-root[data-theme='dark'] .topbar-icon-btn { color: #94a3b8; }
-        .compiler-root[data-theme='dark'] .topbar-icon-btn:hover { background: rgba(255,255,255,0.08); color: #ffffff; }
-        .font-icon { font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .compiler-root[data-theme='dark'] .topbar-icon-btn:hover { background: #1e293b; color: #ffffff; }
+        .font-icon { font-size: 13px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
 
-        /* ── Shared Secondary Button for Format & Save ── */
+        /* ── SaaS Refined Secondary Button (Format, Save) ── */
         .action-btn {
           display: flex; align-items: center; gap: 8px;
-          padding: 6px 14px; border-radius: 10px;
-          font-size: 13px; font-weight: 600; cursor: pointer;
+          padding: 7px 16px; border-radius: 6px;
+          font-size: 13.5px; font-weight: 600; cursor: pointer;
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-          border: 1px solid transparent;
         }
 
         .secondary-btn {
-          background: #f1f5f9; color: #334155;
-          border-color: rgba(0,0,0,0.05);
+          background: #ffffff; 
+          color: #334155;
+          border: 1px solid #cbd5e1; /* Clear crisp border */
+          box-shadow: 0 1px 2px rgba(0,0,0,0.03); /* Extremely subtle elevation */
         }
-        .secondary-btn:hover { background: #e2e8f0; color: #0f172a; transform: translateY(-1px); }
+        .secondary-btn:hover { 
+          background: #f8fafc; 
+          color: #0f172a; 
+          border-color: #94a3b8; 
+        }
         .compiler-root[data-theme='dark'] .secondary-btn {
-          background: rgba(255,255,255,0.05); color: #e2e8f0;
-          border-color: rgba(255,255,255,0.1);
+          background: #1e293b; 
+          color: #cbd5e1;
+          border: 1px solid #334155;
+          box-shadow: none;
         }
         .compiler-root[data-theme='dark'] .secondary-btn:hover {
-          background: rgba(255,255,255,0.1); color: #ffffff;
-          border-color: rgba(255,255,255,0.2);
+          background: #334155; 
+          color: #ffffff;
+          border-color: #475569;
         }
 
+        /* ── Prominent Vibrant Primary Button (Run) ── */
         .run-btn {
-          background: linear-gradient(135deg, #2563eb, #1d4ed8);
+          background: #2563eb; /* True SaaS blue */
           color: white;
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+          border: 1px solid transparent;
+          box-shadow: 0 1px 2px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);
         }
         .run-btn:hover:not(:disabled) {
-          box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+          background: #1d4ed8;
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3), inset 0 1px 0 rgba(255,255,255,0.1);
           transform: translateY(-1px);
-          filter: brightness(1.1);
         }
 
         .stop-btn {
           background: rgba(239, 68, 68, 0.1);
           color: #ef4444;
-          border-color: rgba(239, 68, 68, 0.2);
+          border: 1px solid rgba(239, 68, 68, 0.2);
         }
         .compiler-root[data-theme='dark'] .stop-btn { background: rgba(239, 68, 68, 0.15); }
-        .stop-btn:hover { background: rgba(239, 68, 68, 0.2); color: #dc2626; }
+        .stop-btn:hover { background: rgba(239, 68, 68, 0.2); color: #dc2626; border-color: rgba(239, 68, 68, 0.3); }
         .compiler-root[data-theme='dark'] .stop-btn:hover { color: #f87171; background: rgba(239, 68, 68, 0.25); }
 
         /* ─── Panels ─── */
@@ -1062,12 +1096,12 @@ export default function Compiler() {
           display: flex; align-items: center; justify-content: center; z-index: 10;
         }
         .resize-handle-bar {
-          width: 2px; height: 100%; background: rgba(0,0,0,0.06);
+          width: 1px; height: 100%; background: #e2e8f0;
           transition: all 0.2s;
         }
-        .compiler-root[data-theme='dark'] .resize-handle-bar { background: rgba(255,255,255,0.06); }
+        .compiler-root[data-theme='dark'] .resize-handle-bar { background: #1e293b; }
         .resize-handle:hover .resize-handle-bar, .resize-handle:active .resize-handle-bar {
-          background: #3b82f6; width: 4px; box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+          background: #3b82f6; width: 3px; box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
         }
 
         /* ─── Terminal Panel ─── */
@@ -1075,14 +1109,14 @@ export default function Compiler() {
           display: flex; flex-direction: column;
           background: #f8fafc; border-left: 1px solid transparent;
         }
-        .compiler-root[data-theme='dark'] .terminal-panel { background: #080808; }
+        .compiler-root[data-theme='dark'] .terminal-panel { background: #0b1120; }
 
         .terminal-topbar {
           display: flex; align-items: center; justify-content: space-between;
-          height: 44px; padding: 0 16px; border-bottom: 1px solid rgba(0,0,0,0.06);
+          height: 44px; padding: 0 16px; border-bottom: 1px solid #e2e8f0;
           background: rgba(0,0,0,0.01);
         }
-        .compiler-root[data-theme='dark'] .terminal-topbar { border-bottom-color: rgba(255,255,255,0.06); background: transparent; }
+        .compiler-root[data-theme='dark'] .terminal-topbar { border-bottom-color: #1e293b; background: transparent; }
 
         .terminal-topbar-left { display: flex; align-items: center; gap: 12px; }
         .window-controls { display: flex; gap: 6px; }
@@ -1101,7 +1135,7 @@ export default function Compiler() {
           cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: 0.2s;
         }
         .terminal-icon-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
-        .compiler-root[data-theme='dark'] .terminal-icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .compiler-root[data-theme='dark'] .terminal-icon-btn:hover { background: #1e293b; color: #fff; }
 
         .terminal-clear-btn {
           display: flex; align-items: center; gap: 6px;
@@ -1110,7 +1144,7 @@ export default function Compiler() {
           padding: 4px 10px; border-radius: 6px; transition: 0.2s;
         }
         .terminal-clear-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
-        .compiler-root[data-theme='dark'] .terminal-clear-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .compiler-root[data-theme='dark'] .terminal-clear-btn:hover { background: #1e293b; color: #fff; }
 
         /* Terminal Body */
         .terminal-body {
@@ -1122,29 +1156,32 @@ export default function Compiler() {
         .terminal-output-container { flex: 1; padding: 16px; overflow-y: auto; }
         .terminal-output { white-space: pre-wrap; word-break: break-word; }
         
-        .term-hint { color: #94a3b8; font-style: italic; }
-        .compiler-root[data-theme='dark'] .term-hint { color: #475569; }
+        .term-hint { color: #0983e8; font-style: italic; }
+        .compiler-root[data-theme='dark'] .term-hint { color: #38bdf8; }
         
         .term-out { color: #0f172a; }
         .compiler-root[data-theme='dark'] .term-out { color: #e2e8f0; }
         
         .term-error { color: #ef4444; }
         
-        .term-success-divider { margin-top: 16px; padding-top: 8px; border-top: 1px dashed rgba(0,0,0,0.1); }
-        .compiler-root[data-theme='dark'] .term-success-divider { border-top-color: rgba(255,255,255,0.1); }
-        .term-success { color: #10b981; font-size: 0.9em; opacity: 0.8; }
-        .compiler-root[data-theme='dark'] .term-success { color: #34d399; }
+        .term-success-divider { margin-top: 16px; padding-top: 8px; border-top: 1px dashed #e2e8f0; }
+        .compiler-root[data-theme='dark'] .term-success-divider { border-top-color: #334155; }
+        .term-success { color: #059669; font-size: 0.9em; opacity: 0.9; }
+        .compiler-root[data-theme='dark'] .term-success { color: #10b981; }
+        .term-metrics { color: #64748b; font-size: 0.85em; margin-left: 8px; font-family: 'JetBrains Mono', monospace; }
+        .compiler-root[data-theme='dark'] .term-metrics { color: #94a3b8; }
+        .metric-separator { opacity: 0.5; margin: 0 6px; }
 
         .blink { animation: blink 1s step-end infinite; }
         @keyframes blink { 0%,100% {opacity:1} 50% {opacity:0} }
 
         /* Stdin Area */
         .terminal-stdin-container {
-          flex-shrink: 0; border-top: 1px solid rgba(0,0,0,0.06);
+          flex-shrink: 0; border-top: 1px solid #e2e8f0;
           padding: 12px 16px; background: #ffffff;
         }
         .compiler-root[data-theme='dark'] .terminal-stdin-container {
-          border-top-color: rgba(255,255,255,0.06); background: #0d0d0d;
+          border-top-color: #1e293b; background: #0f172a;
         }
 
         .stdin-header {
@@ -1154,24 +1191,25 @@ export default function Compiler() {
         }
 
         .terminal-input-row { display: flex; align-items: flex-start; gap: 10px; }
-        .terminal-prompt { color: #3b82f6; font-weight: 700; user-select: none; margin-top: 1px; }
+        .terminal-prompt { color: #10b981; font-weight: 700; user-select: none; margin-top: 1px; }
+        .compiler-root[data-theme='dark'] .terminal-prompt { color: #34d399; }
         
         .terminal-input {
           flex: 1; background: transparent; border: none; outline: none;
           color: #0f172a; font-family: inherit; line-height: 1.6;
           resize: none; overflow: hidden; min-height: 24px;
         }
-        .compiler-root[data-theme='dark'] .terminal-input { color: #e2e8f0; }
+        .compiler-root[data-theme='dark'] .terminal-input { color: #93c5fd; }
         .terminal-input::placeholder { color: #94a3b8; }
         .compiler-root[data-theme='dark'] .terminal-input::placeholder { color: #475569; }
 
         /* ─── Scrollbars ─── */
         ::-webkit-scrollbar { width: 10px; height: 10px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
-        ::-webkit-scrollbar-thumb:hover { background-color: rgba(0,0,0,0.3); }
-        .compiler-root[data-theme='dark'] ::-webkit-scrollbar-thumb { background-color: rgba(255,255,255,0.15); }
-        .compiler-root[data-theme='dark'] ::-webkit-scrollbar-thumb:hover { background-color: rgba(255,255,255,0.3); }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+        ::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+        .compiler-root[data-theme='dark'] ::-webkit-scrollbar-thumb { background-color: #334155; }
+        .compiler-root[data-theme='dark'] ::-webkit-scrollbar-thumb:hover { background-color: #475569; }
 
         /* ─── Mobile Responsiveness ─── */
         @media (max-width: 768px) {
@@ -1181,9 +1219,9 @@ export default function Compiler() {
           .compiler-sidebar {
             width: 100%; height: 60px; flex-direction: row; padding: 8px 16px;
             overflow-x: auto; order: 3; background: #ffffff;
-            border-top: 1px solid rgba(0,0,0,0.06); gap: 8px;
+            border-top: 1px solid #e2e8f0; gap: 8px;
           }
-          .compiler-root[data-theme='dark'] .compiler-sidebar { background: #0d0d0d; border-top-color: rgba(255,255,255,0.06); }
+          .compiler-root[data-theme='dark'] .compiler-sidebar { background: #0f172a; border-top-color: #1e293b; }
           
           .sidebar-lang-container { flex-direction: row; }
           .sidebar-active-indicator {
@@ -1197,8 +1235,8 @@ export default function Compiler() {
           .action-group.hidden { display: none; }
           
           .resize-handle { width: 100%; height: 12px; cursor: row-resize; flex-direction: column; }
-          .resize-handle-bar { width: 100%; height: 2px; }
-          .resize-handle:hover .resize-handle-bar { height: 4px; width: 100%; }
+          .resize-handle-bar { width: 100%; height: 1px; }
+          .resize-handle:hover .resize-handle-bar { height: 3px; width: 100%; }
         }
       `}</style>
     </div>
