@@ -4,7 +4,8 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { 
   collection, query, orderBy, onSnapshot, deleteDoc, doc, setDoc, updateDoc, getDocs 
 } from "firebase/firestore";
-import { auth, firestoreDB, loginWithGoogle, logout } from "../lib/firebase"; 
+import { ref, onValue } from "firebase/database";
+import { auth, firestoreDB, loginWithGoogle, logout, rtdb } from "../lib/firebase"; 
 import { createClient } from '@supabase/supabase-js';
 import { 
   Lock, Terminal, Clock, Copy, Check, 
@@ -150,6 +151,7 @@ const Admin = () => {
   const [broadcastLink, setBroadcastLink] = useState("");
   const [isSavingBroadcast, setIsSavingBroadcast] = useState(false);
 
+  const [siteVisits, setSiteVisits] = useState<number>(0);
   const [insightsData, setInsightsData] = useState<UserActivityData[]>([]);
   const [isInsightsLoading, setIsInsightsLoading] = useState(false);
   const [insightSearchEmail, setInsightSearchEmail] = useState("");
@@ -208,7 +210,19 @@ const Admin = () => {
             setBroadcastActive(data.active || false); setBroadcastLink(data.link || "");
         }
     });
-    return () => { unsubPosts(); unsubBroadcast(); };
+
+    const statsRef = ref(rtdb, 'site_stats/visits');
+
+    const unsubStats = onValue(statsRef, (snapshot) => {
+        const visits = snapshot.val();
+        if (visits !== null) {
+            setSiteVisits(visits);
+        } else {
+            setSiteVisits(0);
+        }
+    });
+
+    return () => { unsubPosts(); unsubBroadcast(); unsubStats(); };
   }, [isAdmin]);
 
   useEffect(() => {
@@ -1248,9 +1262,19 @@ const Admin = () => {
                             <button onClick={exportInsightsToCSV} className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-medium transition-colors border border-white/5"><Download size={14} /> Export CSV</button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-sm"><div className="flex items-center justify-between mb-4"><p className="text-xs text-zinc-500 font-medium">Total Users</p><Users size={16} className="text-sky-400" /></div><h3 className="text-3xl font-bold text-white">{aggregatedActivityData.totalUsersWithData}</h3><p className="text-[11px] text-zinc-500 mt-2">Registered telemetry signatures</p></div>
-                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-sm"><div className="flex items-center justify-between mb-4"><p className="text-xs text-zinc-500 font-medium">Platform Usage</p><Activity size={16} className="text-indigo-400" /></div><h3 className="text-3xl font-bold text-white">{aggregatedActivityData.totalPlatformMinutes} <span className="text-sm text-zinc-500 font-medium">min</span></h3><p className="text-[11px] text-zinc-500 mt-2">Cumulative session time</p></div>
+                        
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <p className="text-xs text-zinc-500 font-medium">Total Site Hits</p>
+                                    <Eye size={16} className="text-rose-400" />
+                                </div>
+                                <h3 className="text-3xl font-bold text-white">{siteVisits}</h3>
+                                <p className="text-[11px] text-zinc-500 mt-2">Cumulative visits globally</p>
+                            </div>
+                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-sm"><div className="flex items-center justify-between mb-4"><p className="text-xs text-zinc-500 font-medium">Total Active Users</p><Users size={16} className="text-sky-400" /></div><h3 className="text-3xl font-bold text-white">{aggregatedActivityData.totalUsersWithData}</h3><p className="text-[11px] text-zinc-500 mt-2">Registered telemetry signatures</p></div>
+                            <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-sm"><div className="flex items-center justify-between mb-4"><p className="text-xs text-zinc-500 font-medium">Platform Usage ScreenTime</p><Activity size={16} className="text-indigo-400" /></div><h3 className="text-3xl font-bold text-white">{aggregatedActivityData.totalPlatformMinutes} <span className="text-sm text-zinc-500 font-medium">min</span></h3><p className="text-[11px] text-zinc-500 mt-2">Cumulative session time</p></div>
                             <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-sm"><div className="flex items-center justify-between mb-4"><p className="text-xs text-zinc-500 font-medium">Avg Time / User</p><Clock size={16} className="text-emerald-400" /></div><h3 className="text-3xl font-bold text-white">{aggregatedActivityData.totalUsersWithData > 0 ? (aggregatedActivityData.totalPlatformMinutes / aggregatedActivityData.totalUsersWithData).toFixed(1) : 0} <span className="text-sm text-zinc-500 font-medium"> min</span></h3><p className="text-[11px] text-zinc-500 mt-2">Engagement metric</p></div>
                         </div>
 

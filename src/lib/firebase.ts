@@ -45,6 +45,7 @@ const logout = async () => {
 };
 
 // Export both the old counter tools and the new community tools
+export const rtdb = getDatabase(app);
 export { 
   db, ref, get, set, runTransaction, 
   auth, googleProvider, firestoreDB, loginWithGoogle, logout 

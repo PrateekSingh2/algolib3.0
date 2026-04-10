@@ -24,7 +24,8 @@ import {
   Sparkles,
   Sun,
   Moon,
-  Code2
+  Code2,
+  BarChart3
 } from "lucide-react";
 
 const timeAgo = (timestamp: number) => {
@@ -159,6 +160,7 @@ const Navbar = () => {
     { name: "Visualizer", path: "/visualizer", icon: Cpu },
     { name: "Contests", path: "/contests", icon: Terminal },
     { name: "Compiler", path: "/compiler", icon: Code2 },
+    { name: "Analyse TC", path: "/analyzer", icon: BarChart3 },
     { name: "Community", path: "/discussion", icon: MessageCircle },
     { name: "Notes", path: "/notes", icon: BookOpen },
   ];

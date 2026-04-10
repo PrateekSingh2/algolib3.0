@@ -25,6 +25,7 @@ import Navbar from "@/components/Navbar";
 import AppFooter from "@/components/AppFooter"; 
 import { useAuth } from "./contexts/AuthContext";
 import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
+import Analyzer from "./pages/Analyzer";
 
 // --- LAZY LOADED ROUTES ---
 const Index = lazy(() => import("./pages/Index"));
@@ -671,6 +672,7 @@ const AppRoutes = () => {
         <Route path="/contests" element={<Contests />} />
         <Route path="/contest/:contestId" element={<ContestPanel user={user} onLoginRequest={handleLoginRequest} />} />
         <Route path="/compiler" element={<Compiler />} />
+        <Route path="/analyzer" element={<Analyzer />} />
                   
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
