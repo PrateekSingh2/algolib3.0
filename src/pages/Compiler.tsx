@@ -444,14 +444,14 @@ export default function Compiler() {
         <meta name="author" content="AlgoLib Team" />
         
         {/* ─── Technical & Crawling Directives ─── */}
-        <link rel="canonical" href="https://algolib.netlify.app/compiler" />
+        <link rel="canonical" href="https://algolib.netlify.app/compiler/" />
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
         <meta name="theme-color" content="#0a0a0a" />
 
         {/* ─── Open Graph / Facebook / LinkedIn ─── */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://algolib.netlify.app/compiler" />
+        <meta property="og:url" content="https://algolib.netlify.app/compiler/" />
         <meta property="og:site_name" content="AlgoLib" />
         <meta property="og:title" content="AlgoLib Compiler | Lightning-Fast Online IDE" />
         <meta 
@@ -465,7 +465,7 @@ export default function Compiler() {
 
         {/* ─── Twitter Card ─── */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content="https://algolib.netlify.app/compiler" />
+        <meta name="twitter:url" content="https://algolib.netlify.app/compiler/" />
         <meta name="twitter:title" content="AlgoLib Compiler | Lightning-Fast Online IDE" />
         <meta 
           name="twitter:description" 
@@ -484,7 +484,7 @@ export default function Compiler() {
             "@context": "https://schema.org",
             "@type": "WebApplication",
             "name": "AlgoLib Compiler",
-            "url": "https://algolib.netlify.app/compiler",
+            "url": "https://algolib.netlify.app/compiler/",
             "applicationCategory": "DeveloperApplication",
             "operatingSystem": "Any",
             "description": "A high-performance online code compiler and execution environment supporting C, C++, Java, Python, and JavaScript. Integrated with algorithm visualization tools.",
