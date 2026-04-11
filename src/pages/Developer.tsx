@@ -4,6 +4,10 @@ import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
 import { Github, Linkedin, Zap, TerminalSquare, Layers, Fingerprint, Code2, Cpu, ArrowLeft } from "lucide-react"; 
 import GlobalRibbon from "@/components/GlobalRibbon";
 import AppFooter from "@/components/AppFooter";
+import Navbar from "@/components/Navbar";
+import GuestNavbar from "@/components/GuestNavbar";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { Helmet } from 'react-helmet-async'; // <-- Added Helmet Import
 
 // --- THE APEX BACKGROUND (Consistent with App/Index/Profile) ---
 const ApexBackground = () => (
@@ -43,20 +47,16 @@ const TeamMemberCard = ({ member, index }: { member: TeamMember; index: number }
       onMouseMove={handleMouseMove}
       className="group relative flex flex-col h-full w-full max-w-[340px] rounded-[2rem] bg-[#050505] border border-white/[0.06] overflow-hidden hover:border-white/[0.15] transition-colors duration-500 shadow-2xl"
     >
-      {/* Dynamic Cursor Spotlight */}
       <motion.div
         className="pointer-events-none absolute -inset-px rounded-[2rem] opacity-0 transition duration-500 group-hover:opacity-100 z-20"
         style={{
           background: useMotionTemplate`radial-gradient(400px circle at ${mouseX}px ${mouseY}px, rgba(255,255,255,0.06), transparent 80%)`,
         }}
       />
-      {/* Subtle top-left glare */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
 
-      {/* Card Content */}
       <div className="relative z-30 flex-1 flex flex-col p-8">
         
-        {/* Header: Avatar & Role */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="relative mb-5">
             <div className="absolute -inset-1 bg-gradient-to-tr from-white/20 to-white/5 rounded-full blur opacity-30 group-hover:opacity-60 transition-opacity duration-500"></div>
@@ -64,7 +64,6 @@ const TeamMemberCard = ({ member, index }: { member: TeamMember; index: number }
             <img
               src={member.imageUrl}
               alt={member.name}
-              /* CHANGED HERE: Removed grayscale, added opacity-80 group-hover:opacity-100 */
               className="relative w-24 h-24 rounded-full object-cover bg-[#0a0a0a] z-10 opacity-80 group-hover:opacity-100 transition-all duration-500"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -82,13 +81,10 @@ const TeamMemberCard = ({ member, index }: { member: TeamMember; index: number }
           </span>
         </div>
 
-        {/* Bio */}
         <p className="text-sm text-zinc-400 leading-relaxed font-light text-center mb-6 flex-1">
           {member.bio}
         </p>
 
-
-        {/* Footer Links */}
         <div className="flex items-center justify-center gap-3 pt-6 border-t border-white/[0.05] mt-auto">
           <a href={member.github} target="_blank" rel="noreferrer" className="flex items-center justify-center w-10 h-10 rounded-full bg-white/[0.02] border border-white/[0.05] text-zinc-400 hover:text-white hover:bg-white/[0.05] hover:border-white/[0.1] transition-all shadow-[inset_0px_1px_1px_0px_rgba(255,255,255,0.05)]">
             <Github size={16} />
@@ -104,6 +100,16 @@ const TeamMemberCard = ({ member, index }: { member: TeamMember; index: number }
 };
 
 const Developer = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const teamMembers: TeamMember[] = [
     { 
       name: 'Prateek Singh', 
@@ -155,15 +161,58 @@ const Developer = () => {
 return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-white/20 flex flex-col relative overflow-hidden">
       
+      {/* --- SEO METADATA --- */}
+      <Helmet>
+        <title>Meet the Developers | AlgoLib Architecture Crew</title>
+        <meta name="title" content="Meet the Developers | AlgoLib Architecture Crew" />
+        <meta name="description" content="Meet the visionaries and elite engineering crew behind AlgoLib. Discover the team building the ultimate interactive DSA visualization matrix." />
+        <meta name="keywords" content="AlgoLib Team, Prateek Singh, Shivansh Sahu, developers, founders, engineering team, DSA visualizer creators" />
+        <link rel="canonical" href="https://algolib.netlify.app/developer/" />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://algolib.netlify.app/developer/" />
+        <meta property="og:title" content="Meet the Developers | AlgoLib Architecture Crew" />
+        <meta property="og:description" content="Meet the visionaries and elite engineering crew behind AlgoLib's interactive visualization matrix." />
+        <meta property="og:image" content="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-04-12%20000252.png" /> 
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Meet the Developers | AlgoLib" />
+        <meta name="twitter:description" content="Meet the visionaries behind AlgoLib's interactive visualization matrix." />
+        <meta name="twitter:image" content="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-04-12%20000252.png" />
+
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "AboutPage",
+            "name": "Meet the Developers | AlgoLib",
+            "url": "https://algolib.netlify.app/developer/",
+            "description": "Meet the visionaries and elite engineering crew behind AlgoLib's interactive visualization matrix.",
+            "mainEntity": {
+              "@type": "Organization",
+              "name": "AlgoLib",
+              "url": "https://algolib.netlify.app/",
+              "founder": [
+                {
+                  "@type": "Person",
+                  "name": "Prateek Singh",
+                  "jobTitle": "CEO, Founder & Lead Developer"
+                }
+              ]
+            }
+          })}
+        </script>
+      </Helmet>
+
       <ApexBackground />
       
+      {/* INJECTED NAVBAR & GLOBAL RIBBON */}
       <div className="fixed top-0 left-0 w-full z-[100]">
         <GlobalRibbon />
+        {isAuthenticated ? <Navbar /> : <GuestNavbar />}
       </div>
 
-      <main className="flex-1 relative z-10 w-full max-w-7xl mx-auto px-6 pt-24 pb-32">
+      <main className="flex-1 relative z-10 w-full max-w-7xl mx-auto px-6 pt-36 pb-32">
         
-        {/* BACK BUTTON CONTAINER */}
         <div className="mb-12">
           <Link 
             to="/" 
@@ -174,7 +223,6 @@ return (
           </Link>
         </div>
 
-        {/* HEADER SECTION */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }} 
           animate={{ opacity: 1, y: 0 }} 
@@ -198,8 +246,6 @@ return (
           </p>
         </motion.div>
 
-        {/* TEAM GRID */}
-        {/* Flex layout that centers cards naturally, wrapping smoothly across breakpoints */}
         <div className="flex flex-wrap justify-center gap-6 md:gap-8 max-w-6xl mx-auto">
           {teamMembers.map((member, i) => (
             <TeamMemberCard key={member.name} member={member} index={i} />

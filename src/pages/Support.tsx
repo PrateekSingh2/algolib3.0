@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Send, LifeBuoy, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -6,8 +6,22 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { firestoreDB } from "../lib/firebase";
 import { toast } from "sonner";
 import AppFooter from '@/components/AppFooter';
+import Navbar from '@/components/Navbar';
+import GuestNavbar from '@/components/GuestNavbar';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { Helmet } from 'react-helmet-async'; // <-- Added Helmet Import
 
 const Support = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -25,21 +39,19 @@ const Support = () => {
     setIsSubmitting(true);
 
     try {
-      // Save the support ticket to Firestore
       await addDoc(collection(firestoreDB, "support_requests"), {
         name: formData.name,
         email: formData.email,
         issueType: formData.type,
         message: formData.message,
         createdAt: serverTimestamp(),
-        status: "open" // Useful for an admin dashboard later
+        status: "open" 
       });
 
       toast.success("Message sent successfully!", {
         description: "Our support matrix has received your request. We'll be in touch soon.",
       });
 
-      // Clear the form
       setFormData({ name: '', email: '', type: 'Bug Report', message: '' });
     } catch (error) {
       console.error("Error submitting support request:", error);
@@ -53,8 +65,50 @@ const Support = () => {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-white/20">
-      <div className="pt-24 pb-24 max-w-4xl mx-auto px-6">
-        {/* Changed standard anchor tag to React Router Link to prevent full page reloads */}
+      
+      {/* --- SEO METADATA --- */}
+      <Helmet>
+        <title>Support & Contact | AlgoLib</title>
+        <meta name="title" content="Support & Contact | AlgoLib" />
+        <meta name="description" content="Need help with AlgoLib? Report bugs, request features, or inquire about sponsoring competitive programming contests. Our support matrix is online." />
+        <meta name="keywords" content="AlgoLib support, contact AlgoLib, report bug, sponsor contest, help center, developer support" />
+        <link rel="canonical" href="https://algolib.netlify.app/support/" />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://algolib.netlify.app/support/" />
+        <meta property="og:title" content="Support & Contact | AlgoLib" />
+        <meta property="og:description" content="Need help with AlgoLib? Report bugs, request features, or inquire about sponsoring competitive programming contests." />
+        
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Support & Contact | AlgoLib" />
+        <meta name="twitter:description" content="Need help with AlgoLib? Report bugs, request features, or contact our support matrix." />
+
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "ContactPage",
+            "name": "AlgoLib Support",
+            "url": "https://algolib.netlify.app/support/",
+            "description": "Support and contact page for AlgoLib users.",
+            "mainEntity": {
+              "@type": "Organization",
+              "name": "AlgoLib",
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "contactType": "customer support",
+                "url": "https://algolib.netlify.app/support/"
+              }
+            }
+          })}
+        </script>
+      </Helmet>
+
+      {/* INJECTED NAVBAR */}
+      <div className="fixed top-0 left-0 w-full z-[100]">
+        {isAuthenticated ? <Navbar /> : <GuestNavbar />}
+      </div>
+
+      <div className="pt-36 pb-24 max-w-4xl mx-auto px-6 relative z-10">
         <div className="mb-12">
           <Link 
             to="/" 
@@ -79,7 +133,6 @@ const Support = () => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-[#0A0C14] border border-white/[0.05] rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
           
-          {/* Decorative background glow */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-blue-500/10 blur-[80px] rounded-full pointer-events-none" />
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6 relative z-10">

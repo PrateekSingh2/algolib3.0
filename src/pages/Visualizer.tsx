@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseClient } from '@/lib/supabase';
+import { Helmet } from 'react-helmet-async';
 import {
   Activity,
   ArrowRightLeft,
@@ -21,10 +22,12 @@ import {
   CheckCircle2,
   PanelLeftClose,
   PanelLeftOpen,
-  BoxSelect // Added for Heap
+  BoxSelect,
+  Lock // <-- Added Lock icon
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
+import GuestNavbar from '@/components/GuestNavbar';
 import GlobalRibbon from '@/components/GlobalRibbon';
 import { setTrackedActivity } from '@/hooks/useActivityTracker';
 
@@ -34,9 +37,8 @@ const QueueVisualizer = lazy(() => import('./QueueVisualizer'));
 const SortingVisualizer = lazy(() => import('./SortingVisualizer'));
 const BSTVisualizer = lazy(() => import('./BSTVisualizer'));
 const GraphVisualizer = lazy(() => import('./GraphVisualizer'));
-const HeapVisualizer = lazy(() => import('./HeapVisualizer')); // Added Heap
+const HeapVisualizer = lazy(() => import('./HeapVisualizer'));
 
-// Added 'heap' to VisualizerKey
 type VisualizerKey = 'll' | 'stack' | 'queue' | 'sorting' | 'bst' | 'graph' | 'heap';
 
 const AlienBackground = ({ mobile }: { mobile: boolean }) => (
@@ -61,12 +63,11 @@ const Visualizer = () => {
   
   // HUD & Layout states
   const [showWelcome, setShowWelcome] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Desktop Sidebar Toggle State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [topNavHidden, setTopNavHidden] = useState(() => 
     typeof window !== 'undefined' ? window.innerWidth <= 639 : false
   );
 
-  // --- NEW: Tell the tracker exactly which visualizer tab is active ---
   useEffect(() => {
     setTrackedActivity(`visualizer_${activeTab}`);
   }, [activeTab]);
@@ -134,7 +135,7 @@ const Visualizer = () => {
       { id: 'queue' as VisualizerKey, label: 'QUEUE_FIFO', icon: ArrowRightLeft, component: <QueueVisualizer /> },
       { id: 'sorting' as VisualizerKey, label: 'SORTING_ALG', icon: BarChart3, component: <SortingVisualizer /> },
       { id: 'bst' as VisualizerKey, label: 'BINARY_TREE', icon: Binary, component: <BSTVisualizer /> },
-      { id: 'heap' as VisualizerKey, label: 'BINARY_HEAP', icon: BoxSelect, component: <HeapVisualizer /> }, // Added Heap
+      { id: 'heap' as VisualizerKey, label: 'BINARY_HEAP', icon: BoxSelect, component: <HeapVisualizer /> },
       { id: 'graph' as VisualizerKey, label: 'GRAPH_NET', icon: Network, component: <GraphVisualizer /> },
     ],
     [],
@@ -149,6 +150,44 @@ const Visualizer = () => {
 
   return (
     <>
+      <Helmet>
+        <title>AlgoLib | Interactive 60FPS DSA Visualizer</title>
+        <meta name="title" content="AlgoLib | Interactive 60FPS DSA Visualizer" />
+        <meta name="description" content="Master Data Structures and Algorithms with AlgoLib's interactive visualizer. Explore Linked Lists, Trees, Graphs, and Sorting Algorithms in real-time." />
+        <meta name="keywords" content="DSA Visualizer, Algorithm Simulator, Data Structures, Binary Tree Visualizer, Graph Visualizer, Sorting Algorithms Visualizer, Stack Visualizer, Queue Visualizer, LinkedList Visualizer, Pathfinding, Sorting Algorithms, AlgoLib, Interactive Learning" />
+        <link rel="canonical" href="https://algolib.netlify.app/visualizer/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://algolib.netlify.app/visualizer/" />
+        <meta property="og:title" content="AlgoLib | Interactive 60FPS DSA Visualizer" />
+        <meta property="og:description" content="Master Data Structures and Algorithms with AlgoLib's interactive 60FPS visualizer. Explore concepts visually in real-time." />
+        <meta property="og:image" content="https://ik.imagekit.io/g7e4hyclo/graph.png" />
+        <meta property="og:image:alt" content="AlgoLib Interactive Algorithm Simulator" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://algolib.netlify.app/visualizer/" />
+        <meta name="twitter:title" content="AlgoLib | Interactive 60FPS DSA Visualizer" />
+        <meta name="twitter:description" content="Master Data Structures and Algorithms with AlgoLib's interactive visualizer. Understand complex computer science concepts effortlessly." />
+        <meta name="twitter:image" content="https://ik.imagekit.io/g7e4hyclo/graph.png" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "AlgoLib DSA Visualizer",
+            "url": "https://algolib.netlify.app/visualizer/",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Web",
+            "description": "An interactive 60FPS visualizer for Data Structures and Algorithms. Features real-time simulations for Linked Lists, Stacks, Queues, Trees, Heaps, and Graphs.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+            "creator": { "@type": "Organization", "name": "AlgoLib" },
+            "featureList": [
+              "Real-time 60FPS Visualization",
+              "Interactive Speed Controls",
+              "Multiple DSA Modules (LinkedList, Sorting Algorithms, Stack, Queue, Heap, Trees, Graphs)",
+              "Holographic UI Engine"
+            ]
+          })}
+        </script>
+      </Helmet>
+
       <AlienBackground mobile={mobile} />
 
       {/* --- WELCOME MODAL --- */}
@@ -166,7 +205,6 @@ const Visualizer = () => {
               exit={{ scale: 0.95, y: 20 }}
               className="w-full max-w-[600px] bg-[#0b0c10] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col font-sans"
             >
-              {/* Header */}
               <div className="p-6 md:p-8 border-b border-white/5 flex items-start gap-4 bg-gradient-to-b from-cyan-900/10 to-transparent">
                 <div className="p-3 rounded-xl bg-[#00f5ff]/10 border border-[#00f5ff]/20 text-[#00f5ff] shadow-[0_0_15px_rgba(0,245,255,0.15)] shrink-0">
                   <Cpu size={24} />
@@ -180,7 +218,6 @@ const Visualizer = () => {
                 </div>
               </div>
 
-              {/* Body */}
               <div className="p-6 md:p-8 space-y-6">
                 <p className="text-gray-300 text-[13px] md:text-sm">Welcome to the interactive algorithm simulation deck.</p>
 
@@ -201,7 +238,6 @@ const Visualizer = () => {
                   </div>
                 </div>
 
-                {/* Warning/Docs Box */}
                 <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 flex flex-col md:flex-row gap-4 items-start md:items-center">
                   <div className="p-2.5 bg-yellow-500/10 rounded-lg text-yellow-500 shrink-0">
                     <BookOpen size={18} />
@@ -216,7 +252,6 @@ const Visualizer = () => {
                 </div>
               </div>
 
-              {/* Footer */}
               <div className="p-5 md:p-6 border-t border-white/5 bg-[#060609] flex justify-end">
                 <button
                   onClick={handleCloseWelcome}
@@ -239,7 +274,7 @@ const Visualizer = () => {
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="fixed top-0 left-0 right-0 z-[200]"
           >
-            <Navbar />
+            {user ? <Navbar /> : <GuestNavbar />}
             <div className="hidden sm:block">
               <GlobalRibbon />
             </div>
@@ -250,7 +285,7 @@ const Visualizer = () => {
       <div className={`h-screen overflow-hidden text-white ${topNavHidden ? 'pt-2 sm:pt-3' : 'pt-[64px] sm:pt-[80px] lg:pt-[96px]'}`}>
         <div className="h-full flex flex-col lg:flex-row gap-3 p-2 sm:p-3 lg:p-4">
           
-          {/* --- DESKTOP SIDE PANEL (With smooth Width Collapse Animation) --- */}
+          {/* --- DESKTOP SIDE PANEL --- */}
           <AnimatePresence initial={false}>
             {isSidebarOpen && (
               <motion.aside 
@@ -260,7 +295,6 @@ const Visualizer = () => {
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 className="hidden lg:flex shrink-0 relative rounded-2xl bg-[#06060c]/95 border border-white/5 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.5)] z-20 overflow-hidden h-full"
               >
-                {/* Fixed inner container prevents text squishing during animation */}
                 <div className="w-[260px] h-full flex flex-col absolute top-0 left-0">
                   <div className="p-6 border-b border-[#00f5ff]/20 shrink-0">
                     <h1 className="text-2xl font-black text-white flex items-center gap-3 tracking-tight">
@@ -271,7 +305,13 @@ const Visualizer = () => {
                   
                   <nav className="flex-1 py-4 flex flex-col overflow-y-auto custom-scrollbar">
                     {menu.map((item) => (
-                      <MenuButton key={item.id} item={item} active={activeTab === item.id} onSelect={selectTab} />
+                      <MenuButton 
+                        key={item.id} 
+                        item={item} 
+                        active={activeTab === item.id} 
+                        onSelect={selectTab} 
+                        isLocked={!user && item.id !== 'll'} // <-- Determine locked state
+                      />
                     ))}
                   </nav>
                   
@@ -296,7 +336,6 @@ const Visualizer = () => {
                   <Menu size={20} className="text-[#00f5ff]" />
                 </button>
 
-                {/* --- DESKTOP SIDEBAR TOGGLE BUTTON --- */}
                 <button
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                   className="hidden lg:flex h-11 w-11 shrink-0 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:text-white active:scale-95 transition-all items-center justify-center"
@@ -311,7 +350,6 @@ const Visualizer = () => {
                 </div>
               </div>
               
-              {/* --- ARROW DOWN / UP Navbar Toggle --- */}
               <button
                 onClick={() => setTopNavHidden((prev) => !prev)}
                 className="h-11 min-w-11 shrink-0 px-3 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:text-white active:scale-95 transition-all flex items-center justify-center"
@@ -335,7 +373,30 @@ const Visualizer = () => {
                         transition={{ duration: 0.25, ease: 'easeOut' }}
                         className="h-full w-full"
                       >
-                        {activeModule?.component}
+                        {/* --- AUTHENTICATION GUARD --- */}
+                        {!user && activeTab !== 'll' ? (
+                          <div className="h-full w-full flex flex-col items-center justify-center text-center p-6 animate-in fade-in zoom-in duration-300">
+                            <div className="h-20 w-20 rounded-2xl bg-cyan-950/40 border border-[#00f5ff]/20 flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(0,245,255,0.15)] relative overflow-hidden">
+                               <div className="absolute inset-0 bg-[#00f5ff]/10 animate-pulse" />
+                               <Lock size={32} className="text-[#00f5ff] relative z-10" />
+                            </div>
+                            <h3 className="text-2xl md:text-3xl font-black font-mono tracking-tight text-white mb-3">
+                              RESTRICTED SECTOR
+                            </h3>
+                            <p className="text-gray-400 max-w-md text-sm leading-relaxed mb-8">
+                              The <span className="text-[#00f5ff] font-mono">{activeModule?.label}</span> simulation module requires security clearance. Authenticate your account to unlock all advanced interactive algorithms.
+                            </p>
+                            {/* Assuming your app routes to /login for authentication */}
+                            <a 
+                              href="/login" 
+                              className="flex items-center gap-2 px-8 py-3.5 bg-[#00f5ff] hover:bg-cyan-300 text-black font-bold text-sm rounded-xl transition-all shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:scale-105 active:scale-95"
+                            >
+                              <Cpu size={16} /> INITIALIZE LOGIN
+                            </a>
+                          </div>
+                        ) : (
+                          activeModule?.component
+                        )}
                       </motion.div>
                     </AnimatePresence>
                   </Suspense>
@@ -379,7 +440,13 @@ const Visualizer = () => {
 
               <div className="py-4 flex flex-col overflow-y-auto custom-scrollbar flex-1">
                 {menu.map((item) => (
-                  <MenuButton key={item.id} item={item} active={activeTab === item.id} onSelect={selectTab} />
+                  <MenuButton 
+                    key={item.id} 
+                    item={item} 
+                    active={activeTab === item.id} 
+                    onSelect={selectTab} 
+                    isLocked={!user && item.id !== 'll'} // <-- Determine locked state
+                  />
                 ))}
               </div>
 
@@ -396,32 +463,38 @@ const Visualizer = () => {
   );
 };
 
-// --- MENU BUTTON ---
+// --- MENU BUTTON WITH LOCK UI ---
 const MenuButton = ({
   item,
   active,
   onSelect,
+  isLocked,
 }: {
   item: { id: VisualizerKey; label: string; icon: React.ComponentType<any> };
   active: boolean;
   onSelect: (tab: VisualizerKey) => void;
+  isLocked?: boolean;
 }) => {
   const Icon = item.icon;
   return (
     <button
       onClick={() => onSelect(item.id)}
-      className={`group w-full h-[60px] border-l-[3px] px-6 flex items-center gap-4 text-left transition-colors duration-300 ${
+      className={`group w-full h-[60px] border-l-[3px] px-6 flex items-center gap-4 text-left transition-colors duration-300 relative ${
         active
           ? 'border-[#00f5ff] bg-[#00f5ff]/10'
           : 'border-transparent hover:bg-white/5'
       }`}
     >
       <Icon size={18} strokeWidth={active ? 2.5 : 2} className={active ? 'text-[#00f5ff]' : 'text-gray-500 group-hover:text-gray-300'} />
-      <span className={`text-[11px] sm:text-xs font-bold font-mono tracking-widest uppercase ${
+      <span className={`text-[11px] sm:text-xs font-bold font-mono tracking-widest uppercase flex-1 ${
         active ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'
       }`}>
         {item.label}
       </span>
+      {/* Small subtle lock icon if restricted */}
+      {isLocked && (
+        <Lock size={14} className="text-gray-600 group-hover:text-gray-400 absolute right-6" />
+      )}
     </button>
   );
 };

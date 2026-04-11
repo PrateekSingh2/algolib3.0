@@ -7,6 +7,9 @@ Allow: /
 Disallow: /profile
 Disallow: /edit-profile
 Disallow: /hq
+Disallow: /analyzer
+Disallow: /community
+Disallow: /notes
 Disallow: /view/*
 Disallow: /contest/*
 

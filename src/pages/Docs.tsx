@@ -7,7 +7,11 @@ import {
   Lock, Activity, BookOpen, Layers, Trophy
 } from "lucide-react";
 import { Link } from 'react-router-dom';
+import GuestNavbar from '@/components/GuestNavbar';
+import Navbar from '@/components/Navbar';
 import AppFooter from '@/components/AppFooter';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { Helmet } from 'react-helmet-async'; // <-- Added Helmet Import
 
 // --- MASSIVE KNOWLEDGE BASE ARCHITECTURE ---
 const docData = [
@@ -76,7 +80,7 @@ const docData = [
     )
   },
 
-  // CATEGORY: COMPETITIVE ARENA (FULLY DOCUMENTED)
+  // CATEGORY: COMPETITIVE ARENA
   {
     id: "competitive-arena",
     category: "Competitive Arena",
@@ -564,11 +568,20 @@ const docData = [
   }
 ];
 
-// Extract categories dynamically
 const categories = Array.from(new Set(docData.map(doc => doc.category)));
 
-// --- MAIN DOCS COMPONENT ---
 const Docs = () => {
+  // Auth State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [activePageId, setActivePageId] = useState("introduction");
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -580,7 +593,9 @@ const Docs = () => {
 
   const activeDoc = useMemo(() => docData.find(d => d.id === activePageId) || docData[0], [activePageId]);
 
-  // Deep Search Logic
+  // Derive a dynamic description snippet for the active document SEO
+  const activeDocDescription = activeDoc.textContent.substring(0, 160).trim() + "...";
+
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const query = searchQuery.toLowerCase();
@@ -590,7 +605,6 @@ const Docs = () => {
     );
   }, [searchQuery]);
 
-  // Keyboard Shortcut Logic (Cmd+K or Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -614,172 +628,214 @@ const Docs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#060606] text-zinc-300 font-sans flex flex-col md:flex-row selection:bg-sky-500/30 selection:text-white">
+    // Modified root layout to strictly flex-col and added padding-top to clear the fixed global Navbar
+    <div className="min-h-screen bg-[#060606] text-zinc-300 font-sans flex flex-col pt-16 md:pt-20 selection:bg-sky-500/30 selection:text-white">
       
-      {/* MOBILE HEADER */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b border-white/[0.05] bg-[#0A0A0A] sticky top-0 z-50">
-        <Link to="/" className="flex items-center gap-2 font-bold text-white tracking-tight">
-           ALGO<span className="text-zinc-500">LIB</span> <span className="text-xs font-normal text-sky-400 border border-sky-400/30 px-1.5 py-0.5 rounded-md ml-1 bg-sky-400/10">Docs</span>
-        </Link>
-        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-zinc-400">
-          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+      {/* --- DYNAMIC SEO METADATA --- */}
+      <Helmet>
+        <title>{`${activeDoc.title} | AlgoLib Documentation`}</title>
+        <meta name="title" content={`${activeDoc.title} | AlgoLib Documentation`} />
+        <meta name="description" content={activeDocDescription} />
+        <meta name="keywords" content={`AlgoLib docs, ${activeDoc.category.toLowerCase()}, ${activeDoc.title.toLowerCase()}, DSA visualizer documentation, competitive programming guide`} />
+        
+        <link rel="canonical" href="https://algolib.netlify.app/docs/" />
+
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content="https://algolib.netlify.app/docs/" />
+        <meta property="og:title" content={`${activeDoc.title} | AlgoLib Documentation`} />
+        <meta property="og:description" content={activeDocDescription} />
+        <meta property="og:image" content="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-04-11%20235856.png" />
+        
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${activeDoc.title} | AlgoLib Documentation`} />
+        <meta name="twitter:description" content={activeDocDescription} />
+        <meta name="twitter:image" content="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-04-11%20235856.png" />
+
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "TechArticle",
+            "headline": activeDoc.title,
+            "description": activeDocDescription,
+            "publisher": {
+              "@type": "Organization",
+              "name": "AlgoLib"
+            }
+          })}
+        </script>
+      </Helmet>
+
+      {/* INJECTED NAVBAR COMPONENT */}
+      <div className="fixed top-0 left-0 w-full z-[100]">
+        {isAuthenticated ? <Navbar /> : <GuestNavbar />}
       </div>
 
-      {/* LEFT SIDEBAR (NAVIGATION & SEARCH) */}
-      <aside className={`
-        ${isMobileMenuOpen ? 'flex' : 'hidden'} 
-        md:flex fixed md:sticky top-0 left-0 h-screen w-full md:w-[300px] lg:w-[320px] 
-        bg-[#09090b] border-r border-white/[0.05] z-40 flex-col shadow-[20px_0_40px_rgba(0,0,0,0.5)] md:shadow-none
-      `}>
-        <div className="p-6 shrink-0 border-b border-white/[0.02]">
-          <Link to="/" className="hidden md:flex items-center gap-2 font-bold text-white tracking-tight mb-8">
-            ALGO<span className="text-zinc-500">LIB</span> <span className="text-xs font-normal text-sky-400 border border-sky-400/30 px-1.5 py-0.5 rounded-md ml-1 bg-sky-400/10">Docs</span>
+      {/* Main Container */}
+      <div className="flex flex-col md:flex-row flex-1 relative w-full">
+        
+        {/* MOBILE HEADER (Adjusted top offset to account for global Navbar) */}
+        <div className="md:hidden flex items-center justify-between p-4 border-b border-white/[0.05] bg-[#0A0A0A] sticky top-[64px] md:top-[80px] z-50">
+          <Link to="/" className="flex items-center gap-2 font-bold text-white tracking-tight">
+             ALGO<span className="text-zinc-500">LIB</span> <span className="text-xs font-normal text-sky-400 border border-sky-400/30 px-1.5 py-0.5 rounded-md ml-1 bg-sky-400/10">Docs</span>
           </Link>
-
-          {/* ENHANCED DEEP SEARCH ENGINE WITH SHORTCUT */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-            <input 
-              ref={searchInputRef}
-              type="text" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search documentation..." 
-              className="w-full bg-[#111] border border-white/[0.05] rounded-xl pl-10 pr-12 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500/50 focus:bg-[#151515] transition-all placeholder:text-zinc-600 shadow-inner"
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 pointer-events-none opacity-60">
-              <kbd className="font-mono text-[10px] bg-white/[0.05] border border-white/[0.1] rounded px-1.5 py-0.5 text-zinc-400">⌘</kbd>
-              <kbd className="font-mono text-[10px] bg-white/[0.05] border border-white/[0.1] rounded px-1.5 py-0.5 text-zinc-400">K</kbd>
-            </div>
-            
-            {/* SEARCH RESULTS DROPDOWN */}
-            <AnimatePresence>
-              {searchQuery && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-                  className="absolute top-[calc(100%+8px)] left-0 right-0 bg-[#0A0A0A] border border-white/[0.1] rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50 max-h-[350px] overflow-y-auto custom-scrollbar"
-                >
-                  {searchResults.length > 0 ? (
-                    <div className="flex flex-col">
-                      {searchResults.map(res => (
-                        <button 
-                          key={res.id} 
-                          onClick={() => handleSelectPage(res.id)}
-                          className="text-left px-4 py-3 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.04] transition-colors flex flex-col gap-1"
-                        >
-                          <div className="text-[13px] font-semibold text-white">{res.title}</div>
-                          <div className="text-[10px] text-zinc-500 uppercase tracking-widest flex items-center gap-1">{res.icon} {res.category}</div>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="px-4 py-6 text-center text-sm text-zinc-500 flex flex-col items-center gap-2">
-                      <Search size={20} className="text-zinc-700" />
-                      No deep results found.
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-zinc-400">
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 pt-6 pb-20 md:pb-6">
-          <nav className="flex flex-col gap-2">
-            {categories.map((category) => {
-              const categoryDocs = docData.filter(d => d.category === category);
-              return (
-                <div key={category} className="mb-4 last:mb-0">
-                  <button 
-                    onClick={() => toggleCategory(category)}
-                    className="flex items-center justify-between w-full px-3 py-1.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest hover:text-zinc-300 transition-colors group"
+        {/* LEFT SIDEBAR (Adjusted offsets so it sticks beneath the global Navbar) */}
+        <aside className={`
+          ${isMobileMenuOpen ? 'flex' : 'hidden'} 
+          md:flex fixed md:sticky top-[136px] md:top-[80px] h-[calc(100vh-64px)] md:h-[calc(100vh-80px)] w-full md:w-[300px] lg:w-[320px] 
+          bg-[#09090b] border-r border-white/[0.05] z-40 flex-col shadow-[20px_0_40px_rgba(0,0,0,0.5)] md:shadow-none
+        `}>
+          <div className="p-6 shrink-0 border-b border-white/[0.02]">
+            <Link to="/" className="hidden md:flex items-center gap-2 font-bold text-white tracking-tight mb-8">
+              ALGO<span className="text-zinc-500">LIB</span> <span className="text-xs font-normal text-sky-400 border border-sky-400/30 px-1.5 py-0.5 rounded-md ml-1 bg-sky-400/10">Docs</span>
+            </Link>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input 
+                ref={searchInputRef}
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search documentation..." 
+                className="w-full bg-[#111] border border-white/[0.05] rounded-xl pl-10 pr-12 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500/50 focus:bg-[#151515] transition-all placeholder:text-zinc-600 shadow-inner"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 pointer-events-none opacity-60">
+                <kbd className="font-mono text-[10px] bg-white/[0.05] border border-white/[0.1] rounded px-1.5 py-0.5 text-zinc-400">⌘</kbd>
+                <kbd className="font-mono text-[10px] bg-white/[0.05] border border-white/[0.1] rounded px-1.5 py-0.5 text-zinc-400">K</kbd>
+              </div>
+              
+              <AnimatePresence>
+                {searchQuery && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
+                    className="absolute top-[calc(100%+8px)] left-0 right-0 bg-[#0A0A0A] border border-white/[0.1] rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.8)] overflow-hidden z-50 max-h-[350px] overflow-y-auto custom-scrollbar"
                   >
-                    {category}
-                    <ChevronRight size={14} className={`text-zinc-600 transition-transform duration-200 ${expandedCategories[category] ? "rotate-90 text-zinc-400" : ""}`} />
-                  </button>
-                  
-                  <AnimatePresence>
-                    {expandedCategories[category] && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="flex flex-col gap-1 mt-2">
-                          {categoryDocs.map((item) => (
-                            <button
-                              key={item.id}
-                              onClick={() => handleSelectPage(item.id)}
-                              className={`flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-[14px] transition-all ${
-                                activePageId === item.id 
-                                  ? "text-white bg-white/[0.05] font-medium shadow-sm" 
-                                  : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]"
-                              }`}
-                            >
-                              <span className={activePageId === item.id ? "text-sky-400" : "text-zinc-600"}>{item.icon}</span>
-                              {item.title}
-                            </button>
-                          ))}
-                        </div>
-                      </motion.div>
+                    {searchResults.length > 0 ? (
+                      <div className="flex flex-col">
+                        {searchResults.map(res => (
+                          <button 
+                            key={res.id} 
+                            onClick={() => handleSelectPage(res.id)}
+                            className="text-left px-4 py-3 border-b border-white/[0.03] last:border-0 hover:bg-white/[0.04] transition-colors flex flex-col gap-1"
+                          >
+                            <div className="text-[13px] font-semibold text-white">{res.title}</div>
+                            <div className="text-[10px] text-zinc-500 uppercase tracking-widest flex items-center gap-1">{res.icon} {res.category}</div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="px-4 py-6 text-center text-sm text-zinc-500 flex flex-col items-center gap-2">
+                        <Search size={20} className="text-zinc-700" />
+                        No deep results found.
+                      </div>
                     )}
-                  </AnimatePresence>
-                </div>
-              )
-            })}
-          </nav>
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT AREA */}
-      <main className="flex-1 px-6 py-12 md:px-16 md:py-20 overflow-x-hidden relative">
-         <motion.div 
-           key={activePageId} 
-           initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: "easeOut" }}
-           className="max-w-3xl"
-         >
-           <Link to="/" className="inline-flex md:hidden items-center text-sm font-medium text-zinc-500 hover:text-white transition-colors mb-10 bg-white/[0.02] border border-white/[0.05] px-3 py-1.5 rounded-lg">
-             <ArrowLeft size={16} className="mr-2" /> Back to App
-           </Link>
-
-           {activeDoc.content}
-
-         </motion.div>
-        <AppFooter />
-      </main>
-
-      {/* RIGHT SIDEBAR (ON THIS PAGE) */}
-      <aside className="hidden xl:block w-[280px] shrink-0 pt-20 pr-10">
-        <div className="sticky top-20">
-          {activeDoc.sections.length > 0 && (
-            <>
-              <h4 className="text-[11px] font-bold text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                <FileText size={14} className="text-sky-400" /> On This Page
-              </h4>
-              <nav className="flex flex-col gap-4 border-l-2 border-white/[0.05] pl-4 relative">
-                {activeDoc.sections.map((section, idx) => (
-                  <a 
-                    key={section.id} 
-                    href={`#${section.id}`}
-                    className="text-[13px] text-zinc-400 hover:text-white transition-colors leading-tight relative group"
-                  >
-                    <span className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-white/[0.1] group-hover:bg-sky-400 transition-colors" />
-                    {section.title}
-                  </a>
-                ))}
-              </nav>
-            </>
-          )}
-
-          <div className="mt-16 pt-8 border-t border-white/[0.05] flex flex-col gap-4 bg-[#080808]">
-             <Link to="/support" className="text-[13px] text-zinc-400 hover:text-white flex items-center justify-between group p-3 rounded-xl border border-transparent hover:border-white/[0.05] hover:bg-white/[0.02] transition-all">
-               <span>Need support?</span>
-               <ArrowLeft size={14} className="rotate-135 text-zinc-600 group-hover:text-white transition-colors" />
-             </Link>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-        </div>
-      </aside>
 
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 pt-6 pb-20 md:pb-6">
+            <nav className="flex flex-col gap-2">
+              {categories.map((category) => {
+                const categoryDocs = docData.filter(d => d.category === category);
+                return (
+                  <div key={category} className="mb-4 last:mb-0">
+                    <button 
+                      onClick={() => toggleCategory(category)}
+                      className="flex items-center justify-between w-full px-3 py-1.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest hover:text-zinc-300 transition-colors group"
+                    >
+                      {category}
+                      <ChevronRight size={14} className={`text-zinc-600 transition-transform duration-200 ${expandedCategories[category] ? "rotate-90 text-zinc-400" : ""}`} />
+                    </button>
+                    
+                    <AnimatePresence>
+                      {expandedCategories[category] && (
+                        <motion.div 
+                          initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="flex flex-col gap-1 mt-2">
+                            {categoryDocs.map((item) => (
+                              <button
+                                key={item.id}
+                                onClick={() => handleSelectPage(item.id)}
+                                className={`flex items-center gap-3 text-left px-3 py-2.5 rounded-xl text-[14px] transition-all ${
+                                  activePageId === item.id 
+                                    ? "text-white bg-white/[0.05] font-medium shadow-sm" 
+                                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]"
+                                }`}
+                              >
+                                <span className={activePageId === item.id ? "text-sky-400" : "text-zinc-600"}>{item.icon}</span>
+                                {item.title}
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )
+              })}
+            </nav>
+          </div>
+        </aside>
+
+        {/* MAIN CONTENT AREA */}
+        <main className="flex-1 px-6 py-12 md:px-16 md:py-20 overflow-x-hidden relative">
+           <motion.div 
+             key={activePageId} 
+             initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: "easeOut" }}
+             className="max-w-3xl"
+           >
+             <Link to="/" className="inline-flex md:hidden items-center text-sm font-medium text-zinc-500 hover:text-white transition-colors mb-10 bg-white/[0.02] border border-white/[0.05] px-3 py-1.5 rounded-lg">
+               <ArrowLeft size={16} className="mr-2" /> Back to App
+             </Link>
+
+             {activeDoc.content}
+
+           </motion.div>
+          <AppFooter />
+        </main>
+
+        {/* RIGHT SIDEBAR */}
+        <aside className="hidden xl:block w-[280px] shrink-0 pt-20 pr-10">
+          <div className="sticky top-20">
+            {activeDoc.sections.length > 0 && (
+              <>
+                <h4 className="text-[11px] font-bold text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                  <FileText size={14} className="text-sky-400" /> On This Page
+                </h4>
+                <nav className="flex flex-col gap-4 border-l-2 border-white/[0.05] pl-4 relative">
+                  {activeDoc.sections.map((section) => (
+                    <a 
+                      key={section.id} 
+                      href={`#${section.id}`}
+                      className="text-[13px] text-zinc-400 hover:text-white transition-colors leading-tight relative group"
+                    >
+                      <span className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-white/[0.1] group-hover:bg-sky-400 transition-colors" />
+                      {section.title}
+                    </a>
+                  ))}
+                </nav>
+              </>
+            )}
+
+            <div className="mt-16 pt-8 border-t border-white/[0.05] flex flex-col gap-4 bg-[#080808]">
+               <Link to="/support" className="text-[13px] text-zinc-400 hover:text-white flex items-center justify-between group p-3 rounded-xl border border-transparent hover:border-white/[0.05] hover:bg-white/[0.02] transition-all">
+                 <span>Need support?</span>
+                 <ArrowLeft size={14} className="rotate-135 text-zinc-600 group-hover:text-white transition-colors" />
+               </Link>
+            </div>
+          </div>
+        </aside>
+
+      </div>
     </div>
   );
 };

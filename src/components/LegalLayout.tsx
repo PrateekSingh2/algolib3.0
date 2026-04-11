@@ -1,10 +1,24 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import AppFooter from '@/components/AppFooter';
+import Navbar from '@/components/Navbar';
+import GuestNavbar from '@/components/GuestNavbar';
 import { useLocation, Link } from 'react-router-dom';
 import { Scale, ShieldCheck, Cookie, ArrowLeft } from 'lucide-react';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const LegalLayout = ({ children, title, lastUpdated }: { children: React.ReactNode, title: string, lastUpdated: string }) => {
   const location = useLocation();
+
+  // Auth State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Scroll to top instantly when navigating to or switching between legal pages
   useEffect(() => {
@@ -19,8 +33,14 @@ const LegalLayout = ({ children, title, lastUpdated }: { children: React.ReactNo
 
   return (
     <div className="min-h-screen bg-[#000000] text-white flex flex-col font-sans selection:bg-white/20">
-      {/* Sleek Minimal Header */}
-      <div className="w-full bg-[#050505] border-b border-white/[0.05] pt-24 md:pt-32 pb-12 md:pb-16 px-6 relative overflow-hidden">
+      
+      {/* INJECTED NAVBAR */}
+      <div className="fixed top-0 left-0 w-full z-[100]">
+        {isAuthenticated ? <Navbar /> : <GuestNavbar />}
+      </div>
+
+      {/* Sleek Minimal Header (Adjusted pt from 24 to 32/40 to clear navbar) */}
+      <div className="w-full bg-[#050505] border-b border-white/[0.05] pt-32 md:pt-40 pb-12 md:pb-16 px-6 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
         <div className="max-w-6xl mx-auto relative z-10 flex flex-col items-start gap-6">
           <div className="mb-4 md:mb-12">
