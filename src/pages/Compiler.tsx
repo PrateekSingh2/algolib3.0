@@ -809,7 +809,7 @@ export default function Compiler() {
                       <div className="flex flex-col gap-6">
                         {output && (
                             <div className="bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800/80 p-4 md:p-5 rounded-2xl shadow-inner overflow-x-auto">
-                               <pre className="font-mono text-[13px] whitespace-pre-wrap text-zinc-800 dark:text-zinc-300 break-all">{output}</pre>
+                               <pre className="font-mono whitespace-pre-wrap text-zinc-800 dark:text-zinc-300 break-all" style={{ fontSize: `${terminalFontSize}px` }}>{output}</pre>
                             </div>
                         )}
                         {!output && (
@@ -851,7 +851,7 @@ export default function Compiler() {
                   </div>
                   <div className="terminal-input-row bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 md:p-4 transition-colors focus-within:border-emerald-500/50">
                     {/* UNIX STYLE PROMPT */}
-                    <span className="terminal-prompt select-none mt-[1px] text-[13px]" style={{ fontSize: `${terminalFontSize}px` }}>
+                    <span className="terminal-prompt select-none mt-[1px]" style={{ fontSize: `${terminalFontSize}px` }}>
                         <span className="text-sky-600 dark:text-sky-400 font-bold">~/algolib</span>
                         <span className="text-zinc-400 dark:text-zinc-500 ml-1.5 mr-2">$</span>
                     </span>
