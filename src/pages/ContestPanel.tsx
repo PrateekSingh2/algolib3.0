@@ -460,7 +460,37 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       const defaultPenalty = diffStr === 'hard' ? 20 : diffStr === 'medium' ? 10 : 5;
       
       const currentWrongCount = wrongAttempts[currentProblem.id] || 0;
+      const pointsEarned = Math.max(0, defaultPts - (currentWrongCount * defaultPenalty));
 
+      // Calculate time taken for this attempt
+      let timeTakenSeconds = 0;
+      if (contest?.start_time) {
+          const startTimeMs = new Date(contest.start_time).getTime();
+          const nowMs = Date.now();
+          if (nowMs > startTimeMs) {
+              timeTakenSeconds = Math.floor((nowMs - startTimeMs) / 1000);
+          }
+      }
+
+      // 1. Log EVERY attempt to the new 'submissions' table (Option A)
+      if (user) {
+        try {
+            await supabase.from('submissions').insert([{
+                user_uid: user.uid || user.id,
+                problem_id: currentProblem.id,
+                contest_id: contestId,
+                language: language,
+                code: code,
+                passed: allPassed,
+                score_awarded: allPassed ? pointsEarned : 0,
+                time_taken_seconds: timeTakenSeconds
+            }]);
+        } catch (e) {
+            console.error("Failed to log submission:", e);
+        }
+      }
+
+      // 2. Handle the Leaderboard (Keep only the best attempt)
       if (!allPassed) {
         setWrongAttempts(prev => ({
           ...prev,
@@ -469,31 +499,48 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         addLog('summary_fail', `Failed (${passedCount}/${casesToRun.length} test cases)`);
       } else {
         addLog('summary_pass', `Accepted (${passedCount}/${casesToRun.length} test cases)`);
+        
         if (user) {
           try {
-              const pointsEarned = Math.max(0, defaultPts - (currentWrongCount * defaultPenalty));
-              
-              let timeTakenSeconds = 0;
-              if (contest?.start_time) {
-                  const startTimeMs = new Date(contest.start_time).getTime();
-                  const nowMs = Date.now();
-                  if (nowMs > startTimeMs) {
-                      timeTakenSeconds = Math.floor((nowMs - startTimeMs) / 1000);
-                  }
-              }
+              // Check if the user already has a score for this problem
+              const { data: existingEntry } = await supabase
+                  .from('leaderboard')
+                  .select('id, score, time_taken_seconds')
+                  .eq('user_uid', user.uid || user.id)
+                  .eq('problem_id', currentProblem.id)
+                  .single();
 
-              await supabase.from('leaderboard').insert([{ 
-                  user_uid: user.uid || user.id, 
-                  display_name: user.displayName || user.name || 'User', 
-                  problem_id: currentProblem.id, 
-                  score: pointsEarned, 
-                  time_taken_seconds: timeTakenSeconds, 
-                  language_used: language
-              }]);
+              if (existingEntry) {
+                  // UPDATE LOGIC: Only overwrite if the new score is strictly better, 
+                  // or if the score is tied but the time is faster.
+                  if (pointsEarned > existingEntry.score || 
+                     (pointsEarned === existingEntry.score && timeTakenSeconds < existingEntry.time_taken_seconds)) {
+                      
+                      await supabase.from('leaderboard')
+                          .update({ 
+                              score: pointsEarned, 
+                              time_taken_seconds: timeTakenSeconds,
+                              language_used: language
+                          })
+                          .eq('id', existingEntry.id);
+                  }
+              } else {
+                  // INSERT LOGIC: First time solving this problem
+                  await supabase.from('leaderboard').insert([{ 
+                      user_uid: user.uid || user.id, 
+                      display_name: user.displayName || user.name || 'User', 
+                      problem_id: currentProblem.id, 
+                      score: pointsEarned, 
+                      time_taken_seconds: timeTakenSeconds, 
+                      language_used: language
+                  }]);
+              }
               
               addLog('points', `Points Earned: ${pointsEarned}`);
               addLog('time', `Runtime: ${formatTime(timeTakenSeconds)}`);
-          } catch (e) {}
+          } catch (e) {
+              console.error("Failed to update leaderboard:", e);
+          }
         }
       }
     }
@@ -640,7 +687,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         <div className="bg-[#1a1a1a] border-b border-white/5 px-4 py-1.5 flex items-center justify-center gap-2 shrink-0">
           <Lock size={12} className="text-amber-500" />
           <span className="text-zinc-400 text-[11px] font-medium tracking-wide">
-            Contest environment active. Do not navigate away from this page.
+            Contest environment active. Do not try to navigate away from this page. Penalty will be applied by our systems before final result published.
           </span>
         </div>
 
@@ -655,7 +702,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                  className="flex-1 overflow-y-auto custom-scrollbar p-5 md:p-6 pb-20 select-none"
                  onContextMenu={(e) => e.preventDefault()}
                >
-                  <div className="w-full max-w-3xl mx-auto">
+                  <div className="w-full">
                      <h1 className="text-2xl font-bold text-zinc-100 mb-3 leading-tight">{activeProblem?.title}</h1>
                      <div className="flex flex-wrap items-center gap-2 mb-6">
                         <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium ${activeDifficultyStr === 'easy' ? 'text-emerald-400 bg-emerald-400/10' : activeDifficultyStr === 'medium' ? 'text-amber-400 bg-amber-400/10' : 'text-rose-400 bg-rose-400/10'}`}>
@@ -701,6 +748,16 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                              <div className="font-semibold text-zinc-300 text-[14px]">Example {i + 1}:</div>
                              <div className="bg-[#1a1a1a] rounded-lg p-4 font-mono text-[13px] border border-white/5 leading-relaxed">
                                 
+                                {(tc.image_url || tc.imageUrl) && (
+                                   <div className="mb-4 flex flex-col">
+                                      <img 
+                                        src={tc.image_url || tc.imageUrl} 
+                                        alt={`Example ${i + 1} Visual Reference`} 
+                                        className="max-w-full md:max-w-[80%] rounded-lg border border-white/10 object-contain bg-black/50" 
+                                      />
+                                   </div>
+                                )}
+
                                 <div className="mb-4 flex flex-col">
                                    <span className="text-zinc-500 select-none font-sans text-[11px] font-bold uppercase tracking-wider mb-1">Input</span>
                                    <pre className="text-zinc-300 whitespace-pre-wrap font-mono leading-normal">{tc.display_input}</pre>

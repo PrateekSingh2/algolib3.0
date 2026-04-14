@@ -25,7 +25,8 @@ import {
   Sun,
   Moon,
   Code2,
-  BarChart3
+  BarChart3,
+  BrainCircuit,
 } from "lucide-react";
 
 const timeAgo = (timestamp: number) => {
@@ -90,8 +91,6 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
-    // --- DATA PROTECTION ---
-    // Do not fetch notifications if the user is not fully onboarded or not logged in
     if (!user || profile?.is_profile_complete === false) return;
 
     const q = query(collection(firestoreDB, "community_posts"), orderBy("createdAt", "desc"), limit(15));
@@ -120,7 +119,7 @@ const Navbar = () => {
     });
 
     return () => unsubscribe();
-  }, [lastReadTime, user, profile?.is_profile_complete]); // Added dependency
+  }, [lastReadTime, user, profile?.is_profile_complete]); 
 
   const handleToggleNotif = () => {
     setIsNotifOpen((prev) => !prev);
@@ -155,18 +154,22 @@ const Navbar = () => {
     navigate(`/discussion#${id}`);
   };
 
+  // Removed Notes from main list to add as a small icon later
   const navLinks = [
     { name: "Home", path: "/", icon: Home },
     { name: "Visualizer", path: "/visualizer", icon: Cpu },
     { name: "Contests", path: "/contests", icon: Terminal },
     { name: "Compiler", path: "/compiler", icon: Code2 },
     { name: "Analyse TC", path: "/analyzer", icon: BarChart3 },
+    { name: "Quiz", path: "/quiz-panel", icon: BrainCircuit },
     { name: "Community", path: "/discussion", icon: MessageCircle },
-    { name: "Notes", path: "/notes", icon: BookOpen },
   ];
 
   const avatarSrc = user?.photoURL || "https://placehold.co/96x96/111/fff?text=U";
   const avatarName = profile?.display_name || user?.displayName || "Engineer";
+
+  const isNotesActive = location.pathname === '/notes';
+  const isDevActive = location.pathname === '/developer';
 
   const ProfileMenu = ({ mobile = false }: { mobile?: boolean }) => (
     <AnimatePresence>
@@ -321,7 +324,15 @@ const Navbar = () => {
           <div className="w-[1px] h-6 bg-white/[0.08] mx-3" />
 
           <div className="flex items-center gap-1 pr-1.5">
-            <Link to="/developer" title="Developer" className="p-2.5 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] transition-colors">&lt;/&gt;</Link>
+            {/* Notes Small Icon */}
+            <Link to="/notes" title="Notes" className={`p-2.5 rounded-full transition-colors ${isNotesActive ? 'text-white bg-white/[0.08]' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]'}`}>
+              <BookOpen className="w-[16px] h-[16px]" />
+            </Link>
+
+            {/* Developer Small Icon */}
+            <Link to="/developer" title="Developer" className={`p-2.5 rounded-full transition-colors font-mono font-bold text-[14px] leading-none flex items-center justify-center ${isDevActive ? 'text-white bg-white/[0.08]' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]'}`}>
+              &lt;/&gt;
+            </Link>
 
             {/* --- VISUAL PROTECTION (DESKTOP) --- */}
             {user && profile?.is_profile_complete && (
@@ -415,7 +426,8 @@ const Navbar = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }} 
                 exit={{ opacity: 0, y: -10, scale: 0.98 }} 
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute top-full left-0 right-0 mt-3 bg-[#09090b]/95 backdrop-blur-2xl border border-white/[0.08] rounded-[24px] p-2.5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] flex flex-col gap-1 z-50 origin-top"
+                // Added max-h-[80vh], overflow-y-auto, and custom-scrollbar here
+                className="absolute top-full left-0 right-0 mt-3 bg-[#09090b]/95 backdrop-blur-2xl border border-white/[0.08] rounded-[24px] p-2.5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] flex flex-col gap-1 z-50 origin-top max-h-[80vh] overflow-y-auto custom-scrollbar"
               >
                 {navLinks.map((tab) => { 
                   const isActive = location.pathname === tab.path; 
@@ -429,13 +441,27 @@ const Navbar = () => {
                     </Link>
                   ); 
                 })}
+                
                 <div className="h-[1px] bg-white/[0.06] my-2 mx-4" />
-                <Link to="/developer" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-3.5 rounded-[16px] flex items-center gap-4 group">
-                  <div className="p-1.5 rounded-lg border border-transparent group-hover:bg-white/[0.04] group-hover:border-white/[0.05] text-zinc-500 group-hover:text-zinc-300 transition-all">
+                
+                {/* Notes Link (Mobile) */}
+                <Link to="/notes" onClick={() => setIsMobileMenuOpen(false)} className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden">
+                  {isNotesActive && <div className="absolute inset-0 bg-white/[0.06] border border-white/[0.04] rounded-[16px] z-0" />}
+                  <div className={`relative z-10 p-1.5 rounded-lg border ${isNotesActive ? 'bg-white/[0.08] border-white/[0.05] text-white' : 'bg-transparent border-transparent text-zinc-500 group-hover:bg-white/[0.04] group-hover:border-white/[0.05] group-hover:text-zinc-300'} transition-all`}>
+                    <BookOpen size={18} />
+                  </div>
+                  <span className={`relative z-10 text-[15px] font-semibold transition-colors ${isNotesActive ? 'text-zinc-100' : 'text-zinc-400 group-hover:text-zinc-200'}`}>Notes</span>
+                </Link>
+
+                {/* Developer Link (Mobile) */}
+                <Link to="/developer" onClick={() => setIsMobileMenuOpen(false)} className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden">
+                  {isDevActive && <div className="absolute inset-0 bg-white/[0.06] border border-white/[0.04] rounded-[16px] z-0" />}
+                  <div className={`relative z-10 p-1.5 rounded-lg border ${isDevActive ? 'bg-white/[0.08] border-white/[0.05] text-white' : 'bg-transparent border-transparent text-zinc-500 group-hover:bg-white/[0.04] group-hover:border-white/[0.05] group-hover:text-zinc-300'} transition-all font-mono font-bold leading-none`}>
                     &lt;/&gt;
                   </div>
-                  <span className="text-[15px] font-semibold text-zinc-400 group-hover:text-zinc-200 transition-colors">Developer</span>
+                  <span className={`relative z-10 text-[15px] font-semibold transition-colors ${isDevActive ? 'text-zinc-100' : 'text-zinc-400 group-hover:text-zinc-200'}`}>Developer</span>
                 </Link>
+
                 {!user && (
                   <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)} className="mt-2 mx-2 mb-1 px-4 py-3.5 rounded-[14px] bg-white text-black flex justify-center items-center gap-2 text-[15px] font-bold active:scale-95 transition-transform">
                     <Sparkles size={18} /> Get Started

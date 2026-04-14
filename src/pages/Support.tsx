@@ -176,6 +176,7 @@ const Support = () => {
                 <option value="Account Issue">Account Issue</option>
                 <option value="Data Deletion">Account & Data Deletion</option>
                 <option value="Sponsor Contest">Sponsor Contest Inquiry</option>
+                <option value="Quiz Access">Request Quiz Dashboard Access</option>
                 <option value="Other">Other</option>
               </select>
             </div>

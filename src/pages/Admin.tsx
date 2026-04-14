@@ -15,7 +15,8 @@ import {
   Search, Users, Activity,
   Database, ChevronUp, MessageSquare, AlertTriangle, Trash2,
   Megaphone, Radio, ExternalLink, Eye, BarChart3, PieChart as PieChartIcon, 
-  Download, User as UserIcon, AlignLeft, Send, Github, Trophy, Plus, Calendar, List, UserPlus, UserMinus
+  Download, User as UserIcon, AlignLeft, Send, Github, Trophy, Plus, Calendar, List, UserPlus, UserMinus,
+  FileText, CheckCircle2, XCircle, Code2
 } from "lucide-react";
 
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -32,15 +33,29 @@ interface ReplyType { id: string; authorId: string; authorName: string; authorAv
 interface Post { id: string; title: string; body: string; authorName: string; authorId: string; upvotes: string[]; downvotes?: string[]; replies: ReplyType[]; createdAt: any; }
 interface UserActivityData { id: string; email?: string; displayName?: string; lifetimeActiveTimeMins?: number; lastActiveDate?: any; activityUsage?: Record<string, number>; }
 interface AdminUser { email: string; added_by: string; created_at: string; }
-// --- Contest Types ---
 interface TestCaseData { displayInput: string; rawInput: string; expected: string; explanation: string; isPublic: boolean; hasMultipleAnswers: boolean; imageUrl?: string; }
 interface ProblemData { dbId?: string; title: string; description: string; inputFormat: string; outputFormat: string; constraints: string; difficulty: string; testCases: TestCaseData[]; }
+
+// --- Submissions Type ---
+interface SubmissionData {
+    id: string;
+    created_at: string;
+    user_uid: string;
+    problem_id: string;
+    contest_id: string;
+    language: string;
+    code: string;
+    passed: boolean;
+    score_awarded: number;
+    time_taken_seconds: number;
+    problemTitle?: string;
+}
 
 // --- CLOUDINARY UPLOAD HELPER ---
 const uploadToCloudinary = async (file: File) => {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", "ml_default"); // Ensure you have an unsigned preset named ml_default in Cloudinary
+  formData.append("upload_preset", "ml_default"); 
   
   const res = await fetch("https://api.cloudinary.com/v1_1/dmmv8phgq/image/upload", {
     method: "POST",
@@ -93,11 +108,17 @@ const toLocalDatetime = (isoString: string) => {
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}m ${s}s`;
+};
+
 const Admin = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"forge" | "contests" | "moderation" | "broadcast" | "insights" | "admins">("forge");
+  const [activeTab, setActiveTab] = useState<"forge" | "contests" | "submissions" | "moderation" | "broadcast" | "insights" | "admins">("forge");
 
   const [mode, setMode] = useState<"create" | "edit">("create");
   const [activeCodeTab, setActiveCodeTab] = useState<"java" | "cpp" | "python">("java");
@@ -108,7 +129,7 @@ const Admin = () => {
   const [adminPasscode, setAdminPasscode] = useState("");
   const [showUnauthorizedModal, setShowUnauthorizedModal] = useState(false);
 
-  // New Admin Control States
+  // Admin Control States
   const [adminsList, setAdminsList] = useState<AdminUser[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [showAddAdminPasscodeModal, setShowAddAdminPasscodeModal] = useState(false);
@@ -127,6 +148,13 @@ const Admin = () => {
   ]);
   const [existingContests, setExistingContests] = useState<any[]>([]);
   const [isDeployingContest, setIsDeployingContest] = useState(false);
+
+  // Submissions Tracker States
+  const [submissionsData, setSubmissionsData] = useState<SubmissionData[]>([]);
+  const [selectedSubContest, setSelectedSubContest] = useState<string>("");
+  const [subSearchQuery, setSubSearchQuery] = useState("");
+  const [isSubsLoading, setIsSubsLoading] = useState(false);
+  const [viewingCodeInfo, setViewingCodeInfo] = useState<SubmissionData | null>(null);
 
   const [jsonOutput, setJsonOutput] = useState("");
   const [copied, setCopied] = useState(false);
@@ -189,10 +217,53 @@ const Admin = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "admins" && isAdmin) {
-      loadAdminsList();
+    if (isAdmin && (activeTab === "admins" || activeTab === "submissions" || activeTab === "contests")) {
+      if (activeTab === "admins") loadAdminsList();
+      if (existingContests.length === 0) loadContestsListSilent();
     }
   }, [activeTab, isAdmin]);
+
+  // Handle Submissions Tab Logic
+  useEffect(() => {
+    if (activeTab === "submissions" && selectedSubContest) {
+        fetchSubmissions();
+    } else if (activeTab === "submissions" && !selectedSubContest) {
+        setSubmissionsData([]);
+    }
+  }, [activeTab, selectedSubContest]);
+
+  const loadContestsListSilent = async () => {
+    const { data } = await supabase.from('contests').select('id, title, start_time').order('start_time', { ascending: false });
+    if (data) setExistingContests(data);
+  };
+
+  const fetchSubmissions = async () => {
+      setIsSubsLoading(true);
+      try {
+          const { data: subs, error: subsErr } = await supabase
+              .from('submissions')
+              .select('*')
+              .eq('contest_id', selectedSubContest)
+              .order('created_at', { ascending: false });
+
+          if (subsErr) throw subsErr;
+
+          const { data: probs } = await supabase.from('problems').select('id, title').eq('contest_id', selectedSubContest);
+          const probMap = new Map();
+          if (probs) probs.forEach(p => probMap.set(p.id, p.title));
+
+          const mappedSubs = (subs || []).map(s => ({
+              ...s,
+              problemTitle: probMap.get(s.problem_id) || 'Unknown Problem'
+          }));
+
+          setSubmissionsData(mappedSubs);
+      } catch (err) {
+          console.error("Error fetching submissions:", err);
+      } finally {
+          setIsSubsLoading(false);
+      }
+  };
 
   const loadAdminsList = async () => {
       const { data } = await supabase.from('admins').select('*').order('created_at', { ascending: false });
@@ -589,6 +660,12 @@ const Admin = () => {
   const totalReplies = posts.reduce((acc, post) => acc + (post.replies?.length || 0), 0);
   const totalInteractions = posts.reduce((acc, post) => acc + (post.upvotes?.length || 0) + (post.downvotes?.length || 0), 0) + totalReplies;
 
+  const filteredSubmissions = submissionsData.filter(s => 
+      s.user_uid.toLowerCase().includes(subSearchQuery.toLowerCase()) ||
+      s.problemTitle?.toLowerCase().includes(subSearchQuery.toLowerCase()) ||
+      s.language.toLowerCase().includes(subSearchQuery.toLowerCase())
+  );
+
   const inputClass = "w-full bg-zinc-950/50 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/50 text-sm text-zinc-200 transition-all placeholder:text-zinc-600";
   const labelClass = "text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-2 block";
 
@@ -598,6 +675,45 @@ const Admin = () => {
       <Navbar />
       
       <AnimatePresence>
+        
+        {/* Code Viewer Modal for Submissions */}
+        {viewingCodeInfo && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} className="w-full max-w-4xl max-h-[85vh] bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+                    
+                    <div className="flex justify-between items-center px-6 py-4 border-b border-white/5 bg-zinc-900/50">
+                        <div>
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <Code2 size={20} className="text-purple-400"/> Submission Source
+                            </h3>
+                            <p className="text-xs text-zinc-400 mt-1">
+                                {viewingCodeInfo.problemTitle} • User: {viewingCodeInfo.user_uid.substring(0, 8)}... • Lang: {viewingCodeInfo.language}
+                            </p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => { navigator.clipboard.writeText(viewingCodeInfo.code); setStatusMsg("Code Copied!"); setTimeout(()=>setStatusMsg(""), 2000); }} 
+                                className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors"
+                                title="Copy Source"
+                            >
+                                <Copy size={18}/>
+                            </button>
+                            <button onClick={() => setViewingCodeInfo(null)} className="p-2 hover:bg-red-500/10 rounded-lg text-zinc-400 hover:text-red-400 transition-colors">
+                                <X size={18}/>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-auto bg-[#0a0a0a] p-6 custom-scrollbar">
+                        <pre className="font-mono text-xs md:text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                            {viewingCodeInfo.code}
+                        </pre>
+                    </div>
+
+                </motion.div>
+            </motion.div>
+        )}
+
         {/* Purge Modal */}
         {showPurgeModal && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -799,6 +915,7 @@ const Admin = () => {
             {[ 
                 { id: 'forge', label: 'Data Forge', icon: Code }, 
                 { id: 'contests', label: 'Contest Forge', icon: Trophy }, 
+                { id: 'submissions', label: 'Submissions', icon: FileText }, 
                 { id: 'moderation', label: 'Moderation', icon: ShieldCheck }, 
                 { id: 'broadcast', label: 'Broadcast', icon: Radio }, 
                 { id: 'insights', label: 'Insights', icon: BarChart3 }, 
@@ -1100,7 +1217,146 @@ const Admin = () => {
         )}
 
         {/* ========================================== */}
-        {/* TAB 3: COMMUNITY MODERATION                */}
+        {/* TAB 3: SUBMISSIONS TRACKER                 */}
+        {/* ========================================== */}
+        {activeTab === "submissions" && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                
+                {/* Header & Filters */}
+                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 p-6 rounded-3xl shadow-lg">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
+                        <div>
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                <FileText size={20} className="text-sky-400" /> Submissions Database
+                            </h2>
+                            <p className="text-xs text-zinc-400 mt-1">Monitor code executions and algorithm integrity.</p>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                            <select 
+                                value={selectedSubContest} 
+                                onChange={(e) => setSelectedSubContest(e.target.value)}
+                                className={`${inputClass} w-full sm:w-64`}
+                            >
+                                <option value="" disabled>Select Target Contest...</option>
+                                {existingContests.map(c => (
+                                    <option key={c.id} value={c.id}>{c.title}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {selectedSubContest && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider mb-1">Total Submissions</p>
+                                    <h4 className="text-2xl font-bold text-white">{submissionsData.length}</h4>
+                                </div>
+                                <Terminal size={24} className="text-zinc-600" />
+                            </div>
+                            <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-4 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[11px] text-emerald-500/70 font-bold uppercase tracking-wider mb-1">Accepted</p>
+                                    <h4 className="text-2xl font-bold text-emerald-400">{submissionsData.filter(s => s.passed).length}</h4>
+                                </div>
+                                <CheckCircle2 size={24} className="text-emerald-500/30" />
+                            </div>
+                            <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-4 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[11px] text-rose-500/70 font-bold uppercase tracking-wider mb-1">Rejected</p>
+                                    <h4 className="text-2xl font-bold text-rose-400">{submissionsData.filter(s => !s.passed).length}</h4>
+                                </div>
+                                <XCircle size={24} className="text-rose-500/30" />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Search Bar */}
+                    <div className="relative w-full group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                        <input 
+                            type="text" 
+                            placeholder="Search by user signature, problem title, or language..." 
+                            className="w-full bg-zinc-950 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30 transition-all text-white placeholder:text-zinc-600" 
+                            value={subSearchQuery} 
+                            onChange={(e) => setSubSearchQuery(e.target.value)} 
+                            disabled={!selectedSubContest}
+                        />
+                    </div>
+                </div>
+
+                {/* Submissions Table */}
+                <div className="bg-zinc-900/40 backdrop-blur-xl border border-white/5 rounded-3xl shadow-lg overflow-hidden flex flex-col">
+                    <div className="overflow-x-auto min-h-[400px]">
+                        <table className="w-full text-left border-collapse min-w-[900px]">
+                            <thead>
+                                <tr className="bg-zinc-950/50 border-b border-white/5 text-zinc-500 text-[11px] uppercase tracking-wider font-semibold">
+                                    <th className="p-4 pl-6">Timestamp</th>
+                                    <th className="p-4">User Signature</th>
+                                    <th className="p-4">Problem</th>
+                                    <th className="p-4 text-center">Lang</th>
+                                    <th className="p-4 text-center">Status</th>
+                                    <th className="p-4 text-center">Score</th>
+                                    <th className="p-4 text-center">Runtime</th>
+                                    <th className="p-4 pr-6 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 bg-transparent text-sm">
+                                {!selectedSubContest ? (
+                                    <tr><td colSpan={8} className="p-16 text-center text-zinc-500"><Terminal size={32} className="mx-auto mb-3 opacity-20" />Select a contest above to view telemetry.</td></tr>
+                                ) : isSubsLoading ? (
+                                    <tr><td colSpan={8} className="p-16 text-center text-zinc-500"><Loader2 size={32} className="mx-auto mb-3 animate-spin text-sky-400" />Fetching records...</td></tr>
+                                ) : filteredSubmissions.length > 0 ? (
+                                    filteredSubmissions.map((sub) => (
+                                        <tr key={sub.id} className="hover:bg-white/[0.02] transition-colors group">
+                                            <td className="p-4 pl-6 text-zinc-400 text-xs">
+                                                {new Date(sub.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="font-mono text-zinc-300 text-[13px]">{sub.user_uid.substring(0, 12)}...</span>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="font-medium text-zinc-200">{sub.problemTitle}</span>
+                                            </td>
+                                            <td className="p-4 text-center">
+                                                <span className="px-2 py-1 bg-white/5 rounded text-xs font-medium text-zinc-300 capitalize">{sub.language}</span>
+                                            </td>
+                                            <td className="p-4 text-center">
+                                                {sub.passed ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold text-emerald-400 bg-emerald-400/10">
+                                                        <CheckCircle2 size={12}/> Accepted
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold text-rose-400 bg-rose-400/10">
+                                                        <XCircle size={12}/> Rejected
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 text-center font-mono text-zinc-300">{sub.score_awarded}</td>
+                                            <td className="p-4 text-center font-mono text-zinc-500 text-[13px]">{formatDuration(sub.time_taken_seconds)}</td>
+                                            <td className="p-4 pr-6 text-right">
+                                                <button 
+                                                    onClick={() => setViewingCodeInfo(sub)}
+                                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-sky-400 hover:bg-sky-500/10 transition-colors"
+                                                >
+                                                    <Code2 size={14} /> View Code
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr><td colSpan={8} className="p-16 text-center text-zinc-500"><Search size={32} className="mx-auto mb-3 opacity-20" />No submissions found matching criteria.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </motion.div>
+        )}
+
+        {/* ========================================== */}
+        {/* TAB 4: COMMUNITY MODERATION                */}
         {/* ========================================== */}
         {activeTab === "moderation" && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
@@ -1192,7 +1448,7 @@ const Admin = () => {
         )}
 
         {/* ========================================== */}
-        {/* TAB 4: GLOBAL BROADCAST NOTIFICATIONS      */}
+        {/* TAB 5: GLOBAL BROADCAST NOTIFICATIONS      */}
         {/* ========================================== */}
         {activeTab === "broadcast" && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 max-w-4xl mx-auto">
@@ -1249,7 +1505,7 @@ const Admin = () => {
         )}
 
         {/* ========================================== */}
-        {/* TAB 5: INSIGHTS DASHBOARD                  */}
+        {/* TAB 6: INSIGHTS DASHBOARD                  */}
         {/* ========================================== */}
         {activeTab === "insights" && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
@@ -1363,7 +1619,7 @@ const Admin = () => {
         )}
 
         {/* ========================================== */}
-        {/* TAB 6: ACCESS CONTROL                      */}
+        {/* TAB 7: ACCESS CONTROL                      */}
         {/* ========================================== */}
         {activeTab === "admins" && (
              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 max-w-4xl mx-auto">

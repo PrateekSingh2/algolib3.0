@@ -543,9 +543,11 @@ export default function Compiler() {
               >
                 <Settings size={15} />
               </button>
+              
+              {/* Save Code Button */}
               <button 
-                className={`topbar-icon-btn ${showEditorSettings ? 'text-emerald-500 bg-zinc-100 dark:bg-white/5' : ''}`} 
-                onClick={() => { setShowEditorSettings(!showEditorSettings); setShowMobileMenu(false); }} 
+                className="topbar-icon-btn" 
+                onClick={() => { handleSaveFile(); setShowEditorSettings(false); setShowMobileMenu(false); }} 
                 title="Save Code"
               >
                 <Save size={15} />

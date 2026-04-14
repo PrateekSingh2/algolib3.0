@@ -25,6 +25,9 @@ import GuestNavbar from "@/components/GuestNavbar";
 import { useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Analyzer from "./pages/Analyzer";
+import Quiz from "./pages/Quiz";
+import QuizPanel from "./pages/QuizPanel";
+import QuizForge from "./pages/QuizForge";
 
 // --- LAZY LOADED ROUTES ---
 const Index = lazy(() => import("./pages/Index"));
@@ -679,6 +682,10 @@ const AppRoutes = () => {
         <Route path="/contest/:contestId" element={<ContestPanel user={user} onLoginRequest={handleLoginRequest} />} />
         <Route path="/compiler" element={<Compiler />} />
         <Route path="/analyzer" element={<Analyzer />} />
+        <Route path="/quiz/:id" element={<Quiz />} />
+        <Route path="/quiz-forge" element={<QuizForge />} />
+        <Route path="/quiz-panel" element={<QuizPanel />} />
+
                   
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
