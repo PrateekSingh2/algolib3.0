@@ -16,6 +16,8 @@ dist-ssr
 .env
 .env.local
 
+service_account.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
