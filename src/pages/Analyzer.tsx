@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
-import Editor from '@monaco-editor/react';
-import { Activity, Zap, Code2, BrainCircuit, AlertCircle, Sparkles, BatteryCharging } from 'lucide-react';
+import { Zap, AlertCircle, Send, Paperclip, Loader2, Sparkles } from 'lucide-react';
 
 // ─── FIREBASE IMPORTS ────────────────────────────────────────────────────────
 import { auth, firestoreDB as db } from "@/lib/firebase";
@@ -12,8 +11,6 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import Navbar from "@/components/Navbar"; 
-import AppFooter from '@/components/AppFooter';
-import App from '@/App';
 
 // ─── Environment & Types ─────────────────────────────────────────────────────
 declare global {
@@ -28,7 +25,14 @@ interface AnalysisResult {
   explanation: string;
 }
 
-// ─── Graph Data Generator ────────────────────────────────────────────────────
+interface ChatMessage {
+  role: 'user' | 'ai';
+  content: string;
+  result?: AnalysisResult;
+  isError?: boolean;
+}
+
+// ─── Graph Data Generator (Gemini Pastel Theme) ──────────────────────────────
 const generateChartData = () => {
   const data = [];
   for (let n = 1; n <= 20; n++) {
@@ -47,37 +51,54 @@ const generateChartData = () => {
 
 const CHART_DATA = generateChartData();
 const COMPLEXITY_COLORS = {
-  'O(1)': '#10b981', 'O(log N)': '#34d399', 'O(N)': '#facc15',
-  'O(N log N)': '#fb923c', 'O(N^2)': '#ef4444', 'O(2^N)': '#9f1239',
+  'O(1)': '#81c995',       // Soft Green
+  'O(log N)': '#8ab4f8',   // Soft Blue
+  'O(N)': '#fde293',       // Soft Yellow
+  'O(N log N)': '#fcad70', // Soft Orange
+  'O(N^2)': '#f28b82',     // Soft Red
+  'O(2^N)': '#c58af9',     // Soft Purple
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function Analyzer() {
-  const [code, setCode] = useState<string>('// Paste your code here\n\nfunction calculateSomething(arr) {\n    let sum = 0;\n    for(let i = 0; i < arr.length; i++) {\n        for(let j = 0; j < arr.length; j++) {\n            sum += arr[i] * arr[j];\n        }\n    }\n    return sum;\n}');
+  const [inputCode, setInputCode] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
   
   const [credits, setCredits] = useState<number | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isAnalyzing]);
+
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputCode(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+  };
 
   // ─── Firebase Auth & Credit Listener ───────────────────────────────────────
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      
       if (!user) {
         setCredits(null);
         return;
       }
-
       const today = new Date().toISOString().split('T')[0];
       const userRef = doc(db, 'user_credits', user.uid);
       
       try {
         const docSnap = await getDoc(userRef);
-
         if (!docSnap.exists()) {
           await setDoc(userRef, { credits: 7, last_reset_date: today });
           setCredits(7);
@@ -94,20 +115,21 @@ export default function Analyzer() {
         console.error("Error fetching credits:", err);
       }
     });
-
     return () => unsubscribe(); 
   }, []);
 
   // ─── Analyze Action ────────────────────────────────────────────────────────
   const handleAnalyze = async () => {
-    if (!code.trim()) {
-      setError("Please paste some code to analyze.");
-      return;
-    }
+    const trimmedCode = inputCode.trim();
+    if (!trimmedCode) return;
 
     setIsAnalyzing(true);
-    setError(null);
-    setResult(null);
+    // Add user message to chat
+    setMessages(prev => [...prev, { role: 'user', content: trimmedCode }]);
+    setInputCode('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
 
     try {
       if (!currentUser) throw new Error("You must be logged in to use the analyzer.");
@@ -149,7 +171,7 @@ export default function Analyzer() {
               The 'complexity' value MUST be exactly one of these strings: "O(1)", "O(log N)", "O(N)", "O(N log N)", "O(N^2)", "O(2^N)".
               The 'explanation' should be 2 concise sentences explaining why.`
             },
-            { role: "user", content: code }
+            { role: "user", content: trimmedCode }
           ],
           temperature: 0.1,
           response_format: { type: "json_object" }
@@ -162,10 +184,23 @@ export default function Analyzer() {
       }
 
       const data = await response.json();
-      const aiResult = JSON.parse(data.choices[0].message.content);
+      const aiResult = JSON.parse(data.choices[0].message.content) as { complexity?: string; explanation?: string };
       
-      if (aiResult.complexity && aiResult.explanation) {
-        setResult(aiResult);
+      const validComplexities: AnalysisResult['complexity'][] = ['O(1)', 'O(log N)', 'O(N)', 'O(N log N)', 'O(N^2)', 'O(2^N)'];
+
+      if (aiResult.complexity && aiResult.explanation && validComplexities.includes(aiResult.complexity as AnalysisResult['complexity'])) {
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'ai',
+            content: '',
+            result: {
+              complexity: aiResult.complexity as AnalysisResult['complexity'],
+              explanation: aiResult.explanation
+            }
+          }
+        ]);
+        
         const newBalance = currentCredits - 1;
         await updateDoc(userRef, { credits: newBalance });
         setCredits(newBalance);
@@ -175,356 +210,375 @@ export default function Analyzer() {
 
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "An unexpected error occurred.");
+      setMessages(prev => [
+        ...prev,
+        { role: 'ai', content: err.message || "An unexpected error occurred.", isError: true }
+      ]);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAnalyze();
+    }
+  };
+
+  const isHomeState = messages.length === 0;
+  
+  // Extract user's first name dynamically, defaulting to known profile name
+  const firstName = currentUser?.displayName ? currentUser.displayName.split(' ')[0] : 'Prateek';
+
   return (
     <div className="analyzer-root">
-      <Helmet><title>Time Complexity Analyzer | AlgoLib</title></Helmet>
+      <Helmet><title>AlgoLib AI Assistant</title></Helmet>
       
-      <Navbar />
+      <div className="navbar-wrapper">
+        <Navbar />
+      </div>
+      
+      {/* Spacer added here to prevent content from hiding behind the fixed navbar */}
+      <div className="navbar-spacer"></div>
 
-      <main className="analyzer-main">
-        {/* ─── Professional Dashboard Banner ─── */}
-        <div className="dashboard-banner">
-          <div className="banner-info">
-            <div className="banner-icon-wrapper">
-              <Sparkles className="banner-icon" size={28} />
-            </div>
-            <div className="banner-text">
-              <h1 className="banner-title">Algorithm Analyzer</h1>
-              <p className="banner-subtitle">Evaluate your code's time complexity and efficiency instantly.</p>
+      <div className="tokens-indicator">
+        <Zap size={14} className={credits && credits > 0 ? 'text-yellow-400' : 'text-red-400'} />
+        <span>{credits !== null ? `${credits} requests left` : 'Connecting...'}</span>
+      </div>
+
+      <main className="app-viewport">
+        
+        {/* Chat Feed */}
+        {!isHomeState && (
+          <div className="chat-scroll-area">
+            <div className="chat-content-bounds">
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`message-row ${msg.role}`}>
+                  {msg.role === 'ai' && (
+                    <div className="ai-avatar">
+                      <Sparkles size={16} color="#fff" />
+                    </div>
+                  )}
+                  
+                  <div className="message-bubble">
+                    {msg.role === 'user' ? (
+                      <div className="user-text-bubble">
+                        <pre className="user-code"><code>{msg.content}</code></pre>
+                      </div>
+                    ) : msg.isError ? (
+                      <div className="error-card">
+                        <AlertCircle size={18} />
+                        <span>{msg.content}</span>
+                      </div>
+                    ) : msg.result ? (
+                      <div className="ai-response-layout">
+                        <p className="response-text">
+                          Here is the performance breakdown for your algorithm:
+                        </p>
+                        
+                        <div className="analysis-card">
+                          <div className="complexity-header">
+                            <span className="complexity-label">Time Complexity</span>
+                            <h2 className="complexity-value" style={{ color: COMPLEXITY_COLORS[msg.result.complexity] || '#8ab4f8' }}>
+                              {msg.result.complexity}
+                            </h2>
+                          </div>
+                          <p className="complexity-desc">{msg.result.explanation}</p>
+                        </div>
+
+                        <div className="graph-card">
+                          <span className="graph-label">Growth Rate Visualization</span>
+                          <div className="chart-wrapper">
+                            <ResponsiveContainer width="100%" height={260}>
+                              <LineChart data={CHART_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#3c4043" vertical={false} opacity={0.3} />
+                                <XAxis dataKey="n" stroke="#9aa0a6" tick={{fill: '#9aa0a6', fontSize: 12}} axisLine={false} tickLine={false} />
+                                <YAxis stroke="#9aa0a6" tick={{fill: '#9aa0a6', fontSize: 12}} axisLine={false} tickLine={false} />
+                                <Tooltip 
+                                  contentStyle={{ backgroundColor: '#303134', border: 'none', borderRadius: '8px', color: '#e3e3e3', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}
+                                  itemStyle={{ fontSize: '13px', fontWeight: 500 }}
+                                />
+                                {Object.keys(COMPLEXITY_COLORS).map((key) => {
+                                  const isHighlighted = msg.result!.complexity === key;
+                                  return (
+                                    <Line
+                                      key={key} type="monotone" dataKey={key}
+                                      stroke={COMPLEXITY_COLORS[key as keyof typeof COMPLEXITY_COLORS]}
+                                      strokeWidth={isHighlighted ? 3 : 1}
+                                      strokeOpacity={isHighlighted ? 1 : 0.2}
+                                      dot={false}
+                                    />
+                                  );
+                                })}
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+              
+              {isAnalyzing && (
+                <div className="message-row ai">
+                  <div className="ai-avatar pulse">
+                    <Sparkles size={16} color="#fff" />
+                  </div>
+                  <div className="message-bubble loading-bubble">
+                    <Loader2 className="spinner" size={18} />
+                    <span>Analyzing your code...</span>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
           </div>
-          
-          <div className="banner-stats">
-            <div className="stat-widget primary-widget">
-              <div className="widget-icon-box"><Zap size={18} /></div>
-              <div className="widget-data">
-                <span className="widget-value">{credits !== null ? credits : '-'}</span>
-                <span className="widget-label">Credits Left</span>
+        )}
+
+        {/* Input Area */}
+        <div className={`input-dock-area ${isHomeState ? 'state-centered' : 'state-docked'}`}>
+          <div className="input-bounds">
+            {isHomeState && (
+              <div className="greeting-header">
+                <h1><span className="gradient-text">Hello, {firstName}</span></h1>
+                
+                {/* --- Typing SVG replacing the static <h2> --- */}
+                <div style={{ marginTop: '4px' }}>
+                  <img 
+                    src="https://readme-typing-svg.herokuapp.com?font=Inter&weight=500&size=40&pause=2000&color=444746&width=800&height=60&lines=Which+code+would+you+like+to+analyze%3F;AlgoLib+AI+is+here+to+help%2C+%F0%9F%A4%94;Paste+your+code+snippet+below...;Quick+Analysis+with+low+latency;AlgoLib+AI+supports+any+language%21" 
+                    alt="Typing Animation" 
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+                  />
+                </div>
               </div>
-            </div>
+            )}
             
-            <div className="stat-widget secondary-widget">
-              <div className="widget-icon-box"><BatteryCharging size={18} /></div>
-              <div className="widget-data">
-                <span className="widget-value">{credits !== null ? 7 - credits : '-'}</span>
-                <span className="widget-label">Used Today</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="analyzer-grid">
-          
-          {/* Left Column: Code Input */}
-          <div className="panel code-panel">
-            <div className="panel-topbar">
-              <div className="topbar-left">
-                <Code2 size={16} className="text-slate-400" />
-                <span className="panel-title">Source Code</span>
-              </div>
+            <div className="search-box-wrapper">
+              <button className="icon-btn" disabled><Paperclip size={20} /></button>
+              <textarea
+                ref={textareaRef}
+                className="gemini-input"
+                placeholder="Paste your code or pseudo-code here..."
+                value={inputCode}
+                onChange={handleInput}
+                onKeyDown={handleKeyDown}
+                rows={1}
+                disabled={isAnalyzing}
+              />
               <button 
-                className={`analyze-btn ${isAnalyzing ? 'analyzing' : ''}`}
+                className={`send-btn ${inputCode.trim() ? 'active' : ''}`}
                 onClick={handleAnalyze}
-                disabled={isAnalyzing || credits === 0 || !currentUser}
+                disabled={!inputCode.trim() || isAnalyzing}
               >
-                {isAnalyzing ? (
-                  <><div className="spinner" /><span>Analyzing...</span></>
-                ) : (
-                  <><Zap size={15} fill="currentColor" /><span>Analyze Code</span></>
-                )}
+                <Send size={18} className="send-icon" />
               </button>
             </div>
             
-            <div className="editor-container">
-              <Editor
-                height="100%" 
-                theme="vs-dark" 
-                defaultLanguage="javascript"
-                value={code} 
-                onChange={(val) => setCode(val || '')}
-                options={{ 
-                  minimap: { enabled: false }, 
-                  fontSize: 14, 
-                  fontFamily: "'Fira Code', 'JetBrains Mono', monospace", 
-                  padding: { top: 20, bottom: 20 } 
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Right Column: Results & Enhanced Graph */}
-          <div className="panel result-panel">
-            <div className="panel-topbar">
-              <div className="topbar-left">
-                <BrainCircuit size={16} className="text-slate-400" />
-                <span className="panel-title">Analysis Engine</span>
-              </div>
-            </div>
-
-            <div className="result-content">
-              {error && (
-                <div className="error-box">
-                  <AlertCircle size={18} />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {!result && !error && !isAnalyzing && (
-                <div className="empty-state">
-                  <Activity size={48} className="empty-icon" />
-                  <h3>Awaiting Input</h3>
-                  <p>Paste your algorithm and click "Analyze Code" to generate a performance profile.</p>
-                </div>
-              )}
-
-              {isAnalyzing && (
-                <div className="analyzing-state">
-                  <div className="pulse-ring"></div>
-                  <p>Parsing abstract syntax tree...</p>
-                </div>
-              )}
-
-              {result && !isAnalyzing && (
-                <div className="results-display">
-                  
-                  {/* Glassmorphic Stat Card */}
-                  <div className="stat-card">
-                    <span className="stat-label">Detected Time Complexity</span>
-                    <h2 className="stat-value" style={{ color: COMPLEXITY_COLORS[result.complexity] || '#3b82f6' }}>
-                      {result.complexity}
-                    </h2>
-                    <p className="stat-explanation">{result.explanation}</p>
-                  </div>
-
-                  {/* Enhanced Graph Visualization */}
-                  <div className="graph-container">
-                    <span className="graph-title">Time/Cost(Y-axis) vs Input Size(X-axis)</span>
-                    <div className="chart-wrapper">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={CHART_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          
-                          {/* ─── SVG Filter for Neon Glow ─── */}
-                          <defs>
-                            <filter id="neonGlow" x="-50%" y="-50%" width="200%" height="200%">
-                              <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                              <feMerge>
-                                <feMergeNode in="coloredBlur"/>
-                                <feMergeNode in="SourceGraphic"/>
-                              </feMerge>
-                            </filter>
-                          </defs>
-
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} opacity={0.5} />
-                          <XAxis dataKey="n" stroke="#475569" tick={{fill: '#64748b', fontSize: 12}} axisLine={false} />
-                          <YAxis stroke="#475569" tick={{fill: '#64748b', fontSize: 12}} axisLine={false} />
-                          
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'rgba(15, 23, 42, 0.9)', 
-                              backdropFilter: 'blur(8px)', 
-                              border: '1px solid #334155', 
-                              borderRadius: '12px', 
-                              color: '#f1f5f9', 
-                              boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)' 
-                            }}
-                            itemStyle={{ fontSize: '14px', fontWeight: 600 }}
-                            labelStyle={{ color: '#94a3b8', margin: '0 0 8px 0', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '1px' }}
-                          />
-                          
-                          {Object.keys(COMPLEXITY_COLORS).map((key) => {
-                            const isHighlighted = result.complexity === key;
-                            return (
-                              <Line
-                                key={key}
-                                type="monotone"
-                                dataKey={key}
-                                stroke={COMPLEXITY_COLORS[key as keyof typeof COMPLEXITY_COLORS]}
-                                strokeWidth={isHighlighted ? 5 : 2}
-                                strokeOpacity={isHighlighted ? 1 : 0.1}
-                                dot={isHighlighted ? { r: 4, fill: '#0f172a', strokeWidth: 2 } : false}
-                                activeDot={isHighlighted ? { r: 8, strokeWidth: 0, fill: '#fff' } : false}
-                                filter={isHighlighted ? 'url(#neonGlow)' : 'none'}
-                              />
-                            );
-                          })}
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                </div>
-              )}
+            <div className="disclaimer-text">
+              AlgoLib AI can make mistakes. Consider verifying time complexities for critical systems.
             </div>
           </div>
         </div>
+
       </main>
-      <AppFooter />
 
       <style>{`
-        /* ─── Global & Layout ─── */
-        .analyzer-root { min-height: 100vh; background-color: #020617; color: #f1f5f9; font-family: 'Inter', system-ui, sans-serif; display: flex; flex-direction: column; }
-        .analyzer-main { flex: 1; max-width: 1400px; margin: 0 auto; width: 100%; padding: 120px 24px 40px; display: flex; flex-direction: column; gap: 32px; }
+        /* ─── Base Theme (Gemini Dark) ─── */
+        .analyzer-root { 
+          height: 100vh; 
+          overflow: hidden; 
+          background-color: #131314; /* Standard Gemini Dark background */
+          color: #e3e3e3; 
+          font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          display: flex; 
+          flex-direction: column; 
+          -webkit-font-smoothing: antialiased;
+        }
+
+        .navbar-wrapper {
+          position: relative;
+          z-index: 50;
+          flex-shrink: 0;
+        }
         
-        /* ─── Professional Dashboard Banner ─── */
-        .dashboard-banner {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(2, 6, 23, 0.8) 100%);
-          border: 1px solid #1e293b;
-          border-radius: 20px;
-          padding: 28px 36px;
-          box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-          backdrop-filter: blur(10px);
+        /* Forces space below a fixed/absolute navbar */
+        .navbar-spacer {
+          height: 72px; /* Adjust this value if your navbar is taller/shorter */
+          flex-shrink: 0;
         }
 
-        .banner-info {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-        }
-
-        .banner-icon-wrapper {
-          background: rgba(59, 130, 246, 0.1);
-          color: #3b82f6;
-          padding: 16px;
-          border-radius: 16px;
-          border: 1px solid rgba(59, 130, 246, 0.2);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .banner-title {
-          font-size: 24px;
-          font-weight: 700;
-          color: #f8fafc;
-          margin: 0 0 6px 0;
-          letter-spacing: -0.5px;
-        }
-
-        .banner-subtitle {
-          font-size: 15px;
-          color: #94a3b8;
-          margin: 0;
-        }
-
-        .banner-stats {
-          display: flex;
-          gap: 16px;
-        }
-
-        .stat-widget {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          background: #0b1120;
-          border: 1px solid #1e293b;
-          padding: 12px 24px 12px 16px;
-          border-radius: 14px;
-        }
-
-        .primary-widget {
-          border-color: rgba(59, 130, 246, 0.3);
-          background: linear-gradient(180deg, rgba(15, 23, 42, 0.5) 0%, rgba(37, 99, 235, 0.05) 100%);
-        }
-
-        .widget-icon-box {
-          color: #64748b;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .primary-widget .widget-icon-box {
-          color: #3b82f6;
-        }
-
-        .widget-data {
+        .app-viewport {
+          flex: 1;
           display: flex;
           flex-direction: column;
+          overflow: hidden;
+          position: relative;
         }
 
-        .widget-value {
-          font-size: 18px;
-          font-weight: 700;
-          color: #f8fafc;
-          line-height: 1.1;
+        /* Top Right Token Indicator */
+        .tokens-indicator { 
+          position: absolute; 
+          top: 90px; /* Pushed down slightly to account for the navbar */
+          right: 24px; 
+          display: flex; 
+          align-items: center; 
+          gap: 6px; 
+          font-size: 13px; 
+          font-weight: 500;
+          color: #bdc1c6; 
+          background: #1e1f20; 
+          padding: 8px 14px; 
+          border-radius: 24px; 
+          z-index: 40;
         }
 
-        .primary-widget .widget-value {
-          color: #60a5fa;
+        /* ─── Chat Feed Area ─── */
+        .chat-scroll-area { 
+          flex: 1; 
+          overflow-y: auto; 
+          scroll-behavior: smooth; 
+          padding: 32px 0;
         }
-
-        .widget-label {
-          font-size: 12px;
-          color: #64748b;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          font-weight: 600;
-          margin-top: 2px;
-        }
-
-        @media (max-width: 900px) {
-          .dashboard-banner {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 24px;
-            padding: 24px;
-          }
-          .banner-stats {
-            width: 100%;
-            flex-wrap: wrap;
-          }
-          .stat-widget { flex: 1; min-width: 140px; }
-        }
-
-        /* ─── Grid & Panels ─── */
-        .analyzer-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; height: 650px; }
-        @media (max-width: 1024px) { .analyzer-grid { grid-template-columns: 1fr; height: auto; min-height: 800px; } .code-panel { height: 500px; } }
         
-        .panel { background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
-        .panel-topbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid #1e293b; }
-        .topbar-left { display: flex; align-items: center; gap: 10px; }
-        .panel-title { font-size: 14px; font-weight: 600; color: #e2e8f0; letter-spacing: 0.2px; }
+        .chat-scroll-area::-webkit-scrollbar { width: 8px; }
+        .chat-scroll-area::-webkit-scrollbar-track { background: transparent; }
+        .chat-scroll-area::-webkit-scrollbar-thumb { background: #3c4043; border-radius: 4px; }
         
-        .analyze-btn { display: flex; align-items: center; gap: 8px; background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 0 15px rgba(37, 99, 235, 0.3); }
-        .analyze-btn:hover:not(:disabled) { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 0 20px rgba(37, 99, 235, 0.5); }
-        .analyze-btn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+        .chat-content-bounds {
+          max-width: 800px;
+          margin: 0 auto;
+          display: flex;
+          flex-direction: column;
+          gap: 32px;
+          padding: 0 24px;
+        }
+
+        .message-row { display: flex; gap: 16px; width: 100%; }
+        .message-row.user { justify-content: flex-end; }
         
-        .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; }
+        /* AI Avatar (Gradient Sparkle) */
+        .ai-avatar { 
+          width: 32px; height: 32px; 
+          border-radius: 50%; 
+          background: linear-gradient(135deg, #4285f4, #d96570, #9b72cb);
+          display: flex; align-items: center; justify-content: center; 
+          flex-shrink: 0; 
+        }
+        .ai-avatar.pulse { animation: softPulse 2s infinite alternate; }
+        @keyframes softPulse { 
+          from { opacity: 0.7; transform: scale(0.95); } 
+          to { opacity: 1; transform: scale(1.05); } 
+        }
+
+        .message-bubble { 
+          max-width: calc(100% - 48px); 
+          font-size: 15px; 
+          line-height: 1.6;
+        }
+        .user .message-bubble { max-width: 80%; }
+
+        /* User Message Style */
+        .user-text-bubble {
+          background: #1e1f20;
+          padding: 14px 18px;
+          border-radius: 24px;
+          border-top-right-radius: 4px;
+        }
+        .user-code { 
+          margin: 0; 
+          font-family: 'JetBrains Mono', 'Fira Code', monospace; 
+          font-size: 13.5px; 
+          color: #e3e3e3; 
+          white-space: pre-wrap; 
+          word-break: break-all; 
+        }
+
+        /* AI Message Layout */
+        .ai-response-layout { display: flex; flex-direction: column; gap: 16px; margin-top: 4px; }
+        .response-text { margin: 0; color: #e3e3e3; }
+        
+        .analysis-card { 
+          background: #1e1f20; 
+          border-radius: 16px; 
+          padding: 20px 24px; 
+        }
+        .complexity-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+        .complexity-label { font-size: 13px; font-weight: 500; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; }
+        .complexity-value { font-size: 32px; font-family: 'JetBrains Mono', monospace; font-weight: 600; margin: 0; }
+        .complexity-desc { color: #bdc1c6; font-size: 14.5px; margin: 0; line-height: 1.5; }
+        
+        .graph-card { background: #1e1f20; border-radius: 16px; padding: 20px 24px; }
+        .graph-label { display: block; font-size: 13px; font-weight: 500; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+
+        .loading-bubble { display: flex; align-items: center; gap: 12px; color: #9aa0a6; height: 32px; }
+        .spinner { animation: spin 1s linear infinite; color: #8ab4f8; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .error-card { 
+          background: rgba(242, 139, 130, 0.1); 
+          color: #f28b82; 
+          padding: 14px 18px; 
+          border-radius: 16px; 
+          display: flex; align-items: center; gap: 12px; 
+        }
+
+        /* ─── Input Area ─── */
+        .input-dock-area {
+          padding: 0 24px 24px;
+          background: linear-gradient(180deg, transparent 0%, #131314 25%, #131314 100%);
+          z-index: 10;
+        }
+
+        .input-dock-area.state-centered {
+          flex: 1; display: flex; align-items: center; justify-content: center; background: transparent;
+        }
+        .input-dock-area.state-docked { flex-shrink: 0; }
+
+        .input-bounds { width: 100%; max-width: 820px; margin: 0 auto; }
+
+        /* Gemini Greeting */
+        .greeting-header { margin-bottom: 40px; padding-left: 8px; }
+        .greeting-header h1 { margin: 0 0 8px 0; font-size: 44px; font-weight: 500; letter-spacing: -0.5px; }
+        .gradient-text { 
+          background: linear-gradient(74deg, #2570e9 0%, #64976e 46%, #dd9b50 100%);
+          -webkit-background-clip: text; 
+          -webkit-text-fill-color: transparent; 
+        }
+        .greeting-header h2 { margin: 0; font-size: 44px; font-weight: 500; color: #444746; letter-spacing: -0.5px; }
+
+        /* Search/Input Box */
+        .search-box-wrapper { 
+          display: flex; align-items: flex-end; gap: 12px; 
+          background: #1e1f20; 
+          border-radius: 28px; 
+          padding: 12px 16px; 
+          transition: background 0.2s ease;
+        }
+        .search-box-wrapper:focus-within { background: #282a2c; }
+
+        .gemini-input { 
+          flex: 1; background: transparent; border: none; color: #e3e3e3; 
+          font-family: inherit; font-size: 16px; line-height: 1.5; 
+          resize: none; max-height: 200px; padding: 10px 0; outline: none; 
+        }
+        .gemini-input::placeholder { color: #8e918f; }
         
-        /* ─── Editor & Results ─── */
-        .editor-container { flex: 1; position: relative; background: #0f172a; }
-        .result-content { flex: 1; padding: 24px; display: flex; flex-direction: column; background: #0b1120; overflow-y: auto; }
+        .icon-btn { color: #8e918f; background: none; border: none; padding: 8px; cursor: not-allowed; display: flex; align-items: center; justify-content: center; }
         
-        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #64748b; }
-        .empty-icon { opacity: 0.2; margin-bottom: 16px; }
-        .empty-state h3 { font-size: 18px; color: #94a3b8; margin-bottom: 8px; }
+        .send-btn { 
+          background: transparent; color: #8e918f; border: none; border-radius: 50%; 
+          width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; 
+          cursor: pointer; transition: all 0.2s; 
+          margin-bottom: 2px;
+        }
+        .send-btn.active { color: #8ab4f8; background: rgba(138, 180, 248, 0.08); }
+        .send-btn.active:hover { background: rgba(138, 180, 248, 0.15); }
         
-        .analyzing-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #3b82f6; }
-        .pulse-ring { width: 60px; height: 60px; border-radius: 50%; border: 2px solid #3b82f6; animation: pulse 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; margin-bottom: 20px; }
-        @keyframes pulse { 0% { transform: scale(0.5); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
-        
-        .error-box { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; padding: 16px; border-radius: 12px; display: flex; align-items: flex-start; gap: 12px; margin-bottom: 24px; font-size: 14px; }
-        .results-display { display: flex; flex-direction: column; gap: 24px; height: 100%; }
-        
-        /* ─── Stats & Graph ─── */
-        .stat-card { background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.4)); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 24px; position: relative; overflow: hidden; }
-        .stat-label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 8px; font-weight: 600; }
-        .stat-value { font-size: 42px; font-family: 'JetBrains Mono', monospace; font-weight: 800; margin-bottom: 12px; letter-spacing: -2px; text-shadow: 0 0 30px currentColor; }
-        .stat-explanation { color: #cbd5e1; font-size: 14.5px; line-height: 1.6; }
-        
-        .graph-container { flex: 1; background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; min-height: 250px; }
-        .graph-title { font-size: 13px; font-weight: 600; color: #94a3b8; margin-bottom: 16px; }
-        .chart-wrapper { flex: 1; width: 100%; }
+        .disclaimer-text { 
+          text-align: center; font-size: 12px; color: #8e918f; margin-top: 16px; 
+        }
       `}</style>
     </div>
   );

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
-import { Play, Send, ChevronDown, Lock, Clock, CheckCircle2, Terminal, ArrowLeft, Loader2, X, Trash2, Code2, AlertTriangle, Target, Settings, RotateCcw, Wand2 } from 'lucide-react';
+import { Play, Send, ChevronDown, Lock, Clock, CheckCircle2, Terminal, ArrowLeft, Loader2, X, Trash2, Code2, AlertTriangle, Target, Settings, RotateCcw, Wand2, AlertCircle } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { createClient } from '@supabase/supabase-js';
 
@@ -27,9 +27,7 @@ const FALLBACK_TEST_CASES = [
 // --- MARKDOWN PARSER ---
 const renderMarkdown = (text: string, isSmall = false) => {
   if (!text) return null;
-  
   let cleanText = text.replace(/\\n/g, '\n');
-
   return cleanText.split('\n').map((line, i) => {
     let isHeader = false;
     let headerClass = "";
@@ -59,8 +57,9 @@ const renderMarkdown = (text: string, isSmall = false) => {
 
 // --- STRUCTURED TERMINAL LOG SYSTEM ---
 type LogEntry = {
-  type: 'system' | 'case_header' | 'success' | 'error' | 'expected' | 'actual_pass' | 'actual_fail' | 'summary_pass' | 'summary_fail' | 'points' | 'penalty' | 'time';
-  content: string;
+  type: 'system' | 'case_header' | 'success' | 'error' | 'expected' | 'actual_pass' | 'actual_fail' | 'gfg_panel';
+  content?: string;
+  data?: any; 
 };
 
 const renderTerminalLog = (log: LogEntry, i: number) => {
@@ -98,14 +97,70 @@ const renderTerminalLog = (log: LogEntry, i: number) => {
           </div>
         </div>
       );
-    case 'summary_pass':
-      return <div key={i} className="text-emerald-500 font-bold text-[16px] mt-6 mb-2">Accepted</div>;
-    case 'summary_fail':
-      return <div key={i} className="text-rose-500 font-bold text-[16px] mt-6 mb-2">Wrong Answer</div>;
-    case 'points':
-    case 'penalty':
-    case 'time':
-      return <div key={i} className="text-zinc-400 text-[13px] mb-1">{log.content}</div>;
+    
+    // --- GFG STYLE RESULTS PANEL ---
+    case 'gfg_panel':
+      const { passed, total, attemptsCorrect, attemptsTotal, time, accuracy, isSuccess } = log.data;
+      return (
+        <div key={i} className="flex flex-col text-zinc-200 mt-2 font-sans w-full max-w-4xl">
+          {/* Tabs Area */}
+          <div className="flex border-b border-white/10 mb-6">
+            <div className="text-sky-500 font-semibold pb-2 border-b-2 border-sky-500 px-1 text-[15px]">Compilation Results</div>
+          </div>
+
+          {/* Header */}
+          <div className="flex justify-between items-center mb-6">
+             <div className="flex items-center gap-2">
+                {isSuccess ? (
+                    <>
+                        <span className="text-xl font-bold text-zinc-100">Problem Solved Successfully</span>
+                        <CheckCircle2 size={24} className="text-emerald-500" fill="currentColor" stroke="#121212" />
+                    </>
+                ) : (
+                    <>
+                        <span className="text-xl font-bold text-zinc-100">Wrong Answer</span>
+                        <X size={24} className="text-rose-500 bg-rose-500/10 rounded-full p-1" />
+                    </>
+                )}
+             </div>
+             <Link 
+              to="/support" 
+              className="text-zinc-400 text-[13px] hover:text-zinc-200 underline decoration-white/20 underline-offset-4"
+             >
+             Suggest Feedback
+             </Link>          
+            </div>
+
+          {/* Metric Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+             {/* Card 1 */}
+             <div className="bg-[#1e1e1e]/80 rounded-xl p-5 border border-white/5 shadow-sm">
+                <div className="text-zinc-400 text-[13px] mb-3">Test Cases Passed</div>
+                <div className="text-3xl font-bold text-zinc-100">{passed} / {total}</div>
+             </div>
+             {/* Card 2 */}
+             <div className="bg-[#1e1e1e]/80 rounded-xl p-5 border border-white/5 shadow-sm">
+                <div className="text-zinc-400 text-[13px] mb-3">Attempts : Correct / Total</div>
+                <div className="text-3xl font-bold text-zinc-100 mb-2">{attemptsCorrect} / {attemptsTotal}</div>
+                <div className="text-[13px] text-zinc-400">Accuracy : <span className="font-semibold text-zinc-200">{accuracy}%</span></div>
+             </div>
+             {/* Card 3 */}
+             <div className="bg-[#1e1e1e]/80 rounded-xl p-5 border border-white/5 shadow-sm">
+                <div className="text-zinc-400 text-[13px] mb-3">Time Taken</div>
+                <div className="text-3xl font-bold text-zinc-100">{time}</div>
+             </div>
+          </div>
+
+          {/* GFG Specific Warning Box */}
+          <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-4 flex gap-3 items-start">
+             <AlertCircle size={18} className="text-rose-500 shrink-0 mt-0.5" />
+             <p className="text-rose-500/90 text-[13px] leading-relaxed">
+               You get marks only for the first correct submission if you solve the problem without viewing the full solution.
+             </p>
+          </div>
+        </div>
+      );
+      
     default:
       return <div key={i} className="text-zinc-400 font-mono text-[13px]">{log.content}</div>;
   }
@@ -128,14 +183,15 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [runningCase, setRunningCase] = useState<number | null>(null); 
+  const [runningBatchInfo, setRunningBatchInfo] = useState<string | null>(null); 
   const [isMobile, setIsMobile] = useState(false);
   
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [contestStatus, setContestStatus] = useState<'upcoming' | 'active' | 'ended'>('upcoming');
   const [lastRunTime, setLastRunTime] = useState<number>(0);
   
-  const [wrongAttempts, setWrongAttempts] = useState<Record<string, number>>({});
+  // Track Problem Statistics globally for the GFG Panel
+  const [problemStats, setProblemStats] = useState<Record<string, { correct: number, total: number }>>({});
   
   const [showEndedPopup, setShowEndedPopup] = useState(false);
   const [showCheatWarning, setShowCheatWarning] = useState(false);
@@ -256,7 +312,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     setLogs([]); 
   };
 
-  // --- EDITOR CONTROL FUNCTIONS ---
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
@@ -264,15 +319,9 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
 
   const handleFormatCode = () => {
     if (!editorRef.current || !monacoRef.current) return;
-    
-    // Attempt default format (Works well for languages with built in LSPs)
     const formatAction = editorRef.current.getAction('editor.action.formatDocument');
-    if (formatAction) {
-        formatAction.run();
-    }
+    if (formatAction) formatAction.run();
 
-    // CUSTOM C++/JAVA FORMATTER FALLBACK
-    // Since Monaco doesn't format C++ out of the box, we manually fix the indentation here!
     if (language === 'c++' || language === 'java') {
         const model = editorRef.current.getModel();
         const currentCode = model.getValue();
@@ -281,23 +330,12 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         const lines = currentCode.split('\n');
         const formatted = lines.map(line => {
             let trimmed = line.trim();
-            
-            // If line starts with a closing brace, outdent before processing
-            if (trimmed.startsWith('}')) {
-                indentLevel = Math.max(0, indentLevel - 1);
-            }
-            
+            if (trimmed.startsWith('}')) indentLevel = Math.max(0, indentLevel - 1);
             const result = trimmed ? '    '.repeat(indentLevel) + trimmed : '';
-            
-            // If line ends with an opening brace, indent next line
-            if (trimmed.endsWith('{')) {
-                indentLevel++;
-            }
-            
+            if (trimmed.endsWith('{')) indentLevel++;
             return result;
         }).join('\n');
 
-        // Apply edits cleanly without breaking the undo history
         if (currentCode !== formatted) {
             editorRef.current.executeEdits('format-code', [{
                 range: model.getFullModelRange(),
@@ -355,6 +393,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     }
   };
 
+  // --- BATCH EVALUATION ENGINE ---
   const handleEvaluation = async (isSubmit = false) => {
     const now = Date.now();
     if (now - lastRunTime < 3000) return;
@@ -375,104 +414,132 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     setLogs([]); 
     
     let currentLogs: LogEntry[] = [];
-    const addLog = (type: LogEntry['type'], content: string) => {
-        currentLogs = [...currentLogs, { type, content }];
+    const addLog = (type: LogEntry['type'], content?: string, data?: any) => {
+        currentLogs = [...currentLogs, { type, content, data }];
         setLogs(currentLogs);
     };
 
-    addLog('system', isSubmit ? 'Submitting code...' : 'Compiling and running...');
+    const currentProblem = problems[activeProblemIndex];
+    const pId = currentProblem.id;
+
+    // Initialize stats if not exist
+    if (!problemStats[pId]) {
+      setProblemStats(prev => ({ ...prev, [pId]: { correct: 0, total: 0 } }));
+    }
+
+    addLog('system', isSubmit ? 'Compiling and submitting code in batches...' : 'Running public test cases...');
     
     let casesToRun = isSubmit ? testCases : testCases.filter(tc => tc.is_public === true || tc.is_public === 'true' || tc.isPublic === true || tc.isPublic === 'true');
     if (casesToRun.length === 0 && testCases.length > 0) casesToRun = [testCases[0]];
     
-    let allPassed = true;
     let passedCount = 0;
+    const startTimeExecute = performance.now();
     
-    for (let i = 0; i < casesToRun.length; i++) {
-      const tc = casesToRun[i];
-      addLog('case_header', `Case ${i + 1}`);
-      setRunningCase(i + 1); 
-      
-      const rawIn = String(tc.raw_input || tc.rawInput || '').replace(/\\n/g, '\n');
-      const expOut = String(tc.expected_output || tc.expected || '').trim();
-      const isPub = tc.is_public === true || tc.is_public === 'true';
-      const hasMultiple = tc.has_multiple_answers === true || tc.has_multiple_answers === 'true';
-      
-      try {
-        const { output, statusCode } = await executeCodeCustom(language, code, rawIn);
-        const normalizedActual = output.replace(/\s+/g, '');
-        
-        let isCorrect = false;
-        
-        if (hasMultiple) {
-          const expectedLines = expOut.split('\n').map(l => l.trim()).filter(Boolean);
-          const actualLines = output.split('\n').map(l => l.trim()).filter(Boolean);
+    // --- BATCHING LOGIC ---
+    // Chunk array into sizes of 3 to avoid overwhelming the HF space while still speeding up execution
+    const BATCH_SIZE = 3;
+    const batches = [];
+    for (let i = 0; i < casesToRun.length; i += BATCH_SIZE) {
+        batches.push(casesToRun.slice(i, i + BATCH_SIZE));
+    }
 
-          if (expectedLines.length === actualLines.length && actualLines.length > 0) {
-            isCorrect = expectedLines.every((expLine, index) => {
-              const actLine = actualLines[index].replace(/\s+/g, ''); 
-              const possibleAnswers = expLine.split('|||').map(ans => ans.replace(/\s+/g, ''));
-              return possibleAnswers.includes(actLine);
-            });
-          } else {
-            isCorrect = false; 
-          }
-        } else {
-          const normalizedExpected = expOut.replace(/\s+/g, '');
-          isCorrect = normalizedActual === normalizedExpected && normalizedExpected !== '';
-        }
+    for (let b = 0; b < batches.length; b++) {
+        const currentBatch = batches[b];
+        const startIdx = b * BATCH_SIZE;
+        setRunningBatchInfo(`Executing cases ${startIdx + 1} to ${startIdx + currentBatch.length} of ${casesToRun.length}...`);
 
-        if (statusCode !== 200 && statusCode !== undefined) {
-          addLog('error', `Runtime Error:\n${output}`);
-          allPassed = false;
-        } else if (isCorrect) {
-          addLog('success', 'Accepted');
-          if (isPub) {
-             addLog('actual_pass', output);
-          }
-          passedCount++;
-        } else {
-          addLog('error', 'Wrong Answer');
-          if (isPub) {
-             addLog('expected', expOut);
-             addLog('actual_fail', output);
-          }
-          allPassed = false;
+        // Execute batch concurrently
+        const batchPromises = currentBatch.map(async (tc) => {
+            const rawIn = String(tc.raw_input || tc.rawInput || '').replace(/\\n/g, '\n');
+            const expOut = String(tc.expected_output || tc.expected || '').trim();
+            const hasMultiple = tc.has_multiple_answers === true || tc.has_multiple_answers === 'true';
+            
+            try {
+                const { output, statusCode } = await executeCodeCustom(language, code, rawIn);
+                const normalizedActual = output.replace(/\s+/g, '');
+                let isCorrect = false;
+                
+                if (hasMultiple) {
+                    const expectedLines = expOut.split('\n').map(l => l.trim()).filter(Boolean);
+                    const actualLines = output.split('\n').map(l => l.trim()).filter(Boolean);
+                    if (expectedLines.length === actualLines.length && actualLines.length > 0) {
+                        isCorrect = expectedLines.every((expLine, index) => {
+                            const actLine = actualLines[index].replace(/\s+/g, ''); 
+                            const possibleAnswers = expLine.split('|||').map(ans => ans.replace(/\s+/g, ''));
+                            return possibleAnswers.includes(actLine);
+                        });
+                    }
+                } else {
+                    const normalizedExpected = expOut.replace(/\s+/g, '');
+                    isCorrect = normalizedActual === normalizedExpected && normalizedExpected !== '';
+                }
+
+                return { success: statusCode === 200 || statusCode === undefined, isCorrect, output, expOut, rawIn, tc };
+            } catch (err: any) {
+                return { success: false, isCorrect: false, output: err.message, tc };
+            }
+        });
+
+        const results = await Promise.all(batchPromises);
+
+        // Process batch results
+        for (let i = 0; i < results.length; i++) {
+            const res = results[i];
+            const caseNum = startIdx + i + 1;
+            const isPub = res.tc.is_public === true || res.tc.is_public === 'true';
+
+            // Only spam the log terminal individually if it's NOT a full submission, OR if it failed
+            if (!isSubmit || !res.isCorrect || !res.success) {
+                addLog('case_header', `${caseNum}`);
+                if (!res.success) {
+                    addLog('error', `Runtime Error:\n${res.output}`);
+                } else if (res.isCorrect) {
+                    addLog('success', 'Accepted');
+                    if (isPub) addLog('actual_pass', res.output);
+                } else {
+                    addLog('error', 'Wrong Answer');
+                    if (isPub) {
+                        addLog('expected', res.expOut);
+                        addLog('actual_fail', res.output);
+                    }
+                }
+            }
+            if (res.isCorrect) passedCount++;
         }
-      } catch (err: any) { 
-        addLog('error', `Internal Error:\n${err.message}`);
-        allPassed = false; 
-      }
-      
-      if (!allPassed) {
-        setRunningCase(null);
-        break;
-      }
-      await new Promise(r => setTimeout(r, 500)); 
     }
     
-    setRunningCase(null);
+    setRunningBatchInfo(null);
+    const endTimeExecute = performance.now();
+    const exactTimeTaken = ((endTimeExecute - startTimeExecute) / 1000).toFixed(2);
+    const allPassed = passedCount === casesToRun.length;
 
     if (isSubmit) {
-      const currentProblem = problems[activeProblemIndex];
       const diffStr = (currentProblem?.difficulty || 'easy').toLowerCase();
       const defaultPts = diffStr === 'hard' ? 300 : diffStr === 'medium' ? 200 : 100;
       const defaultPenalty = diffStr === 'hard' ? 20 : diffStr === 'medium' ? 10 : 5;
       
-      const currentWrongCount = wrongAttempts[currentProblem.id] || 0;
-      const pointsEarned = Math.max(0, defaultPts - (currentWrongCount * defaultPenalty));
+      const currentStats = problemStats[pId] || { correct: 0, total: 0 };
+      const newTotal = currentStats.total + 1;
+      const newCorrect = allPassed ? currentStats.correct + 1 : currentStats.correct;
+      const accuracy = Math.round((newCorrect / newTotal) * 100);
+      
+      setProblemStats(prev => ({
+          ...prev,
+          [pId]: { correct: newCorrect, total: newTotal }
+      }));
 
-      // Calculate time taken for this attempt
-      let timeTakenSeconds = 0;
+      // Calculate penalty based on total WRONG attempts (Total - Correct)
+      const wrongAttemptsCount = newTotal - newCorrect - (allPassed ? 0 : 1);
+      const pointsEarned = Math.max(0, defaultPts - (wrongAttemptsCount * defaultPenalty));
+
+      let dbTimeTakenSeconds = 0;
       if (contest?.start_time) {
           const startTimeMs = new Date(contest.start_time).getTime();
-          const nowMs = Date.now();
-          if (nowMs > startTimeMs) {
-              timeTakenSeconds = Math.floor((nowMs - startTimeMs) / 1000);
+          if (Date.now() > startTimeMs) {
+              dbTimeTakenSeconds = Math.floor((Date.now() - startTimeMs) / 1000);
           }
       }
 
-      // 1. Log EVERY attempt to the new 'submissions' table (Option A)
       if (user) {
         try {
             await supabase.from('submissions').insert([{
@@ -483,67 +550,56 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                 code: code,
                 passed: allPassed,
                 score_awarded: allPassed ? pointsEarned : 0,
-                time_taken_seconds: timeTakenSeconds
+                time_taken_seconds: dbTimeTakenSeconds
             }]);
-        } catch (e) {
-            console.error("Failed to log submission:", e);
-        }
+
+            if (allPassed) {
+                const { data: existingEntry } = await supabase
+                    .from('leaderboard')
+                    .select('id, score, time_taken_seconds')
+                    .eq('user_uid', user.uid || user.id)
+                    .eq('problem_id', currentProblem.id)
+                    .single();
+
+                if (existingEntry) {
+                    if (pointsEarned > existingEntry.score || 
+                       (pointsEarned === existingEntry.score && dbTimeTakenSeconds < existingEntry.time_taken_seconds)) {
+                        await supabase.from('leaderboard')
+                            .update({ score: pointsEarned, time_taken_seconds: dbTimeTakenSeconds, language_used: language })
+                            .eq('id', existingEntry.id);
+                    }
+                } else {
+                    await supabase.from('leaderboard').insert([{ 
+                        user_uid: user.uid || user.id, 
+                        display_name: user.displayName || user.name || 'User', 
+                        problem_id: currentProblem.id, 
+                        score: pointsEarned, 
+                        time_taken_seconds: dbTimeTakenSeconds, 
+                        language_used: language
+                    }]);
+                }
+            }
+        } catch (e) { console.error("Database sync failed:", e); }
       }
 
-      // 2. Handle the Leaderboard (Keep only the best attempt)
-      if (!allPassed) {
-        setWrongAttempts(prev => ({
-          ...prev,
-          [currentProblem.id]: currentWrongCount + 1
-        }));
-        addLog('summary_fail', `Failed (${passedCount}/${casesToRun.length} test cases)`);
-      } else {
-        addLog('summary_pass', `Accepted (${passedCount}/${casesToRun.length} test cases)`);
-        
-        if (user) {
-          try {
-              // Check if the user already has a score for this problem
-              const { data: existingEntry } = await supabase
-                  .from('leaderboard')
-                  .select('id, score, time_taken_seconds')
-                  .eq('user_uid', user.uid || user.id)
-                  .eq('problem_id', currentProblem.id)
-                  .single();
+      // RENDER GFG PANEL
+      addLog('gfg_panel', '', {
+          passed: passedCount,
+          total: casesToRun.length,
+          attemptsCorrect: newCorrect,
+          attemptsTotal: newTotal,
+          time: exactTimeTaken,
+          accuracy: accuracy,
+          isSuccess: allPassed
+      });
 
-              if (existingEntry) {
-                  // UPDATE LOGIC: Only overwrite if the new score is strictly better, 
-                  // or if the score is tied but the time is faster.
-                  if (pointsEarned > existingEntry.score || 
-                     (pointsEarned === existingEntry.score && timeTakenSeconds < existingEntry.time_taken_seconds)) {
-                      
-                      await supabase.from('leaderboard')
-                          .update({ 
-                              score: pointsEarned, 
-                              time_taken_seconds: timeTakenSeconds,
-                              language_used: language
-                          })
-                          .eq('id', existingEntry.id);
-                  }
-              } else {
-                  // INSERT LOGIC: First time solving this problem
-                  await supabase.from('leaderboard').insert([{ 
-                      user_uid: user.uid || user.id, 
-                      display_name: user.displayName || user.name || 'User', 
-                      problem_id: currentProblem.id, 
-                      score: pointsEarned, 
-                      time_taken_seconds: timeTakenSeconds, 
-                      language_used: language
-                  }]);
-              }
-              
-              addLog('points', `Points Earned: ${pointsEarned}`);
-              addLog('time', `Runtime: ${formatTime(timeTakenSeconds)}`);
-          } catch (e) {
-              console.error("Failed to update leaderboard:", e);
-          }
+    } else {
+        // Run (not Submit)
+        if (allPassed) {
+             addLog('system', `All ${passedCount}/${casesToRun.length} public test cases passed successfully.`);
         }
-      }
     }
+
     setIsRunning(false);
   };
 
@@ -556,8 +612,9 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   const displayPoints = activeProblem?.points || defaultPoints;
   const displayPenalty = activeProblem?.penalty || defaultPenalty;
   
-  const currentWrongCount = wrongAttempts[activeProblem?.id] || 0;
-  const availablePoints = Math.max(0, displayPoints - (currentWrongCount * displayPenalty));
+  const activeStats = problemStats[activeProblem?.id] || { correct: 0, total: 0 };
+  const wrongCount = activeStats.total - activeStats.correct;
+  const availablePoints = Math.max(0, displayPoints - (wrongCount * displayPenalty));
 
   // --- JSON STRING LEAK PARSER ---
   let problemDesc = activeProblem?.description || '';
@@ -788,7 +845,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
 
             <Panel minSize={20} className="flex flex-col bg-[#121212]">
                <PanelGroup direction="vertical">
-                 <Panel defaultSize={70} minSize={20} className="flex flex-col">
+                 <Panel defaultSize={60} minSize={20} className="flex flex-col">
                     <div className="h-10 bg-[#121212] border-b border-white/5 flex items-center justify-between px-2 shrink-0 relative z-30">
                        <select value={language} onChange={handleLanguageChange} className="bg-white/5 text-zinc-300 text-[12px] font-medium outline-none cursor-pointer hover:bg-white/10 px-2 py-1 rounded transition-colors">
                           <option value="c++">C++</option>
@@ -903,9 +960,9 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                     <div className="w-8 h-0.5 bg-white/10 rounded-full"></div>
                  </PanelResizeHandle>
                  
-                 <Panel className="bg-[#121212] flex flex-col" minSize={10}>
+                 <Panel className="bg-[#121212] flex flex-col" minSize={20}>
                     <div className="h-10 border-b border-white/5 flex items-center justify-between px-4 shrink-0 bg-[#121212]">
-                       <span className="text-[12px] font-semibold text-zinc-300 flex gap-2 items-center"><Terminal size={14} className="text-zinc-500"/> Test Result</span>
+                       <span className="text-[12px] font-semibold text-zinc-300 flex gap-2 items-center"><Terminal size={14} className="text-zinc-500"/> Terminal</span>
                        {logs.length > 0 && <button onClick={() => setLogs([])} className="text-[12px] text-zinc-500 hover:text-zinc-300 transition-colors">Clear</button>}
                     </div>
                     
@@ -914,11 +971,11 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                            <div className="flex flex-col">
                                {logs.map((l, i) => renderTerminalLog(l, i))}
                                
-                               {/* LOADER FOR CURRENT TEST CASE */}
-                               {isRunning && runningCase !== null && (
+                               {/* BATCH EXECUTION LOADER */}
+                               {isRunning && runningBatchInfo && (
                                   <div className="flex items-center gap-3 text-zinc-400 font-mono text-[13px] mt-2 mb-4 p-3 bg-white/5 rounded-md border border-white/5">
                                       <Loader2 size={16} className="animate-spin text-emerald-500" />
-                                      Executing Case {runningCase}...
+                                      {runningBatchInfo}
                                   </div>
                                )}
                            </div>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useMotionTemplate } from "framer-motion";
+
 import Fuse from "fuse.js";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GlobalRibbon from "@/components/GlobalRibbon";
-import { Search, ListFilter, Code, BookOpen, Users, CornerDownRight, Zap, TerminalSquare, Plus, Minus } from "lucide-react";
+import { Search, ListFilter, Code, BookOpen, Users, CornerDownRight, Zap, TerminalSquare, Plus, Minus, Layers } from "lucide-react";
 import { fetchAlgorithms, type Algorithm } from "@/lib/algorithms";
 
 // --- INTERACTIVE ANTIGRAVITY PARTICLE CANVAS ---
@@ -133,6 +134,112 @@ const InteractiveParticleBackground = () => {
   }, []);
 
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-80" />;
+};
+
+const AlgorithmTiltCard = ({ algo, onClick, index }: { algo: Algorithm, onClick: () => void, index: number }) => {
+  const boundingRef = useRef<HTMLDivElement>(null);
+  
+  // Mouse coordinates (0 to 1 mapping)
+  const mouseX = useMotionValue(0.5);
+  const mouseY = useMotionValue(0.5);
+
+  // Smooth springs for heavy, physical feeling
+  const springConfig = { damping: 25, stiffness: 300, mass: 0.5 };
+  const smoothX = useSpring(mouseX, springConfig);
+  const smoothY = useSpring(mouseY, springConfig);
+
+  // Map mouse position to rotation (-12deg to +12deg for dramatic effect)
+  const rotateX = useTransform(smoothY, [0, 1], [12, -12]);
+  const rotateY = useTransform(smoothX, [0, 1], [-12, 12]);
+
+  // Dynamic glare mapped to mouse position
+  const glareX = useTransform(smoothX, [0, 1], [0, 100]);
+  const glareY = useTransform(smoothY, [0, 1], [0, 100]);
+  const backgroundGlare = useMotionTemplate`radial-gradient(circle 250px at ${glareX}% ${glareY}%, rgba(255, 255, 255, 0.1), transparent 80%)`;
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!boundingRef.current) return;
+    const rect = boundingRef.current.getBoundingClientRect();
+    
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    
+    mouseX.set(x);
+    mouseY.set(y);
+  };
+
+  const handleMouseLeave = () => {
+    // Reset to center on leave
+    mouseX.set(0.5);
+    mouseY.set(0.5);
+  };
+
+  return (
+    <motion.div
+      layout // Handles grid reflow
+      initial={{ opacity: 0, y: 30, scale: 0.9 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.5, delay: (index % 4) * 0.08, ease: "easeOut" }}
+      style={{ perspective: "1200px" }} // The critical perspective wrapper
+      className="w-full h-full"
+    >
+      <motion.div
+        ref={boundingRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        onClick={onClick}
+        style={{ 
+          rotateX, 
+          rotateY, 
+          transformStyle: "preserve-3d" // Allows children to pop out
+        }}
+        className="group relative flex flex-col justify-between h-full min-h-[240px] rounded-[1.25rem] border border-white/[0.05] bg-[#0c0e14]/80 backdrop-blur-md p-6 cursor-pointer shadow-[0_10px_30px_-15px_rgba(0,0,0,0.8)] transition-colors duration-300 hover:border-blue-500/30"
+      >
+        {/* Dynamic Glare Overlay */}
+        <motion.div 
+          className="absolute inset-0 rounded-[1.25rem] pointer-events-none z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          style={{ background: backgroundGlare }}
+        />
+
+        {/* 3D Popping Content Wrapper */}
+        <div 
+          className="relative z-10 flex flex-col h-full gap-5 transition-transform duration-300 group-hover:translate-z-10"
+          style={{ transform: "translateZ(40px)" }} // The magic parallax pop
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-black/50 border border-white/[0.08] shadow-inner transition-transform duration-300 group-hover:scale-110">
+              <Layers className="w-5 h-5 text-blue-400 group-hover:text-cyan-300 transition-colors" strokeWidth={1.5} />
+            </div>
+            <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase bg-blue-900/10 border border-blue-500/20 px-3 py-1.5 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+              {algo.category}
+            </span>
+          </div>
+          
+          <div className="flex-1 flex flex-col gap-3">
+            <h3 className="text-xl font-semibold tracking-tight text-zinc-100 group-hover:text-white transition-colors">{algo.title}</h3>
+            <p className="text-sm text-zinc-400 font-light leading-relaxed line-clamp-2">{algo.description}</p>
+          </div>
+
+          {algo.tags && algo.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {algo.tags.slice(0, 3).map((tag, idx) => (
+                <span key={idx} className="text-[10px] px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05] text-zinc-300 font-medium tracking-wide">
+                  {tag}
+                </span>
+              ))}
+              {algo.tags.length > 3 && (
+                <span className="text-[10px] px-2 py-1 rounded-md bg-transparent border border-dashed border-white/[0.1] text-zinc-500 font-medium">
+                  +{algo.tags.length - 3}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 };
 
 const Index = () => {
@@ -297,150 +404,122 @@ const Index = () => {
             </button>
           </motion.div>
 
-          {/* ALGORITHM REGISTRY SECTION */}
-          <section id="registry" className="pt-32 pb-24 relative px-4 overflow-hidden rounded-[2.5rem] mt-24 border border-white/[0.03]">
+          <motion.section 
+            id="registry" 
+            layout
+            className="mt-10 pt-20 pb-24 relative px-6 md:px-12 overflow-hidden rounded-[3rem] border border-white/[0.05] bg-[#05070e]/80 backdrop-blur-2xl shadow-[0_0_100px_rgba(0,0,0,0.8)] flex flex-col"
+          >
+            {/* Inner Section Glare */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[600px] bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.12),transparent_70%)] -z-10 pointer-events-none mix-blend-screen" />
 
-            <div className="absolute inset-0 bg-[#030712] -z-10" />
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none -z-10 [mask-image:radial-gradient(ellipse_100%_100%_at_50%_0%,#000_60%,transparent_100%)]" />
-            <div
-              className="absolute inset-0 opacity-[0.02] pointer-events-none -z-10 [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_40%,transparent_100%)]"
-              style={{ backgroundImage: "repeating-linear-gradient(-45deg, #ffffff 0px, #ffffff 120px, transparent 120px, transparent 240px)" }}
-            />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(14,165,233,0.15),transparent_70%)] -z-10 pointer-events-none mix-blend-screen" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[700px] bg-[radial-gradient(ellipse_at_top,rgba(29,78,216,0.1),transparent_70%)] -z-10 pointer-events-none mix-blend-screen" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_120%_100%_at_50%_0%,transparent_40%,#030712_100%)] -z-10 pointer-events-none" />
+            <motion.div layout className="text-center mb-16 relative z-10">
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-5">Explore the Library</h2>
+              <p className="text-zinc-400 font-light max-w-xl mx-auto text-sm md:text-base">100+ implementations with Complexity Telemetry and real-time visualization.</p>
+            </motion.div>
 
-            <div className="text-center mb-16 relative z-10">
-              <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white mb-4">Explore the Algorithm Library</h2>
-              <p className="text-zinc-500 font-light max-w-xl mx-auto">Access 100+ implementations in Python, Java, and C++ with Text Explanations, Complexity Telemetry, and real-time visualization.</p>
-            </div>
             {/* SEARCH & FILTER */}
-            <div className="mb-16 relative z-20 space-y-6">
-              <div className="relative max-w-xl mx-auto flex items-center bg-[#070707] border border-white/[0.06] rounded-full px-5 py-3.5 shadow-2xl transition-all hover:border-white/[0.12]">
-                <Search className="text-zinc-600 mr-4" size={20} />
+            <motion.div layout className="mb-16 relative z-20 space-y-8">
+              <div className="relative max-w-xl mx-auto flex items-center bg-[#0a0c12] border border-white/[0.08] rounded-full px-6 py-4 shadow-2xl transition-all hover:border-white/[0.2] focus-within:border-blue-500/60 focus-within:shadow-[0_0_30px_rgba(59,130,246,0.2)]">
+                <Search className="text-blue-400 mr-4" size={20} />
                 <input
                   type="text"
                   placeholder="Query by algorithm name (e.g. Quick Sort)..."
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  className="w-full bg-transparent text-sm focus:outline-none text-white placeholder:text-zinc-700 font-mono"
+                  className="w-full bg-transparent text-base focus:outline-none text-white placeholder:text-zinc-600 font-mono"
                 />
               </div>
 
               {/* Collapsible Filter Pills */}
-              <motion.div layout className="flex flex-wrap items-center justify-center gap-2.5 max-w-3xl mx-auto">
+              <motion.div layout className="flex flex-wrap items-center justify-center gap-3 max-w-4xl mx-auto">
                 <AnimatePresence>
                   {visible_pills.map(pill => (
                     <motion.button
                       layout
-                      initial={{ opacity: 0, scale: 0.9 }}
+                      initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
                       key={pill}
                       onClick={() => handleFilterChange(pill)}
-                      className={`px-4 py-1.5 rounded-full border text-xs font-medium transition-all ${activeFilter === pill ? 'bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.15)]' : 'border-white/[0.04] text-zinc-400 hover:border-white/[0.15] hover:text-white bg-white/[0.01]'}`}
+                      className={`px-5 py-2 rounded-full border text-xs font-semibold tracking-wide transition-all duration-300 ${
+                        activeFilter === pill 
+                        ? 'bg-blue-500 text-white border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.4)]' 
+                        : 'border-white/[0.06] text-zinc-400 hover:border-white/[0.2] hover:text-white bg-[#0a0c12]'
+                      }`}
                     >
                       {pill}
                     </motion.button>
                   ))}
                 </AnimatePresence>
 
-                {/* Show More / Hide Button */}
                 {filter_pills.length > INITIAL_PILLS_COUNT && (
                   <motion.button
                     layout
                     onClick={() => setShowAllFilters(!showAllFilters)}
-                    className="px-4 py-1.5 rounded-full border border-dashed border-white/[0.1] text-xs font-medium text-zinc-500 hover:text-white hover:border-white/[0.3] hover:bg-white/[0.02] transition-all flex items-center gap-1.5"
+                    className="px-5 py-2 rounded-full border border-dashed border-white/[0.15] text-xs font-semibold tracking-wide text-zinc-400 hover:text-white hover:border-white/[0.4] hover:bg-white/[0.05] transition-all flex items-center gap-2"
                   >
                     {showAllFilters ? (
-                      <>Collapse <Minus size={12} /></>
+                      <>Collapse <Minus size={14} /></>
                     ) : (
-                      <>+{filter_pills.length - INITIAL_PILLS_COUNT} More <Plus size={12} /></>
+                      <>+{filter_pills.length - INITIAL_PILLS_COUNT} More <Plus size={14} /></>
                     )}
                   </motion.button>
                 )}
               </motion.div>
-            </div>
+            </motion.div>
 
-            {/* ALGO GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[400px]">
+            {/* 3D ALGO GRID */}
+            <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full relative z-20">
               <AnimatePresence>
                 {filteredAlgorithms.length > 0 ? (
                   filteredAlgorithms.slice(0, visibleCount).map((algo, index) => (
-                    <motion.div
-                      key={algo.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="group relative flex flex-col gap-6 overflow-hidden rounded-2xl border border-white/[0.03] bg-grey-400/10 p-7 transition-all hover:border-white/[0.1] hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50 shadow-[inset_0px_1px_1px_0px_rgba(255,255,255,0.02)] cursor-pointer"
-                      onClick={() => navigate(`/view/${algo.id}`)}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
-
-                      <div className="relative z-10 flex flex-col h-full gap-5">
-                        <div className="flex items-center justify-between">
-                          <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                            <TerminalSquare className="w-5 h-5 text-zinc-400 group-hover:text-white" strokeWidth={1.5} />
-                          </div>
-                          <span className="text-[10px] font-mono font-medium tracking-widest text-zinc-500 uppercase bg-white/[0.02] border border-white/[0.04] px-2 py-1 rounded">{algo.category}</span>
-                        </div>
-                        <div className="flex-1 flex flex-col gap-2">
-                          <h3 className="text-xl font-medium tracking-tight text-zinc-200 group-hover:text-white transition-colors">{algo.title}</h3>
-                          <p className="text-sm text-zinc-400 font-light leading-relaxed flex-1 line-clamp-2">{algo.description}</p>
-                        </div>
-
-                        {/* Tags */}
-                        {algo.tags && algo.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {algo.tags.slice(0, 3).map((tag, idx) => (
-                              <span key={idx} className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300/80 font-medium">
-                                {tag}
-                              </span>
-                            ))}
-                            {algo.tags.length > 3 && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-500/10 border border-zinc-500/30 text-zinc-400/80 font-medium">
-                                +{algo.tags.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
+                    <AlgorithmTiltCard 
+                      key={algo.id} 
+                      algo={algo} 
+                      index={index}
+                      onClick={() => navigate(`/view/${algo.id}`)} 
+                    />
                   ))
                 ) : (
                   <motion.div
+                    layout
                     key="empty-state"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 py-20 text-center"
+                    className="col-span-full py-20 text-center"
                   >
-                    <h3 className="text-xl text-zinc-400 mb-2">No algorithms found.</h3>
-                    <p className="text-zinc-600">Try another search query or category filter.</p>
+                    <h3 className="text-xl text-zinc-300 mb-2 font-medium">No algorithms found</h3>
+                    <p className="text-zinc-500">Try adjusting your filters or search query.</p>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
-
+            </motion.div>
             {/* Load More Button */}
-            {filteredAlgorithms.length > visibleCount && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-16 text-center"
-              >
-                <button
-                  onClick={() => setVisibleCount((prev) => prev + 12)}
-                  className="group relative px-8 py-3 rounded-full border border-white/[0.06] bg-[#121318] text-zinc-300 text-sm font-medium transition-all hover:bg-white hover:text-black hover:border-white shadow-xl"
+            <AnimatePresence>
+              {filteredAlgorithms.length > visibleCount && (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="mt-20 flex justify-center w-full relative z-20"
                 >
-                  <span className="relative z-10 flex items-center gap-2">
-                    Load More Algorithms <Zap className="w-4 h-4 text-zinc-500 group-hover:text-black transition-colors" />
-                  </span>
-                  <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-10 transition-opacity" />
-                </button>
-              </motion.div>
-            )}
+                  <button
+                    onClick={() => setVisibleCount((prev) => prev + 8)}
+                    className="group relative px-8 py-4 rounded-full border border-white/[0.1] bg-[#0a0c12] text-zinc-200 text-sm font-semibold tracking-wide transition-all duration-300 hover:bg-white hover:text-black shadow-[0_0_30px_rgba(0,0,0,0.5)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] overflow-hidden"
+                  >
+                    <span className="relative z-10 flex items-center gap-2">
+                      Load More Matrix <Zap className="w-4 h-4 text-blue-500 group-hover:text-black transition-colors" />
+                    </span>
+                    {/* Hover light sweep effect */}
+                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          </section>
+          </motion.section>
 
         </main>
 

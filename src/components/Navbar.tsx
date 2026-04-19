@@ -5,125 +5,125 @@ import { collection, query, orderBy, onSnapshot, limit } from "firebase/firestor
 import { firestoreDB, logout } from "../lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { executeGoogleSignIn, executeGithubSignIn } from "@/App";
 import {
-  Home,
-  Terminal,
-  Cpu,
-  BookOpen,
-  MessageCircle,
-  LogOut,
-  Menu,
-  X,
-  Bell,
-  CheckCircle2,
-  UserCircle2,
-  UserPen,
-  ChevronDown,
-  Zap,
-  Activity,
-  Sparkles,
-  Sun,
-  Moon,
-  Code2,
-  BarChart3,
-  BrainCircuit,
+  Home, Terminal, Cpu, BookOpen, MessageCircle, LogOut, Menu, X,
+  Bell, CheckCircle2, UserCircle2, UserPen, ChevronDown, Zap, Activity,
+  Sparkles, Sun, Moon, Code2, BarChart3, BrainCircuit, Network,
+  TerminalSquare, BookText, Trophy, GraduationCap, Layers, Github, Globe, Newspaper
 } from "lucide-react";
 
-const timeAgo = (timestamp: number) => {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return "Just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const timeAgo = (ts: number) => {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return "Just now";
+  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 };
 
-interface NotifPost {
-  id: string;
-  title: string;
-  authorName: string;
-  createdAt: number;
-  isUnread: boolean;
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface NotifPost { id: string; title: string; authorName: string; createdAt: number; isUnread: boolean; }
+interface NavSubItem { name: string; path: string; icon: React.ElementType; description?: string; }
+interface NavGroup  { label: string; icon: React.ElementType; items: NavSubItem[]; }
 
+// ─── Navigation Data ──────────────────────────────────────────────────────────
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Tools",
+    icon: Cpu,
+    items: [
+      { name: "Visualizer",      path: "/visualizer", icon: Network,         description: "60FPS execution engine" },
+      { name: "Compiler",        path: "/compiler",   icon: TerminalSquare,  description: "Multi-language code runner" },
+      { name: "Analyse TC",      path: "/analyzer",   icon: BarChart3,       description: "AlgoLib AI assistant" },
+    ],
+  },
+  {
+    label: "Learn",
+    icon: GraduationCap,
+    items: [
+      { name: "Notes",   path: "/notes",        icon: BookText,        description: "Programming, OOPs & DSA notes" },
+      { name: "Contests",        path: "/contests",    icon: Trophy,          description: "Live coding contests" },
+      { name: "Quiz Panel",      path: "/quiz-panel",  icon: BrainCircuit,    description: "Create or Join quizzes" },
+    ],
+  },
+];
+
+const NAV_LINKS = [
+  { name: "Home",       path: "/",           icon: Home },
+  { name: "Community",  path: "/discussion", icon: MessageCircle },
+  { name: "Blog",       path: "/blog",       icon: Newspaper },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
 const Navbar = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const location  = useLocation();
+  const navigate  = useNavigate();
   const { user, profile } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotifPost[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [lastReadTime, setLastReadTime] = useState<number>(
-    parseInt(localStorage.getItem("algoLib_lastRead") || Date.now().toString()),
+  const [openGroup,        setOpenGroup]        = useState<string | null>(null);
+  const [isMobileOpen,     setIsMobileOpen]     = useState(false);
+  const [isProfileOpen,    setIsProfileOpen]    = useState(false);
+  const [isNotifOpen,      setIsNotifOpen]      = useState(false);
+  const [isAuthModalOpen,  setIsAuthModalOpen]  = useState(false);
+  const [notifications,    setNotifications]    = useState<NotifPost[]>([]);
+  const [unreadCount,      setUnreadCount]      = useState(0);
+  const [lastReadTime,     setLastReadTime]     = useState<number>(
+    parseInt(localStorage.getItem("algoLib_lastRead") || Date.now().toString())
   );
 
-  const desktopNotifRef = useRef<HTMLDivElement>(null);
-  const mobileNotifRef = useRef<HTMLDivElement>(null);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
-  const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
+  const navRef         = useRef<HTMLDivElement>(null);
+  const profileRef     = useRef<HTMLDivElement>(null);
+  const mProfileRef    = useRef<HTMLDivElement>(null);
+  const notifDeskRef   = useRef<HTMLDivElement>(null);
+  const notifMobRef    = useRef<HTMLDivElement>(null);
 
+  // Close everything on route change
   useEffect(() => {
-    setIsMobileMenuOpen(false);
+    setIsMobileOpen(false);
+    setOpenGroup(null);
     setIsNotifOpen(false);
-    setIsProfileMenuOpen(false);
+    setIsProfileOpen(false);
   }, [location.pathname]);
 
+  // Click-outside handler
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const outsideDesktopNotif = desktopNotifRef.current && !desktopNotifRef.current.contains(target);
-      const outsideMobileNotif = mobileNotifRef.current && !mobileNotifRef.current.contains(target);
-      const outsideProfile = profileMenuRef.current && !profileMenuRef.current.contains(target);
-      const outsideMobileProfile = mobileProfileMenuRef.current && !mobileProfileMenuRef.current.contains(target);
-
-      if (outsideDesktopNotif && outsideMobileNotif) setIsNotifOpen(false);
-      if (outsideProfile && outsideMobileProfile) setIsProfileMenuOpen(false);
+    const handler = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (navRef.current && !navRef.current.contains(t)) setOpenGroup(null);
+      if (profileRef.current  && !profileRef.current.contains(t)  &&
+          mProfileRef.current  && !mProfileRef.current.contains(t))  setIsProfileOpen(false);
+      if (notifDeskRef.current && !notifDeskRef.current.contains(t) &&
+          notifMobRef.current  && !notifMobRef.current.contains(t))  setIsNotifOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Notification feed
   useEffect(() => {
-    if (!user || profile?.is_profile_complete === false) return;
-
+    if (!user || !profile?.is_profile_complete) return;
     const q = query(collection(firestoreDB, "community_posts"), orderBy("createdAt", "desc"), limit(15));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    return onSnapshot(q, (snap) => {
       let count = 0;
-      const fetched: NotifPost[] = [];
-
-      snapshot.forEach((item) => {
-        const post = item.data();
-        if (post.createdAt) {
-          const time = post.createdAt.toMillis();
-          const isUnread = time > lastReadTime && post.authorId !== user?.uid;
-          if (isUnread) count += 1;
-          fetched.push({
-            id: item.id,
-            title: post.title,
-            authorName: post.authorName,
-            createdAt: time,
-            isUnread,
-          });
-        }
+      const list: NotifPost[] = [];
+      snap.forEach((d) => {
+        const p = d.data();
+        if (!p.createdAt) return;
+        const t = p.createdAt.toMillis();
+        const isUnread = t > lastReadTime && p.authorId !== user?.uid;
+        if (isUnread) count++;
+        list.push({ id: d.id, title: p.title, authorName: p.authorName, createdAt: t, isUnread });
       });
-
-      setNotifications(fetched);
+      setNotifications(list);
       setUnreadCount(count);
     });
+  }, [lastReadTime, user, profile?.is_profile_complete]);
 
-    return () => unsubscribe();
-  }, [lastReadTime, user, profile?.is_profile_complete]); 
-
-  const handleToggleNotif = () => {
-    setIsNotifOpen((prev) => !prev);
-    setIsProfileMenuOpen(false); 
+  const handleNotifOpen = () => {
+    setIsNotifOpen(p => !p);
+    setIsProfileOpen(false);
     if (!isNotifOpen && unreadCount > 0) {
       const now = Date.now();
       setLastReadTime(now);
@@ -132,96 +132,65 @@ const Navbar = () => {
     }
   };
 
-  const handleToggleProfile = () => {
-    setIsProfileMenuOpen((prev) => !prev);
-    setIsNotifOpen(false); 
-  };
-
-  const handleNotifItemClick = (e: React.MouseEvent, id: string) => {
+  const handleNotifClick = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     setIsNotifOpen(false);
-    setIsMobileMenuOpen(false);
-
+    setIsMobileOpen(false);
     if (location.pathname === "/discussion") {
-      window.history.replaceState(null, "", `/discussion#${id}`);
-      const element = document.getElementById(id);
-      if (element) {
-        const y = element.getBoundingClientRect().top + window.scrollY - 100;
-        window.scrollTo({ top: y, behavior: "smooth" });
+      // Already on the page — scroll directly
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("notif-highlight");
+        setTimeout(() => el.classList.remove("notif-highlight"), 2000);
       }
       return;
     }
-    navigate(`/discussion#${id}`);
+    // Navigate with state so Community page can scroll after mount
+    navigate("/discussion", { state: { scrollToPost: id } });
   };
 
-  // Removed Notes from main list to add as a small icon later
-  const navLinks = [
-    { name: "Home", path: "/", icon: Home },
-    { name: "Visualizer", path: "/visualizer", icon: Cpu },
-    { name: "Contests", path: "/contests", icon: Terminal },
-    { name: "Compiler", path: "/compiler", icon: Code2 },
-    { name: "Analyse TC", path: "/analyzer", icon: BarChart3 },
-    { name: "Quiz", path: "/quiz-panel", icon: BrainCircuit },
-    { name: "Community", path: "/discussion", icon: MessageCircle },
-  ];
-
-  const avatarSrc = user?.photoURL || "https://placehold.co/96x96/111/fff?text=U";
+  const avatarSrc  = user?.photoURL  || "https://placehold.co/96x96/111/fff?text=U";
   const avatarName = profile?.display_name || user?.displayName || "Engineer";
 
-  const isNotesActive = location.pathname === '/notes';
-  const isDevActive = location.pathname === '/developer';
-
-  const ProfileMenu = ({ mobile = false }: { mobile?: boolean }) => (
+  // ── Reusable Pieces ─────────────────────────────────────────────────────────
+  const ProfileDropdown = ({ mobile = false }: { mobile?: boolean }) => (
     <AnimatePresence>
-      {isProfileMenuOpen && user && (
+      {isProfileOpen && user && (
         <motion.div
-          initial={{ opacity: 1, y: 10, scale: 0.98, filter: "blur(90px)" }}
-          animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 1, y: 10, scale: 0.98, filter: "blur(90px)" }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className={`absolute ${mobile ? "right-0 top-14" : "right-0 top-[calc(100%+16px)]"} w-64 rounded-2xl border border-white/[0.2] bg-[#09090b]/95 backdrop-blur-xl p-1.5 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.5)] z-[420]`}
+          initial={{ opacity: 0, y: 8, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 6, scale: 0.97 }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          className={`absolute ${mobile ? "right-0 top-14" : "right-0 top-[calc(100%+14px)]"} w-64 bg-[#0c0c0e]/95 backdrop-blur-xl border border-white/[0.1] rounded-2xl p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[420]`}
         >
-          <div className="px-3 pt-3 pb-4 mb-1.5 border-b border-white/[0.06] flex items-center gap-3">
-             <div className="relative shrink-0">
-               <img src={avatarSrc} alt="avatar" className="w-10 h-10 rounded-full object-cover ring-2 ring-white/10" />
-               <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-[#09090b] rounded-full"></div>
-             </div>
-             <div className="flex flex-col min-w-0">
-               <div className="flex items-center gap-1.5">
-                  <p className="text-sm text-zinc-100 font-semibold truncate tracking-tight">{avatarName}</p>
-               </div>
-               <p className="text-xs text-zinc-500 truncate mt-0.5 font-medium">{user.email}</p>
-             </div>
+          {/* Avatar header */}
+          <div className="px-3 pt-3 pb-3.5 mb-1 border-b border-white/[0.05] flex items-center gap-3">
+            <div className="relative shrink-0">
+              <img src={avatarSrc} alt="avatar" className="w-9 h-9 rounded-full object-cover ring-2 ring-white/10" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#0c0c0e] rounded-full" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm text-zinc-100 font-semibold truncate tracking-tight">{avatarName}</p>
+              <p className="text-xs text-zinc-500 truncate mt-0.5">{user.email}</p>
+            </div>
           </div>
-          
+
           <div className="flex flex-col gap-0.5">
-            <Link to="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.06] transition-all group">
-              <UserCircle2 size={16} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" /> View Profile
-            </Link>
-            
-            <Link to="/edit-profile" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.06] transition-all group">
-              <UserPen size={16} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" /> Edit Profile
-            </Link>
-            
-            <button 
-              onClick={(e) => { e.preventDefault(); toggleTheme(); }} 
-              className="w-full text-left flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-300 hover:text-white hover:bg-white/[0.06] transition-all group"
-            >
-              <span className="flex items-center gap-3">
-                {theme === 'dark' ? (
-                  <Sun size={16} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" />
-                ) : (
-                  <Moon size={16} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" />
-                )}
+            <Link to="/profile"      className="menu-item"><UserCircle2 size={15} className="menu-icon" /> View Profile</Link>
+            <Link to="/edit-profile" className="menu-item"><UserPen     size={15} className="menu-icon" /> Edit Profile</Link>
+            <button onClick={toggleTheme} className="menu-item w-full justify-between">
+              <span className="flex items-center gap-2.5">
+                {theme === "dark"
+                  ? <Sun  size={15} className="menu-icon" />
+                  : <Moon size={15} className="menu-icon" />}
                 Theme
               </span>
-              <span className="text-[11px] text-zinc-500 font-mono uppercase tracking-widest">{theme}</span>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">{theme}</span>
             </button>
-            
-            <div className="h-[1px] bg-white/[0.06] my-1.5 mx-2" />
-            
-            <button onClick={logout} className="w-full text-left flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-all group">
-              <span className="flex items-center gap-3"><LogOut size={16} className="text-zinc-500 group-hover:text-red-400/70 transition-colors" /> Log Out </span>
+            <div className="h-px bg-white/[0.05] my-1 mx-2" />
+            <button onClick={logout} className="menu-item w-full text-zinc-400 hover:text-red-400 hover:bg-red-500/10">
+              <LogOut size={15} className="text-zinc-500 group-hover:text-red-400" /> Log Out
             </button>
           </div>
         </motion.div>
@@ -229,53 +198,41 @@ const Navbar = () => {
     </AnimatePresence>
   );
 
-  const NotificationPanel = ({ isMobile = false }: { isMobile?: boolean }) => (
+  const NotifPanel = ({ mobile = false }: { mobile?: boolean }) => (
     <AnimatePresence>
       {isNotifOpen && (
         <motion.div
-          initial={{ opacity: 0, y: 10, scale: 0.98, filter: "blur(4px)" }}
-          animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, y: 10, scale: 0.98, filter: "blur(4px)" }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className={`absolute ${isMobile ? "-right-16 sm:right-0 top-14 w-[92vw] max-w-[380px]" : "right-0 top-[calc(100%+16px)] w-[400px]"} bg-[#09090b]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-[0_16px_40px_-12px_rgba(0,0,0,0.5)] overflow-hidden z-[120] flex flex-col cursor-default`}
+          initial={{ opacity: 0, y: 8, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 6, scale: 0.97 }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          className={`absolute ${mobile ? "-right-16 sm:right-0 top-14 w-[90vw] max-w-[380px]" : "right-0 top-[calc(100%+14px)] w-[390px]"} bg-[#0c0c0e]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[120]`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="px-5 py-4 border-b border-white/[0.06] flex justify-between items-center bg-white/[0.01]">
-            <h3 className="text-zinc-100 font-semibold text-[15px] flex items-center gap-2 tracking-tight">
-              <Activity size={16} className="text-blue-400" /> Activity Feed
-            </h3>
-            <button className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-300 transition-colors tracking-wide">
-              MARK ALL READ
-            </button>
+          <div className="px-5 py-3.5 border-b border-white/[0.05] flex justify-between items-center">
+            <h3 className="text-zinc-100 font-semibold text-[14px] flex items-center gap-2"><Activity size={15} className="text-blue-400" /> Activity Feed</h3>
           </div>
-          
-          <div className="max-h-[420px] overflow-y-auto overflow-x-hidden flex flex-col custom-scrollbar">
+          <div className="max-h-[420px] overflow-y-auto flex flex-col">
             {notifications.length === 0 ? (
-              <div className="py-16 text-center flex flex-col items-center justify-center">
-                <div className="w-12 h-12 rounded-2xl border border-white/[0.05] flex items-center justify-center mb-4 bg-white/[0.02] shadow-inner">
-                  <CheckCircle2 size={24} className="text-zinc-600" />
+              <div className="py-14 text-center flex flex-col items-center">
+                <div className="w-11 h-11 rounded-2xl border border-white/[0.05] flex items-center justify-center mb-3 bg-white/[0.02]">
+                  <CheckCircle2 size={22} className="text-zinc-600" />
                 </div>
-                <p className="text-zinc-300 text-[15px] font-semibold tracking-tight">You're all caught up.</p>
-                <p className="text-zinc-500 text-sm mt-1">No new activity in the system.</p>
+                <p className="text-zinc-300 text-[14px] font-semibold">All caught up.</p>
+                <p className="text-zinc-600 text-xs mt-1">No new activity.</p>
               </div>
-            ) : notifications.map((notif) => (
-              <a key={notif.id} href={`/discussion#${notif.id}`} onClick={(e) => handleNotifItemClick(e, notif.id)} className={`group relative flex items-start gap-4 p-5 border-b border-white/[0.03] hover:bg-white/[0.04] transition-all ${notif.isUnread ? 'bg-blue-500/[0.02]' : ''}`}>
-                {notif.isUnread && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />}
-                
-                <div className={`mt-0.5 p-2 rounded-full border ${notif.isUnread ? "bg-blue-500/10 border-blue-500/20 text-blue-400" : "bg-white/[0.03] border-white/[0.05] text-zinc-500 group-hover:text-zinc-300"} transition-colors`}>
-                  <MessageCircle size={16} />
+            ) : notifications.map((n) => (
+              <a key={n.id} href={`/discussion#${n.id}`} onClick={(e) => handleNotifClick(e, n.id)}
+                className={`group relative flex items-start gap-4 p-4 border-b border-white/[0.03] hover:bg-white/[0.03] transition-all ${n.isUnread ? "bg-blue-500/[0.02]" : ""}`}>
+                {n.isUnread && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-blue-500" />}
+                <div className={`mt-0.5 p-2 rounded-full border ${n.isUnread ? "bg-blue-500/10 border-blue-500/20 text-blue-400" : "bg-white/[0.03] border-white/[0.05] text-zinc-500 group-hover:text-zinc-300"} transition-colors`}>
+                  <MessageCircle size={14} />
                 </div>
-                
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[14px] font-medium truncate leading-tight mb-1.5 ${notif.isUnread ? 'text-zinc-100' : 'text-zinc-300'}`}>
-                    {notif.title}
-                  </p>
-                  <p className="text-[13px] text-zinc-500 truncate">
-                    <span className="text-zinc-400 font-medium">{notif.authorName}</span> started a discussion
-                  </p>
+                  <p className={`text-[13px] font-medium truncate mb-1 ${n.isUnread ? "text-zinc-100" : "text-zinc-300"}`}>{n.title}</p>
+                  <p className="text-[12px] text-zinc-500 truncate"><span className="text-zinc-400 font-medium">{n.authorName}</span> started a discussion</p>
                 </div>
-
-                <div className="shrink-0 text-[11px] text-zinc-500 font-medium mt-1">{timeAgo(notif.createdAt)}</div>
+                <div className="shrink-0 text-[11px] text-zinc-600 font-medium mt-0.5">{timeAgo(n.createdAt)}</div>
               </a>
             ))}
           </div>
@@ -284,194 +241,373 @@ const Navbar = () => {
     </AnimatePresence>
   );
 
+  // ── Desktop Dropdown ─────────────────────────────────────────────────────────
+  const GroupDropdown = ({ group }: { group: NavGroup }) => (
+    <AnimatePresence>
+      {openGroup === group.label && (
+        <motion.div
+          initial={{ opacity: 0, y: 8, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 4, scale: 0.98 }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-[#0d0d0f]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden z-50"
+        >
+          <div className="p-2">
+            {group.items.map((item) => (
+              <Link key={item.name} to={item.path}
+                onClick={() => setOpenGroup(null)}
+                className="flex items-start gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-colors group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.05] flex items-center justify-center flex-shrink-0 group-hover:bg-white/[0.07] transition-colors">
+                  <item.icon className="w-4 h-4 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
+                </div>
+                <div>
+                  <div className="text-[13px] font-medium text-zinc-200 group-hover:text-white transition-colors">{item.name}</div>
+                  {item.description && <div className="text-[11px] text-zinc-600 mt-0.5 group-hover:text-zinc-500 transition-colors">{item.description}</div>}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  const isNotesActive = location.pathname === "/notes";
+  const isDevActive   = location.pathname === "/developer";
+
   return (
     <>
-      {/* DESKTOP NAVBAR */}
-      <nav className="fixed top-6 inset-x-0 z-50 pointer-events-none hidden md:flex justify-center">
-        <motion.div 
-          initial={{ y: -50, opacity: 0 }} 
-          animate={{ y: 0, opacity: 1 }} 
+      {/* ── DESKTOP ─────────────────────────────────────────────────────────── */}
+      <nav className="fixed top-5 inset-x-0 z-50 pointer-events-none hidden md:flex justify-center">
+        <motion.div
+          ref={navRef}
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="pointer-events-auto flex items-center p-1.5 rounded-full bg-[#09090b]/80 backdrop-blur-xl border border-white/[0.2] shadow-[0_8px_32px_rgba(0,0,0,0.4)] bg-[#09090b]/95"
+          className="pointer-events-auto flex items-center p-1.5 rounded-full bg-[#09090b]/85 backdrop-blur-xl border border-white/[0.12] shadow-[0_8px_40px_rgba(0,0,0,0.5)]"
         >
+          {/* Logo */}
           <Link to="/" className="flex items-center gap-2 pl-4 pr-3 py-1.5 mr-2 rounded-full hover:bg-white/[0.06] transition-colors group">
-            <Zap className="w-[18px] h-[18px] text-zinc-100 group-hover:text-blue-400 transition-colors" fill="currentColor" />
-            <span className="font-extrabold text-white text-[15px] tracking-tight">ALGO<span className="text-zinc-500 font-semibold">LIB</span></span>
+            <Zap className="w-[17px] h-[17px] text-zinc-100 group-hover:text-blue-400 transition-colors" fill="currentColor" />
+            <span className="font-extrabold text-white text-[14px] tracking-tight">ALGO<span className="text-zinc-500 font-semibold">LIB</span></span>
           </Link>
 
-          <div className="flex items-center gap-1 relative">
-            {navLinks.map((tab) => { 
-              const isActive = location.pathname === tab.path; 
-              const isHovered = hoveredTab === tab.name; 
+          {/* Simple nav links */}
+          <div className="flex items-center gap-0.5">
+            {NAV_LINKS.map((tab) => {
+              const isActive = location.pathname === tab.path;
               return (
-                <div key={tab.name} onMouseEnter={() => setHoveredTab(tab.name)} onMouseLeave={() => setHoveredTab(null)} className="relative">
-                  <Link to={tab.path} className={`relative z-10 flex items-center gap-2 px-4 py-2 rounded-full transition-colors duration-200 ${isActive ? "text-white" : "text-zinc-400 hover:text-zinc-200"}`}>
-                    <tab.icon className={`w-[15px] h-[15px] transition-transform duration-300 ${isActive || isHovered ? 'scale-110' : ''} ${isActive ? 'text-white' : 'text-zinc-500'}`} />
-                    <span className="text-[13px] font-semibold tracking-wide">{tab.name}</span>
+                <div key={tab.name} className="relative">
+                  <Link to={tab.path}
+                    className={`relative z-10 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold tracking-wide transition-colors ${isActive ? "text-white" : "text-zinc-400 hover:text-zinc-200"}`}>
+                    <tab.icon className="w-[14px] h-[14px]" />
+                    {tab.name}
                   </Link>
                   {isActive && (
-                    <motion.div 
-                      layoutId="desktop-active-nav" 
-                      className="absolute inset-0 rounded-full bg-white/[0.08] border border-white/[0.04] shadow-inner z-0" 
-                      transition={{ type: "spring", bounce: 0.15, duration: 0.5 }} 
-                    />
+                    <motion.div layoutId="desk-active-nav"
+                      className="absolute inset-0 rounded-full bg-white/[0.08] border border-white/[0.04] z-0"
+                      transition={{ type: "spring", bounce: 0.15, duration: 0.5 }} />
                   )}
+                </div>
+              );
+            })}
+
+            {/* Group dropdowns */}
+            {NAV_GROUPS.map((group) => {
+              const isGroupActive = group.items.some(i => i.path === location.pathname);
+              const isOpen = openGroup === group.label;
+              return (
+                <div key={group.label} className="relative">
+                  <button
+                    onClick={() => setOpenGroup(p => p === group.label ? null : group.label)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold tracking-wide transition-colors ${isOpen || isGroupActive ? "text-white bg-white/[0.07]" : "text-zinc-400 hover:text-zinc-200"}`}
+                  >
+                    <group.icon className="w-[14px] h-[14px]" />
+                    {group.label}
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  <GroupDropdown group={group} />
                 </div>
               );
             })}
           </div>
 
-          <div className="w-[1px] h-6 bg-white/[0.08] mx-3" />
+          <div className="w-px h-5 bg-white/[0.08] mx-3" />
 
+          {/* Right actions */}
           <div className="flex items-center gap-1 pr-1.5">
-            {/* Notes Small Icon */}
-            <Link to="/notes" title="Notes" className={`p-2.5 rounded-full transition-colors ${isNotesActive ? 'text-white bg-white/[0.08]' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]'}`}>
-              <BookOpen className="w-[16px] h-[16px]" />
+
+            {/* Dev */}
+            <Link to="/developer" title="Developer"
+              className={`p-2 rounded-full font-mono font-bold text-[13px] leading-none flex items-center justify-center transition-colors ${isDevActive ? "text-white bg-white/[0.08]" : "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]"}`}>
+              {"</>"}
             </Link>
 
-            {/* Developer Small Icon */}
-            <Link to="/developer" title="Developer" className={`p-2.5 rounded-full transition-colors font-mono font-bold text-[14px] leading-none flex items-center justify-center ${isDevActive ? 'text-white bg-white/[0.08]' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]'}`}>
-              &lt;/&gt;
-            </Link>
-
-            {/* --- VISUAL PROTECTION (DESKTOP) --- */}
+            {/* Notifications */}
             {user && profile?.is_profile_complete && (
-              <div className="relative" ref={desktopNotifRef}>
-                <button onClick={handleToggleNotif} title="Notifications" className={`p-2.5 rounded-full transition-colors relative ${isNotifOpen ? 'bg-white/[0.08] text-white' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]'}`}>
-                  <Bell className="w-[16px] h-[16px]" />
+              <div className="relative" ref={notifDeskRef}>
+                <button onClick={handleNotifOpen}
+                  className={`p-2 rounded-full relative transition-colors ${isNotifOpen ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]"}`}>
+                  <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-2.5 right-2.5 flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500 border border-[#09090b]"></span>
+                    <span className="absolute top-2 right-2 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500 border border-[#09090b]" />
                     </span>
                   )}
                 </button>
-                <NotificationPanel />
+                <NotifPanel />
               </div>
             )}
 
+            {/* Profile or sign-in */}
             {user ? (
-              <div className="relative ml-1.5" ref={profileMenuRef}>
-                <button onClick={handleToggleProfile} className={`flex items-center gap-1.5 rounded-full pl-1.5 pr-2.5 py-1.5 transition-all border ${isProfileMenuOpen ? 'bg-white/[0.08] border-white/[0.08]' : 'bg-transparent border-transparent hover:bg-white/[0.06]'}`}>
+              <div className="relative ml-1" ref={profileRef}>
+                <button onClick={() => { setIsProfileOpen(p => !p); setIsNotifOpen(false); }}
+                  className={`flex items-center gap-1.5 rounded-full pl-1.5 pr-2.5 py-1.5 border transition-all ${isProfileOpen ? "bg-white/[0.08] border-white/[0.08]" : "border-transparent hover:bg-white/[0.06]"}`}>
                   <img src={avatarSrc} alt="avatar" className="w-6 h-6 rounded-full object-cover ring-1 ring-white/10" />
-                  <ChevronDown size={14} className={isProfileMenuOpen ? 'text-zinc-300' : 'text-zinc-500'} />
+                  <ChevronDown size={13} className={isProfileOpen ? "text-zinc-300" : "text-zinc-500"} />
                 </button>
-                <ProfileMenu />
+                <ProfileDropdown />
               </div>
             ) : (
-              <Link to="/auth" className="ml-2 px-4 py-1.5 rounded-full bg-white text-black text-[13px] font-bold tracking-wide hover:bg-zinc-200 transition-colors shadow-md">
-                Sign In
-              </Link>
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="ml-1 px-5 py-2 rounded-full bg-white text-black text-[13px] font-bold hover:bg-zinc-200 transition-colors shadow-md flex items-center gap-1.5"
+              >
+                <Sparkles size={13} /> Sign In
+              </button>
             )}
           </div>
         </motion.div>
       </nav>
 
-      {/* MOBILE NAVBAR */}
+      {/* ── MOBILE ──────────────────────────────────────────────────────────── */}
       <div className="md:hidden fixed top-4 inset-x-4 z-50">
-        <motion.div 
-          initial={{ y: -50, opacity: 0 }} 
-          animate={{ y: 0, opacity: 1 }} 
+        <motion.div
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="relative flex items-center justify-between p-2.5 rounded-[20px] bg-[#09090b]/80 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50 supports-[backdrop-filter]:bg-[#09090b]/60"
+          className="relative flex items-center justify-between p-2.5 rounded-[20px] bg-[#09090b]/85 backdrop-blur-xl border border-white/[0.10] shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50"
         >
           <Link to="/" className="flex items-center gap-2 px-2 group">
             <Zap className="w-4 h-4 text-zinc-100 group-hover:text-blue-400 transition-colors" fill="currentColor" />
             <span className="font-extrabold text-white text-[16px] tracking-tight">ALGO<span className="text-zinc-500 font-semibold">LIB</span></span>
           </Link>
-          
+
           <div className="flex items-center gap-1">
-            
-            {/* --- VISUAL PROTECTION (MOBILE) --- */}
             {user && profile?.is_profile_complete && (
-              <div className="relative" ref={mobileNotifRef}>
-                <button onClick={handleToggleNotif} className={`p-2 rounded-xl transition-colors relative ${isNotifOpen ? 'bg-white/[0.08] text-white' : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'}`}>
+              <div className="relative" ref={notifMobRef}>
+                <button onClick={handleNotifOpen} className={`p-2 rounded-xl relative transition-colors ${isNotifOpen ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"}`}>
                   <Bell size={18} />
                   {unreadCount > 0 && (
-                     <span className="absolute top-2 right-2.5 flex h-2 w-2">
-                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                       <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500 border border-[#09090b]"></span>
-                     </span>
+                    <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500 border border-[#09090b]" />
+                    </span>
                   )}
                 </button>
-                <NotificationPanel isMobile={true} />
+                <NotifPanel mobile />
               </div>
             )}
-
             {user && (
-              <div className="relative" ref={mobileProfileMenuRef}>
-                <button onClick={handleToggleProfile} className={`flex items-center p-1 rounded-full border ml-1 transition-colors ${isProfileMenuOpen ? 'border-white/[0.2] bg-white/[0.05]' : 'border-white/[0.08] hover:border-white/[0.15]'}`}>
+              <div className="relative" ref={mProfileRef}>
+                <button onClick={() => { setIsProfileOpen(p => !p); setIsNotifOpen(false); }}
+                  className={`flex items-center p-1 rounded-full border ml-1 transition-colors ${isProfileOpen ? "border-white/[0.2] bg-white/[0.05]" : "border-white/[0.08]"}`}>
                   <img src={avatarSrc} alt="avatar" className="w-7 h-7 rounded-full object-cover" />
                 </button>
-                <ProfileMenu mobile />
+                <ProfileDropdown mobile />
               </div>
             )}
-
-            <button onClick={() => setIsMobileMenuOpen((prev) => !prev)} className={`p-2 ml-1.5 rounded-xl transition-colors ${isMobileMenuOpen ? 'bg-white text-black' : 'text-zinc-300 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08]'}`}>
-              {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            <button onClick={() => setIsMobileOpen(p => !p)}
+              className={`p-2 ml-1 rounded-xl transition-colors ${isMobileOpen ? "bg-white text-black" : "text-zinc-300 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08]"}`}>
+              {isMobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
         </motion.div>
 
         <AnimatePresence>
-          {isMobileMenuOpen && (
+          {isMobileOpen && (
             <>
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="fixed inset-0 bg-[#030303]/60 backdrop-blur-sm z-40"
-                onClick={() => setIsMobileMenuOpen(false)}
-              />
-              <motion.div 
-                initial={{ opacity: 0, y: -20, scale: 0.96 }} 
-                animate={{ opacity: 1, y: 0, scale: 1 }} 
-                exit={{ opacity: 0, y: -10, scale: 0.98 }} 
+                onClick={() => setIsMobileOpen(false)} />
+
+              <motion.div
+                initial={{ opacity: 0, y: -20, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.98 }}
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                // Added max-h-[80vh], overflow-y-auto, and custom-scrollbar here
-                className="absolute top-full left-0 right-0 mt-3 bg-[#09090b]/95 backdrop-blur-2xl border border-white/[0.08] rounded-[24px] p-2.5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] flex flex-col gap-1 z-50 origin-top max-h-[80vh] overflow-y-auto custom-scrollbar"
+                className="absolute top-full left-0 right-0 mt-3 bg-[#09090b]/95 backdrop-blur-2xl border border-white/[0.10] rounded-[24px] p-2.5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] flex flex-col gap-0.5 z-50 max-h-[80vh] overflow-y-auto"
               >
-                {navLinks.map((tab) => { 
-                  const isActive = location.pathname === tab.path; 
+                {/* Simple links */}
+                {NAV_LINKS.map((tab) => {
+                  const isActive = location.pathname === tab.path;
                   return (
-                    <Link key={tab.name} to={tab.path} onClick={() => setIsMobileMenuOpen(false)} className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden">
+                    <Link key={tab.name} to={tab.path} onClick={() => setIsMobileOpen(false)}
+                      className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden">
                       {isActive && <div className="absolute inset-0 bg-white/[0.06] border border-white/[0.04] rounded-[16px] z-0" />}
-                      <div className={`relative z-10 p-1.5 rounded-lg border ${isActive ? 'bg-white/[0.08] border-white/[0.05] text-white' : 'bg-transparent border-transparent text-zinc-500 group-hover:text-zinc-300 group-hover:bg-white/[0.04] group-hover:border-white/[0.05]'} transition-all`}>
+                      <div className={`relative z-10 p-1.5 rounded-lg border ${isActive ? "bg-white/[0.08] border-white/[0.05] text-white" : "border-transparent text-zinc-500 group-hover:text-zinc-300 group-hover:bg-white/[0.04] group-hover:border-white/[0.05]"} transition-all`}>
                         <tab.icon size={18} />
                       </div>
-                      <span className={`relative z-10 text-[15px] font-semibold transition-colors ${isActive ? 'text-zinc-100' : 'text-zinc-400 group-hover:text-zinc-200'}`}>{tab.name}</span>
+                      <span className={`relative z-10 text-[15px] font-semibold transition-colors ${isActive ? "text-zinc-100" : "text-zinc-400 group-hover:text-zinc-200"}`}>{tab.name}</span>
                     </Link>
-                  ); 
+                  );
                 })}
-                
-                <div className="h-[1px] bg-white/[0.06] my-2 mx-4" />
-                
-                {/* Notes Link (Mobile) */}
-                <Link to="/notes" onClick={() => setIsMobileMenuOpen(false)} className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden">
-                  {isNotesActive && <div className="absolute inset-0 bg-white/[0.06] border border-white/[0.04] rounded-[16px] z-0" />}
-                  <div className={`relative z-10 p-1.5 rounded-lg border ${isNotesActive ? 'bg-white/[0.08] border-white/[0.05] text-white' : 'bg-transparent border-transparent text-zinc-500 group-hover:bg-white/[0.04] group-hover:border-white/[0.05] group-hover:text-zinc-300'} transition-all`}>
-                    <BookOpen size={18} />
-                  </div>
-                  <span className={`relative z-10 text-[15px] font-semibold transition-colors ${isNotesActive ? 'text-zinc-100' : 'text-zinc-400 group-hover:text-zinc-200'}`}>Notes</span>
-                </Link>
 
-                {/* Developer Link (Mobile) */}
-                <Link to="/developer" onClick={() => setIsMobileMenuOpen(false)} className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden">
-                  {isDevActive && <div className="absolute inset-0 bg-white/[0.06] border border-white/[0.04] rounded-[16px] z-0" />}
-                  <div className={`relative z-10 p-1.5 rounded-lg border ${isDevActive ? 'bg-white/[0.08] border-white/[0.05] text-white' : 'bg-transparent border-transparent text-zinc-500 group-hover:bg-white/[0.04] group-hover:border-white/[0.05] group-hover:text-zinc-300'} transition-all font-mono font-bold leading-none`}>
-                    &lt;/&gt;
+                {/* Groups */}
+                {NAV_GROUPS.map((group) => (
+                  <div key={group.label}>
+                    <div className="px-4 py-2 text-[11px] font-semibold tracking-widest text-zinc-600 uppercase">{group.label}</div>
+                    {group.items.map((item) => {
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <Link key={item.name} to={item.path} onClick={() => setIsMobileOpen(false)}
+                          className="relative px-4 py-3 rounded-[16px] flex items-center gap-4 group overflow-hidden">
+                          {isActive && <div className="absolute inset-0 bg-white/[0.06] border border-white/[0.04] rounded-[16px] z-0" />}
+                          <div className={`relative z-10 p-1.5 rounded-lg border ${isActive ? "bg-white/[0.08] border-white/[0.05] text-white" : "border-transparent text-zinc-500 group-hover:text-zinc-300 group-hover:bg-white/[0.04] group-hover:border-white/[0.05]"} transition-all`}>
+                            <item.icon size={17} />
+                          </div>
+                          <div className="relative z-10">
+                            <div className={`text-[14px] font-semibold transition-colors ${isActive ? "text-zinc-100" : "text-zinc-400 group-hover:text-zinc-200"}`}>{item.name}</div>
+                            {item.description && <div className="text-[11px] text-zinc-600">{item.description}</div>}
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
-                  <span className={`relative z-10 text-[15px] font-semibold transition-colors ${isDevActive ? 'text-zinc-100' : 'text-zinc-400 group-hover:text-zinc-200'}`}>Developer</span>
-                </Link>
+                ))}
+
+                <div className="h-px bg-white/[0.06] my-2 mx-4" />
+
+                {/* Notes & Dev */}
+                {[{ name: "Developer", path: "/developer", icon: Code2 }].map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link key={item.name} to={item.path} onClick={() => setIsMobileOpen(false)}
+                      className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden">
+                      {isActive && <div className="absolute inset-0 bg-white/[0.06] border border-white/[0.04] rounded-[16px] z-0" />}
+                      <div className={`relative z-10 p-1.5 rounded-lg border ${isActive ? "bg-white/[0.08] border-white/[0.05] text-white" : "border-transparent text-zinc-500 group-hover:text-zinc-300 group-hover:bg-white/[0.04] group-hover:border-white/[0.05]"} transition-all`}>
+                        <item.icon size={18} />
+                      </div>
+                      <span className={`relative z-10 text-[15px] font-semibold transition-colors ${isActive ? "text-zinc-100" : "text-zinc-400 group-hover:text-zinc-200"}`}>{item.name}</span>
+                    </Link>
+                  );
+                })}
 
                 {!user && (
-                  <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)} className="mt-2 mx-2 mb-1 px-4 py-3.5 rounded-[14px] bg-white text-black flex justify-center items-center gap-2 text-[15px] font-bold active:scale-95 transition-transform">
+                  <button
+                    onClick={() => { setIsMobileOpen(false); setIsAuthModalOpen(true); }}
+                    className="mt-2 mx-2 mb-1 px-4 py-3.5 rounded-[14px] bg-white text-black flex justify-center items-center gap-2 text-[15px] font-bold active:scale-95 transition-transform"
+                  >
                     <Sparkles size={18} /> Get Started
-                  </Link>
+                  </button>
                 )}
               </motion.div>
             </>
           )}
         </AnimatePresence>
       </div>
+
+      {/* ── AUTH MODAL ─────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isAuthModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+            onClick={() => setIsAuthModalOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md bg-[#0A0A0A] border border-white/10 rounded-2xl shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden"
+            >
+              {/* Top glow accent */}
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-500/60 to-transparent" />
+              <div className="absolute -top-20 -right-20 w-40 h-40 bg-cyan-500/10 blur-[50px] rounded-full pointer-events-none" />
+
+              <div className="p-8 relative z-10">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Zap className="w-4 h-4 text-cyan-400" fill="currentColor" />
+                      <span className="text-xs font-mono text-zinc-500 tracking-widest uppercase">AlgoLib</span>
+                    </div>
+                    <h2 className="text-xl font-semibold text-white tracking-tight">Initialize Profile</h2>
+                  </div>
+                  <button
+                    onClick={() => setIsAuthModalOpen(false)}
+                    className="text-zinc-600 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/[0.06]"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <p className="text-sm text-zinc-500 mb-8 leading-relaxed">
+                  Select an auth protocol to securely sync your algorithmic environment.
+                </p>
+
+                {/* Auth buttons */}
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => { setIsAuthModalOpen(false); executeGoogleSignIn(); }}
+                    className="flex items-center justify-center gap-3 w-full h-12 bg-white text-black rounded-xl font-semibold text-[14px] hover:bg-zinc-100 transition-all active:scale-[0.98] shadow-md"
+                  >
+                    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                    </svg>
+                    Continue with Google
+                  </button>
+
+                  <button
+                    onClick={() => { setIsAuthModalOpen(false); executeGithubSignIn(); }}
+                    className="flex items-center justify-center gap-3 w-full h-12 bg-[#24292e] text-white border border-white/5 rounded-xl font-semibold text-[14px] hover:bg-[#2f363d] transition-all active:scale-[0.98]"
+                  >
+                    <Github className="w-5 h-5" />
+                    Continue with GitHub
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-zinc-600 text-center mt-6 leading-relaxed">
+                  By continuing, you agree to our{" "}
+                  <Link to="/terms" onClick={() => setIsAuthModalOpen(false)} className="text-zinc-400 hover:text-white underline underline-offset-2">Terms</Link>{" "}
+                  and{" "}
+                  <Link to="/privacy" onClick={() => setIsAuthModalOpen(false)} className="text-zinc-400 hover:text-white underline underline-offset-2">Privacy Policy</Link>.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Shared CSS */}
+      <style>{`
+        .menu-item {
+          display: flex; align-items: center; gap: 10px;
+          padding: 10px 12px; border-radius: 12px;
+          font-size: 13px; font-weight: 500;
+          color: rgb(212 212 216); text-decoration: none;
+          transition: all 0.15s;
+          cursor: pointer; background: transparent; border: none; text-align: left;
+        }
+        .menu-item:hover { color: white; background: rgba(255,255,255,0.06); }
+        .menu-icon { color: rgb(113 113 122); flex-shrink: 0; }
+        .menu-item:hover .menu-icon { color: rgb(212 212 216); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+      `}</style>
     </>
   );
 };

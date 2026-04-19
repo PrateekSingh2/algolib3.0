@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
-import GuestNavbar from '@/components/GuestNavbar';
 import GlobalRibbon from '@/components/GlobalRibbon';
 import { setTrackedActivity } from '@/hooks/useActivityTracker';
 
@@ -274,7 +273,7 @@ const Visualizer = () => {
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="fixed top-0 left-0 right-0 z-[200]"
           >
-            {user ? <Navbar /> : <GuestNavbar />}
+            <Navbar />
             <div className="hidden sm:block">
               <GlobalRibbon />
             </div>

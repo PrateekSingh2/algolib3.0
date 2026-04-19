@@ -5,7 +5,6 @@ import { Github, Linkedin, Zap, TerminalSquare, Layers, Fingerprint, Code2, Cpu,
 import GlobalRibbon from "@/components/GlobalRibbon";
 import AppFooter from "@/components/AppFooter";
 import Navbar from "@/components/Navbar";
-import GuestNavbar from "@/components/GuestNavbar";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { Helmet } from 'react-helmet-async'; // <-- Added Helmet Import
 
@@ -208,7 +207,7 @@ return (
       {/* INJECTED NAVBAR & GLOBAL RIBBON */}
       <div className="fixed top-0 left-0 w-full z-[100]">
         <GlobalRibbon />
-        {isAuthenticated ? <Navbar /> : <GuestNavbar />}
+        <Navbar />
       </div>
 
       <main className="flex-1 relative z-10 w-full max-w-7xl mx-auto px-6 pt-36 pb-32">

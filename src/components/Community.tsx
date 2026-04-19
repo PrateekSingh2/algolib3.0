@@ -6,6 +6,7 @@ import {
 } from "firebase/firestore";
 import { firestoreDB } from "../lib/firebase";
 import { useAuth } from "@/contexts/AuthContext"; 
+import { useLocation } from "react-router-dom";
 import { 
   MessageSquare, Image as ImageIcon, Reply, Loader2, 
   CheckCircle2, Trophy, Search, Edit2, Trash2, X, Save,
@@ -648,6 +649,7 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
 // --- MAIN COMMUNITY PAGE ---
 export default function Community() {
   const { user, profile } = useAuth();
+  const location = useLocation();
   const [posts, setPosts] = useState<Post[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -659,6 +661,25 @@ export default function Community() {
   
   const createBodyRef = useRef<HTMLTextAreaElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-scroll to post when navigated from Navbar notification
+  useEffect(() => {
+    const scrollTo = (location.state as any)?.scrollToPost;
+    if (!scrollTo || posts.length === 0) return;
+    const tryScroll = (attempts = 0) => {
+      const el = document.getElementById(scrollTo);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('notif-highlight');
+        setTimeout(() => el.classList.remove('notif-highlight'), 2500);
+        // Clear state so refresh doesn't re-scroll
+        window.history.replaceState({}, '', '/discussion');
+      } else if (attempts < 10) {
+        setTimeout(() => tryScroll(attempts + 1), 200);
+      }
+    };
+    tryScroll();
+  }, [location.state, posts]);
   
   // Search Keyboard Shortcut
   useEffect(() => {

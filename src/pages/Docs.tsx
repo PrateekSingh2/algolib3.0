@@ -7,7 +7,6 @@ import {
   Lock, Activity, BookOpen, Layers, Trophy
 } from "lucide-react";
 import { Link } from 'react-router-dom';
-import GuestNavbar from '@/components/GuestNavbar';
 import Navbar from '@/components/Navbar';
 import AppFooter from '@/components/AppFooter';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
@@ -565,6 +564,138 @@ const docData = [
         </div>
       </>
     )
+  },
+  // CATEGORY: QUICK START
+  {
+    id: "quick-start",
+    category: "Getting Started",
+    icon: <Zap size={18} />,
+    title: "Quick Start Guide",
+    textContent: "Getting Started Quick Start Guide Ready to dive into the matrix? Here is exactly how to initialize your workspace, run your first algorithmic visualization, and compete. Step 1: Authentication Before accessing the Visualizer Engine, you must sync your profile. Click Get Started in the top right. Authenticate securely via Google. Wait for the engine to initialize your personal workspace cache. Step 2: Running a Visualization Navigate to the Visualizer Hub. Select a topology, for example, Singly Linked List. Use the HUD Controls to inject nodes, delete pointers, or step through algorithms. Watch the live memory mapping react in real-time. Step 3: Executing Code Want to run Python, Java or C++? Head over to the Multi-Language Compiler. Write or paste your logic. Hit Compile & Execute to stream the standard output directly back into the browser. No local setup required.",
+    sections: [
+      { id: "authentication", title: "Step 1: Authentication" },
+      { id: "visualization", title: "Step 2: Visualization" },
+      { id: "execution", title: "Step 3: Code Execution" }
+    ],
+    content: (
+      <>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20"><Zap className="text-purple-400" size={24} /></div>
+          <h1 className="text-4xl font-bold tracking-tight text-white">Quick Start Guide</h1>
+        </div>
+        <p className="text-lg text-zinc-400 leading-relaxed mb-10">
+          Ready to dive into the matrix? Here is exactly how to initialize your workspace, run your first algorithmic visualization, and begin executing production-grade code.
+        </p>
+
+        <div className="space-y-12">
+          <div>
+            <h2 id="authentication" className="text-xl font-semibold text-white mb-4 flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/[0.05] border border-white/[0.1] text-xs font-mono text-zinc-400">1</span>
+              Authentication
+            </h2>
+            <p className="text-zinc-400 text-sm leading-relaxed mb-4">Before accessing the 60FPS Visualizer Engine or creating Community threads, you must securely authenticate your session.</p>
+            <div className="bg-[#050505] p-5 rounded-xl border border-white/[0.05]">
+              <ul className="space-y-3 text-sm text-zinc-300">
+                <li className="flex gap-2 items-start"><CheckCircle2 size={16} className="text-sky-500 mt-0.5 shrink-0" /> Click <strong className="text-white">Get Started</strong> or <strong className="text-white">Sign In</strong> in the top right navigation.</li>
+                <li className="flex gap-2 items-start"><CheckCircle2 size={16} className="text-sky-500 mt-0.5 shrink-0" /> Authenticate via your preferred provider (Google or GitHub).</li>
+                <li className="flex gap-2 items-start"><CheckCircle2 size={16} className="text-sky-500 mt-0.5 shrink-0" /> Complete your developer profile setup to unlock the Community Matrix.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div>
+            <h2 id="visualization" className="text-xl font-semibold text-white mb-4 flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/[0.05] border border-white/[0.1] text-xs font-mono text-zinc-400">2</span>
+              Running a Visualization
+            </h2>
+            <p className="text-zinc-400 text-sm leading-relaxed mb-4">The core of AlgoLib is its deterministic visualization HUD.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="bg-[#050505] p-5 border border-white/[0.05] rounded-xl">
+                 <Network className="text-teal-400 mb-2" size={20} />
+                 <h4 className="text-white font-medium mb-1">Select Topology</h4>
+                 <p className="text-xs text-zinc-400">Open the Visualizer hub and select data structures like BST, Graphs, or Linked Lists.</p>
+               </div>
+               <div className="bg-[#050505] p-5 border border-white/[0.05] rounded-xl">
+                 <Activity className="text-pink-400 mb-2" size={20} />
+                 <h4 className="text-white font-medium mb-1">Inject State</h4>
+                 <p className="text-xs text-zinc-400">Use the control panel to insert values, delete nodes, or run standard traversal algorithms.</p>
+               </div>
+            </div>
+          </div>
+
+          <div>
+            <h2 id="execution" className="text-xl font-semibold text-white mb-4 flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/[0.05] border border-white/[0.1] text-xs font-mono text-zinc-400">3</span>
+              Code Execution
+            </h2>
+            <p className="text-zinc-400 text-sm leading-relaxed mb-4">Test your logic against our secure remote execution environments.</p>
+            <div className="bg-sky-500/10 border border-sky-500/20 p-5 rounded-xl">
+              <p className="text-sm text-sky-200">
+                 Navigate to the <strong>Multi-Language Compiler</strong>. You can write Python, Java, or C++ directly in the browser. Hit <code>Compile & Execute</code> to stream standard output back in seconds.
+              </p>
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  },
+  // CATEGORY: SUPPORT & FAQ
+  {
+    id: "support-faq",
+    category: "Help & Resources",
+    icon: <MessageSquare size={18} />,
+    title: "Support & FAQ",
+    textContent: "Support & FAQ Encountering an error or have deep architecture doubts? Our direct channels are always open. Frequently Asked Questions Q: Is my code execution environment secure? A: Yes. All code executed in the arena or compiler is securely sandboxed in isolated remote containers, or alternatively, runs safely in local browser memory. Q: Can I run this offline? A: AlgoLib is built as a Progressive Web App (PWA). You can install it on your device and use the core Visualizer Engine entirely offline without ever losing framerate. Developer Support For bug reports, system failures, or business inquiries, contact the core engineering team directly. Email: prateeksinghrajawat2006@gmail.com Response Time: We monitor telemetry and support queues rigorously. Expect an initial technical evaluation within 12-24 hours.",
+    sections: [
+      { id: "faq", title: "Frequently Asked Questions" },
+      { id: "direct-support", title: "Developer Support" }
+    ],
+    content: (
+      <>
+        <div className="flex items-center gap-3 mb-6">
+          <h1 className="text-4xl font-bold tracking-tight text-white">Support & FAQ</h1>
+        </div>
+        <p className="text-lg text-zinc-400 leading-relaxed mb-10">
+          Encountering an error or have deep architecture doubts? Our direct channels are always open. Here are the most common questions, along with our direct support matrix.
+        </p>
+
+        <h2 id="faq" className="text-2xl font-semibold text-white mt-12 mb-6 border-b border-white/[0.05] pb-2">Frequently Asked Questions</h2>
+        
+        <div className="space-y-4 mb-12">
+          <div className="bg-[#050505] border border-white/[0.05] rounded-2xl p-6">
+            <h4 className="text-white font-medium mb-2 flex items-center gap-2"><CheckCircle2 size={16} className="text-green-500"/> Is my code execution isolated?</h4>
+            <p className="text-sm text-zinc-400 leading-relaxed">Yes. All code executed in the arena or compiler is securely sandboxed in isolated remote containers (for contest evaluation) or natively via advanced WebAssembly protocols ensuring complete safety.</p>
+          </div>
+          <div className="bg-[#050505] border border-white/[0.05] rounded-2xl p-6">
+            <h4 className="text-white font-medium mb-2 flex items-center gap-2"><Zap size={16} className="text-yellow-500"/> Can I run the Visualizer offline?</h4>
+            <p className="text-sm text-zinc-400 leading-relaxed">Absolutely. AlgoLib is built as a Progressive Web App (PWA). You can install it on your device and use the core Visualizer Engine entirely offline without any performance degradation.</p>
+          </div>
+          <div className="bg-[#050505] border border-white/[0.05] rounded-2xl p-6">
+            <h4 className="text-white font-medium mb-2 flex items-center gap-2"><Lock size={16} className="text-purple-500"/> Are my Saved Snippets public?</h4>
+            <p className="text-sm text-zinc-400 leading-relaxed">By default, anything you save to your personal snippet vault is entirely private. Only posts you explicitly share on the "Community" hub are visible to the network.</p>
+          </div>
+        </div>
+
+        <h2 id="direct-support" className="text-2xl font-semibold text-white mt-12 mb-6 border-b border-white/[0.05] pb-2">Developer Support</h2>
+        <div className="bg-sky-500/10 border border-sky-500/20 p-8 rounded-2xl relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/20 blur-[50px]" />
+           <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+             <div>
+               <h3 className="text-xl font-bold text-white mb-2">Direct Contact Array</h3>
+               <p className="text-sm text-sky-200/70 mb-4 max-w-md">For bug reports, arena failures, or enterprise business inquiries, contact the core engineering team directly through our encrypted pipeline.</p>
+               
+               <div className="flex items-center gap-3 text-sm">
+                 <span className="px-3 py-1 bg-white/[0.05] border border-white/[0.1] rounded-md font-mono text-white">prateeksinghrajawat2006@gmail.com</span>
+               </div>
+             </div>
+             
+             <a href="mailto:prateeksinghrajawat2006@gmail.com" className="shrink-0 bg-white text-black font-semibold text-sm px-6 py-3 rounded-xl hover:bg-zinc-200 transition-colors shadow-lg shadow-white/10">
+               Ping Network
+             </a>
+           </div>
+        </div>
+      </>
+    )
   }
 ];
 
@@ -667,7 +798,7 @@ const Docs = () => {
 
       {/* INJECTED NAVBAR COMPONENT */}
       <div className="fixed top-0 left-0 w-full z-[100]">
-        {isAuthenticated ? <Navbar /> : <GuestNavbar />}
+        <Navbar />
       </div>
 
       {/* Main Container */}
