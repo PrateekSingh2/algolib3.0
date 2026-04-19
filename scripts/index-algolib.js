@@ -2,33 +2,52 @@ import { google } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import 'dotenv/config'; // Automatically loads your .env file
+import 'dotenv/config'; 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 1. Resolve Credentials
-let clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-let privateKey = process.env.GOOGLE_PRIVATE_KEY;
+let clientEmail = process.env.GOOGLE_CLIENT_EMAIL || process.env.VITE_GOOGLE_CLIENT_EMAIL;
+let privateKey = process.env.GOOGLE_PRIVATE_KEY || process.env.VITE_GOOGLE_PRIVATE_KEY;
 
 if (!clientEmail || !privateKey) {
-  console.log("⚠️ Environment variables not found. Falling back to service_account.json...");
+  console.log("⚠️ Credentials not found in .env. Falling back to service_account.json...");
+  
+  const keyPath = path.resolve(__dirname, '../service_account.json');
+  
+  if (!fs.existsSync(keyPath)) {
+    console.error(`❌ CRITICAL ERROR: Could not find service_account.json at: ${keyPath}`);
+    process.exit(1);
+  }
+
   try {
-    const keyPath = path.resolve(__dirname, '../service_account.json');
     const keyData = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
     clientEmail = keyData.client_email;
     privateKey = keyData.private_key;
   } catch (err) {
-    console.error("❌ Critical Error: No credentials found in .env OR service_account.json");
+    console.error("❌ CRITICAL ERROR: Failed to parse service_account.json.", err.message);
     process.exit(1);
   }
 }
 
-// Fix formatting of the private key
+// 2. Strict Debugging Guardrails
+if (!privateKey) {
+  console.error("❌ CRITICAL ERROR: The private key is undefined!");
+  console.error("👉 Check your service_account.json file. It MUST contain a field named exactly 'private_key'.");
+  process.exit(1);
+}
+
+if (!clientEmail) {
+  console.error("❌ CRITICAL ERROR: The client email is undefined!");
+  console.error("👉 Check your service_account.json file. It MUST contain a field named exactly 'client_email'.");
+  process.exit(1);
+}
+
+// 3. Fix formatting of the private key
 const formattedKey = privateKey.replace(/\\n/g, '\n');
 
-// 2. Initialize the JWT Client
-// NOTE: Use the 'credentials' object property - this solves the "No key set" error
+// 4. Initialize the JWT Client (Modern Object Syntax)
 const jwtClient = new google.auth.JWT({
   email: clientEmail,
   key: formattedKey,
@@ -52,6 +71,7 @@ const urlsToIndex = [
 
 async function submitUrls() {
   try {
+    console.log("🔐 Authenticating with Google Cloud...");
     await jwtClient.authorize();
     console.log("🔓 Authentication successful. Pinging Google...");
 
@@ -72,7 +92,12 @@ async function submitUrls() {
     console.log("🚀 All pages submitted successfully.");
   } catch (error) {
     console.error("❌ Indexing API Error:");
-    console.error(error.response ? error.response.data : error.message);
+    if (error.response && error.response.data) {
+      console.error(JSON.stringify(error.response.data, null, 2));
+    } else {
+      console.error(error.message);
+    }
+    process.exit(1);
   }
 }
 
