@@ -44,7 +44,7 @@ exports.handler = async (event, context) => {
               "complexity": "...",
               "explanation": "..."
             }
-            The 'complexity' value MUST be a concise string representing the Big-O time complexity. Utilize the specific variables present in the user's code context (e.g., "O(row * col)", "O(V + E)", "O(2^N)").
+            The 'complexity' value MUST be a concise string representing the Big-O time complexity. Utilize the specific variables present in the user's code context (e.g., "O(N!)", "O(row * col)", "O(V + E)", "O(2^N)").
             The 'explanation' should be 2 concise sentences explaining why.`
           },
           { role: "user", content: code }
