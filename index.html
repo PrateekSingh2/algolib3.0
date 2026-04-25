@@ -81,13 +81,7 @@
     ]
     </script>
 
-    <script>
-      window.deferredPWAInstallPrompt = null;
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        window.deferredPWAInstallPrompt = e;
-      });
-    </script>
+<!-- Removed window.deferredPWAInstallPrompt script to fix global scope pollution -->
   </head>
 
   <body>

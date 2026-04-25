@@ -23,8 +23,9 @@ import { useActivityTracker, setTrackedActivity } from "@/hooks/useActivityTrack
 
 import AppFooter from "@/components/AppFooter";
 import OrbitalLoader from "@/components/OrbitalLoader";
-import { useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { useAuth, executeGoogleSignIn, executeGithubSignIn } from "@/contexts/AuthContext";
+import { useCookieConsent } from "./contexts/CookieContext";
 import Navbar from "./components/Navbar";
 import Analyzer from "./pages/Analyzer";
 import Quiz from "./pages/Quiz";
@@ -55,27 +56,7 @@ const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const queryClient = new QueryClient();
 
-// --- UNIFIED SECURE AUTH HANDLERS ---
-export const executeGoogleSignIn = async () => {
-  try {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    await signInWithPopup(auth, provider);
-  } catch (error) {
-    console.error("Google Sign-In failed:", error);
-    toast.error("Sign-in cancelled or failed.");
-  }
-};
-
-export const executeGithubSignIn = async () => {
-  try {
-    const provider = new GithubAuthProvider();
-    await signInWithPopup(auth, provider);
-  } catch (error) {
-    console.error("GitHub Sign-In failed:", error);
-    toast.error("GitHub Sign-in cancelled or failed.");
-  }
-};
+// Removed sign in handlers to AuthContext to fix Fast Refresh issues
 
 const ModuleLoader = () => <OrbitalLoader />;
 
@@ -257,8 +238,7 @@ const EliteBackground = () => (
 );
 
 const CookieConsent = () => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [showCustomize, setShowCustomize] = useState(false);
+  const { isCookieConsentOpen, setIsCookieConsentOpen, showCustomize, setShowCustomize } = useCookieConsent();
 
   const [preferences, setPreferences] = useState(() => {
     const saved = localStorage.getItem("algolib_cookie_consent");
@@ -276,36 +256,29 @@ const CookieConsent = () => {
 
   useEffect(() => {
     const consent = localStorage.getItem("algolib_cookie_consent");
-    if (!consent) {
-      const timer = setTimeout(() => setIsVisible(true), 2000);
+    if (!consent && !isCookieConsentOpen) {
+      const timer = setTimeout(() => setIsCookieConsentOpen(true), 2000);
       return () => clearTimeout(timer);
     }
-
-    const handleOpenCookies = () => {
-      setIsVisible(true);
-      setShowCustomize(true);
-    };
-    window.addEventListener('openCookieConsent', handleOpenCookies);
-    return () => window.removeEventListener('openCookieConsent', handleOpenCookies);
-  }, []);
+  }, [isCookieConsentOpen, setIsCookieConsentOpen]);
 
   const handleAcceptAll = () => {
     const allPrefs = { necessary: true, analytics: true, personalization: true };
     localStorage.setItem("algolib_cookie_consent", JSON.stringify(allPrefs));
     setPreferences(allPrefs);
-    setIsVisible(false);
+    setIsCookieConsentOpen(false);
   };
 
   const handleDecline = () => {
     const minPrefs = { necessary: true, analytics: false, personalization: false };
     localStorage.setItem("algolib_cookie_consent", JSON.stringify(minPrefs));
     setPreferences(minPrefs);
-    setIsVisible(false);
+    setIsCookieConsentOpen(false);
   };
 
   const handleSavePreferences = () => {
     localStorage.setItem("algolib_cookie_consent", JSON.stringify(preferences));
-    setIsVisible(false);
+    setIsCookieConsentOpen(false);
   };
 
   const togglePreference = (key: keyof typeof preferences) => {
@@ -315,7 +288,7 @@ const CookieConsent = () => {
 
   return (
     <AnimatePresence>
-      {isVisible && (
+      {isCookieConsentOpen && (
         <motion.div
           initial={{ opacity: 0, y: 50, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}

@@ -4,9 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
 import { Play, Send, ChevronDown, Lock, Clock, CheckCircle2, Terminal, ArrowLeft, Loader2, X, Trash2, Code2, AlertTriangle, Target, Settings, RotateCcw, Wand2, AlertCircle } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 // --- PURE CODEFORCES TEMPLATES ---
 const userTemplates: Record<string, string> = {
@@ -155,7 +153,7 @@ const renderTerminalLog = (log: LogEntry, i: number) => {
           <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-4 flex gap-3 items-start">
              <AlertCircle size={18} className="text-rose-500 shrink-0 mt-0.5" />
              <p className="text-rose-500/90 text-[13px] leading-relaxed">
-               You get marks only for the first correct submission if you solve the problem without viewing the full solution.
+               You get marks only for the first correct submission.
              </p>
           </div>
         </div>
@@ -217,14 +215,8 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       if (document.hidden && contestStatus === 'active') {
         setShowCheatWarning(true);
         if (user && contestId) {
-            try {
-              await supabase.rpc('log_contest_warning', {
-                p_firebase_uid: user.uid || user.id,
-                p_contest_id: contestId,
-                p_email: user.email || '',
-                p_display_name: user.displayName || 'Unknown'
-              });
-            } catch (e) {}
+            // Future extension: Call Netlify function to log warning
+            console.warn("User navigated away from active contest.");
         }
       }
     };
@@ -235,11 +227,19 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   useEffect(() => {
     const fetchMatrix = async () => {
       if (!contestId) { setLoading(false); return; }
-      const { data: cData } = await supabase.from('contests').select('*').eq('id', contestId).single();
-      if (cData) setContest(cData);
-      const { data: pData } = await supabase.from('problems').select('*').eq('contest_id', contestId).order('id', { ascending: true });
-      if (pData && pData.length > 0) setProblems(pData);
-      else setProblems([FALLBACK_PROBLEM]);
+      try {
+        const response = await fetch(`/.netlify/functions/get-contest-details?id=${contestId}`);
+        if (response.ok) {
+          const { contest, problems } = await response.json();
+          if (contest) setContest(contest);
+          if (problems && problems.length > 0) setProblems(problems);
+          else setProblems([FALLBACK_PROBLEM]);
+        } else {
+          setProblems([FALLBACK_PROBLEM]);
+        }
+      } catch (err) {
+        setProblems([FALLBACK_PROBLEM]);
+      }
       setLoading(false);
     };
     fetchMatrix();
@@ -250,9 +250,18 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       if (problems.length === 0) return;
       const currentProblem = problems[activeProblemIndex];
       if (currentProblem.id === 'fallback-id') { setTestCases(FALLBACK_TEST_CASES); return; }
-      const { data: tcData } = await supabase.from('test_cases').select('*').eq('problem_id', currentProblem.id);
-      if (tcData && tcData.length > 0) setTestCases(tcData);
-      else setTestCases(FALLBACK_TEST_CASES);
+      try {
+        const response = await fetch(`/.netlify/functions/get-test-cases?problemId=${currentProblem.id}`);
+        if (response.ok) {
+          const tcData = await response.json();
+          if (tcData && tcData.length > 0) setTestCases(tcData);
+          else setTestCases(FALLBACK_TEST_CASES);
+        } else {
+          setTestCases(FALLBACK_TEST_CASES);
+        }
+      } catch (err) {
+        setTestCases(FALLBACK_TEST_CASES);
+      }
     };
     fetchTestCases();
   }, [activeProblemIndex, problems]);
@@ -540,45 +549,25 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
           }
       }
 
-      if (user) {
+      if (user && user.getIdToken) {
         try {
-            await supabase.from('submissions').insert([{
-                user_uid: user.uid || user.id,
-                problem_id: currentProblem.id,
-                contest_id: contestId,
-                language: language,
-                code: code,
-                passed: allPassed,
-                score_awarded: allPassed ? pointsEarned : 0,
-                time_taken_seconds: dbTimeTakenSeconds
-            }]);
-
-            if (allPassed) {
-                const { data: existingEntry } = await supabase
-                    .from('leaderboard')
-                    .select('id, score, time_taken_seconds')
-                    .eq('user_uid', user.uid || user.id)
-                    .eq('problem_id', currentProblem.id)
-                    .single();
-
-                if (existingEntry) {
-                    if (pointsEarned > existingEntry.score || 
-                       (pointsEarned === existingEntry.score && dbTimeTakenSeconds < existingEntry.time_taken_seconds)) {
-                        await supabase.from('leaderboard')
-                            .update({ score: pointsEarned, time_taken_seconds: dbTimeTakenSeconds, language_used: language })
-                            .eq('id', existingEntry.id);
-                    }
-                } else {
-                    await supabase.from('leaderboard').insert([{ 
-                        user_uid: user.uid || user.id, 
-                        display_name: user.displayName || user.name || 'User', 
-                        problem_id: currentProblem.id, 
-                        score: pointsEarned, 
-                        time_taken_seconds: dbTimeTakenSeconds, 
-                        language_used: language
-                    }]);
-                }
-            }
+            const token = await user.getIdToken();
+            await fetch('/.netlify/functions/submit-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    problem_id: currentProblem.id,
+                    contest_id: contestId,
+                    language: language,
+                    code: code,
+                    passed: allPassed,
+                    score_awarded: pointsEarned,
+                    time_taken_seconds: dbTimeTakenSeconds
+                })
+            });
         } catch (e) { console.error("Database sync failed:", e); }
       }
 

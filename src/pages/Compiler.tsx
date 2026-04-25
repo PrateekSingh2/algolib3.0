@@ -123,11 +123,11 @@ const ALGO_VAULT: Record<string, {name: string, code: string}[]> = {
 
 // ─── Flow-State Music Streams ────────────────────────────────────────────────
 const MUSIC_STREAMS = [
-  { id: 'phonk1', name: 'Aggressive Phonk', url: 'https://streams.ilovemusic.de/iloveradio37.mp3' },
-  { id: 'phonk2', name: 'Drift Phonk / Hard Bass', url: 'https://streams.ilovemusic.de/iloveradio38.mp3' },
-  { id: 'lofi', name: 'Lo-Fi Focus', url: 'https://streams.ilovemusic.de/iloveradio17.mp3' },
-  { id: 'synth', name: 'Synthwave / Cyberpunk', url: 'https://streams.ilovemusic.de/iloveradio26.mp3' },
-  { id: 'chill', name: 'Deep Chill', url: 'https://streams.ilovemusic.de/iloveradio10.mp3' }
+  { id: 'phonk1', name: 'Channel: 1', url: 'https://streams.ilovemusic.de/iloveradio37.mp3' },
+  { id: 'phonk2', name: 'Channel: 2', url: 'https://streams.ilovemusic.de/iloveradio38.mp3' },
+  { id: 'lofi', name: 'Channel: 3', url: 'https://streams.ilovemusic.de/iloveradio17.mp3' },
+  { id: 'synth', name: 'Channel: 4', url: 'https://streams.ilovemusic.de/iloveradio26.mp3' },
+  { id: 'chill', name: 'Channel: 5', url: 'https://streams.ilovemusic.de/iloveradio10.mp3' }
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────

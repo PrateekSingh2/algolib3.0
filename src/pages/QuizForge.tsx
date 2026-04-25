@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, loginWithGoogle } from "../lib/firebase"; 
-import { createClient } from '@supabase/supabase-js';
+
 import ReactMarkdown from 'react-markdown';
 import { 
   ShieldAlert, CheckCircle2, LayoutGrid, Trophy, Loader2, SearchX, 
@@ -14,9 +14,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+
 
 // --- Types ---
 interface QuizOption { id: string; text: string; }
@@ -131,21 +129,20 @@ export default function QuizForge() {
   // Fetch only quizzes matching the user's UID
   const loadMyQuizzes = async (uid: string) => {
       setQuizView("manager");
-      const { data, error } = await supabase
-        .from('quizzes')
-        .select('*')
-        .eq('creator_uid', uid)
-        .order('created_at', { ascending: false });
-        
-      if (error) console.error("Error loading quizzes:", error);
-      if (data) setExistingQuizzes(data);
+      const response = await fetch(`/.netlify/functions/get-quizzes?creator_uid=${uid}`);
+      if (response.ok) {
+          const data = await response.json();
+          setExistingQuizzes(data);
+      } else {
+          console.error("Error loading quizzes");
+      }
   };
 
   const handleEditQuiz = async (quiz: any) => {
       setStatusMsg("Loading Quiz...");
-      const { data: qData, error } = await supabase.from('quiz_questions').select('*').eq('quiz_id', quiz.id);
-      
-      if (error) return alert("Failed to load questions. Check your RLS policies.");
+      const response = await fetch(`/.netlify/functions/get-quiz-details?id=${quiz.id}`);
+      if (!response.ok) return alert("Failed to load questions. Check your RLS policies.");
+      const { questions: qData } = await response.json();
 
       const loadedQuestions = (qData || []).map((q: any) => {
           let inferredType: QuestionType = q.is_multiple_choice ? 'multiple' : 'single';
@@ -170,10 +167,12 @@ export default function QuizForge() {
   const handleDeleteQuiz = async (id: string) => {
       if(!window.confirm("CRITICAL WARNING: Purge this assessment? All records will be permanently deleted.")) return;
       try {
-          await supabase.from('quiz_submissions').delete().eq('quiz_id', id);
-          await supabase.from('quiz_questions').delete().eq('quiz_id', id);
-          const { error } = await supabase.from('quizzes').delete().eq('id', id);
-          if (error) throw error;
+          const token = await user?.getIdToken();
+          const response = await fetch(`/.netlify/functions/manage-quiz?id=${id}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!response.ok) throw new Error("Delete failed");
           
           if (user) loadMyQuizzes(user.uid);
       } catch (err: any) { alert(`Purge failed: ${err.message}`); }
@@ -186,9 +185,10 @@ export default function QuizForge() {
       setShowResultsModal(true);
 
       try {
-          const { data, error } = await supabase.from('quiz_submissions').select('*').eq('quiz_id', quiz.id);
-          if (error) throw error;
-          if (data) setActiveResults(data.sort((a, b) => b.score !== a.score ? b.score - a.score : a.time_taken_seconds - b.time_taken_seconds));
+          const response = await fetch(`/.netlify/functions/get-quiz-submissions?quiz_id=${quiz.id}`);
+          if (!response.ok) throw new Error("Fetch failed");
+          const data = await response.json();
+          if (data) setActiveResults(data);
       } catch (err: any) {
           alert(`Leaderboard Fetch Failed: ${err.message}`);
           setShowResultsModal(false);
@@ -213,35 +213,40 @@ export default function QuizForge() {
           let currentQuizId = quizForm.dbId;
           let assignedCode = "";
   
-          if (currentQuizId) {
-              const { error: updateErr } = await supabase.from('quizzes').update({ 
-                  title: quizForm.title, start_time: startISO, end_time: endISO, max_warnings: quizForm.maxWarnings 
-              }).eq('id', currentQuizId);
-              if (updateErr) throw updateErr;
-              
-              const { data: existingData } = await supabase.from('quizzes').select('join_code').eq('id', currentQuizId).single();
-              assignedCode = existingData?.join_code || "XXXXXX";
-          } else {
-              const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-              for (let i = 0; i < 6; i++) assignedCode += chars.charAt(Math.floor(Math.random() * chars.length));
-              
-              // Bind the new quiz to the authenticated user's UID
-              const { data, error: insertErr } = await supabase.from('quizzes').insert([{ 
-                  title: quizForm.title, start_time: startISO, end_time: endISO, max_warnings: quizForm.maxWarnings, creator_uid: user.uid, join_code: assignedCode
-              }]).select();
-              if (insertErr) throw insertErr;
-              currentQuizId = data![0].id;
-              setQuizForm(prev => ({...prev, dbId: currentQuizId}));
-          }
-  
-          const { error: delErr } = await supabase.from('quiz_questions').delete().eq('quiz_id', currentQuizId);
-          if (delErr) throw delErr;
+          const token = await user.getIdToken();
+          const response = await fetch('/.netlify/functions/manage-quiz', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                  id: currentQuizId,
+                  title: quizForm.title,
+                  start_time: startISO,
+                  end_time: endISO,
+                  max_warnings: quizForm.maxWarnings,
+                  // ✅ FIX: Map camelCase state to snake_case for the database
+                  questions: quizForm.questions.map(q => ({
+                      id: q.dbId,
+                      text: q.text,
+                      is_multiple_choice: q.questionType === 'multiple',
+                      options: q.options,
+                      correct_options: q.correctOptions
+                  }))
+              })
+          });
           
-          const questionsToInsert = quizForm.questions.map(q => ({
-              quiz_id: currentQuizId, text: q.text, is_multiple_choice: q.questionType === 'multiple',
-              options: q.questionType === 'numerical' ? [] : q.options, correct_options: q.correctOptions
-          }));
-          if (questionsToInsert.length > 0) await supabase.from('quiz_questions').insert(questionsToInsert);
+          if (!response.ok) throw new Error("Deployment failed");
+          const resData = await response.json();
+          currentQuizId = resData.id;
+
+          // Need to fetch join_code
+          const qRes = await fetch(`/.netlify/functions/get-quiz-details?id=${currentQuizId}`);
+          if (qRes.ok) {
+              const { quiz: qInfo } = await qRes.json();
+              assignedCode = qInfo.join_code;
+          }
   
           setGeneratedLink(`${window.location.origin}/quiz/${currentQuizId}`);
           setGeneratedCode(assignedCode);

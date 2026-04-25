@@ -4,7 +4,7 @@ import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
-import { createClient } from '@supabase/supabase-js';
+
 import { 
   User, TerminalSquare, Mail, GraduationCap, Calendar, 
   Activity, MapPin, Map, Globe2, Github, Fingerprint, 
@@ -12,7 +12,7 @@ import {
   Network, Database, Trophy, Code2, Target, History
 } from "lucide-react";
 
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
+
 
 const ApexBackground = () => (
   <div className="fixed inset-0 z-0 pointer-events-none bg-[#000000] flex items-center justify-center overflow-hidden">
@@ -89,68 +89,69 @@ const Profile = () => {
       const targetUid = user?.uid || profile?.id;
       if (!targetUid) return;
 
-      const { data: lbData } = await supabase.from('leaderboard').select('*').eq('user_uid', targetUid);
-      
-      if (lbData) {
-        let score = 0;
-        const uniqueProblems = new Set();
-        const langs = new Set<string>();
-
-        const successfulSolves = lbData.filter(e => e.score > 0).sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      try {
+        const response = await fetch(`/.netlify/functions/get-profile-stats?uid=${targetUid}`);
+        if (!response.ok) return;
+        const data = await response.json();
         
-        successfulSolves.forEach((entry: any) => {
-            if (!uniqueProblems.has(entry.problem_id)) {
-                uniqueProblems.add(entry.problem_id);
-                score += entry.score;
-                langs.add(entry.language_used);
-            }
-        });
+        const lbData = data.leaderboard || [];
+        const pData = data.problems || [];
+        const cData = data.contests || [];
 
-        if (uniqueProblems.size > 0) {
-            const { data: pData } = await supabase.from('problems').select('id, contest_id').in('id', Array.from(uniqueProblems));
-            
-            if (pData) {
-                const contestIds = Array.from(new Set(pData.map(p => p.contest_id)));
-                const { data: cData } = await supabase.from('contests').select('id, title, start_time').in('id', contestIds);
-                
-                if (cData) {
-                    const problemToContest: Record<string, string> = {};
-                    pData.forEach(p => problemToContest[p.id] = p.contest_id);
-                    
-                    const cMap: Record<string, any> = {};
-                    cData.forEach(c => cMap[c.id] = c);
+        if (lbData.length > 0) {
+          let score = 0;
+          const uniqueProblems = new Set();
+          const langs = new Set<string>();
 
-                    const userContests: Record<string, any> = {};
-                    
-                    const scoredProblems = new Set();
-                    successfulSolves.forEach(entry => {
-                        if (!scoredProblems.has(entry.problem_id)) {
-                            scoredProblems.add(entry.problem_id);
-                            const cId = problemToContest[entry.problem_id];
-                            if (cId && cMap[cId]) {
-                                if (!userContests[cId]) {
-                                    userContests[cId] = {
-                                        id: cId,
-                                        title: cMap[cId].title,
-                                        date: cMap[cId].start_time,
-                                        score: 0
-                                    };
-                                }
-                                userContests[cId].score += entry.score;
-                            }
-                        }
-                    });
-                    
-                    setAttendedContests(Object.values(userContests).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-                }
-            }
+          const successfulSolves = lbData.filter((e: any) => e.score > 0).sort((a: any,b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          
+          successfulSolves.forEach((entry: any) => {
+              if (!uniqueProblems.has(entry.problem_id)) {
+                  uniqueProblems.add(entry.problem_id);
+                  score += entry.score;
+                  langs.add(entry.language_used);
+              }
+          });
+
+          if (uniqueProblems.size > 0 && pData.length > 0) {
+              const problemToContest: Record<string, string> = {};
+              pData.forEach((p: any) => problemToContest[p.id] = p.contest_id);
+              
+              const cMap: Record<string, any> = {};
+              cData.forEach((c: any) => cMap[c.id] = c);
+
+              const userContests: Record<string, any> = {};
+              
+              const scoredProblems = new Set();
+              successfulSolves.forEach((entry: any) => {
+                  if (!scoredProblems.has(entry.problem_id)) {
+                      scoredProblems.add(entry.problem_id);
+                      const cId = problemToContest[entry.problem_id];
+                      if (cId && cMap[cId]) {
+                          if (!userContests[cId]) {
+                              userContests[cId] = {
+                                  id: cId,
+                                  title: cMap[cId].title,
+                                  date: cMap[cId].start_time,
+                                  score: 0
+                              };
+                          }
+                          userContests[cId].score += entry.score;
+                      }
+                  }
+              });
+              
+              setAttendedContests(Object.values(userContests).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+          }
+
+          setArenaStats({
+              totalScore: score,
+              problemsSolved: uniqueProblems.size,
+              languages: Array.from(langs)
+          });
         }
-
-        setArenaStats({
-            totalScore: score,
-            problemsSolved: uniqueProblems.size,
-            languages: Array.from(langs)
-        });
+      } catch (err) {
+        console.error(err);
       }
     };
     fetchUserStats();

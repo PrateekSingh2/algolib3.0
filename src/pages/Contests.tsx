@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
+
 import { Trophy, Clock, Calendar, ChevronRight, Activity, Code2, Sparkles, ArrowRight, Loader2, BarChart2, X, Medal, HeartHandshake, Lock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import AppFooter from '@/components/AppFooter';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+
 
 const VIDEO_URL = "https://ik.imagekit.io/g7e4hyclo/contest-bg.mp4";
 const CACHE_NAME = "algolib-media-cache-v1";
@@ -74,19 +72,20 @@ export default function Contests() {
 
   useEffect(() => {
     const fetchContests = async () => {
-      const { data, error } = await supabase.from('contests').select('*').order('start_time', { ascending: true });
-      if (!error && data) setContests(data);
+      try {
+        const response = await fetch('/.netlify/functions/get-contests');
+        if (response.ok) {
+          const data = await response.json();
+          setContests(data);
+        }
+      } catch (err) { console.error(err); }
       setLoading(false);
     };
     fetchContests();
 
-    const channel = supabase
-      .channel('realtime_contests')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'contests' }, () => { fetchContests(); })
-      .subscribe();
-
     const timer = setInterval(() => { setCurrentTime(new Date().getTime()); }, 1000);
-    return () => { supabase.removeChannel(channel); clearInterval(timer); };
+    const pollTimer = setInterval(fetchContests, 15000);
+    return () => { clearInterval(timer); clearInterval(pollTimer); };
   }, []);
 
   // --- UPDATED LEADERBOARD FETCH ---
@@ -94,30 +93,22 @@ export default function Contests() {
     if (!selectedLeaderboard) return;
     const fetchLeaderboard = async () => {
       setLoadingLb(true);
-      const { data: pData } = await supabase.from('problems').select('id').eq('contest_id', selectedLeaderboard.id);
-      
-      if (!pData || pData.length === 0) {
-        setLbData([]); setLoadingLb(false); return;
-      }
-      
-      const pIds = pData.map(p => p.id);
-      const { data: lData } = await supabase.from('leaderboard').select('*').in('problem_id', pIds).order('created_at', { ascending: true });
+      try {
+        const response = await fetch(`/.netlify/functions/get-contest-leaderboard?id=${selectedLeaderboard.id}`);
+        if (!response.ok) throw new Error("Failed to fetch");
+        const { leaderboard, users } = await response.json();
 
-      if (lData && lData.length > 0) {
-        const userMap: Record<string, any> = {};
-        
-        // 1. Fetch real names from the database
-        const userUids = [...new Set(lData.map(entry => entry.user_uid))];
-        const { data: dbUsers } = await supabase.from('users').select('firebase_uid, display_name, full_name').in('firebase_uid', userUids);
-        
-        const dbUserMap: Record<string, string> = {};
-        if (dbUsers) {
-            dbUsers.forEach((u: any) => {
-                dbUserMap[u.firebase_uid] = u.display_name || u.full_name;
-            });
-        }
-        
-        lData.forEach(entry => {
+        if (leaderboard && leaderboard.length > 0) {
+          const userMap: {[key: string]: any} = {};
+          
+          const dbUserMap: {[key: string]: string} = {};
+          if (users) {
+              users.forEach((u: any) => {
+                  dbUserMap[u.firebase_uid] = u.display_name || u.full_name;
+              });
+          }
+          
+          leaderboard.forEach((entry: any) => {
           if (!userMap[entry.user_uid]) {
             // 2. Set Name Priority: Supabase User Table -> Leaderboard Default -> Fallback
             const realName = dbUserMap[entry.user_uid] || entry.display_name || 'Anonymous User';
@@ -141,7 +132,9 @@ export default function Contests() {
         });
         
         setLbData(sorted);
-      } else {
+        } // <--- ADD THIS CLOSING BRACKET FOR THE IF STATEMENT
+      } catch (err) {
+        console.error(err);
         setLbData([]);
       }
       setLoadingLb(false);
@@ -149,7 +142,6 @@ export default function Contests() {
 
     fetchLeaderboard();
   }, [selectedLeaderboard]);
-
   const liveContests = contests.filter(c => new Date(c.start_time).getTime() <= currentTime && new Date(c.end_time).getTime() > currentTime);
   const upcomingContests = contests.filter(c => new Date(c.start_time).getTime() > currentTime);
   const pastContests = contests.filter(c => new Date(c.end_time).getTime() <= currentTime).reverse();

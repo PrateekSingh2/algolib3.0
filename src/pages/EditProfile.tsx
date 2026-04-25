@@ -11,7 +11,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GlobalRibbon from "@/components/GlobalRibbon";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabaseClient } from "@/lib/supabase";
+
 
 interface ProfileFormState {
   full_name: string;
@@ -138,28 +138,30 @@ const EditProfile = () => {
     setSaving(true);
     setMessage({ text: "", type: "" });
 
-    const profileFilter = profile?.id ? `id=eq.${encodeURIComponent(profile.id)}` : user.email ? `email=eq.${encodeURIComponent(user.email)}` : null;
-
-    if (!profileFilter) {
-      setSaving(false);
-      setMessage({ text: "Unable to locate your profile record.", type: "error" });
-      return;
-    }
-
     try {
-      await supabaseClient.update("users", profileFilter, {
-        full_name: form.full_name.trim() || null, 
-        display_name: form.display_name.trim() || null,
-        college: form.college.trim() || null, 
-        age: form.age ? Number(form.age) : null,
-        gender: form.gender.trim() || null, 
-        city: form.city.trim() || null,
-        state: form.state.trim() || null, 
-        country: form.country.trim() || null,
-        github_url: form.github_url.trim() || null, 
-        bio: form.bio.trim() || null,
-        is_profile_complete: true // <-- CHANGED: Updates the correct new column
+      const token = await user.getIdToken();
+      const response = await fetch('/.netlify/functions/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          full_name: form.full_name.trim() || null, 
+          display_name: form.display_name.trim() || null,
+          college: form.college.trim() || null, 
+          age: form.age ? Number(form.age) : null,
+          gender: form.gender.trim() || null, 
+          city: form.city.trim() || null,
+          state: form.state.trim() || null, 
+          country: form.country.trim() || null,
+          github_url: form.github_url.trim() || null, 
+          bio: form.bio.trim() || null,
+          is_profile_complete: true
+        })
       });
+      
+      if (!response.ok) throw new Error("Update failed");
       
       await refreshProfile();
       

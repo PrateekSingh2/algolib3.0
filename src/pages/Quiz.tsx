@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, loginWithGoogle } from "../lib/firebase"; 
-import { createClient } from '@supabase/supabase-js';
+
 import ReactMarkdown from 'react-markdown';
 import { 
   AlertTriangle, Clock, ShieldAlert, ChevronRight, 
@@ -11,9 +11,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+
 
 type QuestionType = 'single' | 'multiple' | 'true_false' | 'numerical';
 
@@ -78,23 +76,23 @@ export default function QuizArena() {
         if (!quizId) { setEligibility('not_found'); return; }
 
         try {
-            const { data: existingSubmission } = await supabase
-                .from('quiz_submissions')
-                .select('id, score')
-                .eq('user_uid', user.uid)
-                .eq('quiz_id', quizId)
-                .maybeSingle();
-
-            if (existingSubmission) {
-                setFinalScore(existingSubmission.score);
-                setEligibility('denied');
-                return;
+            const subResponse = await fetch(`/.netlify/functions/get-quiz-submissions?quiz_id=${quizId}&user_uid=${user.uid}`);
+            if (subResponse.ok) {
+                const existingSubmission = await subResponse.json();
+                if (existingSubmission && existingSubmission.id) {
+                    setFinalScore(existingSubmission.score);
+                    setEligibility('denied');
+                    return;
+                }
             }
 
-            const { data: qData, error: qError } = await supabase.from('quizzes').select('*').eq('id', quizId).maybeSingle();
-            if (qError || !qData) { setEligibility('not_found'); return; }
+            const qResponse = await fetch(`/.netlify/functions/get-quiz-details?id=${quizId}`);
+            if (!qResponse.ok) { setEligibility('not_found'); return; }
+            const qRespData = await qResponse.json();
+            const qData = qRespData.quiz;
+            const questionsData = qRespData.questions;
 
-            const { data: questionsData } = await supabase.from('quiz_questions').select('*').eq('quiz_id', quizId);
+            if (!qData) { setEligibility('not_found'); return; }
             
             const formattedQuestions = (questionsData || []).map(q => {
                 let inferredType: QuestionType = q.is_multiple_choice ? 'multiple' : 'single';
@@ -110,12 +108,24 @@ export default function QuizArena() {
                 };
             });
 
+            // 🔀 NEW SHUFFLE LOGIC: Fisher-Yates Algorithm
+            const shuffledQuestions = [...formattedQuestions];
+            for (let i = shuffledQuestions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledQuestions[i], shuffledQuestions[j]] = [shuffledQuestions[j], shuffledQuestions[i]];
+            }
+
             const mockStart = new Date(Date.now() - 5 * 60000).toISOString(); 
             const mockEnd = new Date(Date.now() + (qData.duration_seconds || 900) * 1000).toISOString(); 
 
             setQuizData({
-                id: qData.id, title: qData.title, startTime: qData.start_time || mockStart,
-                endTime: qData.end_time || mockEnd, maxWarnings: qData.max_warnings || 3, questions: formattedQuestions
+                id: qData.id, 
+                title: qData.title, 
+                startTime: qData.start_time || mockStart,
+                endTime: qData.end_time || mockEnd, 
+                maxWarnings: qData.max_warnings || 3, 
+                // ✅ FIX: Use the shuffled questions here instead of formattedQuestions
+                questions: shuffledQuestions 
             });
 
             setEligibility('allowed');
@@ -135,15 +145,9 @@ export default function QuizArena() {
     const fetchLeaderboard = async () => {
       if (!quizId) return;
       try {
-        const { data, error } = await supabase
-          .from('quiz_submissions')
-          .select('display_name, score, time_taken_seconds')
-          .eq('quiz_id', quizId)
-          .order('score', { ascending: false })
-          .order('time_taken_seconds', { ascending: true }) // Tie-breaker: Faster time wins
-          .limit(10);
-
-        if (!error && data) {
+        const response = await fetch(`/.netlify/functions/get-quiz-submissions?quiz_id=${quizId}&limit=10`);
+        if (response.ok) {
+          const data = await response.json();
           setLeaderboard(data);
         }
       } catch (err) {
@@ -302,12 +306,23 @@ export default function QuizArena() {
     const timeTaken = durationTotal - timeRemaining;
 
     try {
-        await supabase.from('quiz_submissions').insert([{
-            user_uid: user.uid, display_name: user.displayName || 'Unknown User', email: user.email || 'No Email',
-            quiz_id: quizData.id, score: calculatedScore, total_questions: quizData.questions.length,
-            warnings_hit: warningsRef.current, 
-            time_taken_seconds: timeTaken > 0 ? timeTaken : 0, answers_payload: answers
-        }]);
+        const token = await user.getIdToken();
+        await fetch('/.netlify/functions/submit-quiz', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                quiz_id: quizData.id,
+                score: calculatedScore,
+                total_questions: quizData.questions.length,
+                time_taken_seconds: timeTaken > 0 ? timeTaken : 0,
+                warnings_hit: warningsRef.current,
+                answers_payload: answers,
+                email: user.email
+            })
+        });
     } catch (error) { console.error("Failed to save submission:", error); }
 
     setIsSubmittingToDB(false);

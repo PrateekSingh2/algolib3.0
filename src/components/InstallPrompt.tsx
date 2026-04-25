@@ -2,15 +2,10 @@ import { useState, useEffect } from "react";
 import { Download, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-declare global {
-  interface Window {
-    deferredPWAInstallPrompt: any;
-  }
-}
-
 const InstallPrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
     const checkPromptStatus = () => {
@@ -38,16 +33,11 @@ const InstallPrompt = () => {
       // 4. Handle Android / Chrome Event
       const handlePrompt = (e: Event) => {
         e.preventDefault();
-        window.deferredPWAInstallPrompt = e;
+        setDeferredPrompt(e);
         setShowPrompt(true);
       };
 
-      // If index.html caught it early or it's already available
-      if (window.deferredPWAInstallPrompt) {
-        setShowPrompt(true);
-      } else {
-        window.addEventListener("beforeinstallprompt", handlePrompt);
-      }
+      window.addEventListener("beforeinstallprompt", handlePrompt);
 
       return () => {
         window.removeEventListener("beforeinstallprompt", handlePrompt);
@@ -63,13 +53,11 @@ const InstallPrompt = () => {
   }, []);
 
   const handleInstallClick = async () => {
-    const promptEvent = window.deferredPWAInstallPrompt;
-    
-    if (promptEvent) {
-      promptEvent.prompt();
-      const { outcome } = await promptEvent.userChoice;
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
-        window.deferredPWAInstallPrompt = null;
+        setDeferredPrompt(null);
         setShowPrompt(false);
       }
     } else if (isIOS) {

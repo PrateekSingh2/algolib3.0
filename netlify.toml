@@ -1,8 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = "dist" # Vite outputs files here
+
 [dev]
+  framework = "#custom"
+  command = "npm run dev"
   targetPort = 8080
-  
+  port = 8888
+  host = "127.0.0.1"
+
+# React Router SPA Fallback (Prevents 404s on page refresh in production)
 [[redirects]]
-  from = "/api/jdoodle/*"
-  to = "https://api.jdoodle.com/:splat"
+  from = "/*"
+  to = "/index.html"
   status = 200
-  force = true

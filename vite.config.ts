@@ -11,41 +11,38 @@ const vitePrerender = require('vite-plugin-prerender');
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
+    host: '127.0.0.1',
     port: 8080,
+    strictPort: true,
+    // 🔥 FIX 1: Lock the WebSocket connection directly to Vite so it doesn't get confused by Netlify's proxy
     hmr: {
-      overlay: false,
+      protocol: 'ws',
+      host: '127.0.0.1',
+      port: 8080,
     },
-    // PROXY CONFIGURATION HERE TO FIX LOCALHOST CORS
-    proxy: {
-      '/api/jdoodle': {
-        target: 'https://api.jdoodle.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/jdoodle/, '')
-      }
-    }
   },
   plugins: [
     react(),
-    
-    // 🔥 PRE-RENDER PLUGIN ADDED HERE
-    vitePrerender({
+
+    // PRE-RENDER PLUGIN: Only active during production build
+    ...(mode === 'production' ? [vitePrerender({
       staticDir: path.join(__dirname, 'dist'),
       routes: ['/compiler'],
-    }),
+    })] : []),
 
     VitePWA({
-      registerType: 'prompt', 
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       devOptions: {
-        enabled: true,
+        enabled: false,
         type: 'module'
       },
       workbox: {
         navigateFallback: '/index.html',
-        navigateFallbackAllowlist: [/^(?!\/__).*/],
+        // 🔥 FIX 2: Explicitly tell the Service Worker to NEVER intercept Netlify backend API functions
+        navigateFallbackDenylist: [/^\/\.netlify\//],
         cleanupOutdatedCaches: true,
-        maximumFileSizeToCacheInBytes: 15728640 
+        maximumFileSizeToCacheInBytes: 15728640
       },
       manifest: {
         name: 'AlgoLib',
@@ -53,7 +50,7 @@ export default defineConfig(({ mode }) => ({
         description: 'Visualize Logic. Execute Code. For & By Developers.',
         theme_color: '#09090B',
         background_color: '#09090B',
-        display: 'standalone', 
+        display: 'standalone',
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -67,6 +64,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+
   build: {
     target: 'esnext',
     cssCodeSplit: true,
@@ -76,10 +74,10 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('node_modules')) {
             // Isolate the massive geographic database
             if (id.includes('country-state-city')) return 'geo-data';
-            
+
             // Isolate heavy execution engine
             if (id.includes('@monaco-editor')) return 'monaco-engine';
-            
+
             // Isolate BaaS SDKs
             if (id.includes('firebase')) return 'firebase-core';
             if (id.includes('@supabase')) return 'supabase-core';

@@ -15,13 +15,13 @@ import Navbar from "@/components/Navbar";
 // ─── Environment & Types ─────────────────────────────────────────────────────
 declare global {
   interface ImportMetaEnv {
-    readonly VITE_GROQ_API_KEY: string;
+    // Add other types if necessary
   }
   interface ImportMeta { readonly env: ImportMetaEnv; }
 }
 
 interface AnalysisResult {
-  complexity: 'O(1)' | 'O(log N)' | 'O(N)' | 'O(N log N)' | 'O(N^2)' | 'O(2^N)';
+  complexity: string; // Changed from the strict union of strings
   explanation: string;
 }
 
@@ -151,51 +151,44 @@ export default function Analyzer() {
         throw new Error("You have exhausted your 7 daily credits. Come back tomorrow!");
       }
 
-      const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-      if (!apiKey) throw new Error("API Key missing. Check your .env file.");
-
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const response = await fetch('/.netlify/functions/ask-groq', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant", 
-          messages: [
-            {
-              role: "system",
-              content: `You are an expert algorithm analyzer. Read the code and determine its Big-O time complexity. 
-              Respond ONLY with a valid JSON object. No markdown, no other text.
-              Format: {"complexity": "...", "explanation": "..."}
-              The 'complexity' value MUST be exactly one of these strings: "O(1)", "O(log N)", "O(N)", "O(N log N)", "O(N^2)", "O(2^N)".
-              The 'explanation' should be 2 concise sentences explaining why.`
-            },
-            { role: "user", content: trimmedCode }
-          ],
-          temperature: 0.1,
-          response_format: { type: "json_object" }
-        })
+        body: JSON.stringify({ code: trimmedCode })
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error?.message || `HTTP ${response.status}: Failed to reach Groq.`);
+        let errorMsg = `HTTP ${response.status}: Failed to reach server.`;
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData?.error || errorMsg;
+        } catch (e) {}
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
-      const aiResult = JSON.parse(data.choices[0].message.content) as { complexity?: string; explanation?: string };
       
-      const validComplexities: AnalysisResult['complexity'][] = ['O(1)', 'O(log N)', 'O(N)', 'O(N log N)', 'O(N^2)', 'O(2^N)'];
+      // 🔥 DEBUG: This will print the AI's exact response in your browser console
+      console.log("Raw AI Response:", data.choices[0].message.content); 
+      
+      let rawContent = data.choices[0].message.content;
+      
+      // ✅ FIX: Strip markdown backticks before parsing JSON
+      rawContent = rawContent.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
 
-      if (aiResult.complexity && aiResult.explanation && validComplexities.includes(aiResult.complexity as AnalysisResult['complexity'])) {
+      const aiResult = JSON.parse(rawContent) as { complexity?: string; explanation?: string };
+      
+      // ✅ FIX: Simple check. As long as the AI gives us a string for both, we accept it.
+      if (aiResult.complexity && typeof aiResult.complexity === 'string' && aiResult.explanation && typeof aiResult.explanation === 'string') {
         setMessages(prev => [
           ...prev,
           {
             role: 'ai',
             content: '',
             result: {
-              complexity: aiResult.complexity as AnalysisResult['complexity'],
+              complexity: aiResult.complexity,
               explanation: aiResult.explanation
             }
           }
@@ -205,7 +198,7 @@ export default function Analyzer() {
         await updateDoc(userRef, { credits: newBalance });
         setCredits(newBalance);
       } else {
-        throw new Error("Received invalid format from AI.");
+        throw new Error("Received invalid format from AI. Check browser console for details.");
       }
 
     } catch (err: any) {

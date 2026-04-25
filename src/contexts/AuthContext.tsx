@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { User, onAuthStateChanged } from "firebase/auth";
+import { User, onAuthStateChanged, GoogleAuthProvider, GithubAuthProvider, signInWithPopup } from "firebase/auth";
+import { toast } from "sonner";
 import { auth } from "@/lib/firebase";
-import { supabaseClient } from "@/lib/supabase";
 
 export interface AppUserProfile {
   id: string;
@@ -33,81 +33,50 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const asFilter = (column: string, value: string) => `${column}=eq.${encodeURIComponent(value)}`;
-const benignSupabaseCodes = ["22P02", "42703", "PGRST100"];
-
-const isBenignSupabaseColumnOrCastError = (error: unknown) => {
-  const text = error instanceof Error ? error.message : String(error);
-  return benignSupabaseCodes.some((code) => text.includes(`"${code}"`) || text.includes(code));
-};
-
-const trySelectOne = async (query: string) => {
+export const executeGoogleSignIn = async () => {
   try {
-    const rows = await supabaseClient.select<AppUserProfile[]>("users", query);
-    return rows[0] || null;
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    await signInWithPopup(auth, provider);
   } catch (error) {
-    if (isBenignSupabaseColumnOrCastError(error)) return null;
-    throw error;
+    console.error("Google Sign-In failed:", error);
+    toast.error("Sign-in cancelled or failed.");
   }
 };
 
-const findProfile = async (firebaseUser: User): Promise<AppUserProfile | null> => {
-  const email = firebaseUser.email?.trim();
-
-  if (email) {
-    const byEmail = await trySelectOne(`select=*&${asFilter("email", email)}&limit=1`);
-    if (byEmail) return byEmail;
-  }
-
-  const byFirebaseUid = await trySelectOne(`select=*&${asFilter("firebase_uid", firebaseUser.uid)}&limit=1`);
-  if (byFirebaseUid) return byFirebaseUid;
-
-  return null;
-};
-
-const tryInsertProfile = async (payload: Record<string, unknown>) => {
-  const rows = await supabaseClient.insert<AppUserProfile[]>("users", payload);
-  return rows[0] || null;
-};
-
-const ensureProfile = async (firebaseUser: User): Promise<AppUserProfile | null> => {
-  const existing = await findProfile(firebaseUser);
-  if (existing) {
-    if (!existing.firebase_uid) {
-      try {
-        await supabaseClient.update<AppUserProfile[]>("users", asFilter("id", existing.id), {
-          firebase_uid: firebaseUser.uid,
-        });
-      } catch {
-        // If firebase_uid column is typed incompatibly/missing, keep running with id/email based mapping.
-      }
-    }
-    return existing;
-  }
-
-  const fullPayload: Record<string, unknown> = {
-    firebase_uid: firebaseUser.uid,
-    email: firebaseUser.email,
-    full_name: firebaseUser.displayName,
-    display_name: firebaseUser.displayName,
-    avatar_url: firebaseUser.photoURL,
-    has_seen_welcome: false, 
-    is_profile_complete: false, // <-- INITIALIZES TO FALSE FOR NEW USERS
-  };
-
+export const executeGithubSignIn = async () => {
   try {
-    return await tryInsertProfile(fullPayload);
+    const provider = new GithubAuthProvider();
+    await signInWithPopup(auth, provider);
   } catch (error) {
-    if (!isBenignSupabaseColumnOrCastError(error)) throw error;
+    console.error("GitHub Sign-In failed:", error);
+    toast.error("GitHub Sign-in cancelled or failed.");
+  }
+};
 
-    // Fallback for legacy/mismatched schemas
-    return tryInsertProfile({
-      full_name: firebaseUser.displayName,
-      display_name: firebaseUser.displayName,
-      avatar_url: firebaseUser.photoURL,
-      has_seen_welcome: false,
-      is_profile_complete: false, // <-- INITIALIZES TO FALSE
+const syncProfileWithBackend = async (firebaseUser: User): Promise<AppUserProfile | null> => {
+  try {
+    const token = await firebaseUser.getIdToken();
+    const response = await fetch('/.netlify/functions/sync-profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL
+      })
     });
+    
+    if (response.ok) {
+      return await response.json();
+    }
+    return null;
+  } catch (error) {
+    console.error("Failed to sync profile:", error);
+    return null;
   }
 };
 
@@ -118,7 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const refreshProfile = useCallback(async () => {
     if (!user) return;
-    const refreshed = await findProfile(user);
+    const refreshed = await syncProfileWithBackend(user);
     setProfile(refreshed);
   }, [user]);
 
@@ -133,7 +102,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       try {
-        const syncedProfile = await ensureProfile(firebaseUser);
+        const syncedProfile = await syncProfileWithBackend(firebaseUser);
         setProfile(syncedProfile);
       } catch (error) {
         console.error("Failed to sync Firebase user with Supabase users table", error);

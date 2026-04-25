@@ -6,7 +6,7 @@ import {
 } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
 import { auth, firestoreDB, loginWithGoogle, logout, rtdb } from "../lib/firebase"; 
-import { createClient } from '@supabase/supabase-js';
+
 import { 
   Lock, Terminal, Clock, Copy, Check, 
   Hash, ShieldCheck, Save, RefreshCw, 
@@ -22,9 +22,6 @@ import {
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import Navbar from '@/components/Navbar';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 const CHART_COLORS = ['#38bdf8', '#34d399', '#818cf8', '#fb923c', '#f87171', '#facc15', '#f472b6', '#60a5fa'];
 
@@ -206,8 +203,15 @@ const Admin = () => {
       setUser(currentUser);
       if (currentUser && currentUser.email) {
         try {
-            const { data } = await supabase.from('admins').select('email');
-            const validEmails = data ? data.map(d => d.email) : [];
+            const token = await currentUser.getIdToken();
+            const response = await fetch('/.netlify/functions/get-admins', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            let validEmails: string[] = [];
+            if (response.ok) {
+                const data = await response.json();
+                validEmails = data.map((d: any) => d.email);
+            }
             const fallbackAdmins = ["prateeksinghrajawat2006@gmail.com", "shivanshmax@gmail.com"];
             setIsAdmin(validEmails.includes(currentUser.email) || fallbackAdmins.includes(currentUser.email));
         } catch (e) {
@@ -238,31 +242,26 @@ const Admin = () => {
   }, [activeTab, selectedSubContest]);
 
   const loadContestsListSilent = async () => {
-    const { data } = await supabase.from('contests').select('id, title, start_time').order('start_time', { ascending: false });
-    if (data) setExistingContests(data);
+    try {
+        const response = await fetch('/.netlify/functions/get-contests');
+        if (response.ok) {
+            const data = await response.json();
+            setExistingContests(data);
+        }
+    } catch(e) {}
   };
 
   const fetchSubmissions = async () => {
       setIsSubsLoading(true);
       try {
-          const { data: subs, error: subsErr } = await supabase
-              .from('submissions')
-              .select('*')
-              .eq('contest_id', selectedSubContest)
-              .order('created_at', { ascending: false });
-
-          if (subsErr) throw subsErr;
-
-          const { data: probs } = await supabase.from('problems').select('id, title').eq('contest_id', selectedSubContest);
-          const probMap = new Map();
-          if (probs) probs.forEach(p => probMap.set(p.id, p.title));
-
-          const mappedSubs = (subs || []).map(s => ({
-              ...s,
-              problemTitle: probMap.get(s.problem_id) || 'Unknown Problem'
-          }));
-
-          setSubmissionsData(mappedSubs);
+          const token = await user?.getIdToken();
+          const response = await fetch(`/.netlify/functions/get-contest-submissions?contest_id=${selectedSubContest}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+             const mappedSubs = await response.json();
+             setSubmissionsData(mappedSubs);
+          }
       } catch (err) {
           console.error("Error fetching submissions:", err);
       } finally {
@@ -271,8 +270,16 @@ const Admin = () => {
   };
 
   const loadAdminsList = async () => {
-      const { data } = await supabase.from('admins').select('*').order('created_at', { ascending: false });
-      if (data) setAdminsList(data);
+      try {
+          const token = await user?.getIdToken();
+          const response = await fetch('/.netlify/functions/get-admins', {
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+              const data = await response.json();
+              setAdminsList(data);
+          }
+      } catch(e) {}
   };
 
   useEffect(() => {
@@ -387,20 +394,18 @@ const Admin = () => {
       setIsAddingAdmin(true);
 
       try {
-          const { data: verified, error: verifyErr } = await supabase.rpc('verify_admin_passcode', {
-              provided_passcode: adminPasscode
+          const token = await user?.getIdToken();
+          const response = await fetch('/.netlify/functions/manage-admins', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'add', passcode: adminPasscode, email_to_add: newAdminEmail.toLowerCase() })
           });
-
-          if (verifyErr || !verified) throw new Error("Unauthorized Passcode");
-
-          const { error: insertErr } = await supabase.from('admins').insert([{
-              email: newAdminEmail.toLowerCase(),
-              added_by: user?.email
-          }]);
-
-          if (insertErr) {
-              if (insertErr.code === '23505') throw new Error("User is already an admin!");
-              throw insertErr;
+          const data = await response.json();
+          
+          if (!response.ok) {
+              if (data.error && data.error.includes("already an admin")) throw new Error("User is already an admin!");
+              if (data.error && data.error.includes("Unauthorized Passcode")) throw new Error("Unauthorized Passcode");
+              throw new Error(data.error || "Failed to add admin");
           }
 
           setStatusMsg("New Admin Granted Access!");
@@ -432,12 +437,18 @@ const Admin = () => {
       setIsRemovingAdmin(true);
 
       try {
-          const { error } = await supabase.rpc('remove_admin_with_passcode', {
-              email_to_remove: adminToRemove,
-              provided_passcode: adminPasscode
+          const token = await user?.getIdToken();
+          const response = await fetch('/.netlify/functions/manage-admins', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'remove', passcode: adminPasscode, email_to_remove: adminToRemove })
           });
-
-          if (error) throw error;
+          const data = await response.json();
+          
+          if (!response.ok) {
+              if (data.error && data.error.includes("Unauthorized Passcode")) throw new Error("Unauthorized Passcode");
+              throw new Error(data.error || "Operation failed");
+          }
 
           setStatusMsg("Admin Privileges Revoked!");
           setTimeout(() => setStatusMsg(""), 3000);
@@ -489,8 +500,13 @@ const Admin = () => {
 
   const loadContestsManager = async () => {
     setContestView("manager");
-    const { data } = await supabase.from('contests').select('*').order('start_time', { ascending: false });
-    if (data) setExistingContests(data);
+    try {
+        const response = await fetch('/.netlify/functions/get-contests');
+        if (response.ok) {
+            const data = await response.json();
+            setExistingContests(data);
+        }
+    } catch(e) {}
   };
 
   const resetContestEditor = () => {
@@ -506,41 +522,44 @@ const Admin = () => {
       setCStart(toLocalDatetime(contest.start_time));
       setCEnd(toLocalDatetime(contest.end_time));
       
-      const { data: pData } = await supabase.from('problems').select('*').eq('contest_id', contest.id);
-      if (pData && pData.length > 0) {
-          const loadedProblems: ProblemData[] = [];
-          for (const p of pData) {
-              const { data: tcData } = await supabase.from('test_cases').select('*').eq('problem_id', p.id);
-              const formattedTcs = (tcData || []).map(tc => ({
-                  displayInput: tc.display_input || "", 
-                  rawInput: tc.raw_input || "", 
-                  expected: tc.expected_output || "",
-                  explanation: tc.explanation || "", 
-                  isPublic: tc.is_public,
-                  hasMultipleAnswers: tc.has_multiple_answers || false,
-                  imageUrl: tc.image_url || ""
-              }));
+      const response = await fetch(`/.netlify/functions/get-contest-details?id=${contest.id}`);
+      if (response.ok) {
+          const { problems: pData, testCases: tcData } = await response.json();
+          if (pData && pData.length > 0) {
+              const loadedProblems: ProblemData[] = [];
+              for (const p of pData) {
+                  const pTcs = tcData.filter((tc: any) => tc.problem_id === p.id);
+                  const formattedTcs = (pTcs || []).map((tc: any) => ({
+                      displayInput: tc.display_input || "", 
+                      rawInput: tc.raw_input || "", 
+                      expected: tc.expected_output || "",
+                      explanation: tc.explanation || "", 
+                      isPublic: tc.is_public,
+                      hasMultipleAnswers: tc.has_multiple_answers || false,
+                      imageUrl: tc.image_url || ""
+                  }));
 
-              let descObj = { description: p.description, inputFormat: "", outputFormat: "", constraints: "" };
-              try {
-                  const parsed = JSON.parse(p.description);
-                  if (parsed.description !== undefined) {
-                      descObj = parsed;
-                  }
-              } catch (e) { }
+                  let descObj = { description: p.description, inputFormat: "", outputFormat: "", constraints: "" };
+                  try {
+                      const parsed = JSON.parse(p.description);
+                      if (parsed.description !== undefined) {
+                          descObj = parsed;
+                      }
+                  } catch (e) { }
 
-              loadedProblems.push({
-                  dbId: p.id, title: p.title, difficulty: p.difficulty,
-                  description: descObj.description,
-                  inputFormat: descObj.inputFormat,
-                  outputFormat: descObj.outputFormat,
-                  constraints: descObj.constraints,
-                  testCases: formattedTcs.length > 0 ? formattedTcs : [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false, imageUrl: "" }]
-              });
+                  loadedProblems.push({
+                      dbId: p.id, title: p.title, difficulty: p.difficulty,
+                      description: descObj.description,
+                      inputFormat: descObj.inputFormat,
+                      outputFormat: descObj.outputFormat,
+                      constraints: descObj.constraints,
+                      testCases: formattedTcs.length > 0 ? formattedTcs : [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false, imageUrl: "" }]
+                  });
+              }
+              setProblems(loadedProblems);
+          } else {
+              setProblems([{ title: "", description: "", inputFormat: "", outputFormat: "", constraints: "", difficulty: "Easy", testCases: [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false, imageUrl: "" }] }]);
           }
-          setProblems(loadedProblems);
-      } else {
-          setProblems([{ title: "", description: "", inputFormat: "", outputFormat: "", constraints: "", difficulty: "Easy", testCases: [{ displayInput: "", rawInput: "", expected: "", explanation: "", isPublic: true, hasMultipleAnswers: false, imageUrl: "" }] }]);
       }
       setContestView("editor");
       setStatusMsg("");
@@ -550,18 +569,12 @@ const Admin = () => {
       if(!window.confirm("CRITICAL: Delete this contest? All related problems and test cases will be permanently destroyed.")) return;
       try {
         setStatusMsg("Erasing dependent records...");
-        const { data: pData, error: pFetchErr } = await supabase.from('problems').select('id').eq('contest_id', id);
-        if (pFetchErr) throw new Error("Problem fetch failed: " + pFetchErr.message);
-
-        if (pData && pData.length > 0) {
-            const problemIds = pData.map(p => p.id);
-            await supabase.from('leaderboard').delete().in('problem_id', problemIds);
-            await supabase.from('test_cases').delete().in('problem_id', problemIds);
-            const { error: pErr } = await supabase.from('problems').delete().eq('contest_id', id);
-            if (pErr) throw new Error("Problem delete failed: " + pErr.message);
-        }
-        const { error: cErr } = await supabase.from('contests').delete().eq('id', id);
-        if (cErr) throw new Error("Contest delete failed: " + cErr.message);
+        const token = await user?.getIdToken();
+        const response = await fetch(`/.netlify/functions/manage-contest?id=${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error("Delete failed");
         
         setExistingContests(prev => prev.filter(c => c.id !== id));
         setStatusMsg("Contest Eradicated Successfully");
@@ -580,77 +593,18 @@ const Admin = () => {
     setStatusMsg("Deploying Multi-Tier Contest...");
     
     try {
-      let currentContestId = cId;
-      if (currentContestId) {
-          const { error: updateErr } = await supabase.from('contests').update({ 
-              title: cTitle, start_time: new Date(cStart).toISOString(), end_time: new Date(cEnd).toISOString() 
-          }).eq('id', currentContestId);
-          if (updateErr) throw new Error("Contest Update: " + updateErr.message);
-      } else {
-          const { data, error } = await supabase.from('contests').insert([{ 
-              title: cTitle, start_time: new Date(cStart).toISOString(), end_time: new Date(cEnd).toISOString() 
-          }]).select();
-          if(error) throw new Error("Contest Insert: " + error.message);
-          currentContestId = data[0].id;
-          setCId(currentContestId); 
-      }
-
-      const { data: existingProbs, error: exProbErr } = await supabase.from('problems').select('id').eq('contest_id', currentContestId);
-      if (exProbErr) throw new Error("Problem Fetch: " + exProbErr.message);
-
-      const currentProbIds = problems.map(p => p.dbId).filter(id => id);
-      if (existingProbs) {
-          for (const ep of existingProbs) {
-              if (!currentProbIds.includes(ep.id)) {
-                  await supabase.from('leaderboard').delete().eq('problem_id', ep.id);
-                  await supabase.from('test_cases').delete().eq('problem_id', ep.id);
-                  await supabase.from('problems').delete().eq('id', ep.id);
-              }
-          }
-      }
-
-      let updatedProblems = [...problems];
-      for (let i = 0; i < problems.length; i++) {
-          let p = problems[i];
-          let probId = p.dbId;
-          
-          const combinedDesc = JSON.stringify({
-              description: p.description,
-              inputFormat: p.inputFormat,
-              outputFormat: p.outputFormat,
-              constraints: p.constraints
-          });
-
-          if (probId) {
-              const { error: pUpdateErr } = await supabase.from('problems').update({ 
-                  title: p.title, description: combinedDesc, difficulty: p.difficulty 
-              }).eq('id', probId);
-              if (pUpdateErr) throw new Error("Problem Update: " + pUpdateErr.message);
-          } else {
-              const { data, error } = await supabase.from('problems').insert([{ 
-                  contest_id: currentContestId, title: p.title, description: combinedDesc, difficulty: p.difficulty 
-              }]).select();
-              if(error) throw new Error("Problem Insert: " + error.message);
-              probId = data[0].id;
-              updatedProblems[i].dbId = probId; 
-          }
-
-          await supabase.from('test_cases').delete().eq('problem_id', probId);
-          const tcsToInsert = p.testCases.map(tc => ({
-              problem_id: probId, display_input: tc.displayInput, raw_input: tc.rawInput,
-              expected_output: tc.expected, explanation: tc.explanation, is_public: tc.isPublic,
-              has_multiple_answers: tc.hasMultipleAnswers || false, image_url: tc.imageUrl || null
-          }));
-          
-          if(tcsToInsert.length > 0) {
-              const { error: tcInsErr } = await supabase.from('test_cases').insert(tcsToInsert);
-              if (tcInsErr) throw new Error("Test Case Insert: " + tcInsErr.message);
-          }
-      }
+        const token = await user?.getIdToken();
+        const response = await fetch('/.netlify/functions/manage-contest', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cId, cTitle, cStart: new Date(cStart).toISOString(), cEnd: new Date(cEnd).toISOString(), problems
+            })
+        });
+        if (!response.ok) throw new Error("Deployment failed");
       
-      setProblems(updatedProblems);
-      setStatusMsg("Contest Deployed to Matrix!");
-      setTimeout(() => setStatusMsg(""), 4000);
+        setStatusMsg("Contest Deployed to Matrix!");
+        setTimeout(() => setStatusMsg(""), 4000);
     } catch (err: any) {
       alert("Deployment Failed: " + err.message);
       setStatusMsg("");

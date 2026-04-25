@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Instagram, Linkedin, Mail, Zap, Bug } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCookieConsent } from '@/contexts/CookieContext';
 
 interface FooterProps {
   onRestrictedClick?: () => void;
@@ -10,6 +11,7 @@ interface FooterProps {
 const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { openCookieConsent } = useCookieConsent();
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string, isRestricted: boolean) => {
     if (isRestricted && !user) {
@@ -75,7 +77,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
             <ul className="space-y-4 text-sm text-zinc-500 flex flex-col items-center sm:items-start">
               <li><a href="/support" onClick={(e) => handleLinkClick(e, '/support', false)} className="hover:text-white transition-colors cursor-pointer block">Support</a></li>
               <li><a href="/docs" onClick={(e) => handleLinkClick(e, '/docs', false)} className="hover:text-white transition-colors cursor-pointer block">Documentation</a></li>
-              <button onClick={() => window.dispatchEvent(new Event('openCookieConsent'))} className="hover:text-white transition-colors cursor-pointer block">
+              <button onClick={openCookieConsent} className="hover:text-white transition-colors cursor-pointer block">
                 Manage cookies
               </button>
             </ul>

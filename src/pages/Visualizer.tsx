@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabaseClient } from '@/lib/supabase';
+
 import { Helmet } from 'react-helmet-async';
 import {
   Activity,
@@ -100,22 +100,18 @@ const Visualizer = () => {
   const handleCloseWelcome = async () => {
     try {
       if (user) {
-        const profileFilter = profile?.id
-          ? `id=eq.${encodeURIComponent(profile.id)}`
-          : user.email
-            ? `email=eq.${encodeURIComponent(user.email)}`
-            : null;
-
-        if (!profileFilter) {
-          setShowWelcome(false);
-          return;
-        }
-
-        await supabaseClient.update(
-          'users',
-          profileFilter,
-          { has_seen_welcome: true },
-        );
+        const token = await user.getIdToken();
+        const response = await fetch('/.netlify/functions/update-profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ has_seen_welcome: true })
+        });
+        
+        if (!response.ok) throw new Error("Failed to update profile");
+        
         await refreshProfile();
       } else {
         localStorage.setItem('algoviz_welcome_seen', 'true');

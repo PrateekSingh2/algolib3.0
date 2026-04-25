@@ -1,7 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useCookieConsent } from '@/contexts/CookieContext';
 
 const AppFooter = () => {
+  const { openCookieConsent } = useCookieConsent();
+
   return (
     <footer className="relative w-full z-20 bg-[#07090E] border-t border-white/[0.05] py-6 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-zinc-500 font-sans">
       <div className="text-zinc-400 font-medium">
@@ -11,8 +14,8 @@ const AppFooter = () => {
         <Link to="/terms" className="hover:text-zinc-300 transition-colors">Terms</Link>
         <Link to="/privacy" className="hover:text-zinc-300 transition-colors">Privacy</Link>
         
-        {/* Dispatches event to open the cookie consent panel */}
-        <button onClick={() => window.dispatchEvent(new Event('openCookieConsent'))} className="hover:text-zinc-300 transition-colors cursor-pointer">
+        {/* Uses context instead of global window object */}
+        <button onClick={openCookieConsent} className="hover:text-zinc-300 transition-colors cursor-pointer">
           Manage cookies
         </button>
         

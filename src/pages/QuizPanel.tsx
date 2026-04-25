@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createClient } from '@supabase/supabase-js';
+
 import { 
   KeyRound, Plus, Loader2, ShieldAlert, Fingerprint, TerminalSquare, ChevronRight
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+
 
 export default function QuizPanel() {
   const navigate = useNavigate();
@@ -28,16 +26,16 @@ export default function QuizPanel() {
     setError('');
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from('quizzes')
-        .select('id')
-        .eq('join_code', joinCode.toUpperCase())
-        .maybeSingle();
-
-      if (fetchError || !data) {
+      const response = await fetch(`/.netlify/functions/get-quizzes?join_code=${joinCode.toUpperCase()}`);
+      if (!response.ok) {
         setError('Assessment not found. Verify the code and try again.');
       } else {
-        navigate(`/quiz/${data.id}`);
+        const data = await response.json();
+        if (!data || !data.id) {
+           setError('Assessment not found. Verify the code and try again.');
+        } else {
+           navigate(`/quiz/${data.id}`);
+        }
       }
     } catch (err) {
       setError('Connection matrix failed. Please try again.');

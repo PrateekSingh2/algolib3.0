@@ -5,7 +5,7 @@ import { collection, query, orderBy, onSnapshot, limit } from "firebase/firestor
 import { firestoreDB, logout } from "../lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { executeGoogleSignIn, executeGithubSignIn } from "@/App";
+import { executeGoogleSignIn, executeGithubSignIn } from "@/contexts/AuthContext";
 import {
   Home, Terminal, Cpu, BookOpen, MessageCircle, LogOut, Menu, X,
   Bell, CheckCircle2, UserCircle2, UserPen, ChevronDown, Zap, Activity,
