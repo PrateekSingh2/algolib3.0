@@ -120,4 +120,9 @@ async function submitUrls() {
   }
 }
 
-submitUrls();
+// At the bottom of scripts/index-algolib.js
+submitUrls().catch(error => {
+  console.error("⚠️ Indexing API failed (non-fatal):", error.message);
+  // We exit with 0 (success) so Netlify doesn't kill the build!
+  process.exit(0); 
+});
