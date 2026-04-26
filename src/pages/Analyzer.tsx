@@ -5,7 +5,7 @@ import { Zap, AlertCircle, Send, Paperclip, Loader2, Sparkles, Copy, Check, Edit
 // ─── FIREBASE IMPORTS ────────────────────────────────────────────────────────
 import { auth, firestoreDB as db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -14,14 +14,12 @@ import Navbar from "@/components/Navbar";
 
 // ─── Environment & Types ─────────────────────────────────────────────────────
 declare global {
-  interface ImportMetaEnv {
-    // Add other types if necessary
-  }
+  interface ImportMetaEnv {}
   interface ImportMeta { readonly env: ImportMetaEnv; }
 }
 
 interface AnalysisResult {
-  complexity: string; // Changed from the strict union of strings
+  complexity: string; 
   explanation: string;
 }
 
@@ -51,12 +49,12 @@ const generateChartData = () => {
 
 const CHART_DATA = generateChartData();
 const COMPLEXITY_COLORS = {
-  'O(1)': '#81c995',       // Soft Green
-  'O(log N)': '#8ab4f8',   // Soft Blue
-  'O(N)': '#fde293',       // Soft Yellow
-  'O(N log N)': '#fcad70', // Soft Orange
-  'O(N^2)': '#f28b82',     // Soft Red
-  'O(2^N)': '#c58af9',     // Soft Purple
+  'O(1)': '#81c995',       
+  'O(log N)': '#8ab4f8',   
+  'O(N)': '#fde293',       
+  'O(N log N)': '#fcad70', 
+  'O(N^2)': '#f28b82',     
+  'O(2^N)': '#c58af9',     
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -68,6 +66,7 @@ export default function Analyzer() {
   
   const [credits, setCredits] = useState<number | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -85,8 +84,6 @@ export default function Analyzer() {
     e.target.style.height = 'auto';
     e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
   };
-
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -107,36 +104,36 @@ export default function Analyzer() {
     }
   };
 
-  // ─── Firebase Auth & Credit Listener ───────────────────────────────────────
+  // ─── Firebase Auth & Real-Time Credit Listener ─────────────────────────────
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    let unsubscribeSnapshot: () => void;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       if (!user) {
         setCredits(null);
+        if (unsubscribeSnapshot) unsubscribeSnapshot();
         return;
       }
-      const today = new Date().toISOString().split('T')[0];
+      
       const userRef = doc(db, 'user_credits', user.uid);
       
-      try {
-        const docSnap = await getDoc(userRef);
-        if (!docSnap.exists()) {
-          await setDoc(userRef, { credits: 7, last_reset_date: today });
-          setCredits(7);
+      // Real-time listener: UI updates instantly when backend changes the db
+      unsubscribeSnapshot = onSnapshot(userRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setCredits(docSnap.data().credits);
         } else {
-          const data = docSnap.data();
-          if (data.last_reset_date !== today) {
-            await updateDoc(userRef, { credits: 7, last_reset_date: today });
-            setCredits(7);
-          } else {
-            setCredits(data.credits);
-          }
+          setCredits(7); // Visual default for brand new users
         }
-      } catch (err) {
-        console.error("Error fetching credits:", err);
-      }
+      }, (error) => {
+        console.error("Error listening to credits:", error);
+      });
     });
-    return () => unsubscribe(); 
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeSnapshot) unsubscribeSnapshot();
+    }; 
   }, []);
 
   // ─── Analyze Action ────────────────────────────────────────────────────────
@@ -145,7 +142,6 @@ export default function Analyzer() {
     if (!trimmedCode) return;
 
     setIsAnalyzing(true);
-    // Add user message to chat
     setMessages(prev => [...prev, { role: 'user', content: trimmedCode }]);
     setInputCode('');
     if (textareaRef.current) {
@@ -155,27 +151,14 @@ export default function Analyzer() {
     try {
       if (!currentUser) throw new Error("You must be logged in to use the analyzer.");
 
-      const today = new Date().toISOString().split('T')[0];
-      const userRef = doc(db, 'user_credits', currentUser.uid);
-      const docSnap = await getDoc(userRef);
-
-      if (!docSnap.exists()) throw new Error("Could not verify credits. Please refresh.");
-
-      let currentCredits = docSnap.data().credits;
-
-      if (docSnap.data().last_reset_date !== today) {
-        await updateDoc(userRef, { credits: 7, last_reset_date: today });
-        currentCredits = 7;
-      }
-
-      if (currentCredits <= 0) {
-        throw new Error("You have exhausted your 7 daily credits. Come back tomorrow!");
-      }
+      // Securely fetch the user's ID token
+      const token = await currentUser.getIdToken();
 
       const response = await fetch('/.netlify/functions/ask-groq', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // Pass token to backend
         },
         body: JSON.stringify({ code: trimmedCode })
       });
@@ -191,17 +174,19 @@ export default function Analyzer() {
 
       const data = await response.json();
       
-      // 🔥 DEBUG: This will print the AI's exact response in your browser console
-      console.log("Raw AI Response:", data.choices[0].message.content); 
-      
       let rawContent = data.choices[0].message.content;
-      
-      // ✅ FIX: Strip markdown backticks before parsing JSON
-      rawContent = rawContent.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+      rawContent = rawContent.replace(/http:\/\/googleusercontent.com\/immersive_entry_chip\/0/g, '');
 
-      const aiResult = JSON.parse(rawContent) as { complexity?: string; explanation?: string };
+      // 1. Add "error?: string" to your type casting
+      const aiResult = JSON.parse(rawContent) as { complexity?: string; explanation?: string; error?: string };
       
-      // ✅ FIX: Simple check. As long as the AI gives us a string for both, we accept it.
+      // 2. Intercept the intentional AI error BEFORE checking for complexity
+      if (aiResult.error) {
+        // Throwing this sends it straight to your catch block!
+        throw new Error(aiResult.error); 
+      }
+
+      // 3. Proceed with normal success logic
       if (aiResult.complexity && typeof aiResult.complexity === 'string' && aiResult.explanation && typeof aiResult.explanation === 'string') {
         setMessages(prev => [
           ...prev,
@@ -214,22 +199,17 @@ export default function Analyzer() {
             }
           }
         ]);
-        
-        const newBalance = currentCredits - 1;
-        await updateDoc(userRef, { credits: newBalance });
-        setCredits(newBalance);
       } else {
         throw new Error("Received invalid format from AI. Check browser console for details.");
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
       console.error(err);
       setMessages(prev => [
         ...prev,
-        { role: 'ai', content: err.message || "An unexpected error occurred.", isError: true }
+        { role: 'ai', content: errorMessage, isError: true }
       ]);
-    } finally {
-      setIsAnalyzing(false);
     }
   };
 
@@ -242,7 +222,7 @@ export default function Analyzer() {
 
   const isHomeState = messages.length === 0;
   
-  // Extract user's first name dynamically, defaulting to known profile name
+  // Extract user's first name dynamically
   const firstName = currentUser?.displayName ? currentUser.displayName.split(' ')[0] : 'Prateek';
 
   return (
@@ -253,7 +233,6 @@ export default function Analyzer() {
         <Navbar />
       </div>
       
-      {/* Spacer added here to prevent content from hiding behind the fixed navbar */}
       <div className="navbar-spacer"></div>
 
       <div className="tokens-indicator">
@@ -304,7 +283,7 @@ export default function Analyzer() {
                         <div className="analysis-card relative group/card">
                           <div className="complexity-header">
                             <span className="complexity-label">Time Complexity</span>
-                            <h2 className="complexity-value" style={{ color: COMPLEXITY_COLORS[msg.result.complexity] || '#8ab4f8' }}>
+                            <h2 className="complexity-value" style={{ color: COMPLEXITY_COLORS[msg.result.complexity as keyof typeof COMPLEXITY_COLORS] || '#8ab4f8' }}>
                               {msg.result.complexity}
                             </h2>
                           </div>
@@ -373,8 +352,6 @@ export default function Analyzer() {
             {isHomeState && (
               <div className="greeting-header">
                 <h1><span className="gradient-text">Hello, {firstName}</span></h1>
-                
-                {/* --- Typing SVG replacing the static <h2> --- */}
                 <div style={{ marginTop: '4px' }}>
                   <img 
                     src="https://readme-typing-svg.herokuapp.com?font=Inter&weight=500&size=40&pause=2000&color=444746&width=800&height=60&lines=Which+code+would+you+like+to+analyze%3F;AlgoLib+AI+is+here+to+help%2C+%F0%9F%A4%94;Paste+your+code+snippet+below...;Quick+Analysis+with+low+latency;AlgoLib+AI+supports+any+language%21" 
@@ -419,7 +396,7 @@ export default function Analyzer() {
         .analyzer-root { 
           height: 100vh; 
           overflow: hidden; 
-          background-color: #131314; /* Standard Gemini Dark background */
+          background-color: #131314; 
           color: #e3e3e3; 
           font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
           display: flex; 
@@ -433,9 +410,8 @@ export default function Analyzer() {
           flex-shrink: 0;
         }
         
-        /* Forces space below a fixed/absolute navbar */
         .navbar-spacer {
-          height: 72px; /* Adjust this value if your navbar is taller/shorter */
+          height: 72px; 
           flex-shrink: 0;
         }
 
@@ -447,10 +423,9 @@ export default function Analyzer() {
           position: relative;
         }
 
-        /* Top Right Token Indicator */
         .tokens-indicator { 
           position: absolute; 
-          top: 90px; /* Pushed down slightly to account for the navbar */
+          top: 90px; 
           right: 24px; 
           display: flex; 
           align-items: center; 
@@ -488,7 +463,6 @@ export default function Analyzer() {
         .message-row { display: flex; gap: 16px; width: 100%; }
         .message-row.user { justify-content: flex-end; }
         
-        /* AI Avatar (Gradient Sparkle) */
         .ai-avatar { 
           width: 32px; height: 32px; 
           border-radius: 50%; 
@@ -509,7 +483,6 @@ export default function Analyzer() {
         }
         .user .message-bubble { max-width: 80%; }
 
-        /* User Message Style */
         .user-text-bubble {
           background: #1e1f20;
           padding: 14px 18px;
@@ -525,7 +498,6 @@ export default function Analyzer() {
           word-break: break-all; 
         }
 
-        /* AI Message Layout */
         .ai-response-layout { display: flex; flex-direction: column; gap: 16px; margin-top: 4px; }
         .response-text { margin: 0; color: #e3e3e3; }
         
@@ -554,7 +526,6 @@ export default function Analyzer() {
           display: flex; align-items: center; gap: 12px; 
         }
 
-        /* Message Actions */
         .action-btn {
           background: transparent;
           border: none;
@@ -586,7 +557,6 @@ export default function Analyzer() {
 
         .input-bounds { width: 100%; max-width: 820px; margin: 0 auto; }
 
-        /* Gemini Greeting */
         .greeting-header { margin-bottom: 40px; padding-left: 8px; }
         .greeting-header h1 { margin: 0 0 8px 0; font-size: 44px; font-weight: 500; letter-spacing: -0.5px; }
         .gradient-text { 
@@ -596,7 +566,6 @@ export default function Analyzer() {
         }
         .greeting-header h2 { margin: 0; font-size: 44px; font-weight: 500; color: #444746; letter-spacing: -0.5px; }
 
-        /* Search/Input Box */
         .search-box-wrapper { 
           display: flex; align-items: flex-end; gap: 12px; 
           background: #1e1f20; 
