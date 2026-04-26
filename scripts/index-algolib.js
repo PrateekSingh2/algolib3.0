@@ -2,34 +2,53 @@ import { google } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import zlib from 'zlib'; // 1. Added zlib for decompression
 import 'dotenv/config'; 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 1. Resolve Credentials
-let clientEmail = process.env.GOOGLE_CLIENT_EMAIL || process.env.VITE_GOOGLE_CLIENT_EMAIL;
-let privateKey = process.env.GOOGLE_PRIVATE_KEY || process.env.VITE_GOOGLE_PRIVATE_KEY;
+// ─── 1. RESOLVE CREDENTIALS ──────────────────────────────────────────────────
+let clientEmail;
+let privateKey;
 
-if (!clientEmail || !privateKey) {
-  console.log("⚠️ Credentials not found in .env. Falling back to service_account.json...");
-  
-  const keyPath = path.resolve(__dirname, '../service_account.json');
-  
-  if (!fs.existsSync(keyPath)) {
-    console.error(`❌ CRITICAL ERROR: Could not find service_account.json at: ${keyPath}`);
-    process.exit(1);
-  }
+// Check for the compressed Gzip variable first (Netlify Production)
+const gzBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_GZ_B64;
 
+if (gzBase64) {
   try {
-    const keyData = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+    console.log("📦 Found compressed credentials. Decompressing...");
+    const buffer = Buffer.from(gzBase64, 'base64');
+    const decompressed = zlib.gunzipSync(buffer);
+    const keyData = JSON.parse(decompressed.toString());
+    
     clientEmail = keyData.client_email;
     privateKey = keyData.private_key;
   } catch (err) {
-    console.error("❌ CRITICAL ERROR: Failed to parse service_account.json.", err.message);
-    process.exit(1);
+    console.error("❌ ERROR: Failed to decompress FIREBASE_SERVICE_ACCOUNT_GZ_B64", err.message);
+  }
+} 
+
+// Fallback to old env vars or local file (Local Development)
+if (!clientEmail || !privateKey) {
+  clientEmail = process.env.GOOGLE_CLIENT_EMAIL || process.env.VITE_GOOGLE_CLIENT_EMAIL;
+  privateKey = process.env.GOOGLE_PRIVATE_KEY || process.env.VITE_GOOGLE_PRIVATE_KEY;
+
+  if (!clientEmail || !privateKey) {
+    console.log("⚠️ Credentials not found in .env. Falling back to service_account.json...");
+    const keyPath = path.resolve(__dirname, '../service_account.json');
+    
+    if (fs.existsSync(keyPath)) {
+      const keyData = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+      clientEmail = keyData.client_email;
+      privateKey = keyData.private_key;
+    } else {
+      console.error("❌ CRITICAL ERROR: No credentials found via Env Vars or local JSON file.");
+      process.exit(1);
+    }
   }
 }
+// ─────────────────────────────────────────────────────────────────────────────
 
 // 2. Strict Debugging Guardrails
 if (!privateKey) {
