@@ -1,34 +1,61 @@
 const admin = require('firebase-admin');
 
-// 1. Initialize Firebase Admin (Ensures it only initializes once per cold start)
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Replace literal \n with actual line breaks for the private key string
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = admin.firestore();
+// Maintain the database connection outside the handler for connection pooling, 
+// but delay the actual initialization until we are safely inside the try/catch block.
+let db;
 
 exports.handler = async (event, context) => {
-  // Only allow POST requests
+  // 1. Standardize CORS headers for Vite/React frontend communication
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+
+  // Catch the browser's preflight request before anything else
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers, body: '' };
+  }
+
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
+      headers,
       body: JSON.stringify({ error: 'Method Not Allowed' })
     };
   }
 
   try {
-    // 2. Extract and verify the Firebase Auth Token
-    const authHeader = event.headers.authorization;
+    // 2. Safe Firebase Initialization
+    // By putting this inside the handler, missing env vars will return a helpful 
+    // JSON error instead of crashing the Node process and causing a 502.
+    if (!admin.apps.length) {
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+      
+      if (!privateKey || !process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL) {
+        throw new Error('Server Misconfiguration: Missing Firebase Environment Variables.');
+      }
+
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          // Aggressively format the key to handle Netlify's string wrapping quirks
+          privateKey: privateKey.replace(/\\n/g, '\n').replace(/^"|"$/g, ''),
+        }),
+      });
+    }
+
+    if (!db) {
+      db = admin.firestore();
+    }
+
+    // 3. Extract and verify the Firebase Auth Token safely
+    const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return { 
         statusCode: 401, 
+        headers,
         body: JSON.stringify({ error: 'Unauthorized: Missing token' }) 
       };
     }
@@ -40,21 +67,35 @@ exports.handler = async (event, context) => {
     } catch (err) {
       return { 
         statusCode: 401, 
-        body: JSON.stringify({ error: 'Unauthorized: Invalid token' }) 
+        headers,
+        body: JSON.stringify({ error: 'Unauthorized: Invalid or expired token' }) 
       };
     }
 
     const uid = decodedToken.uid;
-    const { code } = JSON.parse(event.body || '{}');
+    
+    // Safely parse the body to prevent JSON syntax crashes
+    let bodyData = {};
+    try {
+      bodyData = JSON.parse(event.body || '{}');
+    } catch (e) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Malformed JSON payload' })
+      };
+    }
 
+    const { code } = bodyData;
     if (!code) {
       return {
         statusCode: 400,
+        headers,
         body: JSON.stringify({ error: 'Code snippet is required' })
       };
     }
 
-    // 3. Handle Credit Logic via Secure Server-Side Transaction
+    // 4. Handle Credit Logic via Secure Server-Side Transaction
     const userRef = db.collection('user_credits').doc(uid);
     const now = Date.now();
     const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
@@ -66,28 +107,29 @@ exports.handler = async (event, context) => {
 
       if (docSnap.exists) {
         const data = docSnap.data();
-        currentCredits = data.credits;
+        currentCredits = data.credits || 0;
         lastReset = data.last_reset_time || 0;
       }
 
-      // Check if 3 hours have passed OR if it's a brand new user
       if (!docSnap.exists || (now - lastReset >= THREE_HOURS_MS)) {
-        // Give 7 credits, deduct 1 immediately for this run (saving 6)
         transaction.set(userRef, { credits: 6, last_reset_time: now }, { merge: true });
       } else {
         if (currentCredits <= 0) {
           throw new Error("INSUFFICIENT_CREDITS");
         }
-        // Deduct exactly 1 credit
         transaction.update(userRef, { credits: currentCredits - 1 });
       }
     });
 
-    // 4. Call Groq API
+    // 5. Call Groq API
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      console.error('GROQ_API_KEY is not defined in environment variables.');
-      throw new Error('Server misconfiguration');
+      throw new Error('Server Misconfiguration: Missing Groq API Key.');
+    }
+
+    // Explicit check to ensure the Netlify environment supports native fetch
+    if (typeof fetch === 'undefined') {
+      throw new Error('Native fetch is undefined. Please ensure your Netlify project uses Node.js 18 or higher.');
     }
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -124,27 +166,41 @@ exports.handler = async (event, context) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.error?.message || `HTTP ${response.status}: Failed to reach Groq.`);
+      let groqErrorMsg = `HTTP ${response.status}: Failed to reach Groq.`;
+      try {
+        const errorData = await response.json();
+        groqErrorMsg = errorData?.error?.message || groqErrorMsg;
+      } catch (parseError) {
+        // Fallback if Groq sends HTML or a corrupted string
+      }
+      throw new Error(groqErrorMsg);
     }
 
     const data = await response.json();
     
     return {
       statusCode: 200,
+      headers,
       body: JSON.stringify(data)
     };
 
   } catch (error) {
-    console.error('Error in ask-groq function:', error);
+    console.error('Execution Error:', error);
+    
+    // Explicitly handle our known custom error
     if (error.message === "INSUFFICIENT_CREDITS") {
       return { 
         statusCode: 403, 
+        headers,
         body: JSON.stringify({ error: 'You have exhausted your credits. Please wait up to 3 hours for a refill.' }) 
       };
     }
+
+    // Return the actual error message inside the JSON so the frontend error card can display it,
+    // rather than blindly returning a 502 network drop.
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({ error: error.message || 'Internal Server Error' })
     };
   }
