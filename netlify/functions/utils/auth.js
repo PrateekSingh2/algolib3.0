@@ -1,4 +1,3 @@
-const admin = require('firebase-admin');
 const https = require('https');
 
 // Fix for Node 24 + Netlify CLI ECONNRESET on Windows:
@@ -10,24 +9,11 @@ const keepAliveAgent = new https.Agent({
   maxSockets: 5,
 });
 
-// Monkey-patch Node's global HTTPS agent before firebase-admin initializes
+// Monkey-patch Node's global HTTPS agent BEFORE firebase-admin initializes
 https.globalAgent = keepAliveAgent;
 
-if (!admin.apps.length) {
-  const privateKey = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
-  
-  if (!process.env.GOOGLE_CLIENT_EMAIL || !privateKey) {
-    console.warn("Firebase Admin: Missing GOOGLE_CLIENT_EMAIL or GOOGLE_PRIVATE_KEY");
-  }
-
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.VITE_FIREBASE_PROJECT_ID || "algolib-e0567",
-      clientEmail: process.env.GOOGLE_CLIENT_EMAIL,
-      privateKey: privateKey,
-    }),
-  });
-}
+// NOW import the centralized admin utility so it uses the patched agent
+const { admin } = require('./firebase-admin');
 
 const verifyToken = async (event) => {
   const authHeader = event.headers.authorization || event.headers.Authorization;

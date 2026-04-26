@@ -1,8 +1,4 @@
-const admin = require('firebase-admin');
-
-// Maintain the database connection outside the handler for connection pooling, 
-// but delay the actual initialization until we are safely inside the try/catch block.
-let db;
+const { admin, db } = require('./utils/firebase-admin');
 
 exports.handler = async (event, context) => {
   // 1. Standardize CORS headers for Vite/React frontend communication
@@ -26,30 +22,6 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // 2. Safe Firebase Initialization
-    // By putting this inside the handler, missing env vars will return a helpful 
-    // JSON error instead of crashing the Node process and causing a 502.
-    if (!admin.apps.length) {
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-      
-      if (!privateKey || !process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL) {
-        throw new Error('Server Misconfiguration: Missing Firebase Environment Variables.');
-      }
-
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          // Aggressively format the key to handle Netlify's string wrapping quirks
-          privateKey: privateKey.replace(/\\n/g, '\n').replace(/^"|"$/g, ''),
-        }),
-      });
-    }
-
-    if (!db) {
-      db = admin.firestore();
-    }
-
     // 3. Extract and verify the Firebase Auth Token safely
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
