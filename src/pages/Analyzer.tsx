@@ -144,21 +144,17 @@ export default function Analyzer() {
     setIsAnalyzing(true);
     setMessages(prev => [...prev, { role: 'user', content: trimmedCode }]);
     setInputCode('');
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
-
+    
     try {
       if (!currentUser) throw new Error("You must be logged in to use the analyzer.");
 
-      // Securely fetch the user's ID token
       const token = await currentUser.getIdToken();
 
       const response = await fetch('/.netlify/functions/ask-groq', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Pass token to backend
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ code: trimmedCode })
       });
@@ -173,21 +169,15 @@ export default function Analyzer() {
       }
 
       const data = await response.json();
-      
       let rawContent = data.choices[0].message.content;
-      rawContent = rawContent.replace(/http:\/\/googleusercontent.com\/immersive_entry_chip\/0/g, '');
-
-      // 1. Add "error?: string" to your type casting
+      
       const aiResult = JSON.parse(rawContent) as { complexity?: string; explanation?: string; error?: string };
       
-      // 2. Intercept the intentional AI error BEFORE checking for complexity
       if (aiResult.error) {
-        // Throwing this sends it straight to your catch block!
         throw new Error(aiResult.error); 
       }
 
-      // 3. Proceed with normal success logic
-      if (aiResult.complexity && typeof aiResult.complexity === 'string' && aiResult.explanation && typeof aiResult.explanation === 'string') {
+      if (aiResult.complexity && aiResult.explanation) {
         setMessages(prev => [
           ...prev,
           {
@@ -199,17 +189,21 @@ export default function Analyzer() {
             }
           }
         ]);
+        
+        setIsAnalyzing(false); 
+        
       } else {
-        throw new Error("Received invalid format from AI. Check browser console for details.");
+        throw new Error("Query is not valid. Please ensure your code snippet is correct and try again.");
       }
 
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
-      console.error(err);
       setMessages(prev => [
         ...prev,
         { role: 'ai', content: errorMessage, isError: true }
       ]);
+      
+      setIsAnalyzing(false); 
     }
   };
 
@@ -367,7 +361,7 @@ export default function Analyzer() {
               <textarea
                 ref={textareaRef}
                 className="gemini-input"
-                placeholder="Paste your code or pseudo-code here..."
+                placeholder="Paste to analyze ..."
                 value={inputCode}
                 onChange={handleInput}
                 onKeyDown={handleKeyDown}
