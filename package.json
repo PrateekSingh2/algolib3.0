@@ -8,7 +8,7 @@
     "dev:functions": "netlify functions:serve --port 9999",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:functions\"",
     "build": "vite build",
-    "postbuild": "node scripts/index-algolib.js",
+    "postbuild": "node scripts/index-algolib.js || true",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
