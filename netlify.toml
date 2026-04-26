@@ -1,16 +1,62 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PRODUCTION BUILD
+# ─────────────────────────────────────────────────────────────────────────────
 [build]
-  command = "npm run build"
-  publish = "dist" # Vite outputs files here
+  command   = "npm run build"
+  publish   = "dist"   # Vite outputs here
 
+# ─────────────────────────────────────────────────────────────────────────────
+# NETLIFY FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+[functions]
+  directory = "netlify/functions"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LOCAL DEV  (used by `netlify dev`)
+#
+# CRITICAL: host must be "127.0.0.1" (explicit IPv4).
+#   If omitted or set to "localhost", Node.js on Windows/macOS resolves it to
+#   ::1 (IPv6). The Vite process binds only to 127.0.0.1 (IPv4), so the
+#   TCP connection from the Netlify proxy to Vite crosses address families and
+#   produces ECONNRESET. Pinning both sides to the same IPv4 loopback address
+#   eliminates the conflict entirely.
+#
+# autoLaunch = false prevents the CLI from calling `open http://localhost:8888`
+#   in your default browser, which would again hit the IPv6 socket. Always
+#   open http://127.0.0.1:8888 manually (see README for the exact procedure).
+# ─────────────────────────────────────────────────────────────────────────────
 [dev]
-  framework = "#custom"
-  command = "npm run dev"
-  targetPort = 8080
-  port = 8888
-  host = "127.0.0.1"
+  framework    = "#custom"
+  command      = "npm run dev"   # Vite dev server (binds to 127.0.0.1:8080)
+  targetPort   = 8080            # Port Netlify proxy forwards HTTP to
+  port         = 8888            # Port the browser hits
+  host         = "127.0.0.1"     # Strict IPv4 – prevents ::1 / 127.0.0.1 mismatch
+  autoLaunch   = false           # Never open browser via 'localhost' alias
 
-# React Router SPA Fallback (Prevents 404s on page refresh in production)
+# ─────────────────────────────────────────────────────────────────────────────
+# RESPONSE HEADERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Prevent the browser from caching the SW registration script so that a
+# freshly-deployed SW is picked up immediately on the next page load.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Same treatment for the Workbox-generated SW file produced by vite-plugin-pwa
+[[headers]]
+  for = "/workbox-*.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REDIRECTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+# React Router SPA fallback – serves index.html for every non-asset route so
+# that client-side navigation works after a hard refresh in production.
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from   = "/*"
+  to     = "/index.html"
   status = 200

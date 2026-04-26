@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Zap, AlertCircle, Send, Paperclip, Loader2, Sparkles } from 'lucide-react';
+import { Zap, AlertCircle, Send, Paperclip, Loader2, Sparkles, Copy, Check, Edit2 } from 'lucide-react';
 
 // ─── FIREBASE IMPORTS ────────────────────────────────────────────────────────
 import { auth, firestoreDB as db } from "@/lib/firebase";
@@ -84,6 +84,27 @@ export default function Analyzer() {
     setInputCode(e.target.value);
     e.target.style.height = 'auto';
     e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+  };
+
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleEdit = (text: string) => {
+    setInputCode(text);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.style.height = 'auto';
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+        }
+      }, 0);
+    }
   };
 
   // ─── Firebase Auth & Credit Listener ───────────────────────────────────────
@@ -247,7 +268,7 @@ export default function Analyzer() {
           <div className="chat-scroll-area">
             <div className="chat-content-bounds">
               {messages.map((msg, idx) => (
-                <div key={idx} className={`message-row ${msg.role}`}>
+                <div key={idx} className={`message-row ${msg.role} group`}>
                   {msg.role === 'ai' && (
                     <div className="ai-avatar">
                       <Sparkles size={16} color="#fff" />
@@ -256,8 +277,18 @@ export default function Analyzer() {
                   
                   <div className="message-bubble">
                     {msg.role === 'user' ? (
-                      <div className="user-text-bubble">
-                        <pre className="user-code"><code>{msg.content}</code></pre>
+                      <div className="user-message-wrapper">
+                        <div className="user-text-bubble">
+                          <pre className="user-code"><code>{msg.content}</code></pre>
+                        </div>
+                        <div className="message-actions hidden group-hover:flex gap-2 mt-2 justify-end">
+                          <button onClick={() => handleEdit(msg.content)} className="action-btn" title="Edit Prompt">
+                            <Edit2 size={14} />
+                          </button>
+                          <button onClick={() => handleCopy(msg.content, `user-${idx}`)} className="action-btn" title="Copy Prompt">
+                            {copiedId === `user-${idx}` ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                          </button>
+                        </div>
                       </div>
                     ) : msg.isError ? (
                       <div className="error-card">
@@ -270,7 +301,7 @@ export default function Analyzer() {
                           Here is the performance breakdown for your algorithm:
                         </p>
                         
-                        <div className="analysis-card">
+                        <div className="analysis-card relative group/card">
                           <div className="complexity-header">
                             <span className="complexity-label">Time Complexity</span>
                             <h2 className="complexity-value" style={{ color: COMPLEXITY_COLORS[msg.result.complexity] || '#8ab4f8' }}>
@@ -278,6 +309,12 @@ export default function Analyzer() {
                             </h2>
                           </div>
                           <p className="complexity-desc">{msg.result.explanation}</p>
+                          
+                          <div className="absolute top-4 right-4 hidden group-hover/card:flex">
+                             <button onClick={() => handleCopy(`Time Complexity: ${msg.result!.complexity}\n\nExplanation:\n${msg.result!.explanation}`, `ai-${idx}`)} className="action-btn" title="Copy Analysis">
+                               {copiedId === `ai-${idx}` ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                             </button>
+                          </div>
                         </div>
 
                         <div className="graph-card">
@@ -515,6 +552,24 @@ export default function Analyzer() {
           padding: 14px 18px; 
           border-radius: 16px; 
           display: flex; align-items: center; gap: 12px; 
+        }
+
+        /* Message Actions */
+        .action-btn {
+          background: transparent;
+          border: none;
+          color: #9aa0a6;
+          cursor: pointer;
+          padding: 6px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+        .action-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: #e3e3e3;
         }
 
         /* ─── Input Area ─── */

@@ -3,28 +3,36 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
-// 🔥 FIX: Bypass the plugin's broken ES Module by forcing a CommonJS import
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const vitePrerender = require('vite-plugin-prerender');
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: '127.0.0.1',
     port: 8080,
     strictPort: true,
-    // 🔥 FIX 1: Lock the WebSocket connection directly to Vite so it doesn't get confused by Netlify's proxy
+    proxy: {
+      '/.netlify/functions': {
+        target: 'http://127.0.0.1:9999',
+        changeOrigin: true,
+      }
+    },
+    // ✅ HMR FIX: clientPort MUST match the port the browser connects to (8888, the
+    // Netlify Dev proxy). Without this, the browser tries to open a WebSocket
+    // directly to Vite's internal port 8081 which is not exposed through the proxy,
+    // causing "WebSocket closed without opened" → broken HMR → duplicate React
+    // instance → useContext null crash.
     hmr: {
       protocol: 'ws',
       host: '127.0.0.1',
-      port: 8080,
+      port: 8080,        // Vite's own WS port (same as HTTP dev server)
+      clientPort: 8888,  // The port the BROWSER dials — i.e. Netlify's proxy port
     },
   },
+
   plugins: [
     react(),
-
-    // PRE-RENDER PLUGIN: Only active during production build
     ...(mode === 'production' ? [vitePrerender({
       staticDir: path.join(__dirname, 'dist'),
       routes: ['/compiler'],
@@ -35,14 +43,13 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       devOptions: {
         enabled: false,
-        type: 'module'
+        type: 'module',
       },
       workbox: {
         navigateFallback: '/index.html',
-        // 🔥 FIX 2: Explicitly tell the Service Worker to NEVER intercept Netlify backend API functions
-        navigateFallbackDenylist: [/^\/\.netlify\//],
+        navigateFallbackDenylist: [ /^\/\.netlify\//, /^\/api\// ],
         cleanupOutdatedCaches: true,
-        maximumFileSizeToCacheInBytes: 15728640
+        maximumFileSizeToCacheInBytes: 15728640,
       },
       manifest: {
         name: 'AlgoLib',
@@ -54,15 +61,28 @@ export default defineConfig(({ mode }) => ({
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-        ]
-      }
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        ],
+      },
     }),
   ],
+
+  // ✅ MERGED resolve block — both alias and dedupe must live here.
+  // Having two `resolve` objects in the same config silently drops the first,
+  // killing the `@` import alias and breaking the entire src tree.
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Ensures every module resolves to the SAME React instance so that
+    // useContext / useNavigate never encounter a null dispatcher.
+    dedupe: ['react', 'react-dom', 'react-router-dom'],
+  },
+
+  // ✅ DEPENDENCY ISOLATION: Force Vite to pre-bundle these as a single unit so
+  // every lazy-loaded chunk shares the exact same React dispatcher context.
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom', 'framer-motion'],
   },
 
   build: {
@@ -72,18 +92,13 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Isolate the massive geographic database
             if (id.includes('country-state-city')) return 'geo-data';
-
-            // Isolate heavy execution engine
-            if (id.includes('@monaco-editor')) return 'monaco-engine';
-
-            // Isolate BaaS SDKs
-            if (id.includes('firebase')) return 'firebase-core';
-            if (id.includes('@supabase')) return 'supabase-core';
+            if (id.includes('@monaco-editor'))    return 'monaco-engine';
+            if (id.includes('firebase'))          return 'firebase-core';
+            if (id.includes('@supabase'))         return 'supabase-core';
           }
-        }
-      }
-    }
-  }
+        },
+      },
+    },
+  },
 }));

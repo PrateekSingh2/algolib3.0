@@ -7,8 +7,7 @@ import Navbar from '@/components/Navbar';
 import AppFooter from '@/components/AppFooter';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-
-
+import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const VIDEO_URL = "https://ik.imagekit.io/g7e4hyclo/contest-bg.mp4";
 const CACHE_NAME = "algolib-media-cache-v1";
@@ -16,13 +15,25 @@ const CACHE_NAME = "algolib-media-cache-v1";
 const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
 const itemVariants = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } } };
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-zinc-900 border border-white/10 p-3 rounded-lg shadow-xl">
+        <p className="text-white font-bold">{payload[0].payload.name}</p>
+        <p className="text-sky-400 font-mono text-sm mt-1">{payload[0].value} Pts</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function Contests() {
   const [contests, setContests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date().getTime());
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
 
-  const [currentUser, setCurrentUser] = useState<any>(null); // NEW: Auth tracking
+  const [currentUser, setCurrentUser] = useState<any>(null); 
   
   // Leaderboard State
   const [selectedLeaderboard, setSelectedLeaderboard] = useState<any | null>(null);
@@ -110,7 +121,6 @@ export default function Contests() {
           
           leaderboard.forEach((entry: any) => {
           if (!userMap[entry.user_uid]) {
-            // 2. Set Name Priority: Supabase User Table -> Leaderboard Default -> Fallback
             const realName = dbUserMap[entry.user_uid] || entry.display_name || 'Anonymous User';
             userMap[entry.user_uid] = { uid: entry.user_uid, name: realName, score: 0, time: 0, langs: new Set(), solvedProblems: new Set() };
           }
@@ -132,7 +142,9 @@ export default function Contests() {
         });
         
         setLbData(sorted);
-        } // <--- ADD THIS CLOSING BRACKET FOR THE IF STATEMENT
+        } else {
+           setLbData([]);
+        }
       } catch (err) {
         console.error(err);
         setLbData([]);
@@ -142,6 +154,7 @@ export default function Contests() {
 
     fetchLeaderboard();
   }, [selectedLeaderboard]);
+
   const liveContests = contests.filter(c => new Date(c.start_time).getTime() <= currentTime && new Date(c.end_time).getTime() > currentTime);
   const upcomingContests = contests.filter(c => new Date(c.start_time).getTime() > currentTime);
   const pastContests = contests.filter(c => new Date(c.end_time).getTime() <= currentTime).reverse();
@@ -171,6 +184,19 @@ export default function Contests() {
     return `${h}h ${m}m ${s}s`;
   };
 
+  const top3Data = lbData.slice(0, 3).map((user, idx) => ({
+    name: user.name,
+    score: user.score,
+    rank: idx + 1,
+    fill: idx === 0 ? '#fbbf24' : idx === 1 ? '#e4e4e7d3' : '#d97706de' // gold, silver, bronze
+  }));
+
+  // Reorder for visual podium: [Silver, Gold, Bronze]
+  const podiumData = [];
+  if (top3Data[1]) podiumData.push(top3Data[1]);
+  if (top3Data[0]) podiumData.push(top3Data[0]);
+  if (top3Data[2]) podiumData.push(top3Data[2]);
+
   return (
     <div className="min-h-screen bg-[#050505] text-zinc-200 font-sans selection:bg-sky-500/30 overflow-hidden relative">
       {videoSrc && (
@@ -196,9 +222,9 @@ export default function Contests() {
           >
             <motion.div 
               initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="w-full max-w-4xl max-h-[80vh] flex flex-col bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
+              className="w-full max-w-4xl max-h-[85vh] flex flex-col bg-zinc-950 border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
             >
-              <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/[0.02]">
+              <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/[0.02] shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-sky-500/10 rounded-lg border border-sky-500/20"><Trophy size={20} className="text-sky-400" /></div>
                   <div>
@@ -206,58 +232,79 @@ export default function Contests() {
                     <p className="text-xs text-zinc-400">Global Leaderboard</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedLeaderboard(null)} title="Close leaderboard" aria-label="Close leaderboard" className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} className="text-zinc-500 hover:text-white" /></button>
+                <button onClick={() => setSelectedLeaderboard(null)} title="Close leaderboard" className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} className="text-zinc-500 hover:text-white" /></button>
               </div>
 
               <div className="flex-1 overflow-auto custom-scrollbar p-6">
                 {loadingLb ? (
-                  <div className="h-40 flex flex-col items-center justify-center gap-3 text-sky-400"><Loader2 className="animate-spin" size={32} /><span className="text-sm font-medium text-zinc-400">Calculating Rankings...</span></div>
+                  <div className="h-64 flex flex-col items-center justify-center gap-3 text-sky-400"><Loader2 className="animate-spin" size={32} /><span className="text-sm font-medium text-zinc-400">Calculating Rankings...</span></div>
                 ) : lbData.length === 0 ? (
-                  <div className="h-40 flex flex-col items-center justify-center gap-3 text-zinc-500"><BarChart2 size={32} className="opacity-20" /><span className="text-sm font-medium">No successful submissions yet.</span></div>
+                  <div className="h-64 flex flex-col items-center justify-center gap-3 text-zinc-500"><BarChart2 size={32} className="opacity-20" /><span className="text-sm font-medium">No successful submissions yet.</span></div>
                 ) : (
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-white/5 text-zinc-500 text-xs font-semibold uppercase tracking-wider">
-                        <th className="pb-4 pl-4 w-16 text-center">Rank</th>
-                        <th className="pb-4">Developer</th>
-                        <th className="pb-4 text-center">Score</th>
-                        <th className="pb-4 text-center">Time Taken (HH:MM:SS)</th>
-                        <th className="pb-4 pr-4 text-right">Language</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {lbData.map((user, idx) => (
-                        <tr key={user.uid} className={`transition-colors group ${currentUser?.uid === user.uid ? 'bg-sky-500/10 border-l-[3px] border-sky-400' : 'hover:bg-white/[0.02]'}`}>
-                          <td className="py-4 pl-4 text-center">
-                            {idx === 0 ? <Medal size={20} className="text-yellow-400 mx-auto drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" /> : 
-                             idx === 1 ? <Medal size={20} className="text-zinc-300 mx-auto drop-shadow-[0_0_8px_rgba(212,212,216,0.5)]" /> : 
-                             idx === 2 ? <Medal size={20} className="text-amber-600 mx-auto drop-shadow-[0_0_8px_rgba(217,119,6,0.5)]" /> : 
-                             <span className={`font-bold ${currentUser?.uid === user.uid ? 'text-sky-400' : 'text-zinc-500 group-hover:text-zinc-300'}`}>{idx + 1}</span>}
-                          </td>
-                          <td className="py-4">
-                            <div className="font-bold text-white flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-500 to-purple-500 flex items-center justify-center text-[10px] text-white shadow-sm">
-                                {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                              </div>
-                              {user.name}
-                              {currentUser?.uid === user.uid && (
-                                <span className="ml-2 text-[9px] bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full uppercase tracking-wider border border-sky-500/30">You</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-4 text-center font-mono font-bold text-emerald-400">{user.score}</td>
-                          <td className="py-4 text-center font-mono text-sm text-zinc-400">{formatLbTime(user.time)}</td>
-                          <td className="py-4 pr-4 text-right">
-                            <div className="flex justify-end gap-1">
-                              {Array.from(user.langs).map((l: any) => (
-                                <span key={l} className="px-2 py-0.5 bg-zinc-800 border border-white/10 rounded text-[10px] font-bold uppercase text-zinc-300">{l}</span>
+                  <>
+                    {/* PODIUM CHART */}
+                    {podiumData.length > 0 && (
+                      <div className="h-48 w-full max-w-md mx-auto mb-8 relative border-b border-white/10">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={podiumData} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
+                            <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255, 255, 255, 0.22)'}}/>
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#1ae2cb', fontSize: 12}} dy={10} />
+                            <Bar dataKey="score" radius={[8, 8, 0, 0]} maxBarSize={60}>
+                              {podiumData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
                               ))}
-                            </div>
-                          </td>
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/5 text-zinc-500 text-xs font-semibold uppercase tracking-wider">
+                          <th className="pb-4 pl-4 w-16 text-center">Rank</th>
+                          <th className="pb-4">Developer</th>
+                          <th className="pb-4 text-center">Score</th>
+                          <th className="pb-4 text-center hidden md:table-cell">Time Taken (HH:MM:SS)</th>
+                          <th className="pb-4 pr-4 text-right">Language</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {lbData.map((user, idx) => (
+                          <tr key={user.uid} className={`transition-colors group ${currentUser?.uid === user.uid ? 'bg-sky-500/10 border-l-[3px] border-sky-400' : 'hover:bg-white/[0.02]'}`}>
+                            <td className="py-4 pl-4 text-center">
+                              {idx === 0 ? <Medal size={20} className="text-yellow-400 mx-auto drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" /> : 
+                               idx === 1 ? <Medal size={20} className="text-zinc-300 mx-auto drop-shadow-[0_0_8px_rgba(212,212,216,0.5)]" /> : 
+                               idx === 2 ? <Medal size={20} className="text-amber-600 mx-auto drop-shadow-[0_0_8px_rgba(217,119,6,0.5)]" /> : 
+                               <span className={`font-bold ${currentUser?.uid === user.uid ? 'text-sky-400' : 'text-zinc-500 group-hover:text-zinc-300'}`}>{idx + 1}</span>}
+                            </td>
+                            <td className="py-4">
+                              <div className="font-bold text-white flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-purple-500 flex items-center justify-center text-[12px] text-white shadow-sm border border-white/10">
+                                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                                </div>
+                                <div className="flex flex-col">
+                                   <span>{user.name}</span>
+                                   {currentUser?.uid === user.uid && (
+                                     <span className="text-[10px] text-sky-400 font-medium uppercase tracking-wider">You</span>
+                                   )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-4 text-center font-mono font-bold text-emerald-400">{user.score}</td>
+                            <td className="py-4 text-center font-mono text-sm text-zinc-400 hidden md:table-cell">{formatLbTime(user.time)}</td>
+                            <td className="py-4 pr-4 text-right">
+                              <div className="flex justify-end gap-1 flex-wrap">
+                                {Array.from(user.langs).map((l: any) => (
+                                  <span key={l} className="px-2 py-0.5 bg-zinc-800 border border-white/10 rounded text-[10px] font-bold uppercase text-zinc-300">{l}</span>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
                 )}
               </div>
             </motion.div>
@@ -314,12 +361,15 @@ export default function Contests() {
             {/* --- LIVE NOW SECTION --- */}
             {liveContests.length > 0 && (
               <motion.section variants={itemVariants}>
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </div>
+                    <h2 className="text-2xl font-bold text-white tracking-tight">Live Contests</h2>
                   </div>
-                  <h2 className="text-2xl font-bold text-white tracking-tight">Live Contests</h2>
+                  <span className="text-xs font-bold px-3 py-1 bg-white/5 border border-white/10 rounded-full text-zinc-400">{liveContests.length} Active</span>
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -329,9 +379,9 @@ export default function Contests() {
                       
                       <div className="relative z-10 p-8 flex flex-col flex-1">
                         <div className="flex-1">
-                          <h3 className="text-3xl font-bold text-white mb-3">{c.title}</h3>
-                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium mb-8">
-                            <Clock size={14}/> Ends: {formatDate(c.end_time)}
+                          <h3 className="text-3xl font-bold text-white mb-4">{c.title}</h3>
+                          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-bold mb-8">
+                            <Clock size={16} className="animate-pulse" /> Ends in {getTimeLeft(c.end_time)}
                           </div>
                         </div>
                         
@@ -352,9 +402,12 @@ export default function Contests() {
 
             {/* --- UPCOMING SECTION --- */}
             <motion.section variants={itemVariants}>
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400"><Calendar size={18} /></div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Upcoming Contests</h2>
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400"><Calendar size={18} /></div>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">Upcoming Contests</h2>
+                </div>
+                <span className="text-xs font-bold px-3 py-1 bg-white/5 border border-white/10 rounded-full text-zinc-400">{upcomingContests.length} Scheduled</span>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -385,9 +438,12 @@ export default function Contests() {
 
             {/* --- PAST SECTION --- */}
             <motion.section variants={itemVariants}>
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-2 rounded-lg bg-zinc-800 border border-white/10 text-zinc-400"><Code2 size={18} /></div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Past Contests</h2>
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-zinc-800 border border-white/10 text-zinc-400"><Code2 size={18} /></div>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">Past Contests</h2>
+                </div>
+                <span className="text-xs font-bold px-3 py-1 bg-white/5 border border-white/10 rounded-full text-zinc-400">{pastContests.length} Past</span>
               </div>
               
               <div className="flex flex-col gap-3">

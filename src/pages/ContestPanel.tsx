@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import Editor from '@monaco-editor/react';
-import { Play, Send, ChevronDown, Lock, Clock, CheckCircle2, Terminal, ArrowLeft, Loader2, X, Trash2, Code2, AlertTriangle, Target, Settings, RotateCcw, Wand2, AlertCircle } from 'lucide-react';
+import { Play, Send, Lock, Clock, CheckCircle2, Terminal as TerminalIcon, ArrowLeft, Loader2, X, AlertTriangle, Settings, RotateCcw, Wand2, Cpu, Database, Award, Activity, Code2, AlertCircle, Sparkles } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-
 
 // --- PURE CODEFORCES TEMPLATES ---
 const userTemplates: Record<string, string> = {
@@ -21,6 +20,20 @@ const FALLBACK_PROBLEM = {
 const FALLBACK_TEST_CASES = [
   { id: 1, display_input: 'nums = [2,7,11,15]\ntarget = 9', raw_input: '4\n2 7 11 15\n9', expected_output: '[0, 1]', explanation: 'Because nums[0] + nums[1] == 9, we return [0, 1].', is_public: true }
 ];
+
+interface SubmissionResult {
+  passed: number;
+  total: number;
+  allPassed: boolean;
+  timeTakenMs: number;
+  language: string;
+  accuracy: number;
+  attemptsCorrect: number;
+  attemptsTotal: number;
+  pointsEarned: number;
+  estimatedMemoryKB: number;
+  estimatedComplexity: string;
+}
 
 // --- MARKDOWN PARSER ---
 const renderMarkdown = (text: string, isSmall = false) => {
@@ -53,9 +66,8 @@ const renderMarkdown = (text: string, isSmall = false) => {
   });
 };
 
-// --- STRUCTURED TERMINAL LOG SYSTEM ---
 type LogEntry = {
-  type: 'system' | 'case_header' | 'success' | 'error' | 'expected' | 'actual_pass' | 'actual_fail' | 'gfg_panel';
+  type: 'system' | 'case_header' | 'success' | 'error' | 'expected' | 'actual_pass' | 'actual_fail';
   content?: string;
   data?: any; 
 };
@@ -63,15 +75,20 @@ type LogEntry = {
 const renderTerminalLog = (log: LogEntry, i: number) => {
   switch (log.type) {
     case 'system':
-      return <div key={i} className="text-zinc-400 font-semibold text-[13px] mb-4 pb-2 border-b border-white/5">{log.content}</div>;
+      return (
+        <div key={i} className="text-zinc-400 font-mono text-[13px] mb-2 flex items-start gap-2">
+          <span className="text-sky-500 font-bold select-none">algolib@runner:~$</span>
+          <span>{log.content}</span>
+        </div>
+      );
     case 'case_header':
-      return <div key={i} className="text-zinc-300 font-semibold mt-4 mb-2 flex items-center gap-2 text-[14px]">Test {log.content}</div>;
+      return <div key={i} className="text-zinc-300 font-semibold mt-4 mb-2 flex items-center gap-2 text-[13px] bg-white/5 px-3 py-1 rounded w-fit">Test Case {log.content}</div>;
     case 'success':
-      return <div key={i} className="text-emerald-500 font-medium flex items-center gap-2 my-1 text-[13px]"><CheckCircle2 size={16}/> {log.content}</div>;
+      return <div key={i} className="text-emerald-500 font-medium flex items-center gap-2 my-1 text-[13px]"><span className="px-1.5 py-0.5 bg-emerald-500/10 rounded text-[11px] font-bold text-emerald-400 border border-emerald-500/20">[OK]</span> {log.content}</div>;
     case 'error':
       return (
         <div key={i} className="text-rose-500 font-medium flex items-start gap-2 my-2 bg-rose-500/5 p-3 rounded-md border border-rose-500/10">
-          <X size={16} className="mt-0.5 shrink-0"/> 
+          <span className="px-1.5 py-0.5 bg-rose-500/10 rounded text-[11px] font-bold text-rose-400 border border-rose-500/20 shrink-0">[ERR]</span> 
           <pre className="font-mono whitespace-pre-wrap text-[13px]">{log.content}</pre>
         </div>
       );
@@ -79,7 +96,7 @@ const renderTerminalLog = (log: LogEntry, i: number) => {
       return (
         <div key={i} className="mt-2 mb-1">
           <div className="text-zinc-500 font-semibold mb-1 text-[11px] uppercase">Expected Output</div>
-          <div className="bg-zinc-900 px-3 py-2 rounded-md border border-white/5">
+          <div className="bg-zinc-950 px-3 py-2 rounded border border-white/5">
             <pre className="font-mono whitespace-pre-wrap text-[13px] text-zinc-300">{log.content || " "}</pre>
           </div>
         </div>
@@ -90,78 +107,237 @@ const renderTerminalLog = (log: LogEntry, i: number) => {
       return (
         <div key={i} className="mb-4">
           <div className="text-zinc-500 font-semibold mb-1 text-[11px] uppercase">Actual Output</div>
-          <div className={`px-3 py-2 rounded-md border ${isPass ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'}`}>
+          <div className={`px-3 py-2 rounded border ${isPass ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'}`}>
             <pre className={`font-mono whitespace-pre-wrap text-[13px] ${isPass ? 'text-emerald-200' : 'text-rose-200'}`}>{log.content || " "}</pre>
           </div>
         </div>
       );
-    
-    // --- GFG STYLE RESULTS PANEL ---
-    case 'gfg_panel':
-      const { passed, total, attemptsCorrect, attemptsTotal, time, accuracy, isSuccess } = log.data;
-      return (
-        <div key={i} className="flex flex-col text-zinc-200 mt-2 font-sans w-full max-w-4xl">
-          {/* Tabs Area */}
-          <div className="flex border-b border-white/10 mb-6">
-            <div className="text-sky-500 font-semibold pb-2 border-b-2 border-sky-500 px-1 text-[15px]">Compilation Results</div>
-          </div>
-
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-             <div className="flex items-center gap-2">
-                {isSuccess ? (
-                    <>
-                        <span className="text-xl font-bold text-zinc-100">Problem Solved Successfully</span>
-                        <CheckCircle2 size={24} className="text-emerald-500" fill="currentColor" stroke="#121212" />
-                    </>
-                ) : (
-                    <>
-                        <span className="text-xl font-bold text-zinc-100">Wrong Answer</span>
-                        <X size={24} className="text-rose-500 bg-rose-500/10 rounded-full p-1" />
-                    </>
-                )}
-             </div>
-             <Link 
-              to="/support" 
-              className="text-zinc-400 text-[13px] hover:text-zinc-200 underline decoration-white/20 underline-offset-4"
-             >
-             Suggest Feedback
-             </Link>          
-            </div>
-
-          {/* Metric Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-             {/* Card 1 */}
-             <div className="bg-[#1e1e1e]/80 rounded-xl p-5 border border-white/5 shadow-sm">
-                <div className="text-zinc-400 text-[13px] mb-3">Test Cases Passed</div>
-                <div className="text-3xl font-bold text-zinc-100">{passed} / {total}</div>
-             </div>
-             {/* Card 2 */}
-             <div className="bg-[#1e1e1e]/80 rounded-xl p-5 border border-white/5 shadow-sm">
-                <div className="text-zinc-400 text-[13px] mb-3">Attempts : Correct / Total</div>
-                <div className="text-3xl font-bold text-zinc-100 mb-2">{attemptsCorrect} / {attemptsTotal}</div>
-                <div className="text-[13px] text-zinc-400">Accuracy : <span className="font-semibold text-zinc-200">{accuracy}%</span></div>
-             </div>
-             {/* Card 3 */}
-             <div className="bg-[#1e1e1e]/80 rounded-xl p-5 border border-white/5 shadow-sm">
-                <div className="text-zinc-400 text-[13px] mb-3">Time Taken</div>
-                <div className="text-3xl font-bold text-zinc-100">{time}</div>
-             </div>
-          </div>
-
-          {/* GFG Specific Warning Box */}
-          <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-4 flex gap-3 items-start">
-             <AlertCircle size={18} className="text-rose-500 shrink-0 mt-0.5" />
-             <p className="text-rose-500/90 text-[13px] leading-relaxed">
-               You get marks only for the first correct submission.
-             </p>
-          </div>
-        </div>
-      );
-      
     default:
       return <div key={i} className="text-zinc-400 font-mono text-[13px]">{log.content}</div>;
   }
+};
+// Premium Framer Motion Variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.1 }
+  }
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 15, scale: 0.95, filter: "blur(4px)" },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1, 
+    filter: "blur(0px)",
+    transition: { type: "spring" as const, stiffness: 300, damping: 20 } 
+  }
+};
+
+const pulseRingVariants: Variants = {
+  initial: { scale: 0.8, opacity: 0 },
+  animate: { 
+    scale: [1, 1.8, 2.5], 
+    opacity: [0.6, 0.1, 0],
+    transition: { duration: 2.5, repeat: Infinity, ease: "easeOut" as const }
+  }
+};
+
+// Continuous background gradient shifting
+const bgShiftVariants: Variants = {
+  animate: {
+    backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'],
+    transition: { duration: 15, repeat: Infinity, ease: "linear" as const }
+  }
+};
+
+const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNextProblem }: { result: SubmissionResult, onReset: () => void, onShowLogs: () => void, onNextProblem: () => void, hasNextProblem: boolean }) => {
+  const isPass = result.allPassed;
+
+  return (
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="flex flex-col w-full h-full p-3 md:p-5 overflow-y-auto custom-scrollbar font-sans gap-4 bg-[#0d0d0d] text-zinc-100"
+    >
+      {/* Top Section: Hero Banner + Score */}
+      <div className="flex flex-col md:flex-row gap-4">
+        
+        {/* Main Status Hero */}
+        <motion.div 
+           variants={itemVariants} 
+           className={`flex-1 flex flex-col items-center justify-center p-6 rounded-2xl relative overflow-hidden shadow-2xl transition-all border ${isPass ? 'bg-gradient-to-br from-emerald-950/60 via-emerald-900/20 to-[#121212] border-emerald-500/20 shadow-emerald-900/20' : 'bg-gradient-to-br from-rose-950/60 via-rose-900/20 to-[#121212] border-rose-500/20 shadow-rose-900/20'}`}
+        >
+           {/* Animated Background Mesh */}
+           <motion.div 
+             variants={bgShiftVariants}
+             animate="animate"
+             className={`absolute inset-0 opacity-30 ${isPass ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.15),transparent_60%)]' : 'bg-[radial-gradient(circle_at_50%_50%,rgba(244,63,94,0.15),transparent_60%)]'} bg-[length:200%_200%]`}
+           />
+
+           {/* Glassmorphism Status Badge */}
+           <div className="absolute top-4 left-4 px-2.5 py-1 rounded-md text-[9px] font-black tracking-widest bg-white/5 backdrop-blur-md border border-white/10 uppercase text-zinc-400">
+              Evaluation
+           </div>
+           
+           <div className="relative mb-4 mt-2">
+              <motion.div variants={pulseRingVariants} initial="initial" animate="animate" className={`absolute inset-0 rounded-full ${isPass ? 'bg-emerald-500' : 'bg-rose-500'}`}></motion.div>
+              
+              <motion.div 
+                 initial={{ scale: 0, rotate: -90 }}
+                 animate={{ scale: 1, rotate: 0 }}
+                 transition={{ type: "spring", stiffness: 250, damping: 18, delay: 0.2 }}
+                 className={`w-14 h-14 rounded-2xl flex items-center justify-center relative z-10 shadow-lg backdrop-blur-xl border ${isPass ? 'bg-emerald-500/10 text-emerald-400 border-emerald-400/30' : 'bg-rose-500/10 text-rose-400 border-rose-400/30'}`}
+               >
+                 {isPass ? <CheckCircle2 size={32} strokeWidth={2.5} /> : <X size={32} strokeWidth={2.5} />}
+              </motion.div>
+           </div>
+           
+           <h2 className={`text-2xl md:text-3xl font-black tracking-tight mb-1 relative z-10 drop-shadow-md ${isPass ? 'text-emerald-400' : 'text-rose-400'}`}>
+             {isPass ? 'Execution Successful' : 'Test Cases Failed'}
+           </h2>
+           <p className="text-zinc-400 text-[13px] font-medium text-center relative z-10 max-w-sm">
+             {isPass ? 'Your code efficiently passed all required criteria.' : 'Output did not match expected results for hidden cases.'}
+           </p>
+        </motion.div>
+
+        {/* Score Card */}
+        <motion.div variants={itemVariants} className="w-full md:w-64 bg-gradient-to-b from-[#1a1a1a] to-[#121212] border border-white/5 rounded-2xl p-5 flex flex-col relative overflow-hidden group shadow-xl">
+           
+           {/* Ambient floating award icon */}
+           <motion.div 
+             animate={{ y: [0, -8, 0], rotate: [0, 5, 0] }} 
+             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+             className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-[0.07] transition-all duration-700 pointer-events-none"
+           >
+              <Award size={120} />
+           </motion.div>
+
+           <div className="flex items-center gap-2 text-zinc-500 text-[10px] font-black tracking-[0.2em] uppercase mb-3 relative z-10">
+              <Award size={12} className={isPass ? 'text-amber-400' : 'text-zinc-600'} /> 
+              Net Score
+           </div>
+           
+           <div className="flex flex-col mt-auto relative z-10">
+              <div className="flex items-baseline gap-1.5">
+                 <motion.span 
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4, type: "spring", damping: 14 }}
+                    className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-zinc-500"
+                 >
+                   {result.pointsEarned}
+                 </motion.span>
+                 <span className="text-zinc-500 font-bold text-sm tracking-wide">Pts</span>
+              </div>
+           </div>
+
+           {/* Animated Info Label */}
+           <motion.div 
+             initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.7 }}
+             className="mt-4 text-[10px] text-zinc-400 font-medium leading-tight flex gap-1.5 items-start bg-[#0a0a0a]/80 border border-white/5 p-2.5 rounded-lg relative z-10 backdrop-blur-md"
+           >
+             <AlertCircle size={12} className="shrink-0 mt-0.5 text-sky-400" />
+             <span>Score locks after the <strong>first accepted submission</strong>.</span>
+           </motion.div>
+        </motion.div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        
+        {/* Test Cases */}
+        <motion.div variants={itemVariants} whileHover={{ y: -4, scale: 1.02 }} className="bg-[#151515] border border-white/5 hover:border-sky-500/30 rounded-xl p-4 md:p-5 flex flex-col transition-all duration-300 shadow-md relative overflow-hidden group">
+           <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+           <div className="flex items-center justify-between mb-3 relative z-10">
+              <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] font-black tracking-widest uppercase">
+                 <Database size={12} className="text-sky-400" /> Tests
+              </div>
+              <div className="bg-sky-500/10 text-sky-400 px-1.5 py-0.5 rounded text-[9px] font-bold">{result.accuracy}%</div>
+           </div>
+           
+           <div className="flex items-baseline gap-1 mb-3 relative z-10">
+              <span className="text-3xl font-black text-white">{result.passed}</span>
+              <span className="text-zinc-600 font-bold text-sm">/{result.total}</span>
+           </div>
+           
+           <div className="mt-auto w-full bg-black/60 h-1 rounded-full overflow-hidden relative z-10">
+              <motion.div 
+                initial={{ width: 0 }} animate={{ width: `${result.accuracy}%` }} transition={{ duration: 1.2, delay: 0.4, ease: "easeOut" }}
+                className={`h-full rounded-full shadow-[0_0_10px_rgba(14,165,233,0.5)] ${result.accuracy === 100 ? 'bg-emerald-400' : 'bg-sky-400'}`}
+              />
+           </div>
+        </motion.div>
+
+        {/* Runtime */}
+        <motion.div variants={itemVariants} whileHover={{ y: -4, scale: 1.02 }} className="bg-[#151515] border border-white/5 hover:border-amber-500/30 rounded-xl p-4 md:p-5 flex flex-col transition-all duration-300 shadow-md relative overflow-hidden group">
+           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+           <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] font-black tracking-widest uppercase mb-3 relative z-10">
+              <Activity size={12} className="text-amber-400" /> Runtime
+           </div>
+           <div className="flex items-baseline gap-1 mt-auto relative z-10">
+              <span className="text-3xl font-black text-white">{result.timeTakenMs}</span>
+              <span className="text-zinc-500 font-bold text-sm">ms</span>
+           </div>
+        </motion.div>
+
+        {/* Memory */}
+        <motion.div variants={itemVariants} whileHover={{ y: -4, scale: 1.02 }} className="bg-[#151515] border border-white/5 hover:border-purple-500/30 rounded-xl p-4 md:p-5 flex flex-col transition-all duration-300 shadow-md relative overflow-hidden group">
+           <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+           <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] font-black tracking-widest uppercase mb-3 relative z-10">
+              <Cpu size={12} className="text-purple-400" /> Memory
+           </div>
+           <div className="flex items-baseline gap-1 mt-auto relative z-10">
+              <span className="text-3xl font-black text-white">{(result.estimatedMemoryKB / 1024).toFixed(1)}</span>
+              <span className="text-zinc-500 font-bold text-sm">MB</span>
+           </div>
+        </motion.div>
+      </div>
+
+      {/* Actions */}
+      <motion.div variants={itemVariants} className="mt-2 flex flex-col sm:flex-row gap-3">
+         {isPass ? (
+             <motion.button 
+                whileHover={hasNextProblem ? { scale: 1.02, y: -2 } : {}}
+                whileTap={hasNextProblem ? { scale: 0.98 } : {}}
+                onClick={onNextProblem} 
+                disabled={!hasNextProblem}
+                className={`relative flex-1 py-3.5 px-6 font-bold text-[13px] rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 overflow-hidden group ${hasNextProblem ? 'bg-zinc-100 text-black hover:bg-white shadow-white/10' : 'bg-zinc-900 text-zinc-600 cursor-not-allowed border border-white/5'}`}>
+                {/* Shimmer effect for SaaS feel */}
+                {hasNextProblem && <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)" }}></div>}
+                <span className="relative z-10">{hasNextProblem ? 'Next Challenge' : 'Contest Completed'}</span>
+             </motion.button>
+         ) : (
+             <motion.button 
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onReset} 
+                className="relative flex-1 py-3.5 px-6 bg-zinc-100 text-black hover:bg-white font-bold text-[13px] rounded-xl transition-all shadow-lg overflow-hidden group">
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                <span className="relative z-10">Try Again</span>
+             </motion.button>
+         )}
+         <motion.button 
+            whileHover={{ scale: 1.02, y: -2, backgroundColor: "rgba(30,30,30,1)" }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onShowLogs} 
+            className="flex-1 py-3.5 px-6 bg-[#151515] text-zinc-300 font-bold text-[13px] rounded-xl border border-white/5 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-xl hover:border-white/10">
+            <TerminalIcon size={16} className="text-zinc-500" /> View Output Logs
+         </motion.button>
+      </motion.div>
+
+      {/* Add Shimmer Keyframes to standard style injected in component or globally */}
+      <style>{`
+        @keyframes shimmer {
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
+    </motion.div>
+  );
 };
 
 export default function ContestPanel({ user, onLoginRequest }: { user: any, onLoginRequest: any }) {
@@ -174,21 +350,19 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   const [problems, setProblems] = useState<any[]>([]);
   const [activeProblemIndex, setActiveProblemIndex] = useState(0);
   const [testCases, setTestCases] = useState<any[]>([]);
+  const [allTestCases, setAllTestCases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [language, setLanguage] = useState('c++'); 
   const [code, setCode] = useState(userTemplates['c++']);
   
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isRunning, setIsRunning] = useState(false);
-  const [runningBatchInfo, setRunningBatchInfo] = useState<string | null>(null); 
   const [isMobile, setIsMobile] = useState(false);
   
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [contestStatus, setContestStatus] = useState<'upcoming' | 'active' | 'ended'>('upcoming');
   const [lastRunTime, setLastRunTime] = useState<number>(0);
   
-  // Track Problem Statistics globally for the GFG Panel
   const [problemStats, setProblemStats] = useState<Record<string, { correct: number, total: number }>>({});
   
   const [showEndedPopup, setShowEndedPopup] = useState(false);
@@ -203,6 +377,10 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     suggestions: true
   });
 
+  // --- NEW STATE MACHINE ---
+  const [submissionPhase, setSubmissionPhase] = useState<'idle' | 'evaluating' | 'complete'>('idle');
+  const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile(); 
@@ -215,7 +393,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       if (document.hidden && contestStatus === 'active') {
         setShowCheatWarning(true);
         if (user && contestId) {
-            // Future extension: Call Netlify function to log warning
             console.warn("User navigated away from active contest.");
         }
       }
@@ -228,16 +405,22 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     const fetchMatrix = async () => {
       if (!contestId) { setLoading(false); return; }
       try {
-        const response = await fetch(`/.netlify/functions/get-contest-details?id=${contestId}`);
+        const response = await fetch(`/.netlify/functions/get-contest-details?id=${contestId}&t=${Date.now()}`);
         if (response.ok) {
-          const { contest, problems } = await response.json();
+          const { contest, problems, testCases } = await response.json();
           if (contest) setContest(contest);
-          if (problems && problems.length > 0) setProblems(problems);
-          else setProblems([FALLBACK_PROBLEM]);
+          if (testCases && testCases.length > 0) setAllTestCases(testCases);
+          
+          if (problems && problems.length > 0) {
+            setProblems(problems);
+          } else {
+            setProblems([FALLBACK_PROBLEM]);
+          }
         } else {
           setProblems([FALLBACK_PROBLEM]);
         }
       } catch (err) {
+        console.error("Failed to fetch contest details:", err);
         setProblems([FALLBACK_PROBLEM]);
       }
       setLoading(false);
@@ -246,12 +429,26 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   }, [contestId]);
 
   useEffect(() => {
+    if (problems.length === 0) return;
+    const currentProblem = problems[activeProblemIndex];
+    if (currentProblem.id === 'fallback-id') { 
+      setTestCases(FALLBACK_TEST_CASES); 
+      return; 
+    }
+    
+    // Filter test cases locally from allTestCases instead of fetching
+    if (allTestCases.length > 0) {
+      const problemTestCases = allTestCases.filter(tc => tc.problem_id === currentProblem.id);
+      if (problemTestCases.length > 0) {
+        setTestCases(problemTestCases);
+        return;
+      }
+    }
+    
+    // If no test cases found locally, attempt to fetch them
     const fetchTestCases = async () => {
-      if (problems.length === 0) return;
-      const currentProblem = problems[activeProblemIndex];
-      if (currentProblem.id === 'fallback-id') { setTestCases(FALLBACK_TEST_CASES); return; }
       try {
-        const response = await fetch(`/.netlify/functions/get-test-cases?problemId=${currentProblem.id}`);
+        const response = await fetch(`/.netlify/functions/get-test-cases?problemId=${currentProblem.id}&t=${Date.now()}`);
         if (response.ok) {
           const tcData = await response.json();
           if (tcData && tcData.length > 0) setTestCases(tcData);
@@ -260,11 +457,12 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
           setTestCases(FALLBACK_TEST_CASES);
         }
       } catch (err) {
+        console.error("Failed to fetch test cases:", err);
         setTestCases(FALLBACK_TEST_CASES);
       }
     };
     fetchTestCases();
-  }, [activeProblemIndex, problems]);
+  }, [activeProblemIndex, problems, allTestCases]);
 
   useEffect(() => {
     if (problems.length === 0 || !contestId) return;
@@ -319,6 +517,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   const handleLanguageChange = (e: any) => {
     setLanguage(e.target.value);
     setLogs([]); 
+    setSubmissionPhase('idle');
   };
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
@@ -419,8 +618,14 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       return;
     }
     
-    setIsRunning(true);
     setLogs([]); 
+    
+    if (isSubmit) {
+      setSubmissionPhase('evaluating');
+    } else {
+      setSubmissionPhase('idle');
+      setLogs([{ type: 'system', content: 'Running public test cases...' }]);
+    }
     
     let currentLogs: LogEntry[] = [];
     const addLog = (type: LogEntry['type'], content?: string, data?: any) => {
@@ -431,21 +636,16 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     const currentProblem = problems[activeProblemIndex];
     const pId = currentProblem.id;
 
-    // Initialize stats if not exist
     if (!problemStats[pId]) {
       setProblemStats(prev => ({ ...prev, [pId]: { correct: 0, total: 0 } }));
     }
 
-    addLog('system', isSubmit ? 'Compiling and submitting code in batches...' : 'Running public test cases...');
-    
     let casesToRun = isSubmit ? testCases : testCases.filter(tc => tc.is_public === true || tc.is_public === 'true' || tc.isPublic === true || tc.isPublic === 'true');
     if (casesToRun.length === 0 && testCases.length > 0) casesToRun = [testCases[0]];
     
     let passedCount = 0;
     const startTimeExecute = performance.now();
     
-    // --- BATCHING LOGIC ---
-    // Chunk array into sizes of 3 to avoid overwhelming the HF space while still speeding up execution
     const BATCH_SIZE = 3;
     const batches = [];
     for (let i = 0; i < casesToRun.length; i += BATCH_SIZE) {
@@ -455,9 +655,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     for (let b = 0; b < batches.length; b++) {
         const currentBatch = batches[b];
         const startIdx = b * BATCH_SIZE;
-        setRunningBatchInfo(`Executing cases ${startIdx + 1} to ${startIdx + currentBatch.length} of ${casesToRun.length}...`);
 
-        // Execute batch concurrently
         const batchPromises = currentBatch.map(async (tc) => {
             const rawIn = String(tc.raw_input || tc.rawInput || '').replace(/\\n/g, '\n');
             const expOut = String(tc.expected_output || tc.expected || '').trim();
@@ -491,25 +689,29 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
 
         const results = await Promise.all(batchPromises);
 
-        // Process batch results
         for (let i = 0; i < results.length; i++) {
             const res = results[i];
             const caseNum = startIdx + i + 1;
             const isPub = res.tc.is_public === true || res.tc.is_public === 'true';
 
-            // Only spam the log terminal individually if it's NOT a full submission, OR if it failed
             if (!isSubmit || !res.isCorrect || !res.success) {
-                addLog('case_header', `${caseNum}`);
+                if (!isSubmit) addLog('case_header', `${caseNum}`);
                 if (!res.success) {
+                    if (isSubmit) addLog('case_header', `${caseNum} (Hidden)`);
                     addLog('error', `Runtime Error:\n${res.output}`);
                 } else if (res.isCorrect) {
-                    addLog('success', 'Accepted');
-                    if (isPub) addLog('actual_pass', res.output);
+                    if (!isSubmit) {
+                       addLog('success', 'Accepted');
+                       if (isPub) addLog('actual_pass', res.output);
+                    }
                 } else {
+                    if (isSubmit) addLog('case_header', `${caseNum} (Hidden)`);
                     addLog('error', 'Wrong Answer');
                     if (isPub) {
                         addLog('expected', res.expOut);
                         addLog('actual_fail', res.output);
+                    } else if (isSubmit) {
+                        addLog('system', 'Output hidden for private test cases.');
                     }
                 }
             }
@@ -517,9 +719,8 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         }
     }
     
-    setRunningBatchInfo(null);
     const endTimeExecute = performance.now();
-    const exactTimeTaken = ((endTimeExecute - startTimeExecute) / 1000).toFixed(2);
+    const timeTakenMs = Math.round(endTimeExecute - startTimeExecute);
     const allPassed = passedCount === casesToRun.length;
 
     if (isSubmit) {
@@ -537,7 +738,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
           [pId]: { correct: newCorrect, total: newTotal }
       }));
 
-      // Calculate penalty based on total WRONG attempts (Total - Correct)
       const wrongAttemptsCount = newTotal - newCorrect - (allPassed ? 0 : 1);
       const pointsEarned = Math.max(0, defaultPts - (wrongAttemptsCount * defaultPenalty));
 
@@ -571,28 +771,29 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         } catch (e) { console.error("Database sync failed:", e); }
       }
 
-      // RENDER GFG PANEL
-      addLog('gfg_panel', '', {
-          passed: passedCount,
-          total: casesToRun.length,
-          attemptsCorrect: newCorrect,
-          attemptsTotal: newTotal,
-          time: exactTimeTaken,
-          accuracy: accuracy,
-          isSuccess: allPassed
+      setSubmissionResult({
+         passed: passedCount,
+         total: casesToRun.length,
+         allPassed,
+         timeTakenMs,
+         language,
+         accuracy,
+         attemptsCorrect: newCorrect,
+         attemptsTotal: newTotal,
+         pointsEarned: allPassed ? pointsEarned : 0,
+         estimatedMemoryKB: 1024 + Math.random() * 4096, 
+         estimatedComplexity: 'O(N)' 
       });
+      setSubmissionPhase('complete');
 
     } else {
-        // Run (not Submit)
         if (allPassed) {
              addLog('system', `All ${passedCount}/${casesToRun.length} public test cases passed successfully.`);
         }
     }
-
-    setIsRunning(false);
   };
 
-  if (loading) return <div className="h-screen bg-zinc-950 flex items-center justify-center"><Loader2 className="animate-spin text-emerald-500" size={32} /></div>;
+  if (loading) return <div className="h-screen bg-[#121212] flex items-center justify-center"><Loader2 className="animate-spin text-sky-500" size={32} /></div>;
 
   const activeProblem = problems[activeProblemIndex];
   const activeDifficultyStr = (activeProblem?.difficulty || 'easy').toLowerCase();
@@ -605,7 +806,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   const wrongCount = activeStats.total - activeStats.correct;
   const availablePoints = Math.max(0, displayPoints - (wrongCount * displayPenalty));
 
-  // --- JSON STRING LEAK PARSER ---
   let problemDesc = activeProblem?.description || '';
   let inputFmt = activeProblem?.inputFormat || activeProblem?.input_format || '';
   let outputFmt = activeProblem?.outputFormat || activeProblem?.output_format || '';
@@ -624,27 +824,25 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
   }
 
   return (
-    <div className="h-screen w-screen bg-[#0a0a0a] text-zinc-300 font-sans flex flex-col overflow-hidden relative">
+    <div className="h-screen w-screen bg-[#121212] text-zinc-300 font-sans flex flex-col overflow-hidden relative selection:bg-sky-500/30">
       <AnimatePresence>
-        {/* RESET MODAL */}
         {showResetModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#121212] border border-white/10 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-white/10 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
                 <RotateCcw size={48} className="text-rose-500 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-zinc-100 mb-2">Reset Editor?</h2>
                 <p className="text-zinc-400 mb-6 text-sm">Are you sure you want to reset your code? All current changes will be permanently lost.</p>
                 <div className="flex gap-4">
                    <button onClick={() => setShowResetModal(false)} className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-zinc-200 font-bold rounded-xl transition-colors">Cancel</button>
-                   <button onClick={confirmResetCode} className="flex-1 py-3 bg-rose-600/90 hover:bg-rose-500 text-white font-bold rounded-xl transition-colors">Yes, Reset</button>
+                   <button onClick={confirmResetCode} className="flex-1 py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition-colors">Yes, Reset</button>
                 </div>
              </motion.div>
           </motion.div>
         )}
 
-        {/* CONTEST ENDED POPUP */}
         {showEndedPopup && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-white/10 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
                 <Clock size={48} className="text-rose-500 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-white mb-2">Contest Ended</h2>
                 <p className="text-zinc-400 mb-6 text-sm">The contest time has expired. Submissions for points are now disabled, but you can still run your code for practice.</p>
@@ -653,44 +851,42 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
           </motion.div>
         )}
 
-        {/* CHEAT WARNING POPUP */}
         {showCheatWarning && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl relative">
-                <AlertTriangle size={48} className="text-amber-500 mx-auto mb-4" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-zinc-950 border border-amber-500/30 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl relative">
+                <AlertTriangle size={48} className="text-amber-500 mx-auto mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
                 <h2 className="text-2xl font-bold text-white mb-2">Warning</h2>
                 <p className="text-zinc-400 mb-6 text-sm">Activity tracked: You switched tabs. Please do not navigate away during an active contest.</p>
-                <button onClick={() => setShowCheatWarning(false)} className="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition-colors">I Understand</button>
+                <button onClick={() => setShowCheatWarning(false)} className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl transition-colors">I Understand</button>
              </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="flex-1 flex flex-col w-full h-full relative">
-        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-white/5 bg-[#121212] shrink-0 z-20">
+        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-white/5 bg-[#1a1a1a] shrink-0 z-20">
           <div className="flex items-center justify-between w-full p-3 md:px-4 md:h-12 md:w-auto">
             <div className="flex items-center gap-3 md:gap-4">
               <Link to="/contests" className="text-zinc-400 hover:text-white transition-colors"><ArrowLeft size={18} /></Link>
               <div className="h-5 w-px bg-white/10 hidden md:block mx-1"></div>
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${contestStatus === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                <div className={`w-2 h-2 rounded-full ${contestStatus === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500'}`}></div>
                 <span className="text-[13px] md:text-sm font-semibold text-zinc-100 tracking-wide truncate max-w-[120px] sm:max-w-none">{contest?.title || 'Contest Arena'}</span>
               </div>
             </div>
 
-            {/* MOBILE ONLY: Top right action buttons */}
             <div className="flex items-center gap-1.5 md:hidden">
                <div className="flex items-center gap-1 bg-white/5 border border-white/5 rounded-md px-1.5 py-1 font-mono text-[11px] font-medium text-zinc-300">
                   <Clock size={12} className={`${contestStatus === 'active' && timeRemaining < 300 ? 'text-rose-500 animate-pulse' : 'text-zinc-400'}`} />
                   <span>{contestStatus === 'ended' ? "Ended" : formatTime(timeRemaining)}</span>
                </div>
-               <button onClick={() => handleEvaluation(false)} disabled={isRunning} className="p-1.5 bg-white/5 hover:bg-white/10 text-zinc-200 rounded-md border border-white/5 disabled:opacity-30 transition-all">
+               <button onClick={() => handleEvaluation(false)} disabled={submissionPhase === 'evaluating'} className="p-1.5 bg-white/5 hover:bg-white/10 text-zinc-200 rounded-md border border-white/5 disabled:opacity-30 transition-all">
                  <Play size={14} className="text-zinc-400" />
                </button>
                <button 
                  onClick={() => handleEvaluation(true)} 
-                 disabled={isRunning || contestStatus === 'ended'} 
-                 className={`p-1.5 rounded-md transition-all ${contestStatus === 'ended' ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 disabled:opacity-30'}`}
+                 disabled={submissionPhase === 'evaluating' || contestStatus === 'ended'} 
+                 className={`p-1.5 rounded-md transition-all ${contestStatus === 'ended' ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 border border-sky-500/20 disabled:opacity-30'}`}
                >
                  <Send size={14} />
                </button>
@@ -701,7 +897,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
               {problems.map((p, idx) => (
                   <button 
                     key={p.id || idx} 
-                    onClick={() => { setActiveProblemIndex(idx); setLogs([]); }}
+                    onClick={() => { setActiveProblemIndex(idx); setLogs([]); setSubmissionPhase('idle'); }}
                     className={`whitespace-nowrap px-3 py-1 text-[13px] rounded-md transition-all ${activeProblemIndex === idx ? 'bg-white/10 text-zinc-100 font-medium' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
                   >
                     {idx + 1}. {p.title || `Problem ${String.fromCharCode(65 + idx)}`}
@@ -715,14 +911,14 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                 <span>{contestStatus === 'ended' ? "00:00:00" : formatTime(timeRemaining)}</span>
              </div>
              <div className="flex gap-2">
-                <button onClick={() => handleEvaluation(false)} disabled={isRunning} className="flex items-center gap-2 px-4 py-1.5 bg-white/5 hover:bg-white/10 text-zinc-200 rounded-md text-[13px] font-medium border border-white/5 disabled:opacity-30 transition-all">
-                  <Play size={12} className="text-zinc-400" /> Run
+                <button onClick={() => handleEvaluation(false)} disabled={submissionPhase === 'evaluating'} className="flex items-center gap-2 px-4 py-1.5 bg-white/5 hover:bg-white/10 text-zinc-200 rounded-md text-[13px] font-medium border border-white/5 disabled:opacity-30 transition-all group">
+                  <Play size={12} className="text-zinc-400 group-hover:text-emerald-400 transition-colors" /> Run
                 </button>
                 <button 
                   onClick={() => handleEvaluation(true)} 
-                  disabled={isRunning || contestStatus === 'ended'} 
+                  disabled={submissionPhase === 'evaluating' || contestStatus === 'ended'} 
                   title={contestStatus === 'ended' ? "Submissions closed" : ""}
-                  className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-[13px] font-medium transition-all ${contestStatus === 'ended' ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 disabled:opacity-30'}`}
+                  className={`flex items-center gap-2 px-4 py-1.5 rounded-md text-[13px] font-medium transition-all ${contestStatus === 'ended' ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' : 'bg-sky-500 text-black hover:bg-sky-400 disabled:opacity-30 shadow-[0_0_15px_rgba(14,165,233,0.3)] hover:shadow-[0_0_20px_rgba(14,165,233,0.5)]'}`}
                 >
                   <Send size={12} /> Submit
                 </button>
@@ -739,63 +935,64 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
 
         <div className="flex-1 min-h-0">
           <PanelGroup direction={isMobile ? "vertical" : "horizontal"}>
-            <Panel defaultSize={isMobile ? 40 : 45} minSize={20} maxSize={80} className="flex flex-col bg-[#121212] border-r border-white/5">
-               <div className="flex border-b border-white/5 px-4 bg-[#121212] shrink-0 items-center h-10">
+            <Panel defaultSize={isMobile ? 40 : 45} minSize={20} maxSize={80} className="flex flex-col bg-[#121212] border-r border-white/5 relative z-10">
+               <div className="flex border-b border-white/5 px-4 bg-[#1a1a1a] shrink-0 items-center h-10">
                   <div className="text-[12px] font-semibold text-zinc-200 tracking-wide">Description</div>
                </div>
                
                <div 
-                 className="flex-1 overflow-y-auto custom-scrollbar p-5 md:p-6 pb-20 select-none"
+                 className="flex-1 overflow-y-auto custom-scrollbar p-5 md:p-6 pb-20 select-none bg-[#121212]"
                  onContextMenu={(e) => e.preventDefault()}
                >
-                  <div className="w-full">
-                     <h1 className="text-2xl font-bold text-zinc-100 mb-3 leading-tight">{activeProblem?.title}</h1>
-                     <div className="flex flex-wrap items-center gap-2 mb-6">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium ${activeDifficultyStr === 'easy' ? 'text-emerald-400 bg-emerald-400/10' : activeDifficultyStr === 'medium' ? 'text-amber-400 bg-amber-400/10' : 'text-rose-400 bg-rose-400/10'}`}>
+                  <div className="w-full max-w-3xl mx-auto">
+                     <h1 className="text-2xl md:text-3xl font-extrabold text-zinc-100 mb-4 leading-tight tracking-tight">{activeProblem?.title}</h1>
+                     <div className="flex flex-wrap items-center gap-3 mb-8">
+                        <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase ${activeDifficultyStr === 'easy' ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/20' : activeDifficultyStr === 'medium' ? 'text-amber-400 bg-amber-400/10 border border-amber-400/20' : 'text-rose-400 bg-rose-400/10 border border-rose-400/20'}`}>
                           {activeProblem?.difficulty || 'Easy'}
                         </span>
                         
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium text-sky-400 bg-sky-400/10">
-                          {availablePoints} Pts
+                        <span className="px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase text-sky-400 bg-sky-400/10 border border-sky-400/20 flex items-center gap-1.5">
+                          <Award size={12} /> {availablePoints} Pts
                         </span>
 
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium text-rose-400 bg-rose-400/10">
+                        <span className="px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase text-rose-400 bg-rose-400/10 border border-rose-400/20">
                           -{displayPenalty} Pts / Wrong
                         </span>
 
-                        {activeProblem?.tags?.map((t: string) => <span key={t} className="px-2 py-0.5 bg-white/5 text-zinc-400 rounded-full text-[11px] font-medium">{t}</span>)}
+                        {activeProblem?.tags?.map((t: string) => <span key={t} className="px-3 py-1 bg-white/5 border border-white/10 text-zinc-400 rounded-full text-[11px] font-medium tracking-wide">{t}</span>)}
                      </div>
                      
-                     <div className="markdown-body text-sm md:text-[15px]">{renderMarkdown(problemDesc)}</div>
+                     <div className="markdown-body text-[15px] md:text-base leading-relaxed text-zinc-300">{renderMarkdown(problemDesc)}</div>
 
                      {inputFmt && (
-                        <div className="mt-6">
-                           <h2 className="text-lg font-semibold text-zinc-200 mb-2">Input Format</h2>
-                           <div className="text-zinc-300 text-[14px] leading-relaxed">{renderMarkdown(inputFmt)}</div>
+                        <div className="mt-8">
+                           <h2 className="text-lg font-semibold text-zinc-100 mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-sky-500 rounded-full"></div>Input Format</h2>
+                           <div className="text-zinc-300 text-[14px] leading-relaxed bg-white/[0.02] p-4 rounded-xl border border-white/5">{renderMarkdown(inputFmt)}</div>
                         </div>
                      )}
                      {outputFmt && (
-                        <div className="mt-6">
-                           <h2 className="text-lg font-semibold text-zinc-200 mb-2">Output Format</h2>
-                           <div className="text-zinc-300 text-[14px] leading-relaxed">{renderMarkdown(outputFmt)}</div>
+                        <div className="mt-8">
+                           <h2 className="text-lg font-semibold text-zinc-100 mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-sky-500 rounded-full"></div>Output Format</h2>
+                           <div className="text-zinc-300 text-[14px] leading-relaxed bg-white/[0.02] p-4 rounded-xl border border-white/5">{renderMarkdown(outputFmt)}</div>
                         </div>
                      )}
                      {constr && (
-                        <div className="mt-6">
-                           <h2 className="text-lg font-semibold text-zinc-200 mb-2">Constraints</h2>
-                           <div className="text-zinc-300 text-[14px] leading-relaxed">{renderMarkdown(constr)}</div>
+                        <div className="mt-8">
+                           <h2 className="text-lg font-semibold text-zinc-100 mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-amber-500 rounded-full"></div>Constraints</h2>
+                           <div className="text-zinc-300 text-[14px] leading-relaxed bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">{renderMarkdown(constr)}</div>
                         </div>
                      )}
 
-                     <div className="mt-10 space-y-6">
-                        <h2 className="text-lg font-semibold text-zinc-200 border-b border-white/5 pb-2">Examples</h2>
+                     <div className="mt-12 space-y-6">
+                        <h2 className="text-xl font-bold text-zinc-100 border-b border-white/10 pb-3">Examples</h2>
                         {testCases.filter(tc => tc.is_public === true || tc.is_public === 'true' || tc.isPublic).map((tc, i) => (
                           <div key={i} className="flex flex-col gap-3">
-                             <div className="font-semibold text-zinc-300 text-[14px]">Example {i + 1}:</div>
-                             <div className="bg-[#1a1a1a] rounded-lg p-4 font-mono text-[13px] border border-white/5 leading-relaxed">
+                             <div className="font-bold text-zinc-200 text-[15px]">Example {i + 1}:</div>
+                             <div className="bg-[#1a1a1a] rounded-xl p-5 font-mono text-[13px] border border-white/10 shadow-lg leading-relaxed relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-zinc-800"></div>
                                 
                                 {(tc.image_url || tc.imageUrl) && (
-                                   <div className="mb-4 flex flex-col">
+                                   <div className="mb-5 flex flex-col">
                                       <img 
                                         src={tc.image_url || tc.imageUrl} 
                                         alt={`Example ${i + 1} Visual Reference`} 
@@ -804,20 +1001,20 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                                    </div>
                                 )}
 
-                                <div className="mb-4 flex flex-col">
-                                   <span className="text-zinc-500 select-none font-sans text-[11px] font-bold uppercase tracking-wider mb-1">Input</span>
-                                   <pre className="text-zinc-300 whitespace-pre-wrap font-mono leading-normal">{tc.display_input}</pre>
+                                <div className="mb-5 flex flex-col">
+                                   <span className="text-zinc-500 select-none font-sans text-[11px] font-bold uppercase tracking-wider mb-2">Input</span>
+                                   <pre className="text-zinc-200 whitespace-pre-wrap font-mono leading-normal bg-white/5 p-3 rounded-lg border border-white/5">{tc.display_input}</pre>
                                 </div>
                                 
-                                <div className="mb-2 flex flex-col">
-                                   <span className="text-zinc-500 select-none font-sans text-[11px] font-bold uppercase tracking-wider mb-1">Output</span>
-                                   <pre className="text-zinc-300 whitespace-pre-wrap font-mono leading-normal">{tc.expected_output}</pre>
+                                <div className="mb-3 flex flex-col">
+                                   <span className="text-zinc-500 select-none font-sans text-[11px] font-bold uppercase tracking-wider mb-2">Output</span>
+                                   <pre className="text-zinc-200 whitespace-pre-wrap font-mono leading-normal bg-white/5 p-3 rounded-lg border border-white/5">{tc.expected_output}</pre>
                                 </div>
                                 
                                 {tc.explanation && (
-                                   <div className="flex flex-col gap-1 mt-4 pt-4 border-t border-white/5 font-sans">
+                                   <div className="flex flex-col gap-2 mt-5 pt-5 border-t border-white/5 font-sans">
                                       <span className="text-zinc-500 select-none text-[11px] font-bold uppercase tracking-wider">Explanation</span>
-                                      <div className="text-zinc-400 text-[13px]">{renderMarkdown(tc.explanation, true)}</div>
+                                      <div className="text-zinc-400 text-[14px] leading-relaxed">{renderMarkdown(tc.explanation, true)}</div>
                                    </div>
                                 )}
                              </div>
@@ -828,52 +1025,51 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                </div>
             </Panel>
 
-            <PanelResizeHandle className="w-full h-2 md:w-1.5 md:h-full bg-transparent hover:bg-emerald-500/20 transition-colors cursor-row-resize md:cursor-col-resize flex items-center justify-center shrink-0 relative z-10">
-               <div className="w-8 h-1 md:h-8 md:w-1 bg-white/10 rounded-full"></div>
+            <PanelResizeHandle className="w-full h-2 md:w-2 md:h-full bg-[#121212] hover:bg-sky-500/20 transition-colors cursor-row-resize md:cursor-col-resize flex items-center justify-center shrink-0 relative z-20">
+               <div className="w-8 h-1 md:h-12 md:w-1 bg-white/10 rounded-full group-hover:bg-sky-500/50 transition-colors"></div>
             </PanelResizeHandle>
 
-            <Panel minSize={20} className="flex flex-col bg-[#121212]">
+            <Panel minSize={20} className="flex flex-col bg-[#121212] relative z-10">
                <PanelGroup direction="vertical">
-                 <Panel defaultSize={60} minSize={20} className="flex flex-col">
-                    <div className="h-10 bg-[#121212] border-b border-white/5 flex items-center justify-between px-2 shrink-0 relative z-30">
-                       <select value={language} onChange={handleLanguageChange} className="bg-white/5 text-zinc-300 text-[12px] font-medium outline-none cursor-pointer hover:bg-white/10 px-2 py-1 rounded transition-colors">
+                 <Panel defaultSize={65} minSize={20} className="flex flex-col">
+                    <div className="h-10 bg-[#1a1a1a] border-b border-white/5 flex items-center justify-between px-3 shrink-0 relative z-30">
+                       <select value={language} onChange={handleLanguageChange} className="bg-white/5 border border-white/5 text-zinc-300 text-[12px] font-medium outline-none cursor-pointer hover:bg-white/10 px-3 py-1.5 rounded-md transition-colors shadow-sm">
                           <option value="c++">C++</option>
                           <option value="python">Python 3</option>
                           <option value="java">Java</option>
                        </select>
 
-                       {/* Editor Controls */}
-                       <div className="flex items-center gap-1">
-                          <button onClick={handleFormatCode} title="Format Code" className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-white/5 rounded transition-all">
+                       <div className="flex items-center gap-1.5">
+                          <button onClick={handleFormatCode} title="Format Code" className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-white/5 rounded-md transition-all">
                              <Wand2 size={14} />
                           </button>
-                          <button onClick={handleResetRequest} title="Reset Editor" className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-all">
+                          <button onClick={handleResetRequest} title="Reset Editor" className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-all">
                              <RotateCcw size={14} />
                           </button>
+                          <div className="w-px h-4 bg-white/10 mx-1"></div>
                           <button 
                             onClick={() => setShowEditorSettings(!showEditorSettings)} 
                             title="Editor Settings" 
-                            className={`p-1.5 rounded transition-all ${showEditorSettings ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
+                            className={`p-1.5 rounded-md transition-all ${showEditorSettings ? 'text-sky-400 bg-sky-500/10' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
                           >
                              <Settings size={14} />
                           </button>
                        </div>
 
-                       {/* Editor Settings Dropdown */}
                        <AnimatePresence>
                           {showEditorSettings && (
                             <motion.div 
                                initial={{ opacity: 0, y: -5 }} 
                                animate={{ opacity: 1, y: 0 }} 
                                exit={{ opacity: 0, y: -5 }} 
-                               className="absolute top-10 right-2 w-64 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-2xl p-4 flex flex-col gap-4"
+                               className="absolute top-12 right-3 w-64 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl p-5 flex flex-col gap-5 z-50 backdrop-blur-xl"
                             >
-                                <div className="flex flex-col gap-1.5">
+                                <div className="flex flex-col gap-2">
                                    <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Font Family</label>
                                    <select
                                      value={editorSettings.fontFamily}
                                      onChange={(e) => setEditorSettings({...editorSettings, fontFamily: e.target.value})}
-                                     className="bg-white/5 border border-white/10 rounded p-1.5 text-[12px] text-zinc-300 outline-none"
+                                     className="bg-white/5 border border-white/10 rounded-lg p-2 text-[12px] text-zinc-300 outline-none focus:border-sky-500/50 transition-colors"
                                    >
                                      <option value="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace">System Mono</option>
                                      <option value="'Fira Code', monospace">Fira Code</option>
@@ -882,26 +1078,28 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                                    </select>
                                 </div>
                                 
-                                <div className="flex flex-col gap-1.5">
+                                <div className="flex flex-col gap-2">
                                    <div className="flex justify-between items-center">
                                       <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Font Size</label>
-                                      <span className="text-[11px] font-mono text-zinc-300">{editorSettings.fontSize}px</span>
+                                      <span className="text-[11px] font-mono text-sky-400 bg-sky-400/10 px-2 py-0.5 rounded">{editorSettings.fontSize}px</span>
                                    </div>
                                    <input
                                      type="range" min="10" max="24"
                                      value={editorSettings.fontSize}
                                      onChange={(e) => setEditorSettings({...editorSettings, fontSize: parseInt(e.target.value)})}
-                                     className="accent-emerald-500"
+                                     className="accent-sky-500 mt-1"
                                    />
                                 </div>
                                 
+                                <div className="h-px w-full bg-white/5 my-1"></div>
+
                                 <div className="flex items-center justify-between">
                                    <label className="text-[12px] font-medium text-zinc-300">Word Wrap</label>
                                    <button
                                      onClick={() => setEditorSettings({...editorSettings, wordWrap: !editorSettings.wordWrap})}
-                                     className={`w-8 h-4 rounded-full relative transition-colors ${editorSettings.wordWrap ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                                     className={`w-9 h-5 rounded-full relative transition-colors ${editorSettings.wordWrap ? 'bg-sky-500' : 'bg-zinc-700'}`}
                                    >
-                                      <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-all ${editorSettings.wordWrap ? 'left-4.5 right-0.5' : 'left-0.5'}`} style={{ left: editorSettings.wordWrap ? '18px' : '2px' }}></div>
+                                      <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-all ${editorSettings.wordWrap ? 'left-5' : 'left-1'}`}></div>
                                    </button>
                                 </div>
                                 
@@ -909,9 +1107,9 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                                    <label className="text-[12px] font-medium text-zinc-300">Auto Suggestions</label>
                                    <button
                                      onClick={() => setEditorSettings({...editorSettings, suggestions: !editorSettings.suggestions})}
-                                     className={`w-8 h-4 rounded-full relative transition-colors ${editorSettings.suggestions ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                                     className={`w-9 h-5 rounded-full relative transition-colors ${editorSettings.suggestions ? 'bg-sky-500' : 'bg-zinc-700'}`}
                                    >
-                                      <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-all ${editorSettings.suggestions ? 'left-4.5 right-0.5' : 'left-0.5'}`} style={{ left: editorSettings.suggestions ? '18px' : '2px' }}></div>
+                                      <div className={`w-3.5 h-3.5 bg-white rounded-full absolute top-0.5 transition-all ${editorSettings.suggestions ? 'left-5' : 'left-1'}`}></div>
                                    </button>
                                 </div>
                             </motion.div>
@@ -919,7 +1117,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                        </AnimatePresence>
                     </div>
 
-                    <div className="flex-1 bg-[#0a0a0a] relative">
+                    <div className="flex-1 bg-[#121212] relative">
                        <Editor
                          height="100%"
                          theme="vs-dark"
@@ -934,44 +1132,72 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                             wordWrap: editorSettings.wordWrap ? 'on' : 'off',
                             quickSuggestions: editorSettings.suggestions,
                             suggestOnTriggerCharacters: editorSettings.suggestions,
-                            padding: { top: 16, bottom: 16 }, 
+                            padding: { top: 20, bottom: 20 }, 
                             smoothScrolling: true, 
                             cursorBlinking: "smooth", 
                             automaticLayout: true, 
                             lineNumbersMinChars: 3, 
-                            lineDecorationsWidth: 10 
+                            lineDecorationsWidth: 10,
+                            fontLigatures: true
                          }}
                        />
                     </div>
                  </Panel>
                  
-                 <PanelResizeHandle className="h-1.5 bg-[#0a0a0a] hover:bg-emerald-500/20 transition-colors cursor-row-resize flex items-center justify-center shrink-0 relative z-10 border-y border-white/5">
-                    <div className="w-8 h-0.5 bg-white/10 rounded-full"></div>
+                 <PanelResizeHandle className="h-2 bg-[#121212] hover:bg-sky-500/20 transition-colors cursor-row-resize flex items-center justify-center shrink-0 relative z-20 border-y border-white/5">
+                    <div className="w-12 h-1 bg-white/10 rounded-full group-hover:bg-sky-500/50 transition-colors"></div>
                  </PanelResizeHandle>
                  
-                 <Panel className="bg-[#121212] flex flex-col" minSize={20}>
-                    <div className="h-10 border-b border-white/5 flex items-center justify-between px-4 shrink-0 bg-[#121212]">
-                       <span className="text-[12px] font-semibold text-zinc-300 flex gap-2 items-center"><Terminal size={14} className="text-zinc-500"/> Terminal</span>
-                       {logs.length > 0 && <button onClick={() => setLogs([])} className="text-[12px] text-zinc-500 hover:text-zinc-300 transition-colors">Clear</button>}
+                 <Panel className="bg-[#1a1a1a] flex flex-col" minSize={20}>
+                    <div className="h-10 border-b border-white/5 flex items-center justify-between px-4 shrink-0 bg-[#1a1a1a]">
+                       <div className="flex items-center gap-3">
+                          <div className="flex gap-1.5">
+                             <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+                             <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                          </div>
+                          <span className="text-[12px] font-semibold text-zinc-400 flex gap-2 items-center tracking-wide">Terminal</span>
+                       </div>
+                       {submissionPhase === 'idle' && logs.length > 0 && (
+                          <button onClick={() => setLogs([])} className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-300 transition-colors">Clear</button>
+                       )}
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-5">
-                       {logs.length > 0 ? (
-                           <div className="flex flex-col">
-                               {logs.map((l, i) => renderTerminalLog(l, i))}
-                               
-                               {/* BATCH EXECUTION LOADER */}
-                               {isRunning && runningBatchInfo && (
-                                  <div className="flex items-center gap-3 text-zinc-400 font-mono text-[13px] mt-2 mb-4 p-3 bg-white/5 rounded-md border border-white/5">
-                                      <Loader2 size={16} className="animate-spin text-emerald-500" />
-                                      {runningBatchInfo}
-                                  </div>
-                               )}
-                           </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+                       {submissionPhase === 'evaluating' ? (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#1a1a1a]">
+                             <div className="relative">
+                               <div className="w-16 h-16 border-4 border-sky-500/20 rounded-full"></div>
+                               <div className="w-16 h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+                             </div>
+                             <h3 className="mt-6 text-lg font-bold text-zinc-100">Evaluating Solution...</h3>
+                             <p className="mt-2 text-sm text-zinc-400">Running against hidden test cases</p>
+                          </div>
+                       ) : submissionPhase === 'complete' && submissionResult ? (
+                          <SubmissionDashboard 
+                             result={submissionResult} 
+                             onReset={() => setSubmissionPhase('idle')}
+                             onShowLogs={() => setSubmissionPhase('idle')} 
+                             onNextProblem={() => {
+                                 setActiveProblemIndex(prev => prev + 1);
+                                 setLogs([]);
+                                 setSubmissionPhase('idle');
+                             }}
+                             hasNextProblem={activeProblemIndex < problems.length - 1}
+                          />
                        ) : (
-                           <div className="h-full flex flex-col items-center justify-center text-center gap-2 text-zinc-600">
-                               <div className="text-[13px] font-medium">Run your code to see results here</div>
-                           </div>
+                          <div className="p-4 md:p-6 min-h-full">
+                             {logs.length > 0 ? (
+                                 <div className="flex flex-col">
+                                     {logs.map((l, i) => renderTerminalLog(l, i))}
+                                 </div>
+                             ) : (
+                                 <div className="h-full flex flex-col items-center justify-center text-center gap-3 text-zinc-600 mt-10">
+                                     <TerminalIcon size={32} className="opacity-20" />
+                                     <div className="text-[13px] font-medium">Run your code to see results here</div>
+                                 </div>
+                             )}
+                          </div>
                        )}
                     </div>
                  </Panel>
@@ -981,9 +1207,8 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         </div>
       </div>
       
-      {/* EXPLICIT CSS INJECTION TO LOAD THE DEVELOPER FONTS */}
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Source+Code+Pro:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Source+Code+Pro:wght@400;500;600&display=swap');
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

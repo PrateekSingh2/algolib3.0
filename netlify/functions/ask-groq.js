@@ -37,7 +37,7 @@ exports.handler = async (event, context) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert algorithm analyzer. 
+            content: `You are an expert algorithm analyzer. Read the code and determine its exact Big-O time complexity. 
             Respond ONLY with a valid JSON object. No markdown, no conversational text.
             You MUST use these exact keys:
             {

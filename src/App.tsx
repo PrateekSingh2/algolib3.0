@@ -5,7 +5,18 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Link, Navigate, useNavigate } from "react-router-dom";
 import { HelmetProvider } from 'react-helmet-async';
-import { useRegisterSW } from 'virtual:pwa-register/react';
+import { AuthProvider } from "@/contexts/AuthContext";
+import { CookieProvider } from "./contexts/CookieContext";
+// ─── PWA Updater ─────────────────────────────────────────────────────────────
+// PWAUpdater is in its own file so that `virtual:pwa-register/react` is a
+// static import ONLY inside that module.  We then lazy-load the whole module
+// only in production.  In dev mode the dynamic import() is never called, so
+// the virtual module stub is never parsed and never corrupts React's internal
+// dispatcher — which was the root cause of:
+//   TypeError: Cannot read properties of null (reading 'useContext')
+const PWAUpdater = import.meta.env.DEV
+  ? () => null                                              // dev: no-op, no import
+  : lazy(() => import("@/components/PWAUpdater"));          // prod: real SW updater
 import { auth, firestoreDB } from "./lib/firebase";
 import { GoogleAuthProvider, GithubAuthProvider, signInWithPopup } from "firebase/auth";
 import { onSnapshot, doc } from "firebase/firestore";
@@ -34,7 +45,7 @@ import QuizForge from "./pages/QuizForge";
 import Maintenance from "./pages/Maintenance";
 
 // --- LAZY LOADED ROUTES ---
-const Index = lazy(() => import("./pages/Index"));
+import Index from "./pages/Index";
 const SnippetView = lazy(() => import("./pages/SnippetView"));
 const Visualizer = lazy(() => import("./pages/Visualizer"));
 const Developer = lazy(() => import("./pages/Developer"));
@@ -804,48 +815,6 @@ const AppRoutes = () => {
   );
 };
 
-const PWAUpdater = () => {
-  const {
-    needRefresh: [needRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegistered(swRegistration) {
-      window.addEventListener('focus', () => {
-        if (swRegistration) swRegistration.update();
-      });
-
-      const intervalMS = 60 * 60 * 1000;
-      setInterval(() => {
-        if (swRegistration) swRegistration.update();
-      }, intervalMS);
-    }
-  });
-
-  useEffect(() => {
-    if (needRefresh) {
-      toast.message("Platform Update Available", {
-        duration: Infinity,
-        description: "A new version of AlgoLib has been deployed. Update to apply new features.",
-        action: {
-          label: "⭮ Sync Update",
-          onClick: async () => {
-            if ('caches' in window) {
-              try {
-                const cacheNames = await caches.keys();
-                await Promise.all(cacheNames.map(name => caches.delete(name)));
-              } catch (e) {
-                console.error("Cache purge failed:", e);
-              }
-            }
-            updateServiceWorker(true);
-          },
-        },
-      });
-    }
-  }, [needRefresh, updateServiceWorker]);
-
-  return null;
-};
 
 const App = () => {
   useEffect(() => {
@@ -873,16 +842,26 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-              <PWAUpdater />
-              <CookieConsent />
-              <AuthGuard>
-                <MaintenanceGuard>
-                  <AppRoutes />
-                </MaintenanceGuard>
-              </AuthGuard>
-              <InstallPrompt />
-            </BrowserRouter>
+            {/*
+              AuthProvider and CookieProvider live here — inside the same module
+              boundary as BrowserRouter — so all hooks share the same deduped
+              React instance.  They were previously in main.tsx, which caused
+              the React dispatcher to be null in lazy-loaded chunks.
+            */}
+            <AuthProvider>
+              <CookieProvider>
+                <BrowserRouter>
+                  <PWAUpdater />
+                  <CookieConsent />
+                  <AuthGuard>
+                    <MaintenanceGuard>
+                      <AppRoutes />
+                    </MaintenanceGuard>
+                  </AuthGuard>
+                  <InstallPrompt />
+                </BrowserRouter>
+              </CookieProvider>
+            </AuthProvider>
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>
