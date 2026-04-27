@@ -60,22 +60,35 @@ exports.handler = async (event, context) => {
       }
     });
 
-    // Fortified JSON schema prompting to prevent Groq HTTP 400 errors
     let systemMessage = "";
+    
+    // THE SMART INTENT ROUTER (NLP Engine)
     if (action === 'analyze') {
-      systemMessage = `You are an expert algorithm analyzer. Respond ONLY with a valid JSON object. 
-      Schema requirement: {"type": "analysis", "timeComplexity": "...", "spaceComplexity": "...", "explanation": "..."}.
-      If input is invalid, return: {"error": "Please provide valid code."}`;
+      systemMessage = `You are a highly intelligent polyglot programming assistant. 
+      Read the user's input, which may contain natural language instructions alongside code. 
+      Identify their primary intent: Analysis, Optimization, or Translation.
+      Respond ONLY with a valid JSON object matching the detected intent.
+
+      INTENT 1: ANALYSIS (Default if user pastes code, asks for explanation, or asks for complexity)
+      Schema: {"type": "analysis", "timeComplexity": "...", "spaceComplexity": "...", "explanation": "..."}
+
+      INTENT 2: OPTIMIZATION (If user explicitly asks to make the code faster, better, or optimized)
+      Schema: {"type": "optimization", "code": "<optimized code>", "explanation": "..."}
+
+      INTENT 3: TRANSLATION (If user explicitly asks to translate, rewrite, or convert the code to a specific language like Python, Java, Rust, C++, etc.)
+      Schema: {"type": "translation", "code": "<translated code>", "explanation": "..."}
+
+      If the input is completely non-programming related, return: {"error": "Please provide a valid programming request."}`;
     } 
     else if (action === 'optimize') {
-      systemMessage = `You are a code optimizer. Respond ONLY with a valid JSON object. 
+      systemMessage = `You are an expert code optimizer. Respond ONLY with a valid JSON object. 
       Schema requirement: {"type": "optimization", "code": "...", "explanation": "..."}. 
-      Rewrite the code to be more efficient in time or space.`;
+      Rewrite the provided code to be maximally efficient in time and space.`;
     }
     else if (action === 'translate') {
-      systemMessage = `You are a code translator. Respond ONLY with a valid JSON object. 
+      systemMessage = `You are an expert polyglot compiler. Respond ONLY with a valid JSON object. 
       Schema requirement: {"type": "translation", "code": "...", "explanation": "..."}. 
-      Translate the provided code strictly to ${targetLanguage}. Keep logic identical.`;
+      CRITICAL INSTRUCTION: You MUST translate the provided code entirely into ${targetLanguage}. Do NOT return the code in its original language. Keep the algorithmic logic identical. Write idiomatic ${targetLanguage} code.`;
     }
 
     const apiKey = process.env.GROQ_API_KEY;
@@ -83,13 +96,12 @@ exports.handler = async (event, context) => {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant", 
+        model: "llama-3.3-70b-versatile", // Upgraded 70B Model
         messages: [
           { role: "system", content: systemMessage },
-          // Appending instruction to user prompt forces Groq to obey JSON formatting
-          { role: "user", content: `Code:\n${code}\n\nReturn the output in the requested JSON format.` }
+          { role: "user", content: `User Input:\n${code}\n\nReturn the output in the requested JSON format.` }
         ],
-        temperature: 0.1,
+        temperature: 0.1, // Low temperature forces strict JSON adherence
         response_format: { type: "json_object" }
       })
     });
