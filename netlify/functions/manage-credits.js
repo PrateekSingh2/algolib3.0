@@ -1,5 +1,5 @@
 // Correctly import 'admin' and 'db' from your custom zlib helper file
-const { admin, db } = require('./firebase-admin');
+const { admin, db } = require('./utils/firebase-admin');
 
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'POST') {
