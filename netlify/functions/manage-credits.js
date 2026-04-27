@@ -1,4 +1,4 @@
-const { db, auth } = require('./firebase-admin');
+const { db, auth } = require('./utils/firebase-admin');
 
 exports.handler = async (event, context) => {
     // 1. Check if the request is a POST
