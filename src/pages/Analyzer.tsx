@@ -7,6 +7,7 @@ import {
 
 // ─── FIREBASE IMPORTS ────────────────────────────────────────────────────────
 import { auth, firestoreDB as db } from "@/lib/firebase";
+import { supabase } from "../../netlify/functions/utils/supabase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot, collection, addDoc, updateDoc, serverTimestamp, query, orderBy, deleteDoc } from "firebase/firestore";
 
@@ -85,6 +86,8 @@ export default function Analyzer() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  const [userName, setUserName] = useState<string>('Developer');
+
   // Gemini Style Sidebar & Thread State
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -144,20 +147,48 @@ export default function Analyzer() {
   };
 
   // ─── Firebase Auth & Listeners ─────────────────────────────────────────────
+  // ─── Firebase Auth & Listeners ─────────────────────────────────────────────
   useEffect(() => {
     let unsubscribeCredits: () => void;
     let unsubscribeHistory: () => void;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    // Make this callback async so we can fetch from Supabase
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (!user) {
         setCredits(null);
         setHistory([]);
+        setUserName('Developer'); // Reset name on logout
         if (unsubscribeCredits) unsubscribeCredits();
         if (unsubscribeHistory) unsubscribeHistory();
         return;
       }
       
+      // --- NEW: FETCH COMPLETE NAME FROM SUPABASE ---
+      try {
+        // Note: Adjust 'users' and 'full_name' to match your actual Supabase table and column names.
+        // You can also change .eq('email', user.email) to .eq('id', user.uid) if you link by UID.
+        const { data, error } = await supabase
+          .from('users') 
+          .select('full_name') 
+          .eq('email', user.email)
+          .single();
+
+        let completeName = data?.full_name;
+
+        // Fallback: If no name in Supabase, use Firebase displayName, or default to the email prefix
+        if (!completeName || completeName.trim() === '') {
+          completeName = user.displayName || user.email?.split('@')[0] || 'Developer';
+        }
+        
+        setUserName(completeName);
+      } catch (err) {
+        console.error("Error fetching name from Supabase:", err);
+        // Safety Fallback on error
+        setUserName(user.displayName || user.email?.split('@')[0] || 'Developer');
+      }
+      // ----------------------------------------------
+
       unsubscribeCredits = onSnapshot(doc(db, 'user_credits', user.uid), (docSnap) => {
         if (docSnap.exists()) setCredits(docSnap.data().credits);
         else setCredits(7); 
@@ -320,7 +351,6 @@ export default function Analyzer() {
   };
 
   const isHomeState = messages.length === 0;
-  const firstName = currentUser?.displayName ? currentUser.displayName.split(' ')[0] : 'Prateek';
 
   return (
     <div className="analyzer-root">
@@ -518,7 +548,8 @@ export default function Analyzer() {
             <div className="input-bounds">
               {isHomeState && (
                 <div className="greeting-header">
-                  <h1><span className="gradient-text">Hello, {firstName}</span></h1>
+                  {/* CHANGED THIS LINE TO USE THE SUPABASE NAME */}
+                  <h1><span className="gradient-text">Hello, {userName}</span></h1>
                   <div style={{ marginTop: '4px' }}>
                     <img src="https://readme-typing-svg.herokuapp.com?font=Inter&weight=500&size=40&pause=2000&color=444746&width=800&height=60&lines=Which+code+would+you+like+to+analyze%3F;AlgoLib+AI+is+here+to+help%2C+%F0%9F%A4%94;Paste+your+code+snippet+below...;Quick+Analysis+with+low+latency;AlgoLib+AI+supports+any+language%21" alt="Typing Animation" style={{ pointerEvents: 'none', userSelect: 'none' }} />
                   </div>
