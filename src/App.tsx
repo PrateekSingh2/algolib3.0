@@ -74,14 +74,10 @@ const ModuleLoader = () => <OrbitalLoader />;
 
 // --- GLOBAL MAINTENANCE GUARD ---
 const SYSTEM_MODULES = [
-  { id: '/', name: 'Home' },
-  { id: '/compiler', name: 'Compiler' },
-  { id: '/visualizer', name: 'Visualizer Dashboard' },
-  { id: '/contests', name: 'Contest' },
-  { id: '/quiz-panel', name: 'Quiz' },
-  { id: '/discussion', name: 'Community' },
-  { id: '/docs', name: 'Documentation' },
-  { id: '/notes', name: 'AlgoLib Notes' }
+  { id: '/', name: 'Home' }, { id: '/compiler', name: 'Compiler' }, { id: '/visualizer', name: 'Visualizer Dashboard' },
+  { id: '/analyzer', name: 'AI Analyzer' }, { id: '/view-profile', name: 'View Profile' }, { id: '/edit-profile', name: 'Edit Profile' },
+  { id: '/contests', name: 'Contest' }, { id: '/quiz-panel', name: 'Quiz' }, { id: '/discussion', name: 'Community' },
+  { id: '/docs', name: 'Documentation' }, { id: '/notes', name: 'AlgoLib Notes' }
 ];
 
 const MaintenanceGuard = ({ children }: { children: React.ReactNode }) => {

@@ -21,7 +21,7 @@ const InteractiveParticleBackground = () => {
 
     let animationFrameId: number;
     let particlesArray: Particle[] = [];
-    
+
     // Virtual mouse to track coordinates globally
     const mouse = { x: -1000, y: -1000, radius: 150 };
 
@@ -39,7 +39,7 @@ const InteractiveParticleBackground = () => {
         this.size = Math.random() * 2 + 0.5; // Tiny dots
         this.speedX = (Math.random() - 0.5) * 0.5; // Slow natural drift
         this.speedY = (Math.random() - 0.5) * 0.5;
-        
+
         // Deep blue/cyan aesthetic
         const colors = ['#1d4ed8', '#2563eb', '#3b82f6', '#00d2ff', '#00ff87'];
         this.color = colors[Math.floor(Math.random() * colors.length)];
@@ -47,7 +47,7 @@ const InteractiveParticleBackground = () => {
 
       update() {
         if (!canvas) return;
-        
+
         // Apply natural drift
         this.x += this.speedX;
         this.y += this.speedY;
@@ -66,7 +66,7 @@ const InteractiveParticleBackground = () => {
           const forceDirectionY = dy / distance;
           const force = (mouse.radius - distance) / mouse.radius;
           const repelStrength = 4; // Adjust for harder/softer push
-          
+
           this.x -= forceDirectionX * force * repelStrength;
           this.y -= forceDirectionY * force * repelStrength;
         }
@@ -138,7 +138,7 @@ const InteractiveParticleBackground = () => {
 
 const AlgorithmTiltCard = ({ algo, onClick, index }: { algo: Algorithm, onClick: () => void, index: number }) => {
   const boundingRef = useRef<HTMLDivElement>(null);
-  
+
   // Mouse coordinates (0 to 1 mapping)
   const mouseX = useMotionValue(0.5);
   const mouseY = useMotionValue(0.5);
@@ -160,10 +160,10 @@ const AlgorithmTiltCard = ({ algo, onClick, index }: { algo: Algorithm, onClick:
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!boundingRef.current) return;
     const rect = boundingRef.current.getBoundingClientRect();
-    
+
     const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-    
+
     mouseX.set(x);
     mouseY.set(y);
   };
@@ -190,21 +190,21 @@ const AlgorithmTiltCard = ({ algo, onClick, index }: { algo: Algorithm, onClick:
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={onClick}
-        style={{ 
-          rotateX, 
-          rotateY, 
+        style={{
+          rotateX,
+          rotateY,
           transformStyle: "preserve-3d" // Allows children to pop out
         }}
         className="group relative flex flex-col justify-between h-full min-h-[240px] rounded-[1.25rem] border border-white/[0.05] bg-[#0c0e14]/80 backdrop-blur-md p-6 cursor-pointer shadow-[0_10px_30px_-15px_rgba(0,0,0,0.8)] transition-colors duration-300 hover:border-blue-500/30"
       >
         {/* Dynamic Glare Overlay */}
-        <motion.div 
+        <motion.div
           className="absolute inset-0 rounded-[1.25rem] pointer-events-none z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
           style={{ background: backgroundGlare }}
         />
 
         {/* 3D Popping Content Wrapper */}
-        <div 
+        <div
           className="relative z-10 flex flex-col h-full gap-5 transition-transform duration-300 group-hover:translate-z-10"
           style={{ transform: "translateZ(40px)" }} // The magic parallax pop
         >
@@ -216,7 +216,7 @@ const AlgorithmTiltCard = ({ algo, onClick, index }: { algo: Algorithm, onClick:
               {algo.category}
             </span>
           </div>
-          
+
           <div className="flex-1 flex flex-col gap-3">
             <h3 className="text-xl font-semibold tracking-tight text-zinc-100 group-hover:text-white transition-colors">{algo.title}</h3>
             <p className="text-sm text-zinc-400 font-light leading-relaxed line-clamp-2">{algo.description}</p>
@@ -354,8 +354,8 @@ const Index = () => {
       <div className="relative z-10 flex flex-col min-h-screen">
 
         <div className="fixed top-0 left-0 w-full z-[100]">
-          <Navbar />
           <GlobalRibbon />
+          <Navbar />
         </div>
 
         <main className="flex-1 w-full max-w-[1400px] mx-auto px-6 pt-40 pb-24 md:px-10 lg:px-16">
@@ -387,7 +387,7 @@ const Index = () => {
             transition={{ delay: 0.8, duration: 1 }}
             className="mt-16 flex justify-center"
           >
-            <button 
+            <button
               onClick={() => document.getElementById('registry')?.scrollIntoView({ behavior: 'smooth' })}
               className="group flex flex-col items-center gap-3 outline-none"
             >
@@ -395,17 +395,17 @@ const Index = () => {
                 View Algorithms
               </span>
               <div className="w-6 h-10 rounded-full border border-white/[0.3] flex justify-center p-1.5 bg-[#050505] group-hover:border-white/[0.25] transition-colors shadow-sm">
-                <motion.div 
+                <motion.div
                   animate={{ y: [0, 12, 0], opacity: [1, 0.3, 1] }}
                   transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                  className="w-1 h-2 rounded-full bg-zinc-300 group-hover:bg-white transition-colors" 
+                  className="w-1 h-2 rounded-full bg-zinc-300 group-hover:bg-white transition-colors"
                 />
               </div>
             </button>
           </motion.div>
 
-          <motion.section 
-            id="registry" 
+          <motion.section
+            id="registry"
             layout
             className="mt-10 pt-20 pb-24 relative px-6 md:px-12 overflow-hidden rounded-[3rem] border border-white/[0.05] bg-[#05070e]/80 backdrop-blur-2xl shadow-[0_0_100px_rgba(0,0,0,0.8)] flex flex-col"
           >
@@ -442,11 +442,10 @@ const Index = () => {
                       exit={{ opacity: 0, scale: 0.8 }}
                       key={pill}
                       onClick={() => handleFilterChange(pill)}
-                      className={`px-5 py-2 rounded-full border text-xs font-semibold tracking-wide transition-all duration-300 ${
-                        activeFilter === pill 
-                        ? 'bg-blue-500 text-white border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.4)]' 
-                        : 'border-white/[0.06] text-zinc-400 hover:border-white/[0.2] hover:text-white bg-[#0a0c12]'
-                      }`}
+                      className={`px-5 py-2 rounded-full border text-xs font-semibold tracking-wide transition-all duration-300 ${activeFilter === pill
+                          ? 'bg-blue-500 text-white border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.4)]'
+                          : 'border-white/[0.06] text-zinc-400 hover:border-white/[0.2] hover:text-white bg-[#0a0c12]'
+                        }`}
                     >
                       {pill}
                     </motion.button>
@@ -474,11 +473,11 @@ const Index = () => {
               <AnimatePresence>
                 {filteredAlgorithms.length > 0 ? (
                   filteredAlgorithms.slice(0, visibleCount).map((algo, index) => (
-                    <AlgorithmTiltCard 
-                      key={algo.id} 
-                      algo={algo} 
+                    <AlgorithmTiltCard
+                      key={algo.id}
+                      algo={algo}
                       index={index}
-                      onClick={() => navigate(`/view/${algo.id}`)} 
+                      onClick={() => navigate(`/view/${algo.id}`)}
                     />
                   ))
                 ) : (
