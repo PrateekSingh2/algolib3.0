@@ -234,13 +234,24 @@ const Admin = () => {
             if (!isAdmin) return;
             setIsInsightsLoading(true);
             try {
-                const userSnap = await getDocs(collection(firestoreDB, "users"));
-                const creditSnap = await getDocs(collection(firestoreDB, "user_credits"));
-                const creditMap: Record<string, number> = {};
+                const token = await user?.getIdToken();
 
-                creditSnap.forEach(doc => {
-                    creditMap[doc.id] = doc.data().credits || 0;
+                // 1. Fetch public user data directly (Allowed by your `allow read: if true;` rule)
+                const userSnap = await getDocs(collection(firestoreDB, "users"));
+                
+                // 2. Fetch credits via Netlify Backend (Bypasses rules via Admin SDK)
+                const creditResponse = await fetch('/.netlify/functions/get-all-credits', {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
+                
+                const creditMap: Record<string, number> = {};
+                if (creditResponse.ok) {
+                    const creditData = await creditResponse.json();
+                    // Maps the array from Netlify into a dictionary for quick lookup
+                    creditData.forEach((doc: any) => {
+                        creditMap[doc.id] = doc.credits || 0;
+                    });
+                }
 
                 const users = userSnap.docs.map(doc => {
                     const data = doc.data();
@@ -250,12 +261,12 @@ const Admin = () => {
                         displayName: data.displayName || "Anonymous",
                         lifetimeActiveTimeMins: data.lifetimeActiveTimeMins || 0,
                         lastActiveDate: data.lastActiveDate,
-                        aiCredits: creditMap[doc.id] || 0
+                        aiCredits: creditMap[doc.id] || 0 // Apply the securely fetched credits
                     } as UserActivityData;
                 });
                 setInsightsData(users);
             } catch (error) {
-                console.error("Fetch Error:", error);
+                console.error("Fetch Insights Error:", error);
                 showAlert("Failed to load user records.");
             } finally {
                 setIsInsightsLoading(false);
@@ -298,17 +309,26 @@ const Admin = () => {
     const handleUpdateCredits = async (userId: string, newBalance: number) => {
         if (newBalance < 0) return showAlert("Credits cannot be negative.");
 
-        setStatusMsg("Updating Ledger...");
+        setStatusMsg("Updating Ledger via Secure Backend...");
         try {
-            // Target the 'user_credits' collection using the UID as the Doc ID
-            const creditRef = doc(firestoreDB, "user_credits", userId);
+            const token = await user?.getIdToken();
+            
+            // Target your Netlify backend instead of direct Firestore
+            const response = await fetch('/.netlify/functions/manage-credits', {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId, newBalance })
+            });
 
-            await setDoc(creditRef, {
-                credits: newBalance,
-                updatedAt: new Date()
-            }, { merge: true });
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || "Backend failed to update credits");
+            }
 
-            // Update local state so the UI reflects the change immediately
+            // Update local state so the UI reflects the change immediately without refreshing
             setInsightsData(prev => prev.map(u =>
                 u.id === userId ? { ...u, aiCredits: newBalance } : u
             ));
@@ -442,6 +462,18 @@ const Admin = () => {
     const handleDeletePost = (postId: string) => { showConfirm("Delete post?", "Confirm Purge", async () => { setIsDeleting(postId); try { await deleteDoc(doc(firestoreDB, "community_posts", postId)); } catch (e) { showAlert("Failed."); } finally { setIsDeleting(null); } }); };
     const handleDeleteReply = (postId: string, replyId: string) => { showConfirm("Delete reply?", "Confirm Purge", async () => { setIsDeleting(`reply-${replyId}`); try { const post = posts.find(p => p.id === postId); if (!post || !post.replies) return; await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: post.replies.filter(r => r.id !== replyId) }); } catch (e) { showAlert("Failed."); } finally { setIsDeleting(null); } }); };
 
+    const filteredCredits = useMemo(() => {
+        return insightsData.filter(u => {
+            if (!insightSearchEmail) return true;
+            const searchLower = insightSearchEmail.toLowerCase();
+            return (
+                (u.email && u.email.toLowerCase().includes(searchLower)) ||
+                (u.displayName && u.displayName.toLowerCase().includes(searchLower)) ||
+                (u.id && u.id.toLowerCase().includes(searchLower))
+            );
+        });
+    }, [insightsData, insightSearchEmail]);
+
     if (isAuthLoading) return <div className="min-h-screen bg-[#000000] flex flex-col items-center justify-center text-zinc-400 gap-4"><Loader2 size={32} className="animate-spin text-sky-400" /><p className="text-xs font-bold tracking-widest uppercase">Authenticating...</p></div>;
     if (!user) return (<div className="min-h-screen flex items-center justify-center p-4 relative bg-[#000000]"><StudioBackground /><div className="bg-white/[0.02] backdrop-blur-[40px] border border-white/[0.08] rounded-2xl shadow-2xl p-10 text-center relative z-10 w-full max-w-sm"><div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-gradient-to-br from-zinc-800 to-zinc-950 shadow-inner"><Lock className="text-sky-400 drop-shadow-md" size={32} /></div><h2 className="text-2xl font-bold text-white mb-2">Admin Portal</h2><p className="text-zinc-500 text-sm mb-8">Authorized personnel only.</p><button onClick={loginWithGoogle} className="w-full bg-white text-black hover:bg-zinc-200 transition-colors py-3 rounded-xl text-sm font-bold shadow-lg flex justify-center items-center gap-2">Continue Session</button></div></div>);
     if (user && !isAdmin) return (<div className="min-h-screen flex items-center justify-center p-4 relative bg-[#000000]"><StudioBackground /><div className="bg-red-950/10 backdrop-blur-[40px] border border-red-500/20 rounded-2xl p-10 text-center w-full max-w-sm relative z-10 shadow-2xl"><ShieldAlert className="text-red-500 mx-auto mb-4 drop-shadow-md" size={40} /><h2 className="text-xl font-bold text-white mb-2">Access Denied</h2><p className="text-zinc-400 text-sm mb-8">Your signature lacks clearance.</p><button onClick={logout} className="w-full bg-[#0a0a0a] hover:bg-zinc-900 transition-colors border border-white/10 text-white py-3 rounded-xl text-sm font-bold">Sign Out</button></div></div>);
@@ -457,18 +489,6 @@ const Admin = () => {
     const pLabel = "text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5 block ml-1";
     const pCard = "bg-white/[0.015] backdrop-blur-[40px] border border-white/[0.08] rounded-2xl shadow-xl relative overflow-hidden";
     const pBtn = "py-2.5 px-4 text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2";
-
-    const filteredCredits = useMemo(() => {
-        return insightsData.filter(u => {
-            if (!insightSearchEmail) return true;
-            const searchLower = insightSearchEmail.toLowerCase();
-            return (
-                (u.email && u.email.toLowerCase().includes(searchLower)) ||
-                (u.displayName && u.displayName.toLowerCase().includes(searchLower)) ||
-                (u.id && u.id.toLowerCase().includes(searchLower))
-            );
-        });
-    }, [insightsData, insightSearchEmail]);
 
     return (
         <div className="min-h-screen bg-[#000000] text-zinc-200 font-sans selection:bg-sky-500/30 overflow-x-hidden relative">
