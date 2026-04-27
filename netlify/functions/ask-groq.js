@@ -30,13 +30,10 @@ exports.handler = async (event, context) => {
     try { bodyData = JSON.parse(event.body || '{}'); } 
     catch (e) { return { statusCode: 400, headers, body: JSON.stringify({ error: 'Malformed JSON payload' }) }; }
 
-    // NEW: Accept action type and target language
-    const { code, action = 'analyze', targetLanguage = '' } = bodyData;
+    const { code, action = 'analyze', targetLanguage = 'another language' } = bodyData;
     if (!code) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Code snippet required' }) };
 
-    // NEW: Optimization is free. Translation and Analysis cost 1 credit.
     const isFreeAction = action === 'optimize';
-    
     const userRef = db.collection('user_credits').doc(uid);
     const now = Date.now();
     const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
@@ -53,7 +50,6 @@ exports.handler = async (event, context) => {
       }
 
       if (!docSnap.exists || (now - lastReset >= THREE_HOURS_MS)) {
-        // Reset to 6 if 3 hours have passed
         const newCredits = isFreeAction ? 6 : 5; 
         transaction.set(userRef, { credits: newCredits, last_reset_time: now }, { merge: true });
       } else {
@@ -64,24 +60,22 @@ exports.handler = async (event, context) => {
       }
     });
 
-    // Determine the specific System Prompt based on the action
+    // Fortified JSON schema prompting to prevent Groq HTTP 400 errors
     let systemMessage = "";
     if (action === 'analyze') {
       systemMessage = `You are an expert algorithm analyzer. Respond ONLY with a valid JSON object. 
-      If the input is not code or pseudo-code, return: {"error": "Please provide valid code."}
-      If valid, return exactly: {"type": "analysis", "timeComplexity": "...", "spaceComplexity": "...", "explanation": "..."}
-      Use specific Big-O notation. Explain concisely in 2 sentences.`;
+      Schema requirement: {"type": "analysis", "timeComplexity": "...", "spaceComplexity": "...", "explanation": "..."}.
+      If input is invalid, return: {"error": "Please provide valid code."}`;
     } 
     else if (action === 'optimize') {
-      systemMessage = `You are a code optimizer. Respond ONLY with a valid JSON object.
-      If the input is not code, return: {"error": "Please provide valid code."}
-      If valid, rewrite the code to be more efficient (time/space). Return exactly: 
-      {"type": "optimization", "code": "...", "explanation": "..."}`;
+      systemMessage = `You are a code optimizer. Respond ONLY with a valid JSON object. 
+      Schema requirement: {"type": "optimization", "code": "...", "explanation": "..."}. 
+      Rewrite the code to be more efficient in time or space.`;
     }
     else if (action === 'translate') {
-      systemMessage = `You are a code translator. Respond ONLY with a valid JSON object.
-      Translate the provided code to ${targetLanguage}. Keep logic identical. Return exactly: 
-      {"type": "translation", "code": "...", "explanation": "..."}`;
+      systemMessage = `You are a code translator. Respond ONLY with a valid JSON object. 
+      Schema requirement: {"type": "translation", "code": "...", "explanation": "..."}. 
+      Translate the provided code strictly to ${targetLanguage}. Keep logic identical.`;
     }
 
     const apiKey = process.env.GROQ_API_KEY;
@@ -92,16 +86,20 @@ exports.handler = async (event, context) => {
         model: "llama-3.1-8b-instant", 
         messages: [
           { role: "system", content: systemMessage },
-          { role: "user", content: code }
+          // Appending instruction to user prompt forces Groq to obey JSON formatting
+          { role: "user", content: `Code:\n${code}\n\nReturn the output in the requested JSON format.` }
         ],
         temperature: 0.1,
         response_format: { type: "json_object" }
       })
     });
 
-    if (!response.ok) throw new Error(`HTTP ${response.status}: Groq API Failed.`);
-    const data = await response.json();
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`HTTP ${response.status}: Groq API Failed. ${errText}`);
+    }
     
+    const data = await response.json();
     return { statusCode: 200, headers, body: JSON.stringify(data) };
 
   } catch (error) {

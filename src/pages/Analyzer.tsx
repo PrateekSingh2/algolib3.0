@@ -29,11 +29,16 @@ interface ChatMessage {
   isError?: boolean;
 }
 
+// FIX: Updated HistoryItem to store the FULL result of the AI response
 interface HistoryItem {
   id: string;
-  codeSnippet: string;
-  timeComplexity: string;
-  spaceComplexity: string;
+  type: 'analysis' | 'optimization' | 'translation';
+  codeSnippet: string; // Truncated for sidebar display
+  fullInputCode: string; // The exact code the user sent
+  timeComplexity?: string;
+  spaceComplexity?: string;
+  explanation: string;
+  resultCode?: string; // Stored if it was optimize or translate
   timestamp: any;
 }
 
@@ -84,13 +89,18 @@ export default function Analyzer() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    // Auto-close sidebar on mobile devices on initial load
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isAnalyzing]);
+
+  useEffect(() => {
+    if (inputCode === '' && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  }, [inputCode]);
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputCode(e.target.value);
@@ -108,14 +118,13 @@ export default function Analyzer() {
     setInputCode(text);
     if (textareaRef.current) {
       textareaRef.current.focus();
-      textareaRef.current.style.height = 'auto';
     }
   };
 
   const handleNewAnalysis = () => {
     setMessages([]);
     setInputCode('');
-    if (window.innerWidth < 768) setIsSidebarOpen(false); // Auto-close on mobile
+    if (window.innerWidth < 768) setIsSidebarOpen(false); 
   };
 
   // ─── Firebase Auth & Listeners ─────────────────────────────────────────────
@@ -133,17 +142,17 @@ export default function Analyzer() {
         return;
       }
       
-      // Listen to Credits
       unsubscribeCredits = onSnapshot(doc(db, 'user_credits', user.uid), (docSnap) => {
         if (docSnap.exists()) setCredits(docSnap.data().credits);
         else setCredits(7); 
       });
 
-      // Listen to History
       const historyQ = query(collection(db, 'users', user.uid, 'analysis_history'), orderBy('timestamp', 'desc'));
       unsubscribeHistory = onSnapshot(historyQ, (snap) => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as HistoryItem));
         setHistory(items);
+      }, (error) => {
+        console.error("History Listener Error:", error);
       });
     });
 
@@ -169,7 +178,7 @@ export default function Analyzer() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData?.error || "Failed to reach server.");
+        throw new Error(errorData?.error || `HTTP Error ${response.status}`);
       }
 
       const data = await response.json();
@@ -179,15 +188,17 @@ export default function Analyzer() {
 
       setMessages(prev => [...prev, { role: 'ai', content: '', result: aiResult }]);
 
-      // Save to History ONLY if it was a core analysis
-      if (action === 'analyze' && aiResult.timeComplexity && aiResult.spaceComplexity) {
-        await addDoc(collection(db, 'users', currentUser.uid, 'analysis_history'), {
-          codeSnippet: code.substring(0, 80) + (code.length > 80 ? '...' : ''),
-          timeComplexity: aiResult.timeComplexity,
-          spaceComplexity: aiResult.spaceComplexity,
-          timestamp: serverTimestamp()
-        });
-      }
+      // FIX: Save ALL results (Analysis, Optimization, Translation) with full metadata
+      await addDoc(collection(db, 'users', currentUser.uid, 'analysis_history'), {
+        type: aiResult.type || action,
+        codeSnippet: code.substring(0, 50) + (code.length > 50 ? '...' : ''), // For sidebar
+        fullInputCode: code, // The exact code to restore
+        timeComplexity: aiResult.timeComplexity || null,
+        spaceComplexity: aiResult.spaceComplexity || null,
+        explanation: aiResult.explanation,
+        resultCode: aiResult.code || null,
+        timestamp: serverTimestamp()
+      });
 
     } catch (err: any) {
       setMessages(prev => [...prev, { role: 'ai', content: err.message || "An error occurred.", isError: true }]);
@@ -197,7 +208,7 @@ export default function Analyzer() {
     }
   };
 
-  // ─── Button Handlers ───────────────────────────────────────────────────────
+  // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleAnalyze = () => {
     const trimmed = inputCode.trim();
     if (!trimmed) return;
@@ -226,9 +237,31 @@ export default function Analyzer() {
     }
   };
 
+  // FIX: Restore the entire chat context and result perfectly
   const loadHistoryItem = (item: HistoryItem) => {
-    handleNewAnalysis();
-    setInputCode(item.codeSnippet.replace('...', ''));
+    handleNewAnalysis(); 
+    
+    // Reconstruct the chat conversation
+    const reconstructedMessages: ChatMessage[] = [
+      {
+        role: 'user',
+        content: item.fullInputCode || item.codeSnippet // Fallback to snippet for older items
+      },
+      {
+        role: 'ai',
+        content: '',
+        result: {
+          type: item.type || 'analysis',
+          timeComplexity: item.timeComplexity,
+          spaceComplexity: item.spaceComplexity,
+          explanation: item.explanation,
+          code: item.resultCode
+        }
+      }
+    ];
+
+    setMessages(reconstructedMessages);
+    
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
@@ -242,6 +275,13 @@ export default function Analyzer() {
   const isHomeState = messages.length === 0;
   const firstName = currentUser?.displayName ? currentUser.displayName.split(' ')[0] : 'Prateek';
 
+  // Helper to format history title icon
+  const getHistoryIcon = (type: string) => {
+    if (type === 'optimization') return <Code2 size={14} className="text-emerald-500" />;
+    if (type === 'translation') return <ArrowRightLeft size={14} className="text-amber-500" />;
+    return <MessageSquare size={14} className="text-zinc-500" />;
+  }
+
   return (
     <div className="analyzer-root">
       <Helmet><title>AlgoLib AI Assistant</title></Helmet>
@@ -250,8 +290,6 @@ export default function Analyzer() {
 
       <div className="layout-container">
         
-        {/* GEMINI STYLE SIDEBAR */}
-        {/* Backdrop for mobile */}
         {isSidebarOpen && <div className="sidebar-backdrop md:hidden" onClick={() => setIsSidebarOpen(false)} />}
         
         <aside className={`gemini-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
@@ -268,7 +306,6 @@ export default function Analyzer() {
             </button>
           </div>
 
-          {/* Render history only when sidebar is open to mirror Gemini behavior */}
           {isSidebarOpen && (
             <div className="history-container">
               <div className="history-title">Recent</div>
@@ -279,7 +316,7 @@ export default function Analyzer() {
                   history.map(item => (
                     <div key={item.id} className="history-item group" onClick={() => loadHistoryItem(item)}>
                       <div className="history-content">
-                        <MessageSquare size={16} className="text-zinc-500" />
+                        {getHistoryIcon(item.type)}
                         <span className="history-text">{item.codeSnippet}</span>
                       </div>
                       <button onClick={(e) => handleDeleteHistory(e, item.id)} className="delete-btn opacity-0 group-hover:opacity-100" title="Delete">
@@ -293,12 +330,8 @@ export default function Analyzer() {
           )}
         </aside>
 
-        {/* MAIN FEED VIEWPORT */}
         <main className="app-viewport">
-          
-          {/* Top Bar Utilities */}
           <div className="top-utilities">
-            {/* Mobile hamburger (visible only when sidebar closed on small screens) */}
             <div className="md:hidden">
               {!isSidebarOpen && (
                 <button onClick={() => setIsSidebarOpen(true)} className="hamburger-btn mobile-hamburger">
@@ -406,15 +439,19 @@ export default function Analyzer() {
                             )}
 
                             {(msg.result.type === 'optimization' || msg.result.type === 'translation') && (
-                              <div className="code-result-card">
-                                <div className="result-header">
-                                  <span>{msg.result.type === 'optimization' ? 'Optimized Version' : 'Translated Version'}</span>
-                                  <button onClick={() => handleCopy(msg.result!.code || '', `code-${idx}`)} className="action-btn">
-                                    {copiedId === `code-${idx}` ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-                                  </button>
+                              <div className="code-result-wrapper">
+                                <div className="code-result-card">
+                                  <div className="result-header">
+                                    <span>{msg.result.type === 'optimization' ? 'Optimized Version' : 'Translated Version'}</span>
+                                    <button onClick={() => handleCopy(msg.result!.code || '', `code-${idx}`)} className="action-btn">
+                                      {copiedId === `code-${idx}` ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                                    </button>
+                                  </div>
+                                  <pre className="result-code"><code>{msg.result.code}</code></pre>
                                 </div>
-                                <pre className="result-code"><code>{msg.result.code}</code></pre>
-                                <p className="complexity-desc mt-4">{msg.result.explanation}</p>
+                                <div className="result-explanation-box">
+                                  <p className="complexity-desc m-0 text-sm leading-relaxed">{msg.result.explanation}</p>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -435,7 +472,6 @@ export default function Analyzer() {
             </div>
           )}
 
-          {/* Input Dock */}
           <div className={`input-dock-area ${isHomeState ? 'state-centered' : 'state-docked'}`}>
             <div className="input-bounds">
               {isHomeState && (
@@ -475,57 +511,28 @@ export default function Analyzer() {
         .navbar-spacer { height: 72px; flex-shrink: 0; }
         .layout-container { display: flex; flex: 1; overflow: hidden; position: relative; }
 
-        /* Gemini Sidebar Core */
-        .gemini-sidebar {
-          background-color: #1e1f20;
-          transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          flex-shrink: 0;
-          height: 100%;
-          border-right: 1px solid #282a2c;
-          z-index: 50;
-        }
+        .gemini-sidebar { background-color: #1e1f20; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; height: 100%; border-right: 1px solid #282a2c; z-index: 50; }
         .gemini-sidebar.open { width: 280px; }
         .gemini-sidebar.closed { width: 68px; }
 
         .sidebar-header { padding: 12px; }
-        .hamburger-btn { 
-          background: transparent; border: none; color: #e3e3e3; 
-          width: 44px; height: 44px; border-radius: 50%; 
-          display: flex; align-items: center; justify-content: center; 
-          cursor: pointer; transition: background 0.2s; 
-        }
+        .hamburger-btn { background: transparent; border: none; color: #e3e3e3; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
         .hamburger-btn:hover { background: rgba(255,255,255,0.1); }
         .mobile-hamburger { position: relative; left: -10px; }
 
-        /* New Chat Button */
         .sidebar-actions { padding: 8px 12px; display: flex; justify-content: flex-start; }
-        .new-chat-btn { 
-          display: flex; align-items: center; gap: 12px; 
-          background: #282a2c; color: #e3e3e3; border: none; 
-          height: 44px; border-radius: 22px; padding: 0 16px; 
-          cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          white-space: nowrap; overflow: hidden; font-size: 14px; font-weight: 500;
-        }
+        .new-chat-btn { display: flex; align-items: center; gap: 12px; background: #282a2c; color: #e3e3e3; border: none; height: 44px; border-radius: 22px; padding: 0 16px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; overflow: hidden; font-size: 14px; font-weight: 500; }
         .gemini-sidebar.closed .new-chat-btn { width: 44px; padding: 0; justify-content: center; background: transparent; }
         .gemini-sidebar.closed .new-chat-btn:hover { background: rgba(255,255,255,0.1); }
         .gemini-sidebar.open .new-chat-btn { width: auto; min-width: 150px; background: #282a2c; }
         .gemini-sidebar.open .new-chat-btn:hover { background: #3c4043; }
 
-        /* History List */
         .history-container { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 4px; opacity: 1; transition: opacity 0.2s;}
         .history-container::-webkit-scrollbar { width: 6px; }
         .history-container::-webkit-scrollbar-thumb { background: #3c4043; border-radius: 4px; }
         .history-title { font-size: 13px; color: #e3e3e3; font-weight: 500; padding: 8px 12px; margin-bottom: 4px; }
         
-        .history-item { 
-          display: flex; align-items: center; justify-content: space-between; 
-          padding: 10px 12px; border-radius: 8px; color: #e3e3e3; 
-          cursor: pointer; font-size: 14px; transition: background 0.2s; 
-          white-space: nowrap; overflow: hidden;
-        }
+        .history-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; color: #e3e3e3; cursor: pointer; font-size: 14px; transition: background 0.2s; white-space: nowrap; overflow: hidden; }
         .history-item:hover { background: #282a2c; }
         .history-content { display: flex; align-items: center; gap: 12px; overflow: hidden; flex: 1;}
         .history-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; color: #bdc1c6;}
@@ -533,7 +540,6 @@ export default function Analyzer() {
         .delete-btn { background: transparent; border: none; color: #f28b82; cursor: pointer; padding: 4px; transition: opacity 0.2s; }
         .empty-history { text-align: center; color: #5f6368; font-size: 13px; margin-top: 20px; }
 
-        /* Mobile Sidebar Overrides */
         @media (max-width: 768px) {
           .gemini-sidebar { position: absolute; z-index: 100; height: 100%; border-right: none;}
           .gemini-sidebar.closed { width: 0; transform: translateX(-100%); }
@@ -541,15 +547,10 @@ export default function Analyzer() {
           .sidebar-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 90; }
         }
 
-        /* Top Utilities & Viewport */
         .app-viewport { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         .top-utilities { padding: 16px 24px 0; display: flex; justify-content: space-between; align-items: center; z-index: 40; }
-        .tokens-indicator { 
-          display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; 
-          color: #bdc1c6; background: #1e1f20; padding: 8px 14px; border-radius: 24px; border: 1px solid #3c4043;
-        }
+        .tokens-indicator { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: #bdc1c6; background: #1e1f20; padding: 8px 14px; border-radius: 24px; border: 1px solid #3c4043; }
 
-        /* Chat feed and elements (unchanged mostly) */
         .chat-scroll-area { flex: 1; overflow-y: auto; padding: 12px 0 32px; }
         .chat-scroll-area::-webkit-scrollbar { width: 8px; }
         .chat-scroll-area::-webkit-scrollbar-thumb { background: #3c4043; border-radius: 4px; }
@@ -577,11 +578,12 @@ export default function Analyzer() {
         .graph-card { background: #1e1f20; border-radius: 16px; padding: 20px 24px; }
         .graph-label { display: block; font-size: 13px; font-weight: 500; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
 
+        .code-result-wrapper { display: flex; flex-direction: column; gap: 12px; }
         .code-result-card { background: #1e1f20; border-radius: 16px; overflow: hidden; border: 1px solid #282a2c; }
         .result-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #282a2c; border-bottom: 1px solid #3c4043; font-size: 13px; font-weight: 600; color: #e3e3e3;}
         .result-code { margin: 0; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: #8ab4f8; overflow-x: auto;}
+        .result-explanation-box { background: #1a1b1e; border-left: 3px solid #4285f4; padding: 16px 20px; border-radius: 8px; }
 
-        /* Suggested Actions */
         .suggested-actions { margin-top: 8px; }
         .actions-title { font-size: 12px; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: block; font-weight: 600;}
         .actions-grid { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -603,7 +605,6 @@ export default function Analyzer() {
         .action-btn { background: transparent; border: none; color: #9aa0a6; cursor: pointer; padding: 6px; border-radius: 8px; display: flex; align-items: center; transition: all 0.2s ease; }
         .action-btn:hover { background: rgba(255, 255, 255, 0.1); color: #e3e3e3; }
 
-        /* Input Area */
         .input-dock-area { padding: 0 24px 24px; background: linear-gradient(180deg, transparent 0%, #131314 25%, #131314 100%); z-index: 10; }
         .input-dock-area.state-centered { flex: 1; display: flex; align-items: center; justify-content: center; background: transparent; }
         .input-dock-area.state-docked { flex-shrink: 0; }
