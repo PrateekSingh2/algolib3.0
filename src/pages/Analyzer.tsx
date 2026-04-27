@@ -147,54 +147,53 @@ export default function Analyzer() {
   };
 
   // ─── Firebase Auth & Listeners ─────────────────────────────────────────────
-  // ─── Firebase Auth & Listeners ─────────────────────────────────────────────
   useEffect(() => {
     let unsubscribeCredits: () => void;
     let unsubscribeHistory: () => void;
 
-    // Make this callback async so we can fetch from Supabase
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (!user) {
         setCredits(null);
         setHistory([]);
-        setUserName('Developer'); // Reset name on logout
+        setUserName('Developer');
         if (unsubscribeCredits) unsubscribeCredits();
         if (unsubscribeHistory) unsubscribeHistory();
         return;
       }
       
-      // --- NEW: FETCH COMPLETE NAME FROM SUPABASE ---
+      // --- NEW: FETCH COMPLETE NAME VIA NETLIFY FUNCTION ---
       try {
-        // Note: Adjust 'users' and 'full_name' to match your actual Supabase table and column names.
-        // You can also change .eq('email', user.email) to .eq('id', user.uid) if you link by UID.
-        const { data, error } = await supabase
-          .from('users') 
-          .select('full_name') 
-          .eq('email', user.email)
-          .single();
+        const token = await user.getIdToken();
+        const response = await fetch('/.netlify/functions/get-user-profile', {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
 
-        let completeName = data?.full_name;
+        if (response.ok) {
+            const { full_name } = await response.json();
+            let completeName = full_name;
 
-        // Fallback: If no name in Supabase, use Firebase displayName, or default to the email prefix
-        if (!completeName || completeName.trim() === '') {
-          completeName = user.displayName || user.email?.split('@')[0] || 'Developer';
+            // Fallback to Firebase displayName or email prefix if Supabase is empty
+            if (!completeName || completeName.trim() === '') {
+              completeName = user.displayName || user.email?.split('@')[0] || 'Developer';
+            }
+            setUserName(completeName);
+        } else {
+            // Safe fallback if the backend fails
+            setUserName(user.displayName || user.email?.split('@')[0] || 'Developer');
         }
-        
-        setUserName(completeName);
       } catch (err) {
-        console.error("Error fetching name from Supabase:", err);
-        // Safety Fallback on error
+        console.error("Error calling profile function:", err);
         setUserName(user.displayName || user.email?.split('@')[0] || 'Developer');
       }
-      // ----------------------------------------------
+      // -----------------------------------------------------
 
       unsubscribeCredits = onSnapshot(doc(db, 'user_credits', user.uid), (docSnap) => {
         if (docSnap.exists()) setCredits(docSnap.data().credits);
         else setCredits(7); 
       });
 
-      // Sort by the most recently updated threads
       const historyQ = query(collection(db, 'users', user.uid, 'analysis_history'), orderBy('updatedAt', 'desc'));
       unsubscribeHistory = onSnapshot(historyQ, (snap) => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as HistoryItem));
