@@ -8,7 +8,7 @@ import {
 // ─── FIREBASE IMPORTS ────────────────────────────────────────────────────────
 import { auth, firestoreDB as db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, onSnapshot, collection, addDoc, serverTimestamp, query, orderBy, deleteDoc } from "firebase/firestore";
+import { doc, onSnapshot, collection, addDoc, updateDoc, serverTimestamp, query, orderBy, deleteDoc } from "firebase/firestore";
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Navbar from "@/components/Navbar"; 
@@ -29,17 +29,22 @@ interface ChatMessage {
   isError?: boolean;
 }
 
-// FIX: Updated HistoryItem to store the FULL result of the AI response
+// UPGRADED: HistoryItem now stores the entire message thread
 interface HistoryItem {
   id: string;
-  type: 'analysis' | 'optimization' | 'translation';
-  codeSnippet: string; // Truncated for sidebar display
-  fullInputCode: string; // The exact code the user sent
+  title: string;
+  messages?: ChatMessage[]; // The new threaded model
+  
+  // Legacy fields (kept for backward compatibility so old chats don't break)
+  type?: string;
+  codeSnippet?: string; 
+  fullInputCode?: string; 
   timeComplexity?: string;
   spaceComplexity?: string;
-  explanation: string;
-  resultCode?: string; // Stored if it was optimize or translate
+  explanation?: string;
+  resultCode?: string; 
   timestamp: any;
+  updatedAt?: any;
 }
 
 // ─── Graph Data ──────────────────────────────────────────────────────────────
@@ -80,13 +85,23 @@ export default function Analyzer() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Gemini Style Sidebar State
+  // Gemini Style Sidebar & Thread State
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showLangMenuForIdx, setShowLangMenuForIdx] = useState<number | null>(null);
+  
+  // NEW: Keep track of the active thread
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const chatIdRef = useRef<string | null>(null); 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Helper to sync ref and state instantly
+  const setChatId = (id: string | null) => {
+    setCurrentChatId(id);
+    chatIdRef.current = id;
+  };
 
   useEffect(() => {
     if (window.innerWidth < 768) setIsSidebarOpen(false);
@@ -124,6 +139,7 @@ export default function Analyzer() {
   const handleNewAnalysis = () => {
     setMessages([]);
     setInputCode('');
+    setChatId(null); // CRITICAL: Reset the thread ID so the next message starts a new chat
     if (window.innerWidth < 768) setIsSidebarOpen(false); 
   };
 
@@ -147,7 +163,8 @@ export default function Analyzer() {
         else setCredits(7); 
       });
 
-      const historyQ = query(collection(db, 'users', user.uid, 'analysis_history'), orderBy('timestamp', 'desc'));
+      // Sort by the most recently updated threads
+      const historyQ = query(collection(db, 'users', user.uid, 'analysis_history'), orderBy('updatedAt', 'desc'));
       unsubscribeHistory = onSnapshot(historyQ, (snap) => {
         const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as HistoryItem));
         setHistory(items);
@@ -163,8 +180,41 @@ export default function Analyzer() {
     }; 
   }, []);
 
+  // ─── Thread Saving Logic ───────────────────────────────────────────────────
+  const saveChatToFirebase = async (chatMessages: ChatMessage[]) => {
+    if (!currentUser) return;
+    
+    try {
+      const dbCollection = collection(db, 'users', currentUser.uid, 'analysis_history');
+      
+      if (chatIdRef.current) {
+        // UPDATE EXISTING THREAD
+        await updateDoc(doc(dbCollection, chatIdRef.current), {
+          messages: chatMessages,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        // CREATE NEW THREAD
+        const firstUserMsg = chatMessages.find(m => m.role === 'user');
+        const generatedTitle = firstUserMsg 
+          ? firstUserMsg.content.substring(0, 45) + (firstUserMsg.content.length > 45 ? '...' : '') 
+          : 'New Analysis';
+
+        const docRef = await addDoc(dbCollection, {
+          title: generatedTitle,
+          messages: chatMessages,
+          timestamp: serverTimestamp(),
+          updatedAt: serverTimestamp() // We use updatedAt for sorting so bumped threads rise to the top
+        });
+        setChatId(docRef.id);
+      }
+    } catch (err) {
+      console.error("Failed to save thread:", err);
+    }
+  };
+
   // ─── Core API Request ──────────────────────────────────────────────────────
-  const executeRequest = async (action: 'analyze' | 'optimize' | 'translate', code: string, targetLanguage?: string) => {
+  const executeRequest = async (action: 'analyze' | 'optimize' | 'translate', code: string, currentMessages: ChatMessage[], targetLanguage?: string) => {
     setIsAnalyzing(true);
     try {
       if (!currentUser) throw new Error("Authentication required.");
@@ -186,22 +236,13 @@ export default function Analyzer() {
       
       if (aiResult.error) throw new Error(aiResult.error);
 
-      setMessages(prev => [...prev, { role: 'ai', content: '', result: aiResult }]);
-
-      // FIX: Save ALL results (Analysis, Optimization, Translation) with full metadata
-      await addDoc(collection(db, 'users', currentUser.uid, 'analysis_history'), {
-        type: aiResult.type || action,
-        codeSnippet: code.substring(0, 50) + (code.length > 50 ? '...' : ''), // For sidebar
-        fullInputCode: code, // The exact code to restore
-        timeComplexity: aiResult.timeComplexity || null,
-        spaceComplexity: aiResult.spaceComplexity || null,
-        explanation: aiResult.explanation,
-        resultCode: aiResult.code || null,
-        timestamp: serverTimestamp()
-      });
+      // Append AI response to the thread and save
+      const finalMessages: ChatMessage[] = [...currentMessages, { role: 'ai', content: '', result: aiResult }];
+      setMessages(finalMessages);
+      await saveChatToFirebase(finalMessages);
 
     } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'ai', content: err.message || "An error occurred.", isError: true }]);
+      setMessages([...currentMessages, { role: 'ai', content: err.message || "An error occurred.", isError: true }]);
     } finally {
       setIsAnalyzing(false);
       setShowLangMenuForIdx(null);
@@ -212,19 +253,29 @@ export default function Analyzer() {
   const handleAnalyze = () => {
     const trimmed = inputCode.trim();
     if (!trimmed) return;
-    setMessages(prev => [...prev, { role: 'user', content: trimmed }]);
+    
+    const userMsg: ChatMessage = { role: 'user', content: trimmed };
+    const pendingMessages = [...messages, userMsg];
+    
+    setMessages(pendingMessages);
     setInputCode('');
-    executeRequest('analyze', trimmed);
+    executeRequest('analyze', trimmed, pendingMessages);
   };
 
   const handleOptimize = (codeToOptimize: string) => {
-    setMessages(prev => [...prev, { role: 'user', content: "Please optimize this code to run faster and use less memory." }]);
-    executeRequest('optimize', codeToOptimize);
+    const userMsg: ChatMessage = { role: 'user', content: "Please optimize this code to run faster and use less memory." };
+    const pendingMessages = [...messages, userMsg];
+    
+    setMessages(pendingMessages);
+    executeRequest('optimize', codeToOptimize, pendingMessages);
   };
 
   const handleTranslate = (codeToTranslate: string, targetLang: string) => {
-    setMessages(prev => [...prev, { role: 'user', content: `Please translate this code to ${targetLang}.` }]);
-    executeRequest('translate', codeToTranslate, targetLang);
+    const userMsg: ChatMessage = { role: 'user', content: `Please translate this code to ${targetLang}.` };
+    const pendingMessages = [...messages, userMsg];
+    
+    setMessages(pendingMessages);
+    executeRequest('translate', codeToTranslate, pendingMessages, targetLang);
   };
 
   const handleDeleteHistory = async (e: React.MouseEvent, id: string) => {
@@ -232,35 +283,31 @@ export default function Analyzer() {
     if (!currentUser) return;
     try {
       await deleteDoc(doc(db, 'users', currentUser.uid, 'analysis_history', id));
+      if (currentChatId === id) handleNewAnalysis(); // Clear UI if deleting active chat
     } catch (err) {
       console.error("Failed to delete history item", err);
     }
   };
 
-  // FIX: Restore the entire chat context and result perfectly
   const loadHistoryItem = (item: HistoryItem) => {
-    handleNewAnalysis(); 
+    setChatId(item.id);
     
-    // Reconstruct the chat conversation
-    const reconstructedMessages: ChatMessage[] = [
-      {
-        role: 'user',
-        content: item.fullInputCode || item.codeSnippet // Fallback to snippet for older items
-      },
-      {
-        role: 'ai',
-        content: '',
-        result: {
-          type: item.type || 'analysis',
-          timeComplexity: item.timeComplexity,
-          spaceComplexity: item.spaceComplexity,
-          explanation: item.explanation,
-          code: item.resultCode
-        }
-      }
-    ];
-
-    setMessages(reconstructedMessages);
+    // Check if it's a new "Threaded" item, or a "Legacy" item from earlier
+    if (item.messages && item.messages.length > 0) {
+      setMessages(item.messages);
+    } else {
+      // Graceful fallback for your older database entries
+      setMessages([
+        { role: 'user', content: item.fullInputCode || item.codeSnippet || "" },
+        { role: 'ai', content: '', result: {
+            type: (item.type as any) || 'analysis',
+            timeComplexity: item.timeComplexity,
+            spaceComplexity: item.spaceComplexity,
+            explanation: item.explanation || "",
+            code: item.resultCode
+        }}
+      ]);
+    }
     
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
@@ -274,13 +321,6 @@ export default function Analyzer() {
 
   const isHomeState = messages.length === 0;
   const firstName = currentUser?.displayName ? currentUser.displayName.split(' ')[0] : 'Prateek';
-
-  // Helper to format history title icon
-  const getHistoryIcon = (type: string) => {
-    if (type === 'optimization') return <Code2 size={14} className="text-emerald-500" />;
-    if (type === 'translation') return <ArrowRightLeft size={14} className="text-amber-500" />;
-    return <MessageSquare size={14} className="text-zinc-500" />;
-  }
 
   return (
     <div className="analyzer-root">
@@ -314,10 +354,12 @@ export default function Analyzer() {
                   <p className="empty-history">No history saved.</p>
                 ) : (
                   history.map(item => (
-                    <div key={item.id} className="history-item group" onClick={() => loadHistoryItem(item)}>
+                    <div key={item.id} className={`history-item group ${currentChatId === item.id ? 'active' : ''}`} onClick={() => loadHistoryItem(item)}>
                       <div className="history-content">
-                        {getHistoryIcon(item.type)}
-                        <span className="history-text">{item.codeSnippet}</span>
+                        <MessageSquare size={16} className={currentChatId === item.id ? "text-blue-400" : "text-zinc-500"} />
+                        <span className={`history-text ${currentChatId === item.id ? "text-blue-100" : "text-bdc1c6"}`}>
+                          {item.title || item.codeSnippet}
+                        </span>
                       </div>
                       <button onClick={(e) => handleDeleteHistory(e, item.id)} className="delete-btn opacity-0 group-hover:opacity-100" title="Delete">
                         <Trash2 size={14} />
@@ -534,8 +576,9 @@ export default function Analyzer() {
         
         .history-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; color: #e3e3e3; cursor: pointer; font-size: 14px; transition: background 0.2s; white-space: nowrap; overflow: hidden; }
         .history-item:hover { background: #282a2c; }
+        .history-item.active { background: #2563eb15; border-left: 2px solid #3b82f6; } /* NEW: Highlight active thread */
         .history-content { display: flex; align-items: center; gap: 12px; overflow: hidden; flex: 1;}
-        .history-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; color: #bdc1c6;}
+        .history-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
         
         .delete-btn { background: transparent; border: none; color: #f28b82; cursor: pointer; padding: 4px; transition: opacity 0.2s; }
         .empty-history { text-align: center; color: #5f6368; font-size: 13px; margin-top: 20px; }
