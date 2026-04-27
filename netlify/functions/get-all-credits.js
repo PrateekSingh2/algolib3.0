@@ -1,11 +1,4 @@
-const admin = require('firebase-admin');
-
-if (!admin.apps.length) {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
-}
+const { admin, db } = require('./firebase-admin');
 
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'GET') {
@@ -19,9 +12,12 @@ exports.handler = async (event, context) => {
         }
 
         const token = authHeader.split('Bearer ')[1];
+        
+        // Correctly use admin.auth() here
         await admin.auth().verifyIdToken(token);
 
-        const snapshot = await admin.firestore().collection('user_credits').get();
+        // Use the db instance exported from your helper
+        const snapshot = await db.collection('user_credits').get();
         const credits = [];
         
         snapshot.forEach(doc => {
@@ -36,6 +32,7 @@ exports.handler = async (event, context) => {
             body: JSON.stringify(credits)
         };
     } catch (error) {
+        console.error("Get Credits Error:", error);
         return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
     }
 };
