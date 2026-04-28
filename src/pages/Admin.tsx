@@ -9,7 +9,7 @@ import {
     Lock, Terminal, Clock, Copy, Check, Hash, ShieldCheck, Save, RefreshCw, X, Code, FileJson, CloudLightning,
     Settings, Loader2, Edit3, ShieldAlert, Search, Users, Activity, Database, ChevronUp, MessageSquare, AlertTriangle, Trash2,
     Megaphone, Radio, ExternalLink, Eye, BarChart3, PieChart as PieChartIcon, Download, User as UserIcon, AlignLeft, Send, Github, Trophy, Plus, Calendar, List, UserPlus, UserMinus, FileText, CheckCircle2, XCircle, Code2, Construction,
-    Coins, Zap
+    Coins, Zap, Mail, Paperclip
 } from "lucide-react";
 
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
@@ -93,7 +93,7 @@ const Admin = () => {
     const [user, setUser] = useState<User | null>(null);
     const [isAdmin, setIsAdmin] = useState<boolean>(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"forge" | "contests" | "submissions" | "moderation" | "broadcast" | "insights" | "admins" | "maintenance" | "credits">("forge");
+    const [activeTab, setActiveTab] = useState<"forge" | "contests" | "submissions" | "moderation" | "broadcast" | "insights" | "admins" | "maintenance" | "credits" | "mailroom">("forge");
     const [customAlert, setCustomAlert] = useState<{ isOpen: boolean, message: string, title?: string, type: "info" | "error" | "warning" }>({ isOpen: false, message: "", type: "info" });
     const showAlert = (message: string, type: "info" | "error" | "warning" = "error", title?: string) => setCustomAlert({ isOpen: true, message, type, title });
 
@@ -163,6 +163,14 @@ const Admin = () => {
 
     const [maintainedRoutes, setMaintainedRoutes] = useState<string[]>([]);
     const [isSavingMaintenance, setIsSavingMaintenance] = useState(false);
+
+    const [mailTo, setMailTo] = useState("");
+    const [mailCc, setMailCc] = useState("");
+    const [mailBcc, setMailBcc] = useState("");
+    const [mailSub, setMailSub] = useState("");
+    const [mailBody, setMailBody] = useState("");
+    const [mailAttachments, setMailAttachments] = useState<{filename: string, content: string, contentType: string, size: number}[]>([]);
+    const [isSendingMail, setIsSendingMail] = useState(false);
 
     useEffect(() => { const savedConfig = localStorage.getItem("algolib_gist_config"); if (savedConfig) setGistConfig(JSON.parse(savedConfig)); }, []);
 
@@ -304,6 +312,78 @@ const Admin = () => {
         setIsSavingBroadcast(true);
         try { await setDoc(doc(firestoreDB, "system_settings", "announcement"), { message: broadcastMsg, type: broadcastType, active: broadcastActive, link: broadcastLink, updatedAt: new Date() }); setStatusMsg("Status Updated"); setTimeout(() => setStatusMsg(""), 3000); }
         catch (error) { showAlert("Failed to update broadcast settings."); } finally { setIsSavingBroadcast(false); }
+    };
+
+    // Helper to convert files to Base64
+    const convertFileToBase64 = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const result = reader.result as string;
+                // Strip the 'data:image/png;base64,' prefix for Nodemailer
+                resolve(result.split(',')[1]); 
+            };
+            reader.onerror = error => reject(error);
+        });
+    };
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files) return;
+        const files = Array.from(e.target.files);
+        
+        // Check size limit (e.g., max 4MB total for serverless payload)
+        const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+        if (totalSize > 4 * 1024 * 1024) return showAlert("Total attachment size must be under 4MB.");
+
+        const newAttachments = await Promise.all(files.map(async (file) => ({
+            filename: file.name,
+            content: await convertFileToBase64(file),
+            contentType: file.type,
+            size: file.size
+        })));
+
+        setMailAttachments(prev => [...prev, ...newAttachments]);
+    };
+
+    const removeAttachment = (index: number) => {
+        setMailAttachments(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSendDirectMail = async () => {
+        if (!mailTo || !mailSub || !mailBody) return showAlert("To, Subject, and Payload are required.");
+        setIsSendingMail(true);
+        setStatusMsg("Establishing SMTP connection...");
+        
+        try {
+            const token = await user?.getIdToken();
+            const response = await fetch('/.netlify/functions/send-mail', {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ 
+                    to: mailTo, cc: mailCc, bcc: mailBcc, 
+                    subject: mailSub, message: mailBody, attachments: mailAttachments 
+                })
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || "Failed to dispatch email.");
+            }
+            
+            setStatusMsg("Transmission Delivered!");
+            // Purge form after sending
+            setMailTo(""); setMailCc(""); setMailBcc(""); setMailSub(""); setMailBody(""); setMailAttachments([]);
+            setTimeout(() => setStatusMsg(""), 3000);
+        } catch (err: any) {
+            showAlert(err.message);
+            setStatusMsg("");
+        } finally {
+            setIsSendingMail(false);
+        }
     };
 
     const handleUpdateCredits = async (userId: string, newBalance: number) => {
@@ -612,7 +692,7 @@ const Admin = () => {
                                     { id: 'submissions', label: 'Telemetry', icon: FileText }, { id: 'moderation', label: 'Comms', icon: ShieldCheck },
                                     { id: 'broadcast', label: 'Broadcast', icon: Radio }, { id: 'insights', label: 'Insights', icon: BarChart3 },
                                     { id: 'admins', label: 'Security', icon: UserPlus }, { id: 'maintenance', label: 'Lockdown', icon: Construction },
-                                    { id: 'credits', label: 'AI Credits', icon: Coins }
+                                    { id: 'credits', label: 'AI Credits', icon: Coins }, { id: 'mailroom', label: 'Mailroom', icon: Mail }
                                 ].map(tab => (
                                     <button key={tab.id} onClick={() => { setActiveTab(tab.id as any); setIsMobileNavOpen(false); }} className={`flex items-center gap-3 px-4 py-3 w-full text-sm font-semibold rounded-xl transition-all ${activeTab === tab.id ? 'bg-white/10 text-white border border-white/10 shadow-inner' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/5 border border-transparent'}`}>
                                         <tab.icon size={18} className={`${activeTab === tab.id ? 'text-sky-400' : ''}`} />
@@ -662,7 +742,7 @@ const Admin = () => {
                                 { id: 'submissions', label: 'Telemetry', icon: FileText }, { id: 'moderation', label: 'Comms', icon: ShieldCheck },
                                 { id: 'broadcast', label: 'Broadcast', icon: Radio }, { id: 'insights', label: 'Insights', icon: BarChart3 },
                                 { id: 'admins', label: 'Security', icon: UserPlus }, { id: 'maintenance', label: 'Lockdown', icon: Construction },
-                                { id: 'credits', label: 'AI Credits', icon: Coins }
+                                { id: 'credits', label: 'AI Credits', icon: Coins }, { id: 'mailroom', label: 'Mailroom', icon: Mail }
                             ].map(tab => (
                                 <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative flex items-center gap-3 px-4 py-3 w-full text-xs font-semibold rounded-xl transition-all whitespace-nowrap overflow-hidden group ${activeTab === tab.id ? 'text-white' : 'text-zinc-500 hover:text-zinc-200'}`}>
                                     {activeTab === tab.id && <motion.div layoutId="sidebarGlow" className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent border-l-2 border-white rounded-xl" />}
@@ -1642,6 +1722,89 @@ const Admin = () => {
                                                 )}
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {activeTab === "mailroom" && (
+                        <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6 max-w-4xl mx-auto">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-white flex items-center gap-3 tracking-tight">
+                                        <Mail size={24} className="text-sky-400 drop-shadow-[0_0_12px_rgba(56,189,248,0.4)]" /> Operations Mailroom
+                                    </h2>
+                                    <p className="text-xs font-medium text-zinc-400 mt-1">Dispatch official communications locked to teamalgolib@gmail.com.</p>
+                                </div>
+                            </div>
+
+                            <div className={`${pCard} p-6 md:p-8 space-y-6`}>
+                                {/* Address Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div className="md:col-span-2">
+                                        <label className={pLabel}>Recipient (To) *</label>
+                                        <input value={mailTo} onChange={(e) => setMailTo(e.target.value)} className={pInput} placeholder="operative@domain.com" />
+                                    </div>
+                                    <div>
+                                        <label className={pLabel}>Carbon Copy (CC)</label>
+                                        <input value={mailCc} onChange={(e) => setMailCc(e.target.value)} className={pInput} placeholder="admin@domain.com" />
+                                    </div>
+                                    <div>
+                                        <label className={pLabel}>Blind Carbon Copy (BCC)</label>
+                                        <input value={mailBcc} onChange={(e) => setMailBcc(e.target.value)} className={pInput} placeholder="stealth@domain.com" />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className={pLabel}>Subject Line *</label>
+                                        <input value={mailSub} onChange={(e) => setMailSub(e.target.value)} className={`${pInput} font-bold`} placeholder="Urgent: System Architecture Update" />
+                                    </div>
+                                </div>
+
+                                {/* Payload Body */}
+                                <div>
+                                    <label className={pLabel}>Transmission Payload *</label>
+                                    <textarea 
+                                        value={mailBody} 
+                                        onChange={(e) => setMailBody(e.target.value)} 
+                                        className={`${pInput} resize-y min-h-[200px] text-xs font-mono leading-relaxed`} 
+                                        placeholder="Type your official transmission here..." 
+                                    />
+                                </div>
+
+                                {/* Attachments UI */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className={pLabel}>Encrypted Attachments (Max 4MB total)</label>
+                                        <label className="cursor-pointer text-[10px] font-bold text-sky-400 uppercase tracking-widest hover:text-sky-300 transition-colors flex items-center gap-1.5">
+                                            <Paperclip size={12} /> Append Files
+                                            <input type="file" multiple className="hidden" onChange={handleFileSelect} />
+                                        </label>
+                                    </div>
+                                    
+                                    {mailAttachments.length > 0 && (
+                                        <div className="flex flex-wrap gap-3 mt-3 bg-[#020202] p-4 rounded-xl border border-white/5 shadow-inner">
+                                            {mailAttachments.map((att, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-xs">
+                                                    <span className="font-bold text-zinc-300 truncate max-w-[150px]">{att.filename}</span>
+                                                    <span className="text-[9px] text-zinc-500 font-mono">({(att.size / 1024).toFixed(1)}kb)</span>
+                                                    <button onClick={() => removeAttachment(idx)} className="ml-1 text-zinc-500 hover:text-red-400 transition-colors">
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Dispatch Button */}
+                                <div className="pt-4 border-t border-white/5">
+                                    <button 
+                                        onClick={handleSendDirectMail} 
+                                        disabled={isSendingMail} 
+                                        className="w-full py-4 bg-white text-black hover:bg-zinc-200 font-bold rounded-xl transition-all flex items-center justify-center gap-3 text-sm uppercase tracking-widest shadow-[0_0_30px_rgba(255,255,255,0.15)] disabled:opacity-50"
+                                    >
+                                        {isSendingMail ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+                                        {isSendingMail ? "Establishing SMTP..." : "Dispatch Official Transmission"}
+                                    </button>
                                 </div>
                             </div>
                         </motion.div>
