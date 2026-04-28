@@ -269,7 +269,8 @@ const Admin = () => {
                         displayName: data.displayName || "Anonymous",
                         lifetimeActiveTimeMins: data.lifetimeActiveTimeMins || 0,
                         lastActiveDate: data.lastActiveDate,
-                        aiCredits: creditMap[doc.id] || 0 // Apply the securely fetched credits
+                        activityUsage: data.activityUsage || {}, // <-- ADD THIS LINE
+                        aiCredits: creditMap[doc.id] || 0
                     } as UserActivityData;
                 });
                 setInsightsData(users);
