@@ -244,10 +244,8 @@ const Admin = () => {
             try {
                 const token = await user?.getIdToken();
 
-                // 1. Fetch public user data directly (Allowed by your `allow read: if true;` rule)
                 const userSnap = await getDocs(collection(firestoreDB, "users"));
                 
-                // 2. Fetch credits via Netlify Backend (Bypasses rules via Admin SDK)
                 const creditResponse = await fetch('/.netlify/functions/get-all-credits', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -255,7 +253,6 @@ const Admin = () => {
                 const creditMap: Record<string, number> = {};
                 if (creditResponse.ok) {
                     const creditData = await creditResponse.json();
-                    // Maps the array from Netlify into a dictionary for quick lookup
                     creditData.forEach((doc: any) => {
                         creditMap[doc.id] = doc.credits || 0;
                     });
@@ -263,13 +260,26 @@ const Admin = () => {
 
                 const users = userSnap.docs.map(doc => {
                     const data = doc.data();
+                    
+                    const parsedActivityUsage: Record<string, number> = {};
+                    
+                    Object.keys(data).forEach(key => { 
+                        if (key.startsWith('activityUsage.')) { 
+                            parsedActivityUsage[key.replace('activityUsage.', '')] = data[key]; 
+                        } 
+                    });
+                    
+                    if (data.activityUsage && typeof data.activityUsage === 'object') {
+                        Object.assign(parsedActivityUsage, data.activityUsage);
+                    }
+
                     return {
                         id: doc.id,
                         email: data.email || "",
                         displayName: data.displayName || "Anonymous",
                         lifetimeActiveTimeMins: data.lifetimeActiveTimeMins || 0,
                         lastActiveDate: data.lastActiveDate,
-                        activityUsage: data.activityUsage || {}, // <-- ADD THIS LINE
+                        activityUsage: parsedActivityUsage,
                         aiCredits: creditMap[doc.id] || 0
                     } as UserActivityData;
                 });
@@ -288,10 +298,29 @@ const Admin = () => {
     }, [activeTab, isAdmin, insightsData.length]);
 
     const aggregatedActivityData = useMemo(() => {
-        const totals: Record<string, number> = {}; let totalPlatformMinutes = 0;
-        insightsData.forEach(user => { if (user.activityUsage) { Object.entries(user.activityUsage).forEach(([activity, minutes]) => { if (typeof minutes === 'number') { totals[activity] = (totals[activity] || 0) + minutes; totalPlatformMinutes += minutes; } }); } });
-        const sorted = Object.entries(totals).map(([name, value]) => ({ name, value: Number(value.toFixed(2)) })).sort((a, b) => b.value - a.value);
-        return { chartData: sorted.slice(0, 10), totalPlatformMinutes: Number(totalPlatformMinutes.toFixed(2)), totalUsersWithData: insightsData.filter(u => u.lifetimeActiveTimeMins && u.lifetimeActiveTimeMins > 0).length };
+        const totals: Record<string, number> = {}; 
+        let totalPlatformMinutes = 0;
+        
+        insightsData.forEach(user => { 
+            if (user.activityUsage) { 
+                Object.entries(user.activityUsage).forEach(([activity, minutes]) => { 
+                    if(typeof minutes === 'number') { 
+                        totals[activity] = (totals[activity] || 0) + minutes; 
+                        totalPlatformMinutes += minutes; 
+                    } 
+                }); 
+            } 
+        });
+        
+        const sorted = Object.entries(totals)
+            .map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }))
+            .sort((a, b) => b.value - a.value);
+            
+        return { 
+            chartData: sorted.slice(0, 10), 
+            totalPlatformMinutes: Number(totalPlatformMinutes.toFixed(2)), 
+            totalUsersWithData: insightsData.filter(u => u.lifetimeActiveTimeMins && u.lifetimeActiveTimeMins > 0).length 
+        };
     }, [insightsData]);
 
     const searchedUserStats = useMemo(() => { if (!insightSearchEmail.trim()) return null; return insightsData.find(u => u.email?.toLowerCase().includes(insightSearchEmail.toLowerCase())); }, [insightSearchEmail, insightsData]);
@@ -1499,16 +1528,25 @@ const Admin = () => {
                                                 <div className="bg-[#050505] border border-white/[0.08] rounded-2xl p-6 shadow-inner">
                                                     <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-6">Activity Vector Distribution</h4>
                                                     <div className="space-y-5">
-                                                        {searchedUserStats.activityUsage && Object.keys(searchedUserStats.activityUsage).length > 0 ? (() => {
-                                                            // Calculate maximum value to scale the progress bars correctly
-                                                            const values = Object.values(searchedUserStats.activityUsage).filter(v => typeof v === 'number') as number[];
+                                                        {(() => {
+                                                            const usage = searchedUserStats.activityUsage || {};
+                                                            const hasBreakdown = Object.keys(usage).length > 0;
+                                                            const totalMins = Number(searchedUserStats.lifetimeActiveTimeMins) || 0;
+
+                                                            if (!hasBreakdown && totalMins <= 0) {
+                                                                return <p className="text-center text-zinc-600 text-[10px] font-bold tracking-wider uppercase py-6">No processes logged.</p>;
+                                                            }
+
+                                                            // Create a display object: Use breakdown if it exists, otherwise use fallback
+                                                            const displayData = hasBreakdown ? usage : { 'General Sandbox': totalMins };
+                                                            const values = Object.values(displayData).map(v => Number(v) || 0);
                                                             const maxTime = Math.max(...values, 1);
 
-                                                            return Object.entries(searchedUserStats.activityUsage)
-                                                                .sort((a, b) => b[1] - a[1])
+                                                            return Object.entries(displayData)
+                                                                .sort((a, b) => (Number(b[1]) || 0) - (Number(a[1]) || 0))
                                                                 .map(([activity, time], idx) => {
-                                                                    const timeNum = typeof time === 'number' ? time : 0;
-                                                                    const widthPercent = Math.max((timeNum / maxTime) * 100, 2); // Minimum 2% width so small values remain visible
+                                                                    const timeNum = Number(time) || 0;
+                                                                    const widthPercent = Math.max((timeNum / maxTime) * 100, 2); // Min 2% width
 
                                                                     return (
                                                                         <div key={idx} className="group">
@@ -1523,16 +1561,13 @@ const Admin = () => {
                                                                                     transition={{ duration: 1, ease: "easeOut" }}
                                                                                     className="bg-gradient-to-r from-sky-500 to-indigo-500 h-full rounded-full relative"
                                                                                 >
-                                                                                    {/* Highlight glow at the end of the bar */}
                                                                                     <div className="absolute right-0 top-0 bottom-0 w-4 bg-white/30 rounded-full blur-[2px]"></div>
                                                                                 </motion.div>
                                                                             </div>
                                                                         </div>
                                                                     );
                                                                 });
-                                                        })() : (
-                                                            <p className="text-center text-zinc-600 text-[10px] font-bold tracking-wider uppercase py-6">No processes logged.</p>
-                                                        )}
+                                                        })()}
                                                     </div>
                                                 </div>
                                             </div>
