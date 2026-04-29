@@ -1,4 +1,9 @@
-const { supabase } = require('./utils/supabase');
+const { createClient } = require('@supabase/supabase-js');
+
+// Initialize Supabase directly
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -15,6 +20,7 @@ exports.handler = async (event) => {
 
         return { statusCode: 200, body: JSON.stringify({ quiz: quizData, questions: questions || [] }) };
     } catch (err) {
+        console.error("Get Quiz Details Error:", err);
         return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
     }
 };
