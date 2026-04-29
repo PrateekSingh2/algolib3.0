@@ -1,21 +1,26 @@
 const { admin } = require('./utils/firebase-admin');
 const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase directly to prevent import undefined crashes
+// 1. Initialize Supabase using the SERVICE ROLE KEY to bypass RLS securely
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; 
+
+if (!supabaseServiceKey) {
+    console.error("FATAL ERROR: SUPABASE_SERVICE_ROLE_KEY is missing from Netlify Environment Variables.");
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 exports.handler = async (event) => {
     try {
-        // 1. Verify Authentication Clearance
+        // 2. Verify Firebase Authentication Clearance
         const authHeader = event.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
         const token = authHeader.split('Bearer ')[1];
         const decodedToken = await admin.auth().verifyIdToken(token);
         const userUid = decodedToken.uid;
 
-        // 2. HANDLE PURGE / DELETE
+        // 3. HANDLE PURGE / DELETE
         if (event.httpMethod === 'DELETE') {
             const quizId = event.queryStringParameters.id;
             if (!quizId) return { statusCode: 400, body: JSON.stringify({ error: 'Missing quiz ID' }) };
@@ -28,7 +33,7 @@ exports.handler = async (event) => {
             return { statusCode: 200, body: JSON.stringify({ success: true }) };
         }
 
-        // 3. HANDLE DEPLOY / POST
+        // 4. HANDLE DEPLOY / POST
         if (event.httpMethod === 'POST') {
             const { quizId, title, startTime, endTime, durationSeconds, maxWarnings, questions } = JSON.parse(event.body);
             
@@ -54,6 +59,7 @@ exports.handler = async (event) => {
                     title, start_time: startTime, end_time: endTime, duration_seconds: durationSeconds, 
                     max_warnings: maxWarnings, creator_uid: userUid, join_code: joinCode
                 }]).select();
+                
                 if (insertErr) throw insertErr;
                 currentQuizId = data[0].id;
             }
