@@ -676,6 +676,59 @@ export default function Analyzer() {
         
         .chat-strong { color: #fff; font-weight: 600; }
         .chat-inline-code { background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; color: #8ab4f8; }
+
+        /* --- MOBILE RESPONSIVENESS FIXES --- */
+        @media (max-width: 768px) {
+          /* 1. Fix the Sidebar & Double Hamburger */
+          .gemini-sidebar { 
+            position: absolute; 
+            z-index: 100; 
+            height: 100%; 
+            background: rgba(20, 20, 22, 0.95); 
+          }
+          .gemini-sidebar.closed { 
+            width: 0; 
+            transform: translateX(-100%); 
+            opacity: 0; 
+            border: none; 
+          }
+          .gemini-sidebar.open { 
+            width: 280px; 
+            transform: translateX(0); 
+            opacity: 1; 
+            box-shadow: 4px 0 32px rgba(0,0,0,0.6); 
+          }
+          
+          /* 2. Add Dark Overlay behind open sidebar */
+          .sidebar-backdrop { 
+            position: absolute; 
+            inset: 0; 
+            background: rgba(0,0,0,0.6); 
+            backdrop-filter: blur(2px); 
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 90; 
+          }
+          
+          /* 3. Scale down the giant greeting text */
+          .greeting-header h1 { 
+            font-size: 32px; 
+            line-height: 1.2; 
+          }
+          .greeting-header h2 { 
+            font-size: 18px; 
+          }
+          
+          /* 4. Optimize spacing for small screens */
+          .chat-content-bounds { padding: 0 16px; }
+          .message-row { gap: 12px; }
+          .ai-avatar { width: 28px; height: 28px; }
+          
+          /* 5. Tighten the input dock */
+          .input-dock-area { padding: 0 16px 16px; }
+          .glass-input-wrapper { padding: 8px 12px; border-radius: 20px; }
+          .gemini-input { font-size: 15px; }
+          .top-utilities { padding: 16px 16px 0; }
+        }
       `}</style>
     </div>
   );
