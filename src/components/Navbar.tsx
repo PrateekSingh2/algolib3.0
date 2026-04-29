@@ -33,9 +33,9 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Tools",
     icon: Cpu,
     items: [
-      { name: "Visualizer",      path: "/visualizer", icon: Network,         description: "60FPS execution engine" },
+      { name: "Visualizer",      path: "/visualizer", icon: Network,         description: "Steps execution engine" },
       { name: "Compiler",        path: "/compiler",   icon: TerminalSquare,  description: "Multi-language code runner" },
-      { name: "Analyse TC",      path: "/analyzer",   icon: BarChart3,       description: "AlgoLib AI assistant" },
+      { name: "AlgoLib AI",      path: "/analyzer",   icon: BarChart3,       description: "AlgoLib AI assistant" },
     ],
   },
   {

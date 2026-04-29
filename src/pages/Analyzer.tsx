@@ -7,7 +7,6 @@ import {
 
 // ─── FIREBASE IMPORTS ────────────────────────────────────────────────────────
 import { auth, firestoreDB as db } from "@/lib/firebase";
-import { supabase } from "../../netlify/functions/utils/supabase.js";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot, collection, addDoc, updateDoc, serverTimestamp, query, orderBy, deleteDoc } from "firebase/firestore";
 
@@ -16,7 +15,7 @@ import Navbar from "@/components/Navbar";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface AnalysisResult {
-  type: 'analysis' | 'optimization' | 'translation';
+  type: 'analysis' | 'optimization' | 'translation' | 'chat'; 
   timeComplexity?: string; 
   spaceComplexity?: string;
   explanation: string;
@@ -30,20 +29,10 @@ interface ChatMessage {
   isError?: boolean;
 }
 
-// UPGRADED: HistoryItem now stores the entire message thread
 interface HistoryItem {
   id: string;
   title: string;
-  messages?: ChatMessage[]; // The new threaded model
-  
-  // Legacy fields (kept for backward compatibility so old chats don't break)
-  type?: string;
-  codeSnippet?: string; 
-  fullInputCode?: string; 
-  timeComplexity?: string;
-  spaceComplexity?: string;
-  explanation?: string;
-  resultCode?: string; 
+  messages?: ChatMessage[];
   timestamp: any;
   updatedAt?: any;
 }
@@ -54,12 +43,8 @@ const generateChartData = () => {
   for (let n = 1; n <= 20; n++) {
     data.push({
       n: n,
-      'O(1)': 10,
-      'O(log N)': Math.log2(n) * 15,
-      'O(N)': n * 5,
-      'O(N log N)': n * Math.log2(n) * 3,
-      'O(N^2)': Math.pow(n, 2) * 0.5,
-      'O(2^N)': Math.min(Math.pow(2, n) * 0.1, 300),
+      'O(1)': 10, 'O(log N)': Math.log2(n) * 15, 'O(N)': n * 5,
+      'O(N log N)': n * Math.log2(n) * 3, 'O(N^2)': Math.pow(n, 2) * 0.5, 'O(2^N)': Math.min(Math.pow(2, n) * 0.1, 300),
     });
   }
   return data;
@@ -67,15 +52,50 @@ const generateChartData = () => {
 
 const CHART_DATA = generateChartData();
 const COMPLEXITY_COLORS = {
-  'O(1)': '#81c995',       
-  'O(log N)': '#8ab4f8',   
-  'O(N)': '#fde293',       
-  'O(N log N)': '#fcad70', 
-  'O(N^2)': '#f28b82',     
-  'O(2^N)': '#c58af9',     
+  'O(1)': '#81c995', 'O(log N)': '#8ab4f8', 'O(N)': '#fde293',       
+  'O(N log N)': '#fcad70', 'O(N^2)': '#f28b82', 'O(2^N)': '#c58af9',     
 };
 
 const TRANSLATE_LANGS = ["Python", "Java", "C++", "JavaScript", "Go", "Rust"];
+
+// ─── Utility: Custom Markdown Parser for Code Blocks ─────────────────────────
+const renderFormattedText = (text: string, onCopy: (text: string) => void) => {
+  if (!text) return null;
+  
+  // We use \x60 (the hex code for a backtick) to completely bypass the TSX parser bug.
+  // The capture group (parentheses) ensures the matched code block is kept in the split array.
+  const blockRegex = new RegExp('\\x60\\x60\\x60([\\s\\S]*?)\\x60\\x60\\x60', 'g');
+  const parts = text.split(blockRegex);
+
+  return parts.map((part, index) => {
+    // Due to the regex capture group, every odd index in the array is guaranteed to be a code block.
+    if (index % 2 === 1) {
+      const lines = part.trim().split('\n');
+      const firstLine = lines[0].trim();
+      
+      // Determine if the first line is a language identifier (e.g., "javascript", "python")
+      const hasLang = firstLine && !firstLine.includes(' ');
+      const language = hasLang ? firstLine : 'code';
+      const code = hasLang ? lines.slice(1).join('\n') : part.trim();
+
+      return (
+        <div key={index} className="chat-code-block">
+          <div className="chat-code-header">
+            <span>{language}</span>
+            <button onClick={() => onCopy(code)} className="action-btn text-xs">
+              <Copy size={12} /> Copy
+            </button>
+          </div>
+          <pre><code>{code}</code></pre>
+        </div>
+      );
+    }
+    
+    // Even indices are regular text. We replace newlines with <br/> tags.
+    if (part.trim() === '') return null;
+    return <span key={index} className="chat-prose" dangerouslySetInnerHTML={{ __html: part.replace(/\n/g, '<br/>') }} />;
+  });
+};
 
 export default function Analyzer() {
   const [inputCode, setInputCode] = useState('');
@@ -85,22 +105,18 @@ export default function Analyzer() {
   const [credits, setCredits] = useState<number | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-
   const [userName, setUserName] = useState<string>('Developer');
 
-  // Gemini Style Sidebar & Thread State
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showLangMenuForIdx, setShowLangMenuForIdx] = useState<number | null>(null);
   
-  // NEW: Keep track of the active thread
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const chatIdRef = useRef<string | null>(null); 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Helper to sync ref and state instantly
   const setChatId = (id: string | null) => {
     setCurrentChatId(id);
     chatIdRef.current = id;
@@ -134,15 +150,13 @@ export default function Analyzer() {
 
   const handleEdit = (text: string) => {
     setInputCode(text);
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-    }
+    if (textareaRef.current) textareaRef.current.focus();
   };
 
   const handleNewAnalysis = () => {
     setMessages([]);
     setInputCode('');
-    setChatId(null); // CRITICAL: Reset the thread ID so the next message starts a new chat
+    setChatId(null);
     if (window.innerWidth < 768) setIsSidebarOpen(false); 
   };
 
@@ -157,37 +171,21 @@ export default function Analyzer() {
         setCredits(null);
         setHistory([]);
         setUserName('Developer');
-        if (unsubscribeCredits) unsubscribeCredits();
-        if (unsubscribeHistory) unsubscribeHistory();
         return;
       }
       
-      // --- NEW: FETCH COMPLETE NAME VIA NETLIFY FUNCTION ---
       try {
         const token = await user.getIdToken();
-        const response = await fetch('/.netlify/functions/get-user-profile', {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
+        const response = await fetch('/.netlify/functions/get-user-profile', { headers: { 'Authorization': `Bearer ${token}` } });
         if (response.ok) {
             const { full_name } = await response.json();
-            let completeName = full_name;
-
-            // Fallback to Firebase displayName or email prefix if Supabase is empty
-            if (!completeName || completeName.trim() === '') {
-              completeName = user.displayName || user.email?.split('@')[0] || 'Developer';
-            }
-            setUserName(completeName);
+            setUserName(full_name || user.displayName || user.email?.split('@')[0] || 'Developer');
         } else {
-            // Safe fallback if the backend fails
             setUserName(user.displayName || user.email?.split('@')[0] || 'Developer');
         }
       } catch (err) {
-        console.error("Error calling profile function:", err);
         setUserName(user.displayName || user.email?.split('@')[0] || 'Developer');
       }
-      // -----------------------------------------------------
 
       unsubscribeCredits = onSnapshot(doc(db, 'user_credits', user.uid), (docSnap) => {
         if (docSnap.exists()) setCredits(docSnap.data().credits);
@@ -196,77 +194,56 @@ export default function Analyzer() {
 
       const historyQ = query(collection(db, 'users', user.uid, 'analysis_history'), orderBy('updatedAt', 'desc'));
       unsubscribeHistory = onSnapshot(historyQ, (snap) => {
-        const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as HistoryItem));
-        setHistory(items);
-      }, (error) => {
-        console.error("History Listener Error:", error);
+        setHistory(snap.docs.map(d => ({ id: d.id, ...d.data() } as HistoryItem)));
       });
     });
 
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeCredits) unsubscribeCredits();
-      if (unsubscribeHistory) unsubscribeHistory();
+    return () => { 
+      unsubscribeAuth(); 
+      if (unsubscribeCredits) unsubscribeCredits(); 
+      if (unsubscribeHistory) unsubscribeHistory(); 
     }; 
   }, []);
 
-  // ─── Thread Saving Logic ───────────────────────────────────────────────────
   const saveChatToFirebase = async (chatMessages: ChatMessage[]) => {
     if (!currentUser) return;
-    
     try {
       const dbCollection = collection(db, 'users', currentUser.uid, 'analysis_history');
-      
       if (chatIdRef.current) {
-        // UPDATE EXISTING THREAD
-        await updateDoc(doc(dbCollection, chatIdRef.current), {
-          messages: chatMessages,
-          updatedAt: serverTimestamp()
-        });
+        await updateDoc(doc(dbCollection, chatIdRef.current), { messages: chatMessages, updatedAt: serverTimestamp() });
       } else {
-        // CREATE NEW THREAD
         const firstUserMsg = chatMessages.find(m => m.role === 'user');
-        const generatedTitle = firstUserMsg 
-          ? firstUserMsg.content.substring(0, 45) + (firstUserMsg.content.length > 45 ? '...' : '') 
-          : 'New Analysis';
-
-        const docRef = await addDoc(dbCollection, {
-          title: generatedTitle,
-          messages: chatMessages,
-          timestamp: serverTimestamp(),
-          updatedAt: serverTimestamp() // We use updatedAt for sorting so bumped threads rise to the top
-        });
+        const generatedTitle = firstUserMsg ? firstUserMsg.content.substring(0, 40) + '...' : 'New Chat';
+        const docRef = await addDoc(dbCollection, { title: generatedTitle, messages: chatMessages, timestamp: serverTimestamp(), updatedAt: serverTimestamp() });
         setChatId(docRef.id);
       }
-    } catch (err) {
-      console.error("Failed to save thread:", err);
-    }
+    } catch (err) { console.error("Failed to save thread:", err); }
   };
 
-  // ─── Core API Request ──────────────────────────────────────────────────────
   const executeRequest = async (action: 'analyze' | 'optimize' | 'translate', code: string, currentMessages: ChatMessage[], targetLanguage?: string) => {
     setIsAnalyzing(true);
     try {
       if (!currentUser) throw new Error("Authentication required.");
       const token = await currentUser.getIdToken();
 
+      const recentHistory = currentMessages.slice(-6).map(m => ({
+        role: m.role,
+        content: m.role === 'user' ? m.content : (m.result?.type === 'chat' ? m.result.explanation : JSON.stringify(m.result))
+      }));
+
       const response = await fetch('/.netlify/functions/ask-groq', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ code, action, targetLanguage })
+        body: JSON.stringify({ code, action, targetLanguage, history: recentHistory })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData?.error || `HTTP Error ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
 
       const data = await response.json();
       const aiResult = JSON.parse(data.choices[0].message.content) as AnalysisResult & { error?: string };
       
       if (aiResult.error) throw new Error(aiResult.error);
 
-      // Append AI response to the thread and save
       const finalMessages: ChatMessage[] = [...currentMessages, { role: 'ai', content: '', result: aiResult }];
       setMessages(finalMessages);
       await saveChatToFirebase(finalMessages);
@@ -279,31 +256,23 @@ export default function Analyzer() {
     }
   };
 
-  // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleAnalyze = () => {
     const trimmed = inputCode.trim();
     if (!trimmed) return;
-    
-    const userMsg: ChatMessage = { role: 'user', content: trimmed };
-    const pendingMessages = [...messages, userMsg];
-    
+    const pendingMessages = [...messages, { role: 'user', content: trimmed } as ChatMessage];
     setMessages(pendingMessages);
     setInputCode('');
     executeRequest('analyze', trimmed, pendingMessages);
   };
 
   const handleOptimize = (codeToOptimize: string) => {
-    const userMsg: ChatMessage = { role: 'user', content: "Please optimize this code to run faster and use less memory." };
-    const pendingMessages = [...messages, userMsg];
-    
+    const pendingMessages = [...messages, { role: 'user', content: "Please optimize this code to run faster and use less memory." } as ChatMessage];
     setMessages(pendingMessages);
     executeRequest('optimize', codeToOptimize, pendingMessages);
   };
 
   const handleTranslate = (codeToTranslate: string, targetLang: string) => {
-    const userMsg: ChatMessage = { role: 'user', content: `Please translate this code to ${targetLang}.` };
-    const pendingMessages = [...messages, userMsg];
-    
+    const pendingMessages = [...messages, { role: 'user', content: `Please translate this code to ${targetLang}.` } as ChatMessage];
     setMessages(pendingMessages);
     executeRequest('translate', codeToTranslate, pendingMessages, targetLang);
   };
@@ -313,40 +282,18 @@ export default function Analyzer() {
     if (!currentUser) return;
     try {
       await deleteDoc(doc(db, 'users', currentUser.uid, 'analysis_history', id));
-      if (currentChatId === id) handleNewAnalysis(); // Clear UI if deleting active chat
-    } catch (err) {
-      console.error("Failed to delete history item", err);
-    }
+      if (currentChatId === id) handleNewAnalysis(); 
+    } catch (err) { console.error(err); }
   };
 
   const loadHistoryItem = (item: HistoryItem) => {
     setChatId(item.id);
-    
-    // Check if it's a new "Threaded" item, or a "Legacy" item from earlier
-    if (item.messages && item.messages.length > 0) {
-      setMessages(item.messages);
-    } else {
-      // Graceful fallback for your older database entries
-      setMessages([
-        { role: 'user', content: item.fullInputCode || item.codeSnippet || "" },
-        { role: 'ai', content: '', result: {
-            type: (item.type as any) || 'analysis',
-            timeComplexity: item.timeComplexity,
-            spaceComplexity: item.spaceComplexity,
-            explanation: item.explanation || "",
-            code: item.resultCode
-        }}
-      ]);
-    }
-    
+    if (item.messages && item.messages.length > 0) setMessages(item.messages);
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleAnalyze();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAnalyze(); }
   };
 
   const isHomeState = messages.length === 0;
@@ -358,10 +305,9 @@ export default function Analyzer() {
       <div className="navbar-spacer"></div>
 
       <div className="layout-container">
-        
         {isSidebarOpen && <div className="sidebar-backdrop md:hidden" onClick={() => setIsSidebarOpen(false)} />}
         
-        <aside className={`gemini-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+        <aside className={`gemini-sidebar glass-panel ${isSidebarOpen ? 'open' : 'closed'}`}>
           <div className="sidebar-header">
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hamburger-btn" title="Expand menu">
               <Menu size={20} />
@@ -369,15 +315,15 @@ export default function Analyzer() {
           </div>
 
           <div className="sidebar-actions">
-            <button onClick={handleNewAnalysis} className="new-chat-btn">
+            <button onClick={handleNewAnalysis} className="new-chat-btn glow-hover">
               <Plus size={20} className="icon-shrink" />
-              {isSidebarOpen && <span>New analysis</span>}
+              {isSidebarOpen && <span>New chat</span>}
             </button>
           </div>
 
           {isSidebarOpen && (
-            <div className="history-container">
-              <div className="history-title">Recent</div>
+            <div className="history-container custom-scrollbar">
+              <div className="history-title">Recent Chats</div>
               <div className="history-list">
                 {history.length === 0 ? (
                   <p className="empty-history">No history saved.</p>
@@ -386,11 +332,9 @@ export default function Analyzer() {
                     <div key={item.id} className={`history-item group ${currentChatId === item.id ? 'active' : ''}`} onClick={() => loadHistoryItem(item)}>
                       <div className="history-content">
                         <MessageSquare size={16} className={currentChatId === item.id ? "text-blue-400" : "text-zinc-500"} />
-                        <span className={`history-text ${currentChatId === item.id ? "text-blue-100" : "text-bdc1c6"}`}>
-                          {item.title || item.codeSnippet}
-                        </span>
+                        <span className={`history-text ${currentChatId === item.id ? "text-blue-100" : "text-bdc1c6"}`}>{item.title}</span>
                       </div>
-                      <button onClick={(e) => handleDeleteHistory(e, item.id)} className="delete-btn opacity-0 group-hover:opacity-100" title="Delete">
+                      <button onClick={(e) => handleDeleteHistory(e, item.id)} className="delete-btn opacity-0 group-hover:opacity-100">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -405,27 +349,23 @@ export default function Analyzer() {
           <div className="top-utilities">
             <div className="md:hidden">
               {!isSidebarOpen && (
-                <button onClick={() => setIsSidebarOpen(true)} className="hamburger-btn mobile-hamburger">
-                  <Menu size={20} />
-                </button>
+                <button onClick={() => setIsSidebarOpen(true)} className="hamburger-btn mobile-hamburger"><Menu size={20} /></button>
               )}
             </div>
-            
-            <div className="tokens-indicator ml-auto">
-              <Zap size={14} className={credits && credits > 0 ? 'text-yellow-400' : 'text-red-400'} />
-              <span>{credits !== null ? `${credits} requests left` : 'Connecting...'}</span>
+            <div className="tokens-indicator ml-auto glass-panel">
+              <Zap size={14} className={credits && credits > 0 ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]' : 'text-red-400'} />
+              <span>{credits !== null ? `${credits} credits` : 'Connecting...'}</span>
             </div>
           </div>
 
           {!isHomeState && (
-            <div className="chat-scroll-area">
+            <div className="chat-scroll-area custom-scrollbar">
               <div className="chat-content-bounds">
                 {messages.map((msg, idx) => {
                   const originalCodeMsg = messages.slice(0, idx).reverse().find(m => m.role === 'user');
-                  
                   return (
                     <div key={idx} className={`message-row ${msg.role} group`}>
-                      {msg.role === 'ai' && <div className="ai-avatar"><Sparkles size={16} color="#fff" /></div>}
+                      {msg.role === 'ai' && <div className="ai-avatar pulse-glow"><Sparkles size={16} color="#fff" /></div>}
                       
                       <div className="message-bubble">
                         {msg.role === 'user' ? (
@@ -435,7 +375,7 @@ export default function Analyzer() {
                             </div>
                             <div className="message-actions hidden group-hover:flex gap-2 mt-2 justify-end">
                               <button onClick={() => handleEdit(msg.content)} className="action-btn" title="Edit Prompt"><Edit2 size={14} /></button>
-                              <button onClick={() => handleCopy(msg.content, `user-${idx}`)} className="action-btn" title="Copy Prompt">
+                              <button onClick={() => handleCopy(msg.content, `user-${idx}`)} className="action-btn">
                                 {copiedId === `user-${idx}` ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
                               </button>
                             </div>
@@ -444,31 +384,36 @@ export default function Analyzer() {
                           <div className="error-card"><AlertCircle size={18} /><span>{msg.content}</span></div>
                         ) : msg.result ? (
                           <div className="ai-response-layout">
+                            
+                            {/* Chat/General Intent Rendering */}
+                            {msg.result.type === 'chat' && (
+                              <div className="chat-response-card">
+                                {renderFormattedText(msg.result.explanation, (text) => handleCopy(text, `chat-code-${idx}`))}
+                              </div>
+                            )}
+
+                            {/* Analysis Layout */}
                             {msg.result.type === 'analysis' && (
                               <>
-                                <p className="response-text">Here is the performance breakdown for your algorithm:</p>
-                                <div className="analysis-card relative group/card flex gap-6 flex-col md:flex-row">
+                                <p className="response-text">Here is the performance breakdown:</p>
+                                <div className="analysis-card relative group/card flex gap-6 flex-col md:flex-row glass-panel">
                                   <div className="complexity-box flex-1">
                                     <span className="complexity-label">Time Complexity</span>
-                                    <h2 className="complexity-value" style={{ color: COMPLEXITY_COLORS[msg.result.timeComplexity as keyof typeof COMPLEXITY_COLORS] || '#8ab4f8' }}>
+                                    <h2 className="complexity-value glow-text" style={{ color: COMPLEXITY_COLORS[msg.result.timeComplexity as keyof typeof COMPLEXITY_COLORS] || '#8ab4f8' }}>
                                       {msg.result.timeComplexity}
                                     </h2>
                                   </div>
-                                  <div className="complexity-box flex-1 md:border-l border-zinc-800 md:pl-6">
+                                  <div className="complexity-box flex-1 md:border-l border-zinc-700/50 md:pl-6">
                                     <span className="complexity-label">Space Complexity</span>
-                                    <h2 className="complexity-value" style={{ color: COMPLEXITY_COLORS[msg.result.spaceComplexity as keyof typeof COMPLEXITY_COLORS] || '#81c995' }}>
+                                    <h2 className="complexity-value glow-text" style={{ color: COMPLEXITY_COLORS[msg.result.spaceComplexity as keyof typeof COMPLEXITY_COLORS] || '#81c995' }}>
                                       {msg.result.spaceComplexity}
                                     </h2>
                                   </div>
-                                  <div className="absolute top-4 right-4 hidden group-hover/card:flex">
-                                     <button onClick={() => handleCopy(`Time: ${msg.result!.timeComplexity}\nSpace: ${msg.result!.spaceComplexity}\n\nExplanation:\n${msg.result!.explanation}`, `ai-${idx}`)} className="action-btn">
-                                       {copiedId === `ai-${idx}` ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-                                     </button>
-                                  </div>
                                 </div>
-                                <p className="complexity-desc">{msg.result.explanation}</p>
-
-                                <div className="graph-card">
+                                <div className="chat-response-card mt-2">
+                                  {renderFormattedText(msg.result.explanation, (text) => handleCopy(text, `chat-code-${idx}`))}
+                                </div>
+                                <div className="graph-card glass-panel mt-4">
                                   <span className="graph-label">Time Growth Visualization</span>
                                   <div className="chart-wrapper">
                                     <ResponsiveContainer width="100%" height={260}>
@@ -476,7 +421,7 @@ export default function Analyzer() {
                                         <CartesianGrid strokeDasharray="3 3" stroke="#3c4043" vertical={false} opacity={0.3} />
                                         <XAxis dataKey="n" stroke="#9aa0a6" tick={{fill: '#9aa0a6', fontSize: 12}} axisLine={false} tickLine={false} />
                                         <YAxis stroke="#9aa0a6" tick={{fill: '#9aa0a6', fontSize: 12}} axisLine={false} tickLine={false} />
-                                        <Tooltip contentStyle={{ backgroundColor: '#303134', border: 'none', borderRadius: '8px', color: '#e3e3e3' }} />
+                                        <Tooltip contentStyle={{ backgroundColor: '#1e1f20', border: '1px solid #3c4043', borderRadius: '8px', color: '#e3e3e3' }} />
                                         {Object.keys(COMPLEXITY_COLORS).map((key) => {
                                           const isHighlighted = msg.result!.timeComplexity === key;
                                           return <Line key={key} type="monotone" dataKey={key} stroke={COMPLEXITY_COLORS[key as keyof typeof COMPLEXITY_COLORS]} strokeWidth={isHighlighted ? 3 : 1} strokeOpacity={isHighlighted ? 1 : 0.2} dot={false} />;
@@ -485,8 +430,7 @@ export default function Analyzer() {
                                     </ResponsiveContainer>
                                   </div>
                                 </div>
-
-                                <div className="suggested-actions">
+                                <div className="suggested-actions mt-4">
                                   <span className="actions-title">Suggested Actions</span>
                                   <div className="actions-grid">
                                     <button onClick={() => handleOptimize(originalCodeMsg?.content || '')} className="suggest-btn optimize">
@@ -497,7 +441,7 @@ export default function Analyzer() {
                                         <ArrowRightLeft size={16} /> Translate <span className="badge cost">-1 Credit</span>
                                       </button>
                                       {showLangMenuForIdx === idx && (
-                                        <div className="translate-menu">
+                                        <div className="translate-menu glass-panel">
                                           {TRANSLATE_LANGS.map(lang => (
                                             <button key={lang} onClick={() => handleTranslate(originalCodeMsg?.content || '', lang)}>{lang}</button>
                                           ))}
@@ -511,17 +455,17 @@ export default function Analyzer() {
 
                             {(msg.result.type === 'optimization' || msg.result.type === 'translation') && (
                               <div className="code-result-wrapper">
-                                <div className="code-result-card">
+                                <div className="code-result-card glass-panel">
                                   <div className="result-header">
                                     <span>{msg.result.type === 'optimization' ? 'Optimized Version' : 'Translated Version'}</span>
                                     <button onClick={() => handleCopy(msg.result!.code || '', `code-${idx}`)} className="action-btn">
                                       {copiedId === `code-${idx}` ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
                                     </button>
                                   </div>
-                                  <pre className="result-code"><code>{msg.result.code}</code></pre>
+                                  <pre className="result-code custom-scrollbar"><code>{msg.result.code}</code></pre>
                                 </div>
-                                <div className="result-explanation-box">
-                                  <p className="complexity-desc m-0 text-sm leading-relaxed">{msg.result.explanation}</p>
+                                <div className="chat-response-card mt-2 border-l-2 border-blue-500 pl-4">
+                                  {renderFormattedText(msg.result.explanation, (text) => handleCopy(text, `chat-code-${idx}`))}
                                 </div>
                               </div>
                             )}
@@ -534,8 +478,8 @@ export default function Analyzer() {
                 
                 {isAnalyzing && (
                   <div className="message-row ai">
-                    <div className="ai-avatar pulse"><Sparkles size={16} color="#fff" /></div>
-                    <div className="message-bubble loading-bubble"><Loader2 className="spinner" size={18} /><span>Processing...</span></div>
+                    <div className="ai-avatar pulse-glow"><Sparkles size={16} color="#fff" /></div>
+                    <div className="message-bubble loading-bubble"><Loader2 className="spinner" size={18} /><span>Processing context...</span></div>
                   </div>
                 )}
                 <div ref={messagesEndRef} />
@@ -547,20 +491,17 @@ export default function Analyzer() {
             <div className="input-bounds">
               {isHomeState && (
                 <div className="greeting-header">
-                  {/* CHANGED THIS LINE TO USE THE SUPABASE NAME */}
                   <h1><span className="gradient-text">Hello, {userName}</span></h1>
-                  <div style={{ marginTop: '4px' }}>
-                    <img src="https://readme-typing-svg.herokuapp.com?font=Inter&weight=500&size=40&pause=2000&color=444746&width=800&height=60&lines=Which+code+would+you+like+to+analyze%3F;AlgoLib+AI+is+here+to+help%2C+%F0%9F%A4%94;Paste+your+code+snippet+below...;Quick+Analysis+with+low+latency;AlgoLib+AI+supports+any+language%21" alt="Typing Animation" style={{ pointerEvents: 'none', userSelect: 'none' }} />
-                  </div>
+                  <h2 className="text-2xl text-zinc-500 font-medium mt-2">What are we building today?</h2>
                 </div>
               )}
               
-              <div className="search-box-wrapper">
+              <div className="search-box-wrapper glass-input-wrapper">
                 <button className="icon-btn" disabled><Paperclip size={20} /></button>
                 <textarea
                   ref={textareaRef}
-                  className="gemini-input"
-                  placeholder="Paste to analyze ..."
+                  className="gemini-input custom-scrollbar"
+                  placeholder="Ask a question or paste code..."
                   value={inputCode}
                   onChange={handleInput}
                   onKeyDown={handleKeyDown}
@@ -571,62 +512,62 @@ export default function Analyzer() {
                   <Send size={18} className="send-icon" />
                 </button>
               </div>
-              <div className="disclaimer-text">AlgoLib AI can make mistakes. Consider verifying complexities for critical systems.</div>
+              <div className="disclaimer-text">AlgoLib AI may produce inaccurate information. Always verify critical system code.</div>
             </div>
           </div>
         </main>
       </div>
 
       <style>{`
-        .analyzer-root { height: 100vh; overflow: hidden; background-color: #131314; color: #e3e3e3; display: flex; flex-direction: column; font-family: ui-sans-serif, system-ui, sans-serif;}
+        /* Core Layout */
+        .analyzer-root { height: 100vh; overflow: hidden; background-color: #0d0d10; color: #e3e3e3; display: flex; flex-direction: column; font-family: ui-sans-serif, system-ui, sans-serif;}
         .navbar-wrapper { position: relative; z-index: 60; flex-shrink: 0; }
         .navbar-spacer { height: 72px; flex-shrink: 0; }
         .layout-container { display: flex; flex: 1; overflow: hidden; position: relative; }
 
-        .gemini-sidebar { background-color: #1e1f20; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; height: 100%; border-right: 1px solid #282a2c; z-index: 50; }
+        /* UI Polish: Glassmorphism & Glows */
+        .glass-panel { background: rgba(30, 31, 32, 0.4); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass-input-wrapper { background: rgba(30, 31, 32, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 28px; padding: 12px 16px; display: flex; align-items: flex-end; gap: 12px; transition: all 0.3s ease; box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
+        .glass-input-wrapper:focus-within { border-color: rgba(66, 133, 244, 0.5); box-shadow: 0 4px 32px rgba(66, 133, 244, 0.15); background: rgba(30, 31, 32, 0.8); }
+        .glow-hover { transition: all 0.3s ease; }
+        .glow-hover:hover { box-shadow: 0 0 16px rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+        .pulse-glow { box-shadow: 0 0 12px rgba(66, 133, 244, 0.4); }
+        .glow-text { text-shadow: 0 0 16px currentColor; }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        /* Sidebar Elements */
+        .gemini-sidebar { transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; height: 100%; border-right: 1px solid rgba(255,255,255,0.05); z-index: 50; }
         .gemini-sidebar.open { width: 280px; }
         .gemini-sidebar.closed { width: 68px; }
-
         .sidebar-header { padding: 12px; }
         .hamburger-btn { background: transparent; border: none; color: #e3e3e3; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
         .hamburger-btn:hover { background: rgba(255,255,255,0.1); }
-        .mobile-hamburger { position: relative; left: -10px; }
-
-        .sidebar-actions { padding: 8px 12px; display: flex; justify-content: flex-start; }
-        .new-chat-btn { display: flex; align-items: center; gap: 12px; background: #282a2c; color: #e3e3e3; border: none; height: 44px; border-radius: 22px; padding: 0 16px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; overflow: hidden; font-size: 14px; font-weight: 500; }
-        .gemini-sidebar.closed .new-chat-btn { width: 44px; padding: 0; justify-content: center; background: transparent; }
-        .gemini-sidebar.closed .new-chat-btn:hover { background: rgba(255,255,255,0.1); }
-        .gemini-sidebar.open .new-chat-btn { width: auto; min-width: 150px; background: #282a2c; }
-        .gemini-sidebar.open .new-chat-btn:hover { background: #3c4043; }
-
-        .history-container { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 4px; opacity: 1; transition: opacity 0.2s;}
-        .history-container::-webkit-scrollbar { width: 6px; }
-        .history-container::-webkit-scrollbar-thumb { background: #3c4043; border-radius: 4px; }
-        .history-title { font-size: 13px; color: #e3e3e3; font-weight: 500; padding: 8px 12px; margin-bottom: 4px; }
         
+        .sidebar-actions { padding: 8px 12px; display: flex; justify-content: flex-start; }
+        .new-chat-btn { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); color: #e3e3e3; border: 1px solid rgba(255,255,255,0.1); height: 44px; border-radius: 22px; padding: 0 16px; cursor: pointer; white-space: nowrap; overflow: hidden; font-size: 14px; font-weight: 500; }
+        .gemini-sidebar.closed .new-chat-btn { width: 44px; padding: 0; justify-content: center; background: transparent; border-color: transparent;}
+        .gemini-sidebar.open .new-chat-btn { width: auto; min-width: 150px; }
+
+        .history-container { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+        .history-title { font-size: 12px; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; padding: 8px 12px; }
         .history-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; color: #e3e3e3; cursor: pointer; font-size: 14px; transition: background 0.2s; white-space: nowrap; overflow: hidden; }
-        .history-item:hover { background: #282a2c; }
-        .history-item.active { background: #2563eb15; border-left: 2px solid #3b82f6; } /* NEW: Highlight active thread */
+        .history-item:hover { background: rgba(255,255,255,0.05); }
+        .history-item.active { background: rgba(66, 133, 244, 0.1); border-left: 2px solid #4285f4; }
         .history-content { display: flex; align-items: center; gap: 12px; overflow: hidden; flex: 1;}
         .history-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
-        
-        .delete-btn { background: transparent; border: none; color: #f28b82; cursor: pointer; padding: 4px; transition: opacity 0.2s; }
-        .empty-history { text-align: center; color: #5f6368; font-size: 13px; margin-top: 20px; }
+        .delete-btn { background: transparent; border: none; color: #f28b82; cursor: pointer; padding: 4px; }
 
-        @media (max-width: 768px) {
-          .gemini-sidebar { position: absolute; z-index: 100; height: 100%; border-right: none;}
-          .gemini-sidebar.closed { width: 0; transform: translateX(-100%); }
-          .gemini-sidebar.open { width: 280px; transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.5); }
-          .sidebar-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 90; }
-        }
-
-        .app-viewport { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        /* Main Viewport & Chat */
+        .app-viewport { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; background: radial-gradient(circle at top right, rgba(66, 133, 244, 0.03), transparent 40%); }
         .top-utilities { padding: 16px 24px 0; display: flex; justify-content: space-between; align-items: center; z-index: 40; }
-        .tokens-indicator { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: #bdc1c6; background: #1e1f20; padding: 8px 14px; border-radius: 24px; border: 1px solid #3c4043; }
+        .tokens-indicator { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 24px; }
 
         .chat-scroll-area { flex: 1; overflow-y: auto; padding: 12px 0 32px; }
-        .chat-scroll-area::-webkit-scrollbar { width: 8px; }
-        .chat-scroll-area::-webkit-scrollbar-thumb { background: #3c4043; border-radius: 4px; }
         .chat-content-bounds { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; padding: 0 24px; }
 
         .message-row { display: flex; gap: 16px; width: 100%; }
@@ -635,65 +576,64 @@ export default function Analyzer() {
         .ai-avatar.pulse { animation: softPulse 2s infinite alternate; }
         @keyframes softPulse { from { opacity: 0.7; transform: scale(0.95); } to { opacity: 1; transform: scale(1.05); } }
 
-        .message-bubble { max-width: calc(100% - 48px); font-size: 15px; line-height: 1.6; }
+        .message-bubble { max-width: calc(100% - 48px); font-size: 15px; line-height: 1.6; color: #e3e3e3;}
         .user .message-bubble { max-width: 80%; }
-        .user-text-bubble { background: #1e1f20; padding: 14px 18px; border-radius: 24px; border-top-right-radius: 4px; }
-        .user-code { margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: #e3e3e3; white-space: pre-wrap; word-break: break-all; }
+        .user-text-bubble { background: rgba(255,255,255,0.05); padding: 14px 18px; border-radius: 24px; border-top-right-radius: 4px; border: 1px solid rgba(255,255,255,0.02); }
+        .user-code { margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; white-space: pre-wrap; word-break: break-all; }
 
-        .ai-response-layout { display: flex; flex-direction: column; gap: 16px; margin-top: 4px; }
-        .response-text { margin: 0; color: #e3e3e3; }
-        
-        .analysis-card { background: #1e1f20; border-radius: 16px; padding: 20px 24px; }
+        /* Custom Chat Markdown Styles */
+        .chat-prose { display: block; margin-bottom: 12px; line-height: 1.7; font-size: 15px; color: #d1d5db; }
+        .chat-code-block { background: #000; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; margin: 16px 0; }
+        .chat-code-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; font-family: monospace; color: #9aa0a6; }
+        .chat-code-block pre { margin: 0; padding: 16px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: #8ab4f8; }
+
+        .analysis-card { border-radius: 16px; padding: 20px 24px; }
         .complexity-label { font-size: 13px; font-weight: 500; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; }
         .complexity-value { font-size: 32px; font-family: 'JetBrains Mono', monospace; font-weight: 600; margin: 4px 0 0 0; }
-        .complexity-desc { color: #bdc1c6; font-size: 14.5px; margin: 16px 0 0 0; line-height: 1.5; }
-        
-        .graph-card { background: #1e1f20; border-radius: 16px; padding: 20px 24px; }
+
+        .graph-card { border-radius: 16px; padding: 20px 24px; }
         .graph-label { display: block; font-size: 13px; font-weight: 500; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
 
-        .code-result-wrapper { display: flex; flex-direction: column; gap: 12px; }
-        .code-result-card { background: #1e1f20; border-radius: 16px; overflow: hidden; border: 1px solid #282a2c; }
-        .result-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #282a2c; border-bottom: 1px solid #3c4043; font-size: 13px; font-weight: 600; color: #e3e3e3;}
+        .code-result-card { border-radius: 16px; overflow: hidden; }
+        .result-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; font-weight: 600; }
         .result-code { margin: 0; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: #8ab4f8; overflow-x: auto;}
-        .result-explanation-box { background: #1a1b1e; border-left: 3px solid #4285f4; padding: 16px 20px; border-radius: 8px; }
 
+        .action-btn { background: transparent; border: none; color: #9aa0a6; cursor: pointer; padding: 6px; border-radius: 8px; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease; }
+        .action-btn:hover { background: rgba(255, 255, 255, 0.1); color: #e3e3e3; }
+        
         .suggested-actions { margin-top: 8px; }
         .actions-title { font-size: 12px; color: #9aa0a6; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: block; font-weight: 600;}
         .actions-grid { display: flex; gap: 12px; flex-wrap: wrap; }
-        .suggest-btn { display: flex; align-items: center; gap: 8px; background: #1e1f20; border: 1px solid #3c4043; color: #e3e3e3; padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-        .suggest-btn:hover { background: #282a2c; border-color: #5f6368; }
+        .suggest-btn { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #e3e3e3; padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .suggest-btn:hover { background: rgba(255,255,255,0.1); border-color: #5f6368; }
         .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase;}
         .badge.free { background: rgba(129, 201, 149, 0.15); color: #81c995; }
         .badge.cost { background: rgba(242, 139, 130, 0.15); color: #f28b82; }
 
-        .translate-menu { position: absolute; top: 100%; left: 0; margin-top: 8px; background: #282a2c; border: 1px solid #3c4043; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5); width: 100%;}
-        .translate-menu button { background: transparent; border: none; color: #e3e3e3; padding: 10px 16px; text-align: left; cursor: pointer; font-size: 14px;}
-        .translate-menu button:hover { background: #3c4043; }
+        .translate-menu { position: absolute; top: 100%; left: 0; margin-top: 8px; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5); width: 100%;}
+        .translate-menu button { background: transparent; border: none; color: #e3e3e3; padding: 10px 16px; text-align: left; cursor: pointer; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .translate-menu button:hover { background: rgba(255,255,255,0.1); }
 
         .loading-bubble { display: flex; align-items: center; gap: 12px; color: #9aa0a6; height: 32px; }
         .spinner { animation: spin 1s linear infinite; color: #8ab4f8; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
         .error-card { background: rgba(242, 139, 130, 0.1); color: #f28b82; padding: 14px 18px; border-radius: 16px; display: flex; align-items: center; gap: 12px; }
-        .action-btn { background: transparent; border: none; color: #9aa0a6; cursor: pointer; padding: 6px; border-radius: 8px; display: flex; align-items: center; transition: all 0.2s ease; }
-        .action-btn:hover { background: rgba(255, 255, 255, 0.1); color: #e3e3e3; }
 
-        .input-dock-area { padding: 0 24px 24px; background: linear-gradient(180deg, transparent 0%, #131314 25%, #131314 100%); z-index: 10; }
+        /* Input Dock */
+        .input-dock-area { padding: 0 24px 24px; background: linear-gradient(180deg, transparent 0%, #0d0d10 25%, #0d0d10 100%); z-index: 10; }
         .input-dock-area.state-centered { flex: 1; display: flex; align-items: center; justify-content: center; background: transparent; }
         .input-dock-area.state-docked { flex-shrink: 0; }
         .input-bounds { width: 100%; max-width: 820px; margin: 0 auto; }
-        .greeting-header { margin-bottom: 40px; padding-left: 8px; }
-        .greeting-header h1 { margin: 0 0 8px 0; font-size: 44px; font-weight: 500; letter-spacing: -0.5px; }
-        .gradient-text { background: linear-gradient(74deg, #2570e9 0%, #64976e 46%, #dd9b50 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .search-box-wrapper { display: flex; align-items: flex-end; gap: 12px; background: #1e1f20; border-radius: 28px; padding: 12px 16px; transition: background 0.2s ease; border: 1px solid transparent;}
-        .search-box-wrapper:focus-within { background: #282a2c; border-color: #3c4043; }
+        .greeting-header { margin-bottom: 40px; text-align: center;}
+        .greeting-header h1 { margin: 0; font-size: 44px; font-weight: 600; letter-spacing: -0.5px; }
+        .gradient-text { background: linear-gradient(74deg, #4285f4 0%, #9b72cb 46%, #d96570 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 30px rgba(66, 133, 244, 0.2); }
         .gemini-input { flex: 1; background: transparent; border: none; color: #e3e3e3; font-family: inherit; font-size: 16px; line-height: 1.5; resize: none; max-height: 200px; padding: 10px 0; outline: none; }
-        .gemini-input::placeholder { color: #8e918f; }
-        .icon-btn { color: #8e918f; background: none; border: none; padding: 8px; cursor: not-allowed; display: flex; align-items: center; justify-content: center; }
-        .send-btn { background: transparent; color: #8e918f; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; margin-bottom: 2px; }
-        .send-btn.active { color: #8ab4f8; background: rgba(138, 180, 248, 0.08); }
-        .send-btn.active:hover { background: rgba(138, 180, 248, 0.15); }
-        .disclaimer-text { text-align: center; font-size: 12px; color: #8e918f; margin-top: 16px; }
+        .gemini-input::placeholder { color: #5f6368; }
+        .icon-btn { color: #5f6368; background: none; border: none; padding: 8px; cursor: not-allowed; display: flex; align-items: center; justify-content: center; }
+        .send-btn { background: transparent; color: #5f6368; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
+        .send-btn.active { color: #8ab4f8; background: rgba(138, 180, 248, 0.1); box-shadow: 0 0 12px rgba(138, 180, 248, 0.3); }
+        .disclaimer-text { text-align: center; font-size: 12px; color: #5f6368; margin-top: 16px; }
       `}</style>
     </div>
   );

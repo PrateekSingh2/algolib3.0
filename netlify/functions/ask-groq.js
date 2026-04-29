@@ -30,8 +30,9 @@ exports.handler = async (event, context) => {
     try { bodyData = JSON.parse(event.body || '{}'); } 
     catch (e) { return { statusCode: 400, headers, body: JSON.stringify({ error: 'Malformed JSON payload' }) }; }
 
-    const { code, action = 'analyze', targetLanguage = 'another language' } = bodyData;
-    if (!code) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Code snippet required' }) };
+    // NEW: Accept history array from the frontend
+    const { code, history = [], action = 'analyze', targetLanguage = 'another language' } = bodyData;
+    if (!code) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Input required' }) };
 
     const isFreeAction = action === 'optimize';
     const userRef = db.collection('user_credits').doc(uid);
@@ -60,50 +61,59 @@ exports.handler = async (event, context) => {
       }
     });
 
+    // Format history for Groq
+    const groqMessages = history.map(msg => ({
+      role: msg.role === 'ai' ? 'assistant' : 'user',
+      content: msg.content || JSON.stringify(msg.result)
+    }));
+
     let systemMessage = "";
     
-    // THE SMART INTENT ROUTER (NLP Engine)
+    // UPGRADED NLP ROUTER: Now supports conversational context
     if (action === 'analyze') {
       systemMessage = `You are a highly intelligent polyglot programming assistant. 
-      Read the user's input, which may contain natural language instructions alongside code. 
-      Identify their primary intent: Analysis, Optimization, or Translation.
+      Read the user's input and consider the conversation history.
+      Identify their primary intent: Analysis, Optimization, Translation, or Chat.
       Respond ONLY with a valid JSON object matching the detected intent.
 
-      INTENT 1: ANALYSIS (Default if user pastes code, asks for explanation, or asks for complexity)
+      INTENT 1: ANALYSIS (User pastes code to be analyzed, asks for complexity)
       Schema: {"type": "analysis", "timeComplexity": "...", "spaceComplexity": "...", "explanation": "..."}
 
-      INTENT 2: OPTIMIZATION (If user explicitly asks to make the code faster, better, or optimized)
+      INTENT 2: OPTIMIZATION (User explicitly asks to make code faster/better)
       Schema: {"type": "optimization", "code": "<optimized code>", "explanation": "..."}
 
-      INTENT 3: TRANSLATION (If user explicitly asks to translate, rewrite, or convert the code to a specific language like Python, Java, Rust, C++, etc.)
+      INTENT 3: TRANSLATION (User asks to convert code to another language)
       Schema: {"type": "translation", "code": "<translated code>", "explanation": "..."}
 
-      If the input is completely non-programming related, return: {"error": "Please provide a valid programming request."}`;
+      INTENT 4: CHAT (User asks a general programming question, follows up on previous code, or wants to learn a concept)
+      Schema: {"type": "chat", "explanation": "<Your detailed, educational response here. Use markdown for code blocks if needed.>"}
+
+      STRICT GUARDRAIL: If the user's input is NOT related to programming, computer science, or technology, you MUST return: 
+      {"error": "I am strictly a programming assistant. Please ask me a question related to coding or computer science."}`;
     } 
     else if (action === 'optimize') {
-      systemMessage = `You are an expert code optimizer. Respond ONLY with a valid JSON object. 
-      Schema requirement: {"type": "optimization", "code": "...", "explanation": "..."}. 
-      Rewrite the provided code to be maximally efficient in time and space.`;
+      systemMessage = `You are an expert code optimizer. Respond ONLY with a valid JSON object. Schema: {"type": "optimization", "code": "...", "explanation": "..."}.`;
     }
     else if (action === 'translate') {
-      systemMessage = `You are an expert polyglot compiler. Respond ONLY with a valid JSON object. 
-      Schema requirement: {"type": "translation", "code": "...", "explanation": "..."}. 
-      CRITICAL INSTRUCTION: You MUST translate the provided code entirely into ${targetLanguage}. Do NOT return the code in its original language. Keep the algorithmic logic identical. Write idiomatic ${targetLanguage} code.`;
+      systemMessage = `You are an expert polyglot compiler. Respond ONLY with a valid JSON object. Schema: {"type": "translation", "code": "...", "explanation": "..."}. Translate entirely to ${targetLanguage}.`;
     }
 
     const apiKey = process.env.GROQ_API_KEY;
+    const apiPayload = {
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemMessage },
+          ...groqMessages, // Inject conversational memory
+          { role: "user", content: `User Input:\n${code}\n\nReturn the output in the requested JSON format.` }
+        ],
+        temperature: 0.2, // Slightly higher temp for better conversational flow
+        response_format: { type: "json_object" }
+    };
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile", // Upgraded 70B Model
-        messages: [
-          { role: "system", content: systemMessage },
-          { role: "user", content: `User Input:\n${code}\n\nReturn the output in the requested JSON format.` }
-        ],
-        temperature: 0.1, // Low temperature forces strict JSON adherence
-        response_format: { type: "json_object" }
-      })
+      body: JSON.stringify(apiPayload)
     });
 
     if (!response.ok) {
