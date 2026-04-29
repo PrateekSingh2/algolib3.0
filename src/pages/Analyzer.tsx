@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { 
   Zap, AlertCircle, Send, Paperclip, Loader2, Sparkles, Copy, 
-  Check, Edit2, Trash2, Menu, Code2, ArrowRightLeft, Plus, MessageSquare 
+  Check, Edit2, Trash2, Menu, Code2, ArrowRightLeft, Plus, MessageSquare,
 } from 'lucide-react';
 
 // ─── FIREBASE IMPORTS ────────────────────────────────────────────────────────
@@ -395,7 +395,7 @@ export default function Analyzer() {
                   const originalCodeMsg = messages.slice(0, idx).reverse().find(m => m.role === 'user');
                   return (
                     <div key={idx} className={`message-row ${msg.role} group`}>
-                      {msg.role === 'ai' && <div className="ai-avatar pulse-glow"><Sparkles size={16} color="#fff" /></div>}
+                      {msg.role === 'ai' && <div className="ai-avatar pulse-glow"><Zap size={18} color="#fff" fill="#fff" /></div>}
                       
                       <div className="message-bubble">
                         {msg.role === 'user' ? (
@@ -522,7 +522,7 @@ export default function Analyzer() {
               {isHomeState && (
                 <div className="greeting-header">
                   <h1><span className="gradient-text">Hello, {userName}</span></h1>
-                  <h2 className="text-2xl text-zinc-500 font-medium mt-2">What are we building today?</h2>
+                  <h2 className="text-2xl text-zinc-500 font-medium mt-2">What are your queries to be resolve?</h2>
                 </div>
               )}
               
@@ -602,7 +602,7 @@ export default function Analyzer() {
 
         .message-row { display: flex; gap: 16px; width: 100%; }
         .message-row.user { justify-content: flex-end; }
-        .ai-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #4285f4, #d96570, #9b72cb); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ai-avatar { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #60b3ff, #2b86f1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 12px rgba(43, 134, 241, 0.3); }
         .ai-avatar.pulse { animation: softPulse 2s infinite alternate; }
         @keyframes softPulse { from { opacity: 0.7; transform: scale(0.95); } to { opacity: 1; transform: scale(1.05); } }
 
