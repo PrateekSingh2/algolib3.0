@@ -58,22 +58,37 @@ const COMPLEXITY_COLORS = {
 
 const TRANSLATE_LANGS = ["Python", "Java", "C++", "JavaScript", "Go", "Rust"];
 
-// ─── Utility: Custom Markdown Parser for Code Blocks ─────────────────────────
+// ─── Utility: Custom Markdown Parser for Text & Code Blocks ──────────────────
+const formatTextWithMarkdown = (text: string) => {
+  let html = text
+    .replace(/^### (.*$)/gim, '<h3 class="chat-h3">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 class="chat-h2">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 class="chat-h1">$1</h1>')
+    .replace(/^\s*[\*\-] (.*$)/gim, '<li class="chat-li">$1</li>')
+    .replace(/^\s*\d+\.\s*(.*$)/gim, '<li class="chat-li-ordered">$1</li>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="chat-strong">$1</strong>')
+    .replace(/`([^`]+)`/g, '<code class="chat-inline-code">$1</code>');
+
+  html = html.split('\n').map(line => {
+    const t = line.trim();
+    if (t.startsWith('<h') || t.startsWith('<li')) return line;
+    return line + '<br/>';
+  }).join('\n').replace(/(<br\/>\s*){3,}/g, '<br/><br/>');
+
+  return html;
+};
+
+// 2. The main renderer that splits Code Blocks from Regular Text
 const renderFormattedText = (text: string, onCopy: (text: string) => void) => {
   if (!text) return null;
   
-  // We use \x60 (the hex code for a backtick) to completely bypass the TSX parser bug.
-  // The capture group (parentheses) ensures the matched code block is kept in the split array.
   const blockRegex = new RegExp('\\x60\\x60\\x60([\\s\\S]*?)\\x60\\x60\\x60', 'g');
   const parts = text.split(blockRegex);
 
   return parts.map((part, index) => {
-    // Due to the regex capture group, every odd index in the array is guaranteed to be a code block.
     if (index % 2 === 1) {
       const lines = part.trim().split('\n');
       const firstLine = lines[0].trim();
-      
-      // Determine if the first line is a language identifier (e.g., "javascript", "python")
       const hasLang = firstLine && !firstLine.includes(' ');
       const language = hasLang ? firstLine : 'code';
       const code = hasLang ? lines.slice(1).join('\n') : part.trim();
@@ -91,10 +106,25 @@ const renderFormattedText = (text: string, onCopy: (text: string) => void) => {
       );
     }
     
-    // Even indices are regular text. We replace newlines with <br/> tags.
     if (part.trim() === '') return null;
-    return <span key={index} className="chat-prose" dangerouslySetInnerHTML={{ __html: part.replace(/\n/g, '<br/>') }} />;
+    const formattedHTML = formatTextWithMarkdown(part);
+    return <span key={index} className="chat-prose block" dangerouslySetInnerHTML={{ __html: formattedHTML }} />;
   });
+};
+
+const safeStringify = (data: any): string => {
+  if (!data) return '';
+  if (typeof data === 'string') return data;
+  if (typeof data === 'object') {
+    try {
+      return Object.entries(data)
+        .map(([key, value]) => `/* --- ${key} --- */\n${value}`)
+        .join('\n\n');
+    } catch (e) {
+      return JSON.stringify(data, null, 2);
+    }
+  }
+  return String(data);
 };
 
 export default function Analyzer() {
@@ -388,7 +418,7 @@ export default function Analyzer() {
                             {/* Chat/General Intent Rendering */}
                             {msg.result.type === 'chat' && (
                               <div className="chat-response-card">
-                                {renderFormattedText(msg.result.explanation, (text) => handleCopy(text, `chat-code-${idx}`))}
+                                {renderFormattedText(safeStringify(msg.result.explanation), (text) => handleCopy(text, `chat-code-${idx}`))}
                               </div>
                             )}
 
@@ -411,7 +441,7 @@ export default function Analyzer() {
                                   </div>
                                 </div>
                                 <div className="chat-response-card mt-2">
-                                  {renderFormattedText(msg.result.explanation, (text) => handleCopy(text, `chat-code-${idx}`))}
+                                  {renderFormattedText(safeStringify(msg.result.explanation), (text) => handleCopy(text, `chat-code-${idx}`))}
                                 </div>
                                 <div className="graph-card glass-panel mt-4">
                                   <span className="graph-label">Time Growth Visualization</span>
@@ -458,14 +488,14 @@ export default function Analyzer() {
                                 <div className="code-result-card glass-panel">
                                   <div className="result-header">
                                     <span>{msg.result.type === 'optimization' ? 'Optimized Version' : 'Translated Version'}</span>
-                                    <button onClick={() => handleCopy(msg.result!.code || '', `code-${idx}`)} className="action-btn">
+                                    <button onClick={() => handleCopy(safeStringify(msg.result!.code), `code-${idx}`)} className="action-btn">
                                       {copiedId === `code-${idx}` ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
                                     </button>
                                   </div>
-                                  <pre className="result-code custom-scrollbar"><code>{msg.result.code}</code></pre>
+                                  <pre className="result-code custom-scrollbar"><code>{safeStringify(msg.result.code)}</code></pre>
                                 </div>
                                 <div className="chat-response-card mt-2 border-l-2 border-blue-500 pl-4">
-                                  {renderFormattedText(msg.result.explanation, (text) => handleCopy(text, `chat-code-${idx}`))}
+                                  {renderFormattedText(safeStringify(msg.result.explanation), (text) => handleCopy(text, `chat-code-${idx}`))}
                                 </div>
                               </div>
                             )}
@@ -634,6 +664,18 @@ export default function Analyzer() {
         .send-btn { background: transparent; color: #5f6368; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
         .send-btn.active { color: #8ab4f8; background: rgba(138, 180, 248, 0.1); box-shadow: 0 0 12px rgba(138, 180, 248, 0.3); }
         .disclaimer-text { text-align: center; font-size: 12px; color: #5f6368; margin-top: 16px; }
+        
+        .chat-prose { display: block; margin-bottom: 12px; line-height: 1.7; font-size: 15px; color: #d1d5db; }
+        
+        .chat-h1 { font-size: 1.5em; font-weight: 600; color: #fff; margin: 20px 0 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
+        .chat-h2 { font-size: 1.25em; font-weight: 600; color: #fff; margin: 18px 0 8px 0; }
+        .chat-h3 { font-size: 1.1em; font-weight: 600; color: #fff; margin: 16px 0 6px 0; }
+        
+        .chat-li { margin-left: 20px; list-style-type: disc; margin-bottom: 6px; padding-left: 4px; }
+        .chat-li-ordered { margin-left: 20px; list-style-type: decimal; margin-bottom: 6px; padding-left: 4px; }
+        
+        .chat-strong { color: #fff; font-weight: 600; }
+        .chat-inline-code { background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; color: #8ab4f8; }
       `}</style>
     </div>
   );
