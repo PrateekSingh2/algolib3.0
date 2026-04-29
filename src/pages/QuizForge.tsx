@@ -9,7 +9,7 @@ import {
   Calendar, Check, X, Plus, Trash2, Edit3, CloudLightning, 
   HelpCircle, Link as LinkIcon, Copy, Fingerprint, Activity,
   Hash, BarChart, AlertTriangle, Users, Target, Medal, Clock, 
-  CircleDot, CheckSquare, ToggleLeft, Hash as NumIcon, Shield, Terminal, Lock
+  CircleDot, CheckSquare, ToggleLeft, Hash as NumIcon, Shield, Terminal, Lock, Star
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
@@ -28,9 +28,12 @@ interface QuizQuestion {
 interface QuizData { 
   dbId?: string; 
   title: string; 
+  description: string; // NEW
+  theme: string;       // NEW
+  featured: boolean;   // NEW
   startTime: string; 
   endTime: string; 
-  durationMinutes: number; // NEW: Strict dedicated time
+  durationMinutes: number; 
   maxWarnings: number; 
   questions: QuizQuestion[]; 
 }
@@ -82,9 +85,9 @@ export default function QuizForge() {
   const defaultEnd = new Date(defaultStart.getTime() + 60 * 60 * 1000); 
 
   const [quizForm, setQuizForm] = useState<QuizData>({
-      dbId: undefined, title: "", startTime: toLocalDatetime(defaultStart.toISOString()), 
-      endTime: toLocalDatetime(defaultEnd.toISOString()), durationMinutes: 45, // Default 45 mins
-      maxWarnings: 3, questions: [createNewQuestion()]
+      dbId: undefined, title: "", description: "", theme: "sky", featured: false,
+      startTime: toLocalDatetime(defaultStart.toISOString()), endTime: toLocalDatetime(defaultEnd.toISOString()), 
+      durationMinutes: 45, maxWarnings: 3, questions: [createNewQuestion()]
   });
 
   useEffect(() => {
@@ -111,7 +114,7 @@ export default function QuizForge() {
           const res = await fetch(`/.netlify/functions/get-quiz-details?id=${quiz.id}`, { headers: { 'Authorization': `Bearer ${token}` }});
           if (!res.ok) throw new Error("Failed to load questions.");
           
-          const { questions } = await res.json();
+          const { quiz: qMeta, questions } = await res.json();
           const loadedQuestions = (questions || []).map((q: any) => {
               let inferredType: QuestionType = q.is_multiple_choice ? 'multiple' : 'single';
               if (!q.options || q.options.length === 0) inferredType = 'numerical';
@@ -124,9 +127,11 @@ export default function QuizForge() {
           });
 
           setQuizForm({
-              dbId: quiz.id, title: quiz.title, startTime: toLocalDatetime(quiz.start_time),
-              endTime: toLocalDatetime(quiz.end_time), durationMinutes: quiz.duration_seconds ? quiz.duration_seconds / 60 : 45, 
-              maxWarnings: quiz.max_warnings, questions: loadedQuestions.length > 0 ? loadedQuestions : [createNewQuestion()]
+              dbId: qMeta.id, title: qMeta.title, description: qMeta.description || "", 
+              theme: qMeta.theme || "sky", featured: qMeta.featured || false,
+              startTime: toLocalDatetime(qMeta.start_time), endTime: toLocalDatetime(qMeta.end_time), 
+              durationMinutes: qMeta.duration_seconds ? qMeta.duration_seconds / 60 : 45, 
+              maxWarnings: qMeta.max_warnings, questions: loadedQuestions.length > 0 ? loadedQuestions : [createNewQuestion()]
           });
           setQuizView("editor");
       } catch(err) { alert("Failed to fetch data."); } finally { setStatusMsg(""); }
@@ -169,6 +174,7 @@ export default function QuizForge() {
           const token = await user.getIdToken();
           const payload = {
               quizId: quizForm.dbId, title: quizForm.title,
+              description: quizForm.description, theme: quizForm.theme, featured: quizForm.featured,
               startTime: new Date(quizForm.startTime).toISOString(), endTime: new Date(quizForm.endTime).toISOString(),
               durationSeconds: quizForm.durationMinutes * 60, maxWarnings: quizForm.maxWarnings,
               questions: quizForm.questions.map(q => ({
@@ -252,7 +258,7 @@ export default function QuizForge() {
              <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="max-w-lg w-full bg-[#111] border border-white/[0.08] p-10 rounded-[2.5rem] shadow-2xl text-center">
                 <CheckCircle2 size={40} className="text-emerald-500 mx-auto mb-6" />
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">Deployment Successful!</h2>
-                <p className="text-zinc-400 text-sm mb-6">Your assessment is now live.</p>
+                <p className="text-zinc-400 text-sm mb-6">Your assessment is now live in the global matrix.</p>
                 <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 mb-6">
                     <p className="text-indigo-300/80 text-[11px] font-bold uppercase tracking-[0.2em] mb-2">6-Digit Access Code</p>
                     <p className="text-5xl font-mono font-bold text-white tracking-[0.25em]">{generatedCode}</p>
@@ -266,7 +272,7 @@ export default function QuizForge() {
           </motion.div>
         )}
 
-        {/* Results / Leaderboard Modal */}
+        {/* Results Modal */}
         {showResultsModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 md:p-6">
              <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20, opacity: 0 }} className="max-w-5xl w-full max-h-[90vh] bg-[#0a0a0a] border border-white/[0.08] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden relative">
@@ -328,7 +334,7 @@ export default function QuizForge() {
             </div>
             <div className="flex bg-[#0a0a0a]/80 p-1.5 rounded-2xl border border-white/[0.08] shadow-lg w-fit">
                 <button onClick={() => setQuizView("manager")} className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${quizView === 'manager' ? 'bg-indigo-500 text-white shadow-md' : 'text-zinc-500 hover:text-zinc-300'}`}>My Assessments</button>
-                <button onClick={() => { setQuizForm({dbId: undefined, title: "", startTime: toLocalDatetime(defaultStart.toISOString()), endTime: toLocalDatetime(defaultEnd.toISOString()), durationMinutes: 45, maxWarnings: 3, questions: [createNewQuestion()]}); setQuizView("editor"); }} className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${quizView === 'editor' ? 'bg-indigo-500 text-white shadow-md' : 'text-zinc-500 hover:text-zinc-300'}`}>Create New</button>
+                <button onClick={() => { setQuizForm({dbId: undefined, title: "", description: "", theme: "sky", featured: false, startTime: toLocalDatetime(defaultStart.toISOString()), endTime: toLocalDatetime(defaultEnd.toISOString()), durationMinutes: 45, maxWarnings: 3, questions: [createNewQuestion()]}); setQuizView("editor"); }} className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${quizView === 'editor' ? 'bg-indigo-500 text-white shadow-md' : 'text-zinc-500 hover:text-zinc-300'}`}>Create New</button>
             </div>
         </div>
 
@@ -342,7 +348,10 @@ export default function QuizForge() {
                         {existingQuizzes.map(q => (
                             <div key={q.id} className="p-6 bg-black/40 border border-white/[0.06] rounded-[1.5rem] hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all group">
                                 <div className="flex justify-between items-start mb-4">
-                                    <h4 className="text-lg font-bold text-white tracking-tight">{q.title}</h4>
+                                    <div className="flex flex-col gap-1">
+                                        <h4 className="text-lg font-bold text-white tracking-tight">{q.title}</h4>
+                                        {q.featured && <span className="w-fit text-[9px] bg-sky-500/20 text-sky-400 border border-sky-500/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest flex items-center gap-1"><Star size={10} className="fill-sky-400"/> Featured Tour</span>}
+                                    </div>
                                     <div className="flex gap-2">
                                         <button onClick={() => handleViewResults(q)} className="p-2 bg-white/5 text-emerald-400 hover:bg-emerald-500/20 rounded-xl" title="Results"><BarChart size={16}/></button>
                                         <button onClick={() => handleEditQuiz(q)} className="p-2 bg-white/5 text-sky-400 hover:bg-sky-500/20 rounded-xl" title="Edit"><Edit3 size={16}/></button>
@@ -362,18 +371,37 @@ export default function QuizForge() {
         ) : (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                 
-                {/* Core Config with Strict Duration */}
+                {/* Core Config with Strict Duration & Hub Visibility */}
                 <div className="bg-[#0a0a0a]/80 border border-white/[0.06] p-6 md:p-8 rounded-[2rem]">
                   <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><Calendar size={18} className="text-indigo-400"/> Quiz Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                      <div className="md:col-span-3"><label className={labelClass}>Assessment Title</label><input value={quizForm.title} onChange={(e) => setQuizForm({...quizForm, title: e.target.value})} className={inputClass} placeholder="e.g. Technical Interview Round 1" /></div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+                      <div className="md:col-span-3"><label className={labelClass}>Assessment Title</label><input value={quizForm.title} onChange={(e) => setQuizForm({...quizForm, title: e.target.value})} className={inputClass} placeholder="e.g. Mock Technical Interview Round 1" /></div>
                       <div><label className={labelClass}>Window Opens (Local Time)</label><input type="datetime-local" value={quizForm.startTime} onChange={(e) => setQuizForm({...quizForm, startTime: e.target.value})} className={`${inputClass} [color-scheme:dark]`} /></div>
                       <div><label className={labelClass}>Window Closes (Local Time)</label><input type="datetime-local" value={quizForm.endTime} onChange={(e) => setQuizForm({...quizForm, endTime: e.target.value})} className={`${inputClass} [color-scheme:dark]`} /></div>
                       <div><label className={labelClass}>Dedicated Duration (Minutes)</label><input type="number" value={quizForm.durationMinutes} onChange={(e) => setQuizForm({...quizForm, durationMinutes: Number(e.target.value)})} className={inputClass} placeholder="e.g. 45" /></div>
                   </div>
-                  <p className="text-xs font-medium text-emerald-400/80 mt-4 bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
-                     <b>Note:</b> Students can start anytime while the window is open. Once they click start, they will only receive the strict Dedicated Duration (or less, if the main window closes before their duration is up).
-                  </p>
+
+                  {/* NEW: Hub Presentation Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-5 border-t border-white/5">
+                      <div className="md:col-span-2"><label className={labelClass}>Publish in Public Description</label><input value={quizForm.description} onChange={(e) => setQuizForm({...quizForm, description: e.target.value})} className={inputClass} placeholder="A short description for the public quiz..." /></div>
+                      <div><label className={labelClass}>Theme Color</label>
+                          <select value={quizForm.theme} onChange={(e) => setQuizForm({...quizForm, theme: e.target.value})} className={inputClass}>
+                              <option value="sky">Sky Blue</option><option value="emerald">Emerald Green</option><option value="amber">Amber Yellow</option><option value="rose">Rose Red</option><option value="indigo">Indigo Purple</option>
+                          </select>
+                      </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 mt-6 bg-white/[0.02] p-4 rounded-xl border border-white/5">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" className="sr-only peer" checked={quizForm.featured} onChange={(e) => setQuizForm({...quizForm, featured: e.target.checked})} />
+                          <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                      </label>
+                      <div>
+                          <p className="text-sm font-bold text-white">Publish in Public</p>
+                          <p className="text-xs text-zinc-500 mt-0.5">Allow anyone to take this assessment as an interactive tour without needing a code.</p>
+                      </div>
+                  </div>
                 </div>
 
                 {/* Ultra-Proctored Security Config */}
