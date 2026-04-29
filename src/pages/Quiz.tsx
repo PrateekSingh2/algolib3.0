@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, loginWithGoogle } from "../lib/firebase"; 
-
 import ReactMarkdown from 'react-markdown';
 import { 
   AlertTriangle, Clock, ShieldAlert, ChevronRight, 
@@ -11,25 +10,12 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
-
-
 type QuestionType = 'single' | 'multiple' | 'true_false' | 'numerical';
 
 interface QuizOption { id: string; text: string; }
-interface QuizQuestion { 
-    id: string; 
-    text: string; 
-    questionType: QuestionType; 
-    options: QuizOption[]; 
-    correctOptions: string[]; 
-}
-interface QuizData { id: string; title: string; startTime: string; endTime: string; maxWarnings: number; questions: QuizQuestion[]; }
-
-interface LeaderboardEntry {
-  display_name: string;
-  score: number;
-  time_taken_seconds: number;
-}
+interface QuizQuestion { id: string; text: string; questionType: QuestionType; options: QuizOption[]; correctOptions: string[]; }
+interface QuizData { id: string; title: string; startTime: string; endTime: string; durationSeconds: number; maxWarnings: number; questions: QuizQuestion[]; personalEndTime?: string; }
+interface LeaderboardEntry { display_name: string; score: number; time_taken_seconds: number; }
 
 export default function QuizArena() {
   const { id: quizId } = useParams(); 
@@ -76,63 +62,46 @@ export default function QuizArena() {
         if (!quizId) { setEligibility('not_found'); return; }
 
         try {
-            const subResponse = await fetch(`/.netlify/functions/get-quiz-submissions?quiz_id=${quizId}&user_uid=${user.uid}`);
-            if (subResponse.ok) {
-                const existingSubmission = await subResponse.json();
-                if (existingSubmission && existingSubmission.id) {
-                    setFinalScore(existingSubmission.score);
+            const token = await user.getIdToken();
+            
+            // 1. Verify if user already submitted
+            const subRes = await fetch(`/.netlify/functions/get-quiz-submissions?quiz_id=${quizId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (subRes.ok) {
+                const subs = await subRes.json();
+                const mySub = subs.find((s: any) => s.user_uid === user.uid);
+                if (mySub) {
+                    setFinalScore(mySub.score);
                     setEligibility('denied');
                     return;
                 }
             }
 
-            const qResponse = await fetch(`/.netlify/functions/get-quiz-details?id=${quizId}`);
-            if (!qResponse.ok) { setEligibility('not_found'); return; }
-            const qRespData = await qResponse.json();
-            const qData = qRespData.quiz;
-            const questionsData = qRespData.questions;
-
-            if (!qData) { setEligibility('not_found'); return; }
+            // 2. Fetch Quiz Details via Netlify backend
+            const quizRes = await fetch(`/.netlify/functions/get-quiz-details?id=${quizId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (!quizRes.ok) throw new Error("Not Found");
             
-            const formattedQuestions = (questionsData || []).map(q => {
+            const { quiz, questions } = await quizRes.json();
+
+            const formattedQuestions = (questions || []).map((q: any) => {
                 let inferredType: QuestionType = q.is_multiple_choice ? 'multiple' : 'single';
                 if (!q.options || q.options.length === 0) inferredType = 'numerical';
                 else if (q.options.length === 2 && q.options[0].text === 'True') inferredType = 'true_false';
 
                 return {
-                    id: q.id, 
-                    text: q.text, 
-                    questionType: inferredType,
-                    options: q.options || [], 
-                    correctOptions: q.correct_options || []
+                    id: q.id, text: q.text, questionType: inferredType,
+                    options: q.options || [], correctOptions: q.correct_options || []
                 };
             });
 
-            // 🔀 NEW SHUFFLE LOGIC: Fisher-Yates Algorithm
-            const shuffledQuestions = [...formattedQuestions];
-            for (let i = shuffledQuestions.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffledQuestions[i], shuffledQuestions[j]] = [shuffledQuestions[j], shuffledQuestions[i]];
-            }
-
-            const mockStart = new Date(Date.now() - 5 * 60000).toISOString(); 
-            const mockEnd = new Date(Date.now() + (qData.duration_seconds || 900) * 1000).toISOString(); 
-
             setQuizData({
-                id: qData.id, 
-                title: qData.title, 
-                startTime: qData.start_time || mockStart,
-                endTime: qData.end_time || mockEnd, 
-                maxWarnings: qData.max_warnings || 3, 
-                // ✅ FIX: Use the shuffled questions here instead of formattedQuestions
-                questions: shuffledQuestions 
+                id: quiz.id, title: quiz.title, 
+                startTime: quiz.start_time, endTime: quiz.end_time, 
+                durationSeconds: quiz.duration_seconds || 3600, // Safe Fallback 1 hr
+                maxWarnings: quiz.max_warnings || 3, questions: formattedQuestions
             });
 
             setEligibility('allowed');
-        } catch (error) {
-            console.error(error);
-            setEligibility('not_found');
-        }
+        } catch (error) { setEligibility('not_found'); }
     };
 
     if (user) { setEligibility('loading'); initializeArena(); }
@@ -145,26 +114,24 @@ export default function QuizArena() {
     const fetchLeaderboard = async () => {
       if (!quizId) return;
       try {
-        const response = await fetch(`/.netlify/functions/get-quiz-submissions?quiz_id=${quizId}&limit=10`);
-        if (response.ok) {
-          const data = await response.json();
-          setLeaderboard(data);
+        const token = await user?.getIdToken();
+        const res = await fetch(`/.netlify/functions/get-quiz-submissions?quiz_id=${quizId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          // Sort by Score descending, then Time taken ascending
+          const sorted = data.sort((a: any, b: any) => b.score !== a.score ? b.score - a.score : a.time_taken_seconds - b.time_taken_seconds);
+          setLeaderboard(sorted.slice(0, 10)); // Top 10
         }
-      } catch (err) {
-        console.error("Leaderboard fetch error:", err);
-      }
+      } catch (err) {}
     };
 
     if (eligibility === 'denied' || isSubmitted) {
       fetchLeaderboard();
-      // Auto-update every 2 minutes (120,000 milliseconds)
       interval = setInterval(fetchLeaderboard, 120000); 
     }
 
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [quizId, eligibility, isSubmitted]);
+    return () => { if (interval) clearInterval(interval); };
+  }, [quizId, eligibility, isSubmitted, user]);
 
   useEffect(() => {
     if (!quizData || isSubmitted) return;
@@ -172,20 +139,34 @@ export default function QuizArena() {
     const updateTimer = () => {
         const now = Date.now();
         const start = new Date(quizData.startTime).getTime();
-        const end = new Date(quizData.endTime).getTime();
+        const absoluteWindowEnd = new Date(quizData.endTime).getTime();
 
-        if (now < start) {
-            setQuizStatus('upcoming');
-            setTimeRemaining(Math.floor((start - now) / 1000));
-        } else if (now >= start && now <= end) {
-            setQuizStatus('active');
-            setTimeRemaining(Math.floor((end - now) / 1000));
+        if (!hasStarted) {
+            if (now < start) {
+                setQuizStatus('upcoming');
+                setTimeRemaining(Math.floor((start - now) / 1000));
+            } else if (now >= start && now <= absoluteWindowEnd) {
+                setQuizStatus('active');
+                // Give them the full duration limit to display visually, OR time until window absolutely closes.
+                const maxDisplayTime = Math.min(quizData.durationSeconds, Math.floor((absoluteWindowEnd - now) / 1000));
+                setTimeRemaining(maxDisplayTime > 0 ? maxDisplayTime : 0);
+            } else {
+                setQuizStatus('ended');
+                setTimeRemaining(0);
+            }
         } else {
-            setQuizStatus('ended');
-            setTimeRemaining(0);
-            if (hasStarted && !isSubmitted && !isIntentionalExit.current) {
-                isIntentionalExit.current = true;
-                forceSubmit("The assessment duration has concluded. Auto-submitting your responses.");
+            // THEY CLICKED START - TICK DOWN PERSONAL DEDICATED TIMER
+            const personalEnd = new Date(quizData.personalEndTime!).getTime();
+            if (now <= personalEnd) {
+                setQuizStatus('active');
+                setTimeRemaining(Math.floor((personalEnd - now) / 1000));
+            } else {
+                setQuizStatus('ended');
+                setTimeRemaining(0);
+                if (!isSubmitted && !isIntentionalExit.current) {
+                    isIntentionalExit.current = true;
+                    forceSubmit("Your dedicated assessment duration has concluded. Auto-submitting responses.");
+                }
             }
         }
     };
@@ -219,9 +200,7 @@ export default function QuizArena() {
     const handleVisibilityChange = () => { if (document.hidden) issueStrike("Tab switched or browser minimized"); };
     const handleBlur = () => { issueStrike("Focus lost to an overlay or external application"); };
     const handleFullscreenChange = () => { 
-        if (!document.fullscreenElement && !isSubmitted && !isIntentionalExit.current) {
-            issueStrike("Exited required fullscreen mode"); 
-        }
+        if (!document.fullscreenElement && !isSubmitted && !isIntentionalExit.current) { issueStrike("Exited required fullscreen mode"); }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -241,59 +220,46 @@ export default function QuizArena() {
       if (document.documentElement.requestFullscreen) {
         await document.documentElement.requestFullscreen();
       }
+      
+      // CRITICAL TIMING CALCULATION
+      // Personal end time = Current precise click time + exactly their duration limit
+      // Heavily capped so it cannot exceed the absolute window close time!
+      const absoluteWindowEnd = new Date(quizData!.endTime).getTime();
+      const dedicatedDurationEnd = Date.now() + (quizData!.durationSeconds * 1000);
+      const strictPersonalEndMs = Math.min(dedicatedDurationEnd, absoluteWindowEnd);
+      
+      setQuizData(prev => ({
+          ...prev!,
+          personalEndTime: new Date(strictPersonalEndMs).toISOString()
+      }));
+
       setHasStarted(true);
-    } catch (err) {
-      alert("Browser blocked fullscreen. Please allow fullscreen access to begin.");
-    }
+    } catch (err) { alert("Browser blocked fullscreen. Please allow fullscreen access to begin."); }
   };
 
   const handleSelectOption = (questionId: string, value: string, isMulti: boolean, isNumerical: boolean = false) => {
     setAnswers(prev => {
         if (isNumerical) return { ...prev, [questionId]: [value] };
-        
         const currentSelections = prev[questionId] || [];
         if (isMulti) {
             if (currentSelections.includes(value)) return { ...prev, [questionId]: currentSelections.filter(id => id !== value) };
             else return { ...prev, [questionId]: [...currentSelections, value] };
-        } else {
-            return { ...prev, [questionId]: [value] };
-        }
+        } else { return { ...prev, [questionId]: [value] }; }
     });
   };
 
-  const handleNext = () => { 
-      if (quizData && currentIndex < quizData.questions.length - 1) {
-          setDirection(1);
-          setCurrentIndex(currentIndex + 1); 
-      }
-  };
-  
-  const handlePrev = () => { 
-      if (currentIndex > 0) {
-          setDirection(-1);
-          setCurrentIndex(currentIndex - 1); 
-      }
-  };
-
+  const handleNext = () => { if (quizData && currentIndex < quizData.questions.length - 1) { setDirection(1); setCurrentIndex(currentIndex + 1); } };
+  const handlePrev = () => { if (currentIndex > 0) { setDirection(-1); setCurrentIndex(currentIndex - 1); } };
   const requestSubmit = () => { setShowSubmitConfirm(true); }; 
-
-  const forceSubmit = (reason: string) => { 
-    setShowSubmitConfirm(false); 
-    alert(reason); 
-    finalizeSubmission(); 
-  };
+  const forceSubmit = (reason: string) => { setShowSubmitConfirm(false); alert(reason); finalizeSubmission(); };
 
   const finalizeSubmission = async () => {
     if (!quizData || !user) return;
-    
-    isIntentionalExit.current = true; 
-    setIsSubmittingToDB(true);
+    isIntentionalExit.current = true; setIsSubmittingToDB(true);
     
     let calculatedScore = 0;
     quizData.questions.forEach(q => {
-       const userAns = answers[q.id] || [];
-       const correctAns = q.correctOptions || [];
-       
+       const userAns = answers[q.id] || []; const correctAns = q.correctOptions || [];
        if (q.questionType === 'numerical') {
            if (userAns[0] && correctAns[0] && userAns[0].trim() === correctAns[0].trim()) calculatedScore += 1;
        } else {
@@ -302,47 +268,33 @@ export default function QuizArena() {
     });
     
     setFinalScore(calculatedScore);
-    const durationTotal = Math.floor((new Date(quizData.endTime).getTime() - new Date(quizData.startTime).getTime()) / 1000);
-    const timeTaken = durationTotal - timeRemaining;
+    
+    // Calculates actual time consumed by comparing their start click to when they submitted
+    const assignedTotalTime = Math.floor((new Date(quizData.personalEndTime!).getTime() - (new Date(quizData.personalEndTime!).getTime() - quizData.durationSeconds * 1000)) / 1000);
+    const timeTaken = assignedTotalTime - timeRemaining;
 
     try {
         const token = await user.getIdToken();
         await fetch('/.netlify/functions/submit-quiz', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                quiz_id: quizData.id,
-                score: calculatedScore,
-                total_questions: quizData.questions.length,
-                time_taken_seconds: timeTaken > 0 ? timeTaken : 0,
-                warnings_hit: warningsRef.current,
-                answers_payload: answers,
-                email: user.email
+                quiz_id: quizData.id, score: calculatedScore, total_questions: quizData.questions.length,
+                warnings_hit: warningsRef.current, time_taken_seconds: timeTaken > 0 ? timeTaken : 0, answers_payload: answers
             })
         });
-    } catch (error) { console.error("Failed to save submission:", error); }
+    } catch (error) { console.error("Failed to save submission"); }
 
-    setIsSubmittingToDB(false);
-    setIsSubmitted(true);
-    setShowSubmitConfirm(false);
+    setIsSubmittingToDB(false); setIsSubmitted(true); setShowSubmitConfirm(false);
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   };
 
   const formatCountdown = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
+    const h = Math.floor(seconds / 3600); const m = Math.floor((seconds % 3600) / 60); const s = seconds % 60;
     if (h > 0) return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const formatScheduleTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
+  const formatScheduleTime = (dateStr: string) => { return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); };
   const getOptionLetter = (index: number) => String.fromCharCode(65 + index); 
 
   const slideVariants: Variants = {
@@ -367,34 +319,20 @@ export default function QuizArena() {
              <div key={idx} className="flex items-center justify-between p-3.5 bg-white/[0.02] rounded-xl border border-white/[0.05] hover:bg-white/[0.04] transition-colors">
                 <div className="flex items-center gap-3">
                    <span className={`w-6 text-center font-mono text-sm font-bold ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-zinc-300' : idx === 2 ? 'text-amber-600' : 'text-zinc-600'}`}>#{idx + 1}</span>
-                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-white/5">
-                      <span className="text-xs font-bold text-zinc-300">{(entry.display_name || 'U').charAt(0).toUpperCase()}</span>
-                   </div>
+                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-white/5"><span className="text-xs font-bold text-zinc-300">{(entry.display_name || 'U').charAt(0).toUpperCase()}</span></div>
                    <span className="text-sm font-medium text-zinc-200 truncate max-w-[120px]">{entry.display_name || 'Anonymous'}</span>
                 </div>
-                <div className="flex flex-col items-end gap-0.5">
-                   <span className="font-mono text-sm font-bold text-white">{entry.score} <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-sans">pts</span></span>
-                </div>
+                <div className="flex flex-col items-end gap-0.5"><span className="font-mono text-sm font-bold text-white">{entry.score} <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-sans">pts</span></span></div>
              </div>
           )) : (
-             <div className="flex flex-col items-center justify-center h-full py-10 text-zinc-500 gap-3">
-                <Loader2 className="animate-spin text-zinc-700" size={24} />
-                <p className="text-sm">Fetching ranks...</p>
-             </div>
+             <div className="flex flex-col items-center justify-center h-full py-10 text-zinc-500 gap-3"><Loader2 className="animate-spin text-zinc-700" size={24} /><p className="text-sm">Fetching ranks...</p></div>
           )}
         </div>
     </motion.div>
   );
 
-  // ---------------------------------------------------------
-  // RENDER BLOCKS
-  // ---------------------------------------------------------
+  if (eligibility === 'loading') return <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-zinc-400 gap-4"><Loader2 className="animate-spin text-indigo-500" size={40} /> <p className="text-sm font-bold tracking-widest uppercase text-zinc-500">Initializing Arena</p></div>;
 
-  if (eligibility === 'loading') {
-    return <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-zinc-400 gap-4"><Loader2 className="animate-spin text-indigo-500" size={40} /> <p className="text-sm font-bold tracking-widest uppercase text-zinc-500">Initializing Arena</p></div>;
-  }
-
-  // DENIED OR UNAUTHENTICATED OR NOT FOUND
   if (eligibility === 'not_found' || eligibility === 'unauthenticated' || eligibility === 'denied') {
     return (
       <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center text-white px-6 relative overflow-hidden">
@@ -402,19 +340,13 @@ export default function QuizArena() {
          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/10 blur-[150px] rounded-full pointer-events-none"></div>
 
          <div className="flex flex-col lg:flex-row items-center lg:items-stretch justify-center gap-6 w-full max-w-5xl relative z-10 mt-20 lg:mt-0">
-             
-             {/* Main Notification Card */}
              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="max-w-md w-full bg-[#0a0a0a]/90 backdrop-blur-3xl border border-white/[0.08] p-10 rounded-[2.5rem] shadow-2xl text-center flex flex-col justify-center h-[500px]">
                 {eligibility === 'not_found' && <SearchX size={56} className="text-zinc-600 mx-auto mb-6" />}
                 {eligibility === 'unauthenticated' && <Lock size={56} className="text-indigo-400 mx-auto mb-6" />}
                 {eligibility === 'denied' && <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle2 size={40} className="text-emerald-500" /></div>}
                 
-                <h1 className="text-2xl font-bold mb-3 tracking-tight">
-                  {eligibility === 'not_found' ? 'Assessment Not Found' : eligibility === 'unauthenticated' ? 'Authentication Required' : 'Assessment Completed'}
-                </h1>
-                <p className="text-zinc-400 mb-8 text-sm leading-relaxed">
-                  {eligibility === 'not_found' ? 'The requested module could not be located. Verify the transmission link.' : eligibility === 'unauthenticated' ? 'You must authenticate your identity to access the secure testing arena.' : 'You have already completed this assessment. Multiple attempts are locked by the proctor.'}
-                </p>
+                <h1 className="text-2xl font-bold mb-3 tracking-tight">{eligibility === 'not_found' ? 'Assessment Not Found' : eligibility === 'unauthenticated' ? 'Authentication Required' : 'Assessment Completed'}</h1>
+                <p className="text-zinc-400 mb-8 text-sm leading-relaxed">{eligibility === 'not_found' ? 'The requested module could not be located. Verify the transmission link.' : eligibility === 'unauthenticated' ? 'You must authenticate your identity to access the secure testing arena.' : 'You have already completed this assessment. Multiple attempts are locked by the proctor.'}</p>
                 
                 {eligibility === 'denied' && (
                   <div className="bg-black/50 border border-white/[0.05] p-6 rounded-[2rem] flex flex-col items-center text-center mx-auto mb-8 shadow-inner w-full">
@@ -422,15 +354,12 @@ export default function QuizArena() {
                      <p className="text-5xl font-mono text-white font-bold">{finalScore}</p>
                   </div>
                 )}
-
                 {eligibility === 'unauthenticated' ? (
                    <button onClick={loginWithGoogle} className="w-full py-4 bg-white text-black font-bold rounded-2xl hover:bg-zinc-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)] text-lg mt-auto">Authenticate Identity</button>
                 ) : (
                    <button onClick={() => navigate('/quiz-panel')} className="w-full py-4 bg-zinc-800 text-white font-bold rounded-2xl hover:bg-zinc-700 transition-all text-lg mt-auto">Return to Dashboard</button>
                 )}
              </motion.div>
-
-             {/* Dynamic Leaderboard Sidebar */}
              {eligibility === 'denied' && renderLeaderboardCard()}
          </div>
       </div>
@@ -443,7 +372,6 @@ export default function QuizArena() {
   const progressPercent = (answeredCount / quizData.questions.length) * 100;
 
   if (!hasStarted) {
-    // ... PRE-START SCREEN REMAINS UNCHANGED ...
     return (
       <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center px-6 relative overflow-hidden">
         <Navbar />
@@ -453,18 +381,18 @@ export default function QuizArena() {
            <h1 className="text-3xl md:text-5xl font-extrabold mb-4 text-center tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-400">{quizData.title}</h1>
            <p className="text-zinc-400 text-sm md:text-base text-center mb-10 leading-relaxed">Review the assessment parameters. Ensure a stable connection before proceeding into the secure environment.</p>
            
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                <div className="bg-white/[0.02] border border-white/[0.04] rounded-[1.5rem] p-5 flex items-center gap-4 shadow-inner">
                  <div className="p-3 bg-zinc-800/50 rounded-xl text-zinc-300"><Calendar size={20} /></div>
-                 <div><p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest mb-0.5">Schedule</p><p className="text-sm font-bold text-white">{formatScheduleTime(quizData.startTime)} - {formatScheduleTime(quizData.endTime)}</p></div>
+                 <div><p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest mb-0.5">Window Schedule</p><p className="text-sm font-bold text-white">{formatScheduleTime(quizData.startTime)} - {formatScheduleTime(quizData.endTime)}</p></div>
                </div>
                <div className="bg-white/[0.02] border border-white/[0.04] rounded-[1.5rem] p-5 flex items-center gap-4 shadow-inner">
-                 <div className="p-3 bg-zinc-800/50 rounded-xl text-zinc-300"><LayoutGrid size={20} /></div>
-                 <div><p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest mb-0.5">Size</p><p className="text-sm font-bold text-white">{quizData.questions.length} Items</p></div>
+                 <div className="p-3 bg-zinc-800/50 rounded-xl text-zinc-300"><Clock size={20} /></div>
+                 <div><p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest mb-0.5">Dedicated Time</p><p className="text-sm font-bold text-white">{quizData.durationSeconds / 60} Minutes Exact</p></div>
                </div>
            </div>
-
-           <div className="flex items-start gap-5 text-sm bg-rose-500/5 p-6 rounded-[1.5rem] border border-rose-500/20 mb-10 shadow-inner">
+           
+           <div className="flex items-start gap-5 text-sm bg-rose-500/5 p-6 rounded-[1.5rem] border border-rose-500/20 mb-10 mt-4 shadow-inner">
               <ShieldAlert className="shrink-0 mt-0.5 text-rose-500" size={26} />
               <div className="space-y-2 text-zinc-300">
                   <p className="font-bold text-rose-500 tracking-wide text-base">Strict Proctoring Active</p>
@@ -474,17 +402,11 @@ export default function QuizArena() {
            </div>
 
            {quizStatus === 'upcoming' ? (
-               <button disabled className="w-full py-5 bg-zinc-900 border border-zinc-800 text-zinc-500 font-bold rounded-2xl flex justify-center items-center gap-2 cursor-not-allowed text-lg">
-                 Opens in {formatCountdown(timeRemaining)}
-               </button>
+               <button disabled className="w-full py-5 bg-zinc-900 border border-zinc-800 text-zinc-500 font-bold rounded-2xl flex justify-center items-center gap-2 cursor-not-allowed text-lg">Opens in {formatCountdown(timeRemaining)}</button>
            ) : quizStatus === 'ended' ? (
-               <button disabled className="w-full py-5 bg-zinc-900 border border-zinc-800 text-zinc-500 font-bold rounded-2xl flex justify-center items-center gap-2 cursor-not-allowed text-lg">
-                 Assessment Concluded
-               </button>
+               <button disabled className="w-full py-5 bg-zinc-900 border border-zinc-800 text-zinc-500 font-bold rounded-2xl flex justify-center items-center gap-2 cursor-not-allowed text-lg">Assessment Window Closed</button>
            ) : (
-               <button onClick={requestSecureEnvironment} className="w-full py-5 bg-white text-zinc-950 font-bold rounded-2xl hover:bg-zinc-200 transition-all shadow-[0_0_40px_rgba(255,255,255,0.2)] flex justify-center items-center gap-2 text-lg hover:scale-[1.02] active:scale-[0.98]">
-                 <Maximize size={20} /> Start Quiz
-               </button>
+               <button onClick={requestSecureEnvironment} className="w-full py-5 bg-white text-zinc-950 font-bold rounded-2xl hover:bg-zinc-200 transition-all shadow-[0_0_40px_rgba(255,255,255,0.2)] flex justify-center items-center gap-2 text-lg hover:scale-[1.02] active:scale-[0.98]"><Maximize size={20} /> Start Dedicated Session</button>
            )}
         </motion.div>
       </div>
@@ -499,8 +421,6 @@ export default function QuizArena() {
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-full max-w-2xl h-[500px] bg-emerald-500/10 blur-[150px] rounded-full pointer-events-none"></div>
 
         <div className="flex flex-col lg:flex-row items-center lg:items-stretch justify-center gap-6 w-full max-w-5xl relative z-10 mt-20 lg:mt-0">
-           
-           {/* Final Score Dashboard */}
            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="max-w-xl w-full bg-[#0a0a0a]/80 backdrop-blur-3xl border border-white/[0.08] p-10 md:p-10 rounded-[2.5rem] shadow-2xl text-center flex flex-col h-[500px]">
               <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(16,185,129,0.2)]"><CheckCircle2 size={40} className="text-emerald-500" /></div>
               <h1 className="text-3xl font-extrabold mb-3 tracking-tight">Quiz Completed</h1>
@@ -511,11 +431,8 @@ export default function QuizArena() {
                 <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-2xl flex flex-col items-center text-center shadow-inner"><Target size={20} className="text-indigo-400 mb-2"/><p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Attempted</p><p className="text-2xl font-mono text-white tracking-tighter font-bold">{answeredCount} <span className="text-xs text-zinc-600 font-normal tracking-normal">/ {quizData.questions.length}</span></p></div>
                 <div className="bg-white/[0.02] border border-white/[0.05] p-5 rounded-2xl flex flex-col items-center text-center shadow-inner"><AlertTriangle size={20} className="text-rose-400 mb-2"/><p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Violations</p><p className="text-2xl font-mono text-rose-400 tracking-tighter font-bold">{warningsRef.current} <span className="text-xs text-rose-500/40 font-normal tracking-normal">/ {quizData.maxWarnings}</span></p></div>
               </div>
-
               <button onClick={() => navigate('/quiz-panel')} className="w-full py-4 bg-white text-zinc-950 font-bold rounded-2xl hover:bg-zinc-200 transition-all shadow-md text-lg hover:scale-[1.02] mt-8">Return to Dashboard</button>
            </motion.div>
-
-           {/* Live Leaderboard Render */}
            {renderLeaderboardCard()}
         </div>
       </div>
@@ -523,12 +440,8 @@ export default function QuizArena() {
   }
 
   const currentQ = quizData.questions[currentIndex];
+  const acknowledgeWarning = () => setShowWarningModal(false);
 
-  const acknowledgeWarning = () => {
-    setShowWarningModal(false);
-  };
-
-  // ... REMAINDER OF COMPONENT UNCHANGED (Active quiz taking view) ...
   return (
     <div className="min-h-screen bg-[#050505] text-zinc-100 font-sans flex flex-col overflow-x-hidden relative">
       <div className="fixed top-0 left-0 w-full h-[500px] bg-indigo-500/10 blur-[150px] pointer-events-none rounded-full translate-x-1/4 -translate-y-1/4"></div>
@@ -562,13 +475,7 @@ export default function QuizArena() {
                      {isSubmittingToDB ? <Loader2 className="animate-spin" size={20} /> : <Check size={20} />}
                      {isSubmittingToDB ? "Encrypting..." : "Confirm Finalize"}
                    </button>
-                   <button 
-                      onClick={() => setShowSubmitConfirm(false)}
-                      disabled={isSubmittingToDB}
-                      className="w-full py-4 bg-white/[0.05] text-white font-bold rounded-2xl hover:bg-white/[0.1] transition-all disabled:opacity-50"
-                   >
-                     Abort
-                   </button>
+                   <button onClick={() => setShowSubmitConfirm(false)} disabled={isSubmittingToDB} className="w-full py-4 bg-white/[0.05] text-white font-bold rounded-2xl hover:bg-white/[0.1] transition-all disabled:opacity-50">Abort</button>
                 </div>
              </motion.div>
           </motion.div>
@@ -579,18 +486,14 @@ export default function QuizArena() {
          <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
             <span className="font-bold text-[15px] text-zinc-100 tracking-tight">{quizData.title}</span>
             <div className="flex items-center gap-4">
-                <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-zinc-500 pr-4 border-r border-white/10 uppercase tracking-widest">
-                    <Calendar size={14} /> {formatScheduleTime(quizData.startTime)} - {formatScheduleTime(quizData.endTime)}
-                </div>
+                <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-zinc-500 pr-4 border-r border-white/10 uppercase tracking-widest"><Calendar size={14} /> Personal End: {formatScheduleTime(quizData.personalEndTime!)}</div>
                 <div className={`flex items-center gap-2 text-sm font-bold transition-colors ${timeRemaining < 60 ? 'text-rose-400' : 'text-zinc-200'}`}>
                     <Clock size={16} className={timeRemaining < 60 ? 'animate-pulse' : ''} />
                     <span className="font-mono tracking-wider text-[15px]">{formatCountdown(timeRemaining)}</span>
                 </div>
             </div>
          </div>
-         <div className="w-full h-1 bg-zinc-900">
-            <motion.div className="h-full bg-gradient-to-r from-indigo-500 to-sky-400 shadow-[0_0_15px_rgba(99,102,241,0.8)]" initial={{ width: 0 }} animate={{ width: `${progressPercent}%` }} transition={{ duration: 0.4, ease: "easeOut" }} />
-         </div>
+         <div className="w-full h-1 bg-zinc-900"><motion.div className="h-full bg-gradient-to-r from-indigo-500 to-sky-400 shadow-[0_0_15px_rgba(99,102,241,0.8)]" initial={{ width: 0 }} animate={{ width: `${progressPercent}%` }} transition={{ duration: 0.4, ease: "easeOut" }} /></div>
       </header>
 
       <main className="flex-1 flex justify-center px-4 md:px-6 pt-24 pb-40 relative z-10 w-full max-w-5xl mx-auto">
@@ -598,39 +501,20 @@ export default function QuizArena() {
             
             <div className="mb-6 flex flex-col items-center justify-center text-center w-full">
                <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
-                   <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-zinc-500 bg-white/[0.03] border border-white/[0.05] px-4 py-1.5 rounded-full shadow-inner">
-                     Item {currentIndex + 1} of {quizData.questions.length}
-                   </span>
-                   <span className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.1em] px-4 py-1.5 rounded-full shadow-inner border ${
-                       currentQ.questionType === 'multiple' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 
-                       currentQ.questionType === 'numerical' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                       'text-sky-400 bg-sky-500/10 border-sky-500/20'
-                   }`}>
+                   <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-zinc-500 bg-white/[0.03] border border-white/[0.05] px-4 py-1.5 rounded-full shadow-inner">Item {currentIndex + 1} of {quizData.questions.length}</span>
+                   <span className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.1em] px-4 py-1.5 rounded-full shadow-inner border ${currentQ.questionType === 'multiple' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : currentQ.questionType === 'numerical' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-sky-400 bg-sky-500/10 border-sky-500/20'}`}>
                      {currentQ.questionType === 'numerical' && <Hash size={12}/>}
                      {currentQ.questionType === 'multiple' ? "Multi-Select" : currentQ.questionType === 'numerical' ? "Exact Value" : "Single Choice"}
                    </span>
                </div>
-               
                <AnimatePresence mode="wait">
-                 <motion.div 
-                    key={`qtext-${currentIndex}`} 
-                    custom={direction}
-                    variants={slideVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    className="text-lg md:text-xl lg:text-2xl font-semibold text-white mb-8 max-w-4xl w-full text-left leading-relaxed"
-                 >
+                 <motion.div key={`qtext-${currentIndex}`} custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" className="text-lg md:text-xl lg:text-2xl font-semibold text-white mb-8 max-w-4xl w-full text-left leading-relaxed">
                     <ReactMarkdown
                        components={{
                           pre: ({node, ...props}) => <pre className="bg-[#0a0a0a] border border-white/10 p-5 rounded-2xl overflow-x-auto my-6 text-[14px] leading-snug font-mono text-zinc-300 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]" {...props} />,
-                          code: ({node, inline, ...props}: any) => inline 
-                              ? <code className="bg-white/10 text-sky-300 px-1.5 py-0.5 rounded-md font-mono text-[0.9em]" {...props} /> 
-                              : <code {...props} />,
-                          p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />,
-                          strong: ({node, ...props}) => <strong className="font-extrabold text-white" {...props} />,
-                          ul: ({node, ...props}) => <ul className="list-disc pl-6 my-4 space-y-2 text-zinc-300" {...props} />,
-                          ol: ({node, ...props}) => <ol className="list-decimal pl-6 my-4 space-y-2 text-zinc-300" {...props} />
+                          code: ({node, inline, ...props}: any) => inline ? <code className="bg-white/10 text-sky-300 px-1.5 py-0.5 rounded-md font-mono text-[0.9em]" {...props} /> : <code {...props} />,
+                          p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />, strong: ({node, ...props}) => <strong className="font-extrabold text-white" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc pl-6 my-4 space-y-2 text-zinc-300" {...props} />, ol: ({node, ...props}) => <ol className="list-decimal pl-6 my-4 space-y-2 text-zinc-300" {...props} />
                        }}
                     >
                        {currentQ.text.replace(/\\n/g, '\n')}
@@ -640,70 +524,25 @@ export default function QuizArena() {
             </div>
 
             <AnimatePresence mode="wait">
-              <motion.div 
-                key={`qopts-${currentIndex}`}
-                custom={direction}
-                variants={slideVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                className="w-full max-w-4xl mx-auto" 
-              >
+              <motion.div key={`qopts-${currentIndex}`} custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" className="w-full max-w-4xl mx-auto" >
                 {currentQ.questionType === 'numerical' ? (
                    <div className="flex flex-col items-center justify-center py-8">
-                      <input 
-                         type="number"
-                         value={(answers[currentQ.id] && answers[currentQ.id][0]) || ''}
-                         onChange={(e) => handleSelectOption(currentQ.id, e.target.value, false, true)}
-                         placeholder="Enter exact numerical answer..."
-                         className="w-full max-w-lg bg-[#050505] border border-white/[0.1] rounded-3xl px-8 py-6 outline-none focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 text-center text-4xl font-mono text-white transition-all placeholder:text-zinc-800 placeholder:text-xl placeholder:font-sans shadow-[inset_0_0_30px_rgba(0,0,0,0.5)]"
-                      />
+                      <input type="number" value={(answers[currentQ.id] && answers[currentQ.id][0]) || ''} onChange={(e) => handleSelectOption(currentQ.id, e.target.value, false, true)} placeholder="Enter exact numerical answer..." className="w-full max-w-lg bg-[#050505] border border-white/[0.1] rounded-3xl px-8 py-6 outline-none focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 text-center text-4xl font-mono text-white transition-all placeholder:text-zinc-800 placeholder:text-xl placeholder:font-sans shadow-[inset_0_0_30px_rgba(0,0,0,0.5)]" />
                       <p className="mt-4 text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2"><CheckCircle2 size={14}/> Auto-saving response</p>
                    </div>
                 ) : (
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                       {currentQ.options.map((opt, optIndex) => {
-                        const currentAnsArray = answers[currentQ.id] || [];
-                        const isSelected = currentAnsArray.includes(opt.id);
-                        const letter = getOptionLetter(optIndex);
-
+                        const currentAnsArray = answers[currentQ.id] || []; const isSelected = currentAnsArray.includes(opt.id); const letter = getOptionLetter(optIndex);
                         return (
-                          <motion.button
-                            whileHover={{ scale: 1.01, translateY: -2 }}
-                            whileTap={{ scale: 0.98 }}
-                            key={opt.id}
-                            onClick={() => handleSelectOption(currentQ.id, opt.id, currentQ.questionType === 'multiple')}
-                            className={`relative w-full text-left p-4 md:p-6 rounded-[1.5rem] border-2 transition-all overflow-hidden group flex items-start gap-4 ${
-                              isSelected 
-                                ? 'bg-indigo-500/[0.08] border-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.15)]' 
-                                : 'bg-white/[0.02] border-white/[0.05] hover:border-white/20 hover:bg-white/[0.04]'
-                            }`}
-                          >
-                            <div className={`mt-0.5 w-8 h-8 flex items-center justify-center shrink-0 rounded-xl font-bold text-base transition-colors ${
-                                isSelected ? 'bg-indigo-500 text-white shadow-md' : 'bg-white/10 text-zinc-500 group-hover:bg-white/20 group-hover:text-white'
-                            }`}>
-                                {letter}
-                            </div>
-
-                            <div className={`text-[15px] md:text-[16px] font-medium leading-relaxed transition-colors flex-1 overflow-hidden ${
-                                isSelected ? 'text-white' : 'text-zinc-400 group-hover:text-white'
-                            }`}>
-                                <ReactMarkdown
-                                   components={{
-                                      pre: ({node, ...props}) => <pre className="bg-black/50 border border-white/5 p-4 rounded-xl overflow-x-auto my-3 text-[13px] font-mono text-zinc-300 shadow-inner" {...props} />,
-                                      code: ({node, inline, ...props}: any) => inline 
-                                          ? <code className="bg-white/10 text-sky-300 px-1 py-0.5 rounded font-mono text-[0.9em]" {...props} /> 
-                                          : <code {...props} />,
-                                      p: ({node, ...props}) => <p className="mb-0 inline-block w-full" {...props} />
-                                   }}
-                                >
+                          <motion.button whileHover={{ scale: 1.01, translateY: -2 }} whileTap={{ scale: 0.98 }} key={opt.id} onClick={() => handleSelectOption(currentQ.id, opt.id, currentQ.questionType === 'multiple')} className={`relative w-full text-left p-4 md:p-6 rounded-[1.5rem] border-2 transition-all overflow-hidden group flex items-start gap-4 ${isSelected ? 'bg-indigo-500/[0.08] border-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.15)]' : 'bg-white/[0.02] border-white/[0.05] hover:border-white/20 hover:bg-white/[0.04]'}`}>
+                            <div className={`mt-0.5 w-8 h-8 flex items-center justify-center shrink-0 rounded-xl font-bold text-base transition-colors ${isSelected ? 'bg-indigo-500 text-white shadow-md' : 'bg-white/10 text-zinc-500 group-hover:bg-white/20 group-hover:text-white'}`}>{letter}</div>
+                            <div className={`text-[15px] md:text-[16px] font-medium leading-relaxed transition-colors flex-1 overflow-hidden ${isSelected ? 'text-white' : 'text-zinc-400 group-hover:text-white'}`}>
+                                <ReactMarkdown components={{ pre: ({node, ...props}) => <pre className="bg-black/50 border border-white/5 p-4 rounded-xl overflow-x-auto my-3 text-[13px] font-mono text-zinc-300 shadow-inner" {...props} />, code: ({node, inline, ...props}: any) => inline ? <code className="bg-white/10 text-sky-300 px-1 py-0.5 rounded font-mono text-[0.9em]" {...props} /> : <code {...props} />, p: ({node, ...props}) => <p className="mb-0 inline-block w-full" {...props} /> }}>
                                    {opt.text.replace(/\\n/g, '\n')}
                                 </ReactMarkdown>
                             </div>
-                            
-                            <div className={`mt-1.5 w-5 h-5 flex items-center justify-center shrink-0 transition-all ${currentQ.questionType === 'multiple' ? 'rounded-md border-2' : 'rounded-full border-2'} ${
-                                isSelected ? 'border-indigo-500 bg-indigo-500 opacity-100 scale-100 shadow-md' : 'border-zinc-700 bg-transparent opacity-0 scale-50 group-hover:opacity-50'
-                            }`}>
+                            <div className={`mt-1.5 w-5 h-5 flex items-center justify-center shrink-0 transition-all ${currentQ.questionType === 'multiple' ? 'rounded-md border-2' : 'rounded-full border-2'} ${isSelected ? 'border-indigo-500 bg-indigo-500 opacity-100 scale-100 shadow-md' : 'border-zinc-700 bg-transparent opacity-0 scale-50 group-hover:opacity-50'}`}>
                                 {currentQ.questionType === 'multiple' && <Check size={12} className="text-white stroke-[3]" />}
                                 {currentQ.questionType !== 'multiple' && <div className="w-2 h-2 bg-white rounded-full"></div>}
                             </div>
@@ -719,25 +558,17 @@ export default function QuizArena() {
 
       <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[800px] px-4 z-50">
          <div className="bg-[#121212]/90 backdrop-blur-3xl border border-white/[0.1] rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.6)] p-3 flex items-center justify-between">
-            <button onClick={handlePrev} disabled={currentIndex === 0} className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold tracking-wide transition-all text-zinc-400 hover:text-white hover:bg-white/5 disabled:opacity-0">
-                <ChevronLeft size={20} /> <span className="hidden sm:inline">Prev</span>
-            </button>
-            
+            <button onClick={handlePrev} disabled={currentIndex === 0} className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold tracking-wide transition-all text-zinc-400 hover:text-white hover:bg-white/5 disabled:opacity-0"><ChevronLeft size={20} /> <span className="hidden sm:inline">Prev</span></button>
             <div className="flex gap-2.5 px-4 overflow-x-auto no-scrollbar items-center">
                {quizData.questions.map((q, i) => {
                  const isAns = answers[q.id] && answers[q.id].length > 0 && answers[q.id][0] !== "";
                  return <button key={q.id} onClick={() => { setDirection(i > currentIndex ? 1 : -1); setCurrentIndex(i); }} className={`w-3 h-3 rounded-full transition-all shrink-0 ${i === currentIndex ? 'bg-white scale-[1.3] shadow-[0_0_10px_rgba(255,255,255,0.8)]' : isAns ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)] hover:bg-indigo-400' : 'bg-zinc-800 hover:bg-zinc-600'}`} />
                })}
             </div>
-            
             {currentIndex === quizData.questions.length - 1 ? (
-               <button onClick={requestSubmit} disabled={isSubmittingToDB} className="flex items-center gap-2 px-8 py-3.5 bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-[15px] tracking-wide rounded-xl transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)] disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]">
-                 <span className="hidden sm:inline">Finalize</span> <Send size={18} />
-               </button>
+               <button onClick={requestSubmit} disabled={isSubmittingToDB} className="flex items-center gap-2 px-8 py-3.5 bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-[15px] tracking-wide rounded-xl transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)] disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"><span className="hidden sm:inline">Finalize</span> <Send size={18} /></button>
             ) : (
-               <button onClick={handleNext} className="flex items-center gap-2 px-8 py-3.5 bg-white text-zinc-950 font-bold text-[15px] tracking-wide rounded-xl hover:bg-zinc-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:scale-[1.02] active:scale-[0.98]">
-                 <span className="hidden sm:inline">Next</span> <ChevronRight size={20} />
-               </button>
+               <button onClick={handleNext} className="flex items-center gap-2 px-8 py-3.5 bg-white text-zinc-950 font-bold text-[15px] tracking-wide rounded-xl hover:bg-zinc-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:scale-[1.02] active:scale-[0.98]"><span className="hidden sm:inline">Next</span> <ChevronRight size={20} /></button>
             )}
          </div>
       </footer>
