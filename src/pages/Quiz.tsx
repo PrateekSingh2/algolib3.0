@@ -4,6 +4,7 @@ import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, loginWithGoogle } from "../lib/firebase"; 
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { 
   AlertTriangle, Clock, ShieldAlert, ChevronRight, 
   ChevronLeft, Send, CheckCircle2, AlertOctagon, Maximize, Trophy, Target, 
@@ -17,6 +18,16 @@ interface QuizOption { id: string; text: string; }
 interface QuizQuestion { id: string; text: string; questionType: QuestionType; options: QuizOption[]; correctOptions: string[]; }
 interface QuizData { id: string; title: string; startTime: string; endTime: string; durationSeconds: number; maxWarnings: number; questions: QuizQuestion[]; personalEndTime?: string; }
 interface LeaderboardEntry { display_name: string; score: number; time_taken_seconds: number; }
+
+// UTILITY: Unbiased array randomizer (Fisher-Yates Shuffle)
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
 
 export default function QuizArena() {
   const { id: quizId } = useParams(); 
@@ -65,6 +76,7 @@ export default function QuizArena() {
         try {
             const token = await user.getIdToken();
             
+            // Check for existing submission
             const subRes = await fetch(`/.netlify/functions/get-quiz-submissions?quiz_id=${quizId}`, { headers: { 'Authorization': `Bearer ${token}` } });
             if (subRes.ok) {
                 const subs = await subRes.json();
@@ -82,22 +94,34 @@ export default function QuizArena() {
             
             const { quiz, questions } = await quizRes.json();
 
-            const formattedQuestions = (questions || []).map((q: any) => {
+            // Format and RANDOMIZE options
+            const formattedQuestions: QuizQuestion[] = (questions || []).map((q: any) => {
                 let inferredType: QuestionType = q.is_multiple_choice ? 'multiple' : 'single';
                 if (!q.options || q.options.length === 0) inferredType = 'numerical';
                 else if (q.options.length === 2 && q.options[0].text === 'True') inferredType = 'true_false';
 
+                const randomizedOptions: QuizOption[] = q.options ? shuffleArray<QuizOption>(q.options) : [];
+
                 return {
-                    id: q.id, text: q.text, questionType: inferredType,
-                    options: q.options || [], correctOptions: q.correct_options || []
+                    id: q.id, 
+                    text: q.text, 
+                    questionType: inferredType,
+                    options: randomizedOptions, 
+                    correctOptions: q.correct_options || []
                 };
             });
 
+            // RANDOMIZE questions overall
+            const randomizedQuestions = shuffleArray<QuizQuestion>(formattedQuestions);
+
             setQuizData({
-                id: quiz.id, title: quiz.title, 
-                startTime: quiz.start_time, endTime: quiz.end_time, 
+                id: quiz.id, 
+                title: quiz.title, 
+                startTime: quiz.start_time, 
+                endTime: quiz.end_time, 
                 durationSeconds: quiz.duration_seconds || 3600, 
-                maxWarnings: quiz.max_warnings || 3, questions: formattedQuestions
+                maxWarnings: quiz.max_warnings || 3, 
+                questions: randomizedQuestions
             });
 
             setEligibility('allowed');
@@ -107,6 +131,7 @@ export default function QuizArena() {
     if (user) { setEligibility('loading'); initializeArena(); }
   }, [user, quizId]); 
 
+  // Polling for Leaderboard Data
   useEffect(() => {
     let interval: NodeJS.Timeout;
     const fetchLeaderboard = async () => {
@@ -129,6 +154,7 @@ export default function QuizArena() {
     return () => { if (interval) clearInterval(interval); };
   }, [quizId, eligibility, isSubmitted, user]);
 
+  // Global Timer Logic
   useEffect(() => {
     if (!quizData || isSubmitted) return;
 
@@ -170,6 +196,7 @@ export default function QuizArena() {
     return () => clearInterval(interval);
   }, [quizData, hasStarted, isSubmitted]);
 
+  // Proctoring Engine
   useEffect(() => {
     if (!hasStarted || isSubmitted || !quizData || showSubmitConfirm) return; 
 
@@ -180,7 +207,7 @@ export default function QuizArena() {
       setTimeout(() => { strikeCooldown.current = false; }, 2000); 
 
       warningsRef.current += 1;
-      setWarnings(warningsRef.current); // Triggers re-render for header UI
+      setWarnings(warningsRef.current); 
 
       if (warningsRef.current >= quizData.maxWarnings) {
         isIntentionalExit.current = true; 
@@ -280,7 +307,11 @@ export default function QuizArena() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const formatScheduleTime = (dateStr: string) => { return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); };
+  // Fixed Date and Time Formatting
+  const formatScheduleDateTime = (dateStr: string) => { 
+    return new Date(dateStr).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); 
+  };
+  
   const getOptionLetter = (index: number) => String.fromCharCode(65 + index); 
 
   const slideVariants: Variants = {
@@ -361,21 +392,29 @@ export default function QuizArena() {
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[400px] md:h-[500px] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none"></div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl w-full bg-[#0a0a0a]/80 backdrop-blur-3xl border border-white/[0.08] p-8 md:p-12 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl relative z-10 mt-20">
-           <h1 className="text-2xl md:text-4xl lg:text-5xl font-extrabold mb-4 text-center tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-400">{quizData.title}</h1>
-           <p className="text-zinc-400 text-xs md:text-sm text-center mb-8 md:mb-10 leading-relaxed">Review the assessment parameters. Ensure a stable connection before proceeding into the secure environment.</p>
+           <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-4 text-center tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-400">{quizData.title}</h1>
+           <p className="text-zinc-400 text-xs md:text-sm text-center mb-8 md:mb-10 leading-relaxed max-w-md mx-auto">Review the assessment parameters. Ensure a stable connection before proceeding into the secure environment.</p>
            
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-               <div className="bg-white/[0.02] border border-white/[0.04] rounded-2xl p-4 md:p-5 flex items-center gap-4 shadow-inner">
-                 <div className="p-2.5 md:p-3 bg-zinc-800/50 rounded-xl text-zinc-300"><Calendar size={18} /></div>
-                 <div><p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-0.5">Window Schedule</p><p className="text-xs md:text-sm font-bold text-white">{formatScheduleTime(quizData.startTime)} - {formatScheduleTime(quizData.endTime)}</p></div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+               <div className="bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08] rounded-2xl p-5 md:p-6 flex items-start gap-4 shadow-lg hover:border-white/[0.15] transition-colors">
+                 <div className="p-3 bg-zinc-800/80 rounded-xl text-zinc-300 shadow-inner"><Calendar size={20} /></div>
+                 <div>
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Window Schedule</p>
+                    <p className="text-xs md:text-sm font-bold text-white mb-0.5">{formatScheduleDateTime(quizData.startTime)}</p>
+                    <p className="text-xs md:text-sm font-bold text-zinc-400">to {formatScheduleDateTime(quizData.endTime)}</p>
+                 </div>
                </div>
-               <div className="bg-white/[0.02] border border-white/[0.04] rounded-2xl p-4 md:p-5 flex items-center gap-4 shadow-inner">
-                 <div className="p-2.5 md:p-3 bg-zinc-800/50 rounded-xl text-zinc-300"><Clock size={18} /></div>
-                 <div><p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-0.5">Dedicated Time</p><p className="text-xs md:text-sm font-bold text-white">{quizData.durationSeconds / 60} Minutes Exact</p></div>
+               
+               <div className="bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.08] rounded-2xl p-5 md:p-6 flex items-center gap-4 shadow-lg hover:border-white/[0.15] transition-colors">
+                 <div className="p-3 bg-zinc-800/80 rounded-xl text-zinc-300 shadow-inner"><Clock size={20} /></div>
+                 <div>
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1">Dedicated Time</p>
+                    <p className="text-sm md:text-base font-bold text-white">{quizData.durationSeconds / 60} Minutes Exact</p>
+                 </div>
                </div>
            </div>
            
-           <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5 text-sm bg-rose-500/5 p-5 md:p-6 rounded-2xl border border-rose-500/20 mb-8 md:mb-10 mt-4 shadow-inner">
+           <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5 text-sm bg-gradient-to-r from-rose-500/10 to-transparent p-5 md:p-6 rounded-2xl border border-rose-500/20 mb-8 md:mb-10 mt-4 shadow-inner">
               <ShieldAlert className="shrink-0 mt-0.5 text-rose-500" size={24} />
               <div className="space-y-2 text-zinc-300">
                   <p className="font-bold text-rose-500 tracking-wide text-sm md:text-base">Strict Proctoring Active</p>
@@ -389,7 +428,9 @@ export default function QuizArena() {
            ) : quizStatus === 'ended' ? (
                <button disabled className="w-full py-4 bg-zinc-900 border border-zinc-800 text-zinc-500 font-bold rounded-xl flex justify-center items-center gap-2 cursor-not-allowed md:text-lg text-sm">Assessment Window Closed</button>
            ) : (
-               <button onClick={requestSecureEnvironment} className="w-full py-4 bg-white text-zinc-950 font-bold rounded-xl hover:bg-zinc-200 transition-all shadow-[0_0_40px_rgba(255,255,255,0.2)] flex justify-center items-center gap-2 md:text-lg text-sm hover:scale-[1.02] active:scale-[0.98]"><Maximize size={18} /> Start Dedicated Session</button>
+               <button onClick={requestSecureEnvironment} className="w-full py-4 bg-white text-zinc-950 font-bold rounded-xl hover:bg-zinc-200 transition-all shadow-[0_0_50px_rgba(255,255,255,0.15)] hover:shadow-[0_0_60px_rgba(255,255,255,0.25)] flex justify-center items-center gap-2 md:text-lg text-sm hover:scale-[1.02] active:scale-[0.98]">
+                  <Maximize size={18} /> Start Dedicated Session
+               </button>
            )}
         </motion.div>
       </div>
@@ -470,12 +511,11 @@ export default function QuizArena() {
          <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
             <span className="font-bold text-sm md:text-[15px] text-zinc-100 tracking-tight truncate max-w-[150px] md:max-w-xs">{quizData.title}</span>
             <div className="flex items-center gap-3 md:gap-4">
-                {/* DYNAMIC STRIKE COUNTER IN HEADER */}
                 <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold border transition-colors ${warnings > 0 ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 'bg-white/5 text-zinc-400 border-white/10'}`}>
                     <AlertTriangle size={14} /> <span className="hidden md:inline">Strikes:</span> {warnings} / {quizData.maxWarnings}
                 </div>
                 
-                <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-zinc-500 pr-4 border-r border-white/10 uppercase tracking-widest"><Calendar size={14} /> Personal End: {formatScheduleTime(quizData.personalEndTime!)}</div>
+                <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-zinc-500 pr-4 border-r border-white/10 uppercase tracking-widest"><Calendar size={14} /> End: {formatScheduleDateTime(quizData.personalEndTime!).split(',')[1]}</div>
                 <div className={`flex items-center gap-2 text-sm md:text-base font-bold transition-colors ${timeRemaining < 60 ? 'text-rose-400' : 'text-zinc-200'}`}>
                     <Clock size={16} className={timeRemaining < 60 ? 'animate-pulse' : ''} />
                     <span className="font-mono tracking-wider">{formatCountdown(timeRemaining)}</span>
@@ -494,7 +534,6 @@ export default function QuizArena() {
                        Item {currentIndex + 1} of {quizData.questions.length}
                    </span>
                    
-                   {/* PREMIUM DYNAMIC QUESTION TAGS */}
                    <span className={`flex items-center gap-1.5 text-[9px] md:text-[11px] font-bold uppercase tracking-[0.1em] px-3 md:px-4 py-1.5 rounded-full shadow-inner border ${
                        currentQ.questionType === 'multiple' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 
                        currentQ.questionType === 'numerical' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 
@@ -515,11 +554,36 @@ export default function QuizArena() {
                <AnimatePresence mode="wait">
                  <motion.div key={`qtext-${currentIndex}`} custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" className="text-base md:text-xl lg:text-2xl font-semibold text-white mb-6 md:mb-8 max-w-4xl w-full text-left leading-relaxed">
                     <ReactMarkdown
+                       remarkPlugins={[remarkGfm]}
                        components={{
-                          pre: ({node, ...props}) => <pre className="bg-[#0a0a0a] border border-white/10 p-4 md:p-5 rounded-2xl overflow-x-auto my-4 md:my-6 text-xs md:text-[14px] leading-snug font-mono text-zinc-300 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]" {...props} />,
-                          code: ({node, inline, ...props}: any) => inline ? <code className="bg-white/10 text-sky-300 px-1.5 py-0.5 rounded-md font-mono text-[0.9em]" {...props} /> : <code {...props} />,
-                          p: ({node, ...props}) => <p className="mb-3 md:mb-4 last:mb-0" {...props} />, strong: ({node, ...props}) => <strong className="font-extrabold text-white" {...props} />,
-                          ul: ({node, ...props}) => <ul className="list-disc pl-5 md:pl-6 my-3 md:my-4 space-y-2 text-zinc-300" {...props} />, ol: ({node, ...props}) => <ol className="list-decimal pl-5 md:pl-6 my-3 md:my-4 space-y-2 text-zinc-300" {...props} />
+                          code: ({ node, inline, className, children, ...props }: any) => {
+                            const match = /language-(\w+)/.exec(className || '');
+                            return !inline ? (
+                              <div className="my-4 md:my-6 rounded-2xl overflow-hidden bg-[#0a0a0a] border border-white/10 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
+                                {match && (
+                                  <div className="bg-white/5 px-4 py-1.5 text-[10px] font-mono text-zinc-500 border-b border-white/5 uppercase tracking-widest">
+                                    {match[1]}
+                                  </div>
+                                )}
+                                <pre className="p-4 md:p-5 overflow-x-auto">
+                                  <code className={`text-xs md:text-[14px] leading-snug font-mono text-zinc-300 ${className || ''}`} {...props}>
+                                    {children}
+                                  </code>
+                                </pre>
+                              </div>
+                            ) : (
+                              <code className="bg-white/10 text-sky-300 px-1.5 py-0.5 rounded-md font-mono text-[0.9em]" {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                          p: ({node, ...props}: any) => <p className="mb-3 md:mb-4 last:mb-0" {...props} />, 
+                          strong: ({node, ...props}: any) => <strong className="font-extrabold text-white" {...props} />,
+                          ul: ({node, ...props}: any) => <ul className="list-disc pl-5 md:pl-6 my-3 md:my-4 space-y-2 text-zinc-300" {...props} />, 
+                          ol: ({node, ...props}: any) => <ol className="list-decimal pl-5 md:pl-6 my-3 md:my-4 space-y-2 text-zinc-300" {...props} />,
+                          table: ({node, ...props}: any) => <div className="overflow-x-auto my-4 border border-white/10 rounded-xl"><table className="w-full text-left border-collapse" {...props} /></div>,
+                          th: ({node, ...props}: any) => <th className="p-3 bg-white/5 border-b border-white/10 font-bold text-white" {...props} />,
+                          td: ({node, ...props}: any) => <td className="p-3 border-b border-white/5 text-zinc-300" {...props} />
                        }}
                     >
                        {currentQ.text.replace(/\\n/g, '\n')}
@@ -543,7 +607,25 @@ export default function QuizArena() {
                           <motion.button whileHover={{ scale: 1.01, translateY: -2 }} whileTap={{ scale: 0.98 }} key={opt.id} onClick={() => handleSelectOption(currentQ.id, opt.id, currentQ.questionType === 'multiple')} className={`relative w-full text-left p-4 md:p-6 rounded-[1.25rem] md:rounded-[1.5rem] border-2 transition-all overflow-hidden group flex items-start gap-3 md:gap-4 ${isSelected ? 'bg-indigo-500/[0.08] border-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.15)]' : 'bg-white/[0.02] border-white/[0.05] hover:border-white/20 hover:bg-white/[0.04]'}`}>
                             <div className={`mt-0.5 w-7 h-7 md:w-8 md:h-8 flex items-center justify-center shrink-0 rounded-[0.6rem] md:rounded-xl font-bold text-sm md:text-base transition-colors ${isSelected ? 'bg-indigo-500 text-white shadow-md' : 'bg-white/10 text-zinc-500 group-hover:bg-white/20 group-hover:text-white'}`}>{letter}</div>
                             <div className={`text-[14px] md:text-[16px] font-medium leading-relaxed transition-colors flex-1 overflow-hidden ${isSelected ? 'text-white' : 'text-zinc-400 group-hover:text-white'}`}>
-                                <ReactMarkdown components={{ pre: ({node, ...props}) => <pre className="bg-black/50 border border-white/5 p-3 md:p-4 rounded-xl overflow-x-auto my-2 md:my-3 text-[11px] md:text-[13px] font-mono text-zinc-300 shadow-inner" {...props} />, code: ({node, inline, ...props}: any) => inline ? <code className="bg-white/10 text-sky-300 px-1 py-0.5 rounded font-mono text-[0.8em]" {...props} /> : <code {...props} />, p: ({node, ...props}) => <p className="mb-0 inline-block w-full" {...props} /> }}>
+                                <ReactMarkdown 
+                                   remarkPlugins={[remarkGfm]}
+                                   components={{ 
+                                     code: ({ node, inline, className, children, ...props }: any) => {
+                                       return !inline ? (
+                                          <pre className="bg-black/50 border border-white/5 p-3 md:p-4 rounded-xl overflow-x-auto my-2 md:my-3 shadow-inner">
+                                            <code className="text-[11px] md:text-[13px] font-mono text-zinc-300" {...props}>
+                                              {children}
+                                            </code>
+                                          </pre>
+                                       ) : (
+                                          <code className="bg-white/10 text-sky-300 px-1 py-0.5 rounded font-mono text-[0.8em]" {...props}>
+                                            {children}
+                                          </code>
+                                       );
+                                     }, 
+                                     p: ({node, ...props}: any) => <p className="mb-0 inline-block w-full" {...props} /> 
+                                   }}
+                                >
                                    {opt.text.replace(/\\n/g, '\n')}
                                 </ReactMarkdown>
                             </div>
