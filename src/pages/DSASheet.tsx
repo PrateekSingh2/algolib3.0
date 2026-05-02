@@ -1,35 +1,29 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useDeferredValue, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
 import {
   Search, Star, CheckCircle2, Circle, Filter,
-  ExternalLink, BookOpen, Loader2, RefreshCw, X,
+  ExternalLink, Loader2, RefreshCw, X,
   ChevronDown, ClipboardList, ChevronRight
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import AppFooter from "@/components/AppFooter";
 import { getDSAProgress, toggleDSAStatus, DSAProblem } from "@/lib/dsaApi";
 
-// ─── Constants & Types ────────────────────────────────────────────────────────
+// ─── Constants & Configurations ──────────────────────────────────────────────
 
 const TOPICS = ["All", "Arrays", "Strings", "Linked List", "Trees", "Graphs", "Dynamic Programming", "Binary Search", "Heap", "Backtracking"];
 const DIFFICULTIES = ["All", "Easy", "Medium", "Hard"];
-const STATUS_FILTERS = ["All", "Completed", "Pending", "Needs Revision"];
+const STATUSES = ["All", "Pending", "Completed", "Revision"];
 
-const DIFF_STYLES: Record<string, string> = {
-  Easy:   "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
-  Medium: "text-amber-400 bg-amber-400/10 border-amber-400/20",
-  Hard:   "text-red-400 bg-red-400/10 border-red-400/20",
+const DIFF_STYLES: Record<string, { text: string; bg: string; border: string }> = {
+  Easy:   { text: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/20" },
+  Medium: { text: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/20" },
+  Hard:   { text: "text-rose-400", bg: "bg-rose-400/10", border: "border-rose-400/20" },
 };
 
-const TOPIC_COLORS: Record<string, string> = {
-  Arrays: "text-blue-400", Strings: "text-purple-400", "Linked List": "text-cyan-400",
-  Trees: "text-emerald-400", Graphs: "text-orange-400", "Dynamic Programming": "text-pink-400",
-  "Binary Search": "text-yellow-400", Heap: "text-red-400", Backtracking: "text-indigo-400",
-};
-
-// ─── Utility: Fuzzy Search Logic ──────────────────────────────────────────────
+// ─── Utility: Fuzzy Search Engine ─────────────────────────────────────────────
 
 const fuzzyMatch = (pattern: string, str: string) => {
   if (!pattern) return true;
@@ -45,31 +39,50 @@ const fuzzyMatch = (pattern: string, str: string) => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const DSASheet = () => {
-  const [problems, setProblems]       = useState<DSAProblem[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [refreshing, setRefreshing]   = useState(false);
-  const [search, setSearch]           = useState("");
-  const [topic, setTopic]             = useState("All");
-  const [difficulty, setDifficulty]   = useState("All");
-  const [statusFilter, setStatus]     = useState("All");
-  const [topicOpen, setTopicOpen]     = useState(false);
-  const [toggling, setToggling]       = useState<Set<string>>(new Set());
-  
-  // Track expanded topics
+export default function DSASheet() {
+  const [problems, setProblems] = useState<DSAProblem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [toggling, setToggling] = useState<Set<string>>(new Set());
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
+  const [isMac, setIsMac] = useState(false);
 
+  // Filter States & Refs
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
+  const [topic, setTopic] = useState("All");
+  const [difficulty, setDifficulty] = useState("All");
+  const [status, setStatus] = useState("All");
+  const [topicDropdownOpen, setTopicDropdownOpen] = useState(false);
+
+  // ─── Global Keyboard Shortcuts ───
+  useEffect(() => {
+    // Detect OS for accurate shortcut display
+    setIsMac(typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl + / OR Cmd + /
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // ─── Data Fetching ───
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true); else setRefreshing(true);
     try {
       const data = await getDSAProgress();
       setProblems(data);
-      // Auto-expand first topic if none are expanded
-      if (!silent) {
-        setExpandedTopics(new Set([TOPICS[1]])); // TOPICS[1] is 'Arrays'
+      if (!silent && data.length > 0) {
+        setExpandedTopics(new Set([TOPICS[1]])); // Auto-expand first real topic
       }
-    } catch (e: unknown) {
-      toast.error("Failed to load problems", { description: (e as Error).message });
+    } catch (error) {
+      toast.error("Failed to sync progress. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -78,150 +91,194 @@ const DSASheet = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Optimistic toggle logic
-  const handleToggle = async (id: string, field: "is_completed" | "needs_revision", cur: boolean) => {
+  // ─── Optimistic Updates ───
+  const handleToggle = async (id: string, field: "is_completed" | "needs_revision", currentValue: boolean) => {
     const key = `${id}-${field}`;
     if (toggling.has(key)) return;
-    
-    setProblems(prev => prev.map(p => p.id === id ? { ...p, [field]: !cur } : p));
+
+    setProblems(prev => prev.map(p => p.id === id ? { ...p, [field]: !currentValue } : p));
     setToggling(prev => new Set(prev).add(key));
+
     try {
-      await toggleDSAStatus(id, field, !cur);
-    } catch (e: unknown) {
-      setProblems(prev => prev.map(p => p.id === id ? { ...p, [field]: cur } : p));
-      toast.error("Update failed", { description: (e as Error).message });
+      await toggleDSAStatus(id, field, !currentValue);
+    } catch {
+      setProblems(prev => prev.map(p => p.id === id ? { ...p, [field]: currentValue } : p));
+      toast.error("Update failed. Reverting changes.");
     } finally {
-      setToggling(prev => { const n = new Set(prev); n.delete(key); return n; });
+      setToggling(prev => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
     }
   };
 
-  // Advanced Filtering
-  const filtered = useMemo(() => problems.filter(p => {
-    if (search && !fuzzyMatch(search, p.title) && !fuzzyMatch(search, p.topic)) return false;
-    if (topic !== "All" && p.topic !== topic) return false;
-    if (difficulty !== "All" && p.difficulty !== difficulty) return false;
-    if (statusFilter === "Completed" && !p.is_completed) return false;
-    if (statusFilter === "Pending" && p.is_completed) return false;
-    if (statusFilter === "Needs Revision" && !p.needs_revision) return false;
-    return true;
-  }), [problems, search, topic, difficulty, statusFilter]);
+  // ─── Filter Engine ───
+  const filteredProblems = useMemo(() => {
+    return problems.filter(p => {
+      if (status === "Completed" && !p.is_completed) return false;
+      if (status === "Pending" && p.is_completed) return false;
+      if (status === "Revision" && !p.needs_revision) return false;
+      if (difficulty !== "All" && p.difficulty !== difficulty) return false;
+      if (topic !== "All" && p.topic !== topic) return false;
+      if (deferredSearch && !fuzzyMatch(deferredSearch, p.title) && !fuzzyMatch(deferredSearch, p.topic)) return false;
+      return true;
+    });
+  }, [problems, status, difficulty, topic, deferredSearch]);
 
-  // Auto-expand topics when searching
   useEffect(() => {
-    if (search) {
-      const matchingTopics = new Set(filtered.map(p => p.topic));
+    if (deferredSearch) {
+      const matchingTopics = new Set(filteredProblems.map(p => p.topic));
       setExpandedTopics(matchingTopics);
     }
-  }, [search, filtered]);
+  }, [deferredSearch, filteredProblems]);
 
-  // Grouping by Topic
+  // ─── Grouping Engine ───
   const groupedProblems = useMemo(() => {
     const groups: Record<string, DSAProblem[]> = {};
     TOPICS.filter(t => t !== "All").forEach(t => groups[t] = []);
-    filtered.forEach(p => {
+    filteredProblems.forEach(p => {
       if (!groups[p.topic]) groups[p.topic] = [];
       groups[p.topic].push(p);
     });
     return Object.entries(groups).filter(([_, probs]) => probs.length > 0);
-  }, [filtered]);
+  }, [filteredProblems]);
 
-  const toggleTopic = (t: string) => {
-    setExpandedTopics(prev => {
-      const next = new Set(prev);
-      if (next.has(t)) next.delete(t);
-      else next.add(t);
-      return next;
-    });
-  };
-
-  const total     = problems.length;
+  // ─── Utility Methods ───
+  const total = problems.length;
   const completed = problems.filter(p => p.is_completed).length;
-  const revision  = problems.filter(p => p.needs_revision).length;
-  const pct       = total ? Math.round((completed / total) * 100) : 0;
-
+  const pct = total ? Math.round((completed / total) * 100) : 0;
+  
   const clearFilters = () => { setSearch(""); setTopic("All"); setDifficulty("All"); setStatus("All"); };
-  const hasFilters = search || topic !== "All" || difficulty !== "All" || statusFilter !== "All";
+  const hasActiveFilters = search || topic !== "All" || difficulty !== "All" || status !== "All";
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex flex-col selection:bg-cyan-500/30">
-      <Helmet>
-        <title>DSA Practice Sheet — AlgoLib</title>
-      </Helmet>
+    <div className="min-h-screen bg-[#030303] text-zinc-300 font-sans selection:bg-cyan-500/30">
+      <Helmet><title>DSA Master Sheet — AlgoLib</title></Helmet>
+
+      {/* ─── BULLETPROOF LOCAL STYLE BLOCK ─── */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          #dsa-filter-track::-webkit-scrollbar {
+            display: none !important;
+            height: 0px !important;
+            width: 0px !important;
+            background: transparent !important;
+            -webkit-appearance: none !important;
+          }
+          #dsa-filter-track {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+          }
+        `
+      }} />
 
       <Navbar />
 
-      {/* Background Ambient Glow */}
-      <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-500/5 blur-[150px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-emerald-500/5 blur-[150px]" />
+      {/* Deep Glassmorphism Ambient Mesh Gradient */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        {/* Top Left Cyan Glow */}
+        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyan-900/20 blur-[150px]" />
+        {/* Bottom Right Purple Glow */}
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-indigo-900/10 blur-[150px]" />
       </div>
 
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 pt-28 md:pt-32 pb-20">
-
-        {/* ── Page Header ─────────────────────────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-              <ClipboardList size={14} />
-            </div>
-            <span className="text-[11px] font-mono text-cyan-500/80 tracking-widest uppercase">AlgoLib Ecosystem</span>
+      <main className="relative z-10 w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-32 pb-24">
+        
+        {/* ─── Header ─── */}
+        <header className="mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 backdrop-blur-md shadow-[0_0_15px_rgba(6,182,212,0.15)] mb-4">
+            <ClipboardList size={14} className="text-cyan-400" />
+            <span className="text-[11px] font-mono text-cyan-400/80 uppercase tracking-widest">Master Curriculum</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2 drop-shadow-sm">DSA Practice Sheet</h1>
-          <p className="text-zinc-400 text-sm max-w-xl leading-relaxed">
-            Master algorithms systematically. Track your completion, flag tough problems, and build your technical foundation.
+          <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-3 drop-shadow-md">DSA Practice Sheet</h1>
+          <p className="text-zinc-400 max-w-2xl text-sm sm:text-base leading-relaxed">
+            A highly structured, non-linear progression path to master Data Structures & Algorithms. Track your execution, queue revisions, and build algorithmic intuition.
           </p>
-        </motion.div>
+        </header>
 
-        {/* ── Master Progress Stats ───────────────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
-          className="mb-8 p-5 rounded-2xl bg-white/[0.02] border border-white/[0.05] backdrop-blur-2xl shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 mb-5">
-            <StatPill label="Total Bank" value={total} color="text-zinc-300" />
-            <StatPill label="Solved" value={completed} color="text-emerald-400" glow="drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]" />
-            <StatPill label="Revision Queue" value={revision} color="text-amber-400" glow="drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]" />
-            <div className="sm:ml-auto flex items-center gap-3">
-              <div className="text-right">
-                <span className="block text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">{pct}%</span>
-                <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">Completion</span>
+        {/* ─── Global Progress Card (GLASSMORPHISM FIX) ─── */}
+        <section className="mb-8 relative overflow-hidden rounded-2xl bg-white/[0.02] border border-white/[0.08] p-6 sm:p-8 backdrop-blur-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
+          {/* Subtle inner top highlight */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+            <div className="flex flex-wrap items-center gap-8 md:gap-12">
+              <StatBlock label="Total Problems" value={total} />
+              <div className="hidden sm:block w-px h-12 bg-white/[0.08]" />
+              <StatBlock label="Completed" value={completed} color="text-emerald-400" glow="drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]" />
+              <div className="hidden sm:block w-px h-12 bg-white/[0.08]" />
+              <StatBlock label="Revision Queue" value={problems.filter(p => p.needs_revision).length} color="text-amber-400" glow="drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]" />
+            </div>
+
+            {/* FIXED ALIGNMENT: Matrix & Refresh Button */}
+            <div className="flex flex-col w-full md:w-[35%] xl:w-[30%]">
+              <div className="flex justify-between items-end mb-3">
+                <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-widest">Completion Matrix</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400 leading-none">{pct}%</span>
+                  <button onClick={() => fetchData(true)} disabled={refreshing} className="p-1.5 rounded-lg bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.1] hover:border-white/[0.15] transition-all active:scale-95 focus:outline-none shadow-sm backdrop-blur-md">
+                    <RefreshCw size={14} className={`text-zinc-400 ${refreshing ? "animate-spin text-cyan-400" : "hover:text-white"}`} />
+                  </button>
+                </div>
               </div>
-              <button onClick={() => fetchData(true)} disabled={refreshing}
-                className="p-2 rounded-xl text-zinc-500 bg-white/[0.03] border border-white/[0.05] hover:text-cyan-400 hover:border-cyan-500/30 transition-all active:scale-95 shadow-sm">
-                <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-              </button>
+              <div className="h-2 w-full bg-black/60 rounded-full overflow-hidden border border-white/[0.05] shadow-inner relative">
+                <motion.div 
+                  initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1, ease: "circOut" }}
+                  className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full relative z-10 shadow-[0_0_12px_rgba(52,211,153,0.6)]" 
+                />
+              </div>
             </div>
           </div>
-          <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden inset-shadow-sm border border-white/[0.02]">
-            <motion.div className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.5)]"
-              initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1, ease: "easeOut" }} />
-          </div>
-        </motion.div>
+        </section>
 
-        {/* ── Filters Bar ─────────────────────────────────────────────────── */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="mb-8 flex flex-col sm:flex-row gap-3">
-          {/* Fuzzy Search */}
-          <div className="relative flex-1 group">
-            <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-cyan-400 transition-colors" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Fuzzy search problems (e.g. 'fio' for First Occurrence)..."
-              className="w-full pl-10 pr-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-xl text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 focus:bg-white/[0.04] transition-all shadow-inner" />
-            {search && <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-white/10"><X size={13} /></button>}
+        {/* ─── Advanced Filter Engine (GLASSMORPHISM & UI FIX) ─── */}
+        <section className="sticky top-24 z-20 mb-8 p-3 rounded-2xl bg-[#080808]/70 border border-white/[0.08] backdrop-blur-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] flex flex-col xl:flex-row gap-3">
+          
+          {/* Command Search */}
+          <div className="relative flex-1 group min-w-[200px]">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-cyan-400 transition-colors z-10" />
+            <input 
+              ref={searchInputRef}
+              value={search} onChange={e => setSearch(e.target.value)} 
+              placeholder="Fuzzy search (e.g., 'twosum', 'dp')..."
+              className="w-full pl-11 pr-14 py-3.5 bg-black/40 border border-white/[0.06] rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/40 transition-all shadow-inner focus:bg-white/[0.02]" 
+            />
+            {/* Keyboard Shortcut Indicator - Disappears when typing */}
+            {!search && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none opacity-60 group-focus-within:opacity-0 transition-opacity duration-200">
+                <kbd className="hidden sm:inline-flex items-center px-2 py-1 rounded bg-white/[0.08] border border-white/[0.1] text-[10px] font-medium text-zinc-400 font-sans tracking-widest shadow-sm">
+                  {isMac ? '⌘ /' : 'Ctrl /'}
+                </kbd>
+              </div>
+            )}
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors z-10">
+                <X size={14} />
+              </button>
+            )}
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar">
-            {/* Topic dropdown */}
-            <div className="relative flex-shrink-0">
-              <button onClick={() => setTopicOpen(p => !p)}
-                className="flex items-center gap-2 px-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-xl text-sm text-zinc-300 hover:bg-white/[0.06] transition-all min-w-[150px] justify-between">
-                <span className="flex items-center gap-2"><Filter size={14} className="text-cyan-500/70" />{topic}</span>
-                <ChevronDown size={14} className={`text-zinc-500 transition-transform ${topicOpen ? "rotate-180" : ""}`} />
+          <div 
+            id="dsa-filter-track"
+            className="flex items-center gap-3 overflow-x-auto overflow-y-hidden w-full xl:w-auto scroll-smooth"
+          >
+            {/* Custom Topic Dropdown */}
+            <div className="relative shrink-0 min-w-[160px] h-full">
+              <button 
+                onClick={() => setTopicDropdownOpen(!topicDropdownOpen)}
+                className="w-full h-full flex items-center justify-between px-4 py-3.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm font-medium hover:bg-white/[0.06] transition-colors backdrop-blur-md"
+              >
+                <span className="flex items-center gap-2"><Filter size={14} className="text-zinc-400" /> {topic === "All" ? "All Topics" : topic}</span>
+                <ChevronDown size={14} className={`text-zinc-500 transition-transform ${topicDropdownOpen ? "rotate-180" : ""}`} />
               </button>
               <AnimatePresence>
-                {topicOpen && (
-                  <motion.div initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                    className="absolute top-full right-0 sm:left-0 mt-2 w-56 bg-[#0a0a0a]/95 backdrop-blur-2xl border border-white/[0.08] rounded-xl p-2 shadow-2xl z-30">
+                {topicDropdownOpen && (
+                  <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }}
+                    className="absolute top-[calc(100%+8px)] right-0 mt-0 w-full sm:w-64 bg-[#0d0d0d]/95 backdrop-blur-3xl border border-white/[0.1] rounded-xl p-1.5 shadow-2xl z-50">
                     {TOPICS.map(t => (
-                      <button key={t} onClick={() => { setTopic(t); setTopicOpen(false); }}
-                        className={`w-full text-left px-3 py-2 text-[13px] rounded-lg transition-colors ${topic === t ? "bg-cyan-500/10 text-cyan-400" : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200"}`}>
+                      <button key={t} onClick={() => { setTopic(t); setTopicDropdownOpen(false); }}
+                        className={`w-full text-left px-4 py-2.5 text-sm rounded-lg transition-all ${topic === t ? "bg-cyan-500/15 text-cyan-400 shadow-sm" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"}`}>
                         {t}
                       </button>
                     ))}
@@ -230,100 +287,83 @@ const DSASheet = () => {
               </AnimatePresence>
             </div>
 
-            {/* Status Dropdown */}
-            <select value={statusFilter} onChange={e => setStatus(e.target.value)}
-              className="px-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-xl text-sm text-zinc-300 focus:outline-none focus:border-cyan-500/50 cursor-pointer appearance-none pr-8 relative bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2371717A%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px_10px] bg-[right_12px_center]">
-              {STATUS_FILTERS.map(s => <option key={s} value={s} className="bg-[#0a0a0a]">{s}</option>)}
-            </select>
+            {/* Unified Segmented Controls Track */}
+            <div className="flex items-center gap-2 shrink-0 bg-black/50 border border-white/[0.06] shadow-inner rounded-xl p-1.5 h-full">
+              <SegmentedControl options={STATUSES} selected={status} onChange={setStatus} />
+              <div className="w-px h-6 bg-white/[0.08] shrink-0 mx-1" />
+              <SegmentedControl options={DIFFICULTIES} selected={difficulty} onChange={setDifficulty} />
+            </div>
           </div>
-        </motion.div>
+        </section>
 
-        {/* ── Grouped Problem List ────────────────────────────────────────── */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }} className="space-y-4">
-          
+        {/* ─── Active Filters Info ─── */}
+        {hasActiveFilters && (
+          <div className="flex items-center gap-3 mb-6 animate-in fade-in slide-in-from-top-2">
+            <span className="text-xs text-zinc-500 font-mono">Showing {filteredProblems.length} results</span>
+            <button onClick={clearFilters} className="text-xs text-zinc-400 hover:text-white underline underline-offset-4 decoration-zinc-700 hover:decoration-white transition-all">Clear criteria</button>
+          </div>
+        )}
+
+        {/* ─── Data Render ─── */}
+        <section className="space-y-5">
           {loading ? (
-            <div className="rounded-2xl border border-white/[0.05] bg-white/[0.01] p-4">
-              <div className="h-6 w-32 bg-white/[0.05] rounded mb-4 animate-pulse"></div>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-12 bg-white/[0.02] border border-white/[0.02] rounded-lg mb-2 animate-pulse" />
-              ))}
-            </div>
+            <SkeletonLoader />
           ) : groupedProblems.length === 0 ? (
-            <div className="py-24 flex flex-col items-center gap-4 text-center bg-white/[0.01] border border-white/[0.05] rounded-2xl">
-              <div className="w-16 h-16 rounded-full bg-white/[0.02] border border-white/[0.05] flex items-center justify-center shadow-inner">
-                <Search size={24} className="text-zinc-600" />
-              </div>
-              <div>
-                <p className="text-zinc-200 font-medium text-lg">No matching records found</p>
-                <p className="text-sm text-zinc-500 mt-1">Adjust your fuzzy search or filter parameters.</p>
-              </div>
-              {hasFilters && <button onClick={clearFilters} className="mt-2 px-4 py-2 bg-white/[0.05] hover:bg-white/10 text-sm text-zinc-300 rounded-lg transition-all">Clear all filters</button>}
-            </div>
+            <EmptyState clearFilters={clearFilters} hasFilters={hasActiveFilters} />
           ) : (
             groupedProblems.map(([topicName, topicProblems]) => {
               const isExpanded = expandedTopics.has(topicName);
-              const topicCompleted = topicProblems.filter(p => p.is_completed).length;
-              const topicPct = Math.round((topicCompleted / topicProblems.length) * 100);
+              const completedInTopic = topicProblems.filter(p => p.is_completed).length;
+              const topicPct = Math.round((completedInTopic / topicProblems.length) * 100);
 
               return (
-                <div key={topicName} className="rounded-xl border border-white/[0.05] bg-white/[0.01] backdrop-blur-md overflow-hidden transition-all duration-300">
-                  {/* Topic Header */}
+                <div key={topicName} className="rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-md overflow-hidden transition-all hover:border-white/[0.1] hover:bg-white/[0.02]">
+                  
+                  {/* Accordion Header */}
                   <button 
-                    onClick={() => toggleTopic(topicName)}
-                    className="w-full flex items-center justify-between p-4 sm:px-6 hover:bg-white/[0.02] transition-colors focus:outline-none"
+                    onClick={() => {
+                      const next = new Set(expandedTopics);
+                      next.has(topicName) ? next.delete(topicName) : next.add(topicName);
+                      setExpandedTopics(next);
+                    }}
+                    className="w-full group flex flex-col sm:flex-row sm:items-center justify-between p-5 sm:px-6 focus:outline-none"
                   >
-                    <div className="flex items-center gap-4">
-                      <ChevronRight size={18} className={`text-zinc-500 transition-transform duration-300 ${isExpanded ? "rotate-90" : ""}`} />
-                      <h2 className={`text-lg font-semibold tracking-wide ${TOPIC_COLORS[topicName] || "text-zinc-200"}`}>
-                        {topicName}
-                      </h2>
-                      <span className="hidden sm:inline-block px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05] text-xs font-mono text-zinc-400">
-                        {topicCompleted} / {topicProblems.length}
-                      </span>
+                    <div className="flex items-center gap-4 mb-3 sm:mb-0">
+                      <div className={`p-1.5 rounded-lg transition-all ${isExpanded ? "bg-white/[0.1] text-white shadow-sm" : "bg-white/[0.03] text-zinc-400 group-hover:bg-white/[0.08]"}`}>
+                        <ChevronRight size={16} className={`transition-transform duration-300 ${isExpanded ? "rotate-90" : ""}`} />
+                      </div>
+                      <h2 className="text-[17px] font-semibold text-white tracking-wide">{topicName}</h2>
                     </div>
 
-                    <div className="flex items-center gap-4 w-24 sm:w-48">
-                      <div className="flex-1 h-1.5 bg-black/40 rounded-full overflow-hidden relative">
-                        <div 
-                          className="absolute top-0 left-0 h-full bg-gradient-to-r from-zinc-600 to-zinc-400 rounded-full transition-all duration-700"
-                          style={{ width: `${topicPct}%`, backgroundColor: topicPct === 100 ? '#34d399' : '' }} 
-                        />
+                    {/* Topic Metrics Pill */}
+                    <div className="flex items-center gap-4 pl-12 sm:pl-0">
+                      <div className="flex items-center gap-3 px-3.5 py-2 rounded-full bg-black/40 border border-white/[0.06] shadow-inner">
+                        <span className="text-[11px] font-mono text-zinc-400">{completedInTopic}/{topicProblems.length}</span>
+                        <div className="w-16 h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all duration-500 ${topicPct === 100 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-cyan-500'}`} style={{ width: `${topicPct}%` }} />
+                        </div>
+                        <span className={`text-[11px] font-mono font-bold ${topicPct === 100 ? 'text-emerald-400' : 'text-zinc-300'}`}>{topicPct}%</span>
                       </div>
-                      <span className={`text-xs font-mono w-8 text-right ${topicPct === 100 ? 'text-emerald-400' : 'text-zinc-500'}`}>
-                        {topicPct}%
-                      </span>
                     </div>
                   </button>
 
-                  {/* Topic Body (Accordion) */}
+                  {/* Accordion Body */}
                   <AnimatePresence initial={false}>
                     {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: "easeInOut" }}
-                        className="overflow-hidden border-t border-white/[0.05] bg-[#050505]/50"
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+                        className="overflow-hidden border-t border-white/[0.06] bg-black/20"
                       >
-                        {/* Desktop Table Headers inside Accordion */}
-                        <div className="hidden md:grid grid-cols-[2.5rem_1fr_90px_90px_48px_48px] items-center px-6 py-2 border-b border-white/[0.05] bg-black/20">
-                          {["#", "Problem", "Difficulty", "Platform", <CheckCircle2 key="c" size={14} className="text-zinc-500" />, <Star key="s" size={14} className="text-zinc-500" />].map((h, i) => (
-                            <div key={i} className={`text-[10px] font-semibold text-zinc-500 uppercase tracking-widest ${i >= 4 ? "flex justify-center" : ""}`}>{h}</div>
+                        <div className="hidden md:grid grid-cols-[3rem_1fr_100px_100px_60px_60px] items-center px-6 py-3 bg-white/[0.01] border-b border-white/[0.03]">
+                          {["ID", "Problem Title", "Difficulty", "Platform", "Done", "Revise"].map((h, i) => (
+                            <span key={i} className={`text-[10px] font-semibold text-zinc-500 uppercase tracking-widest ${i >= 4 ? "text-center" : ""}`}>{h}</span>
                           ))}
                         </div>
 
-                        {/* Problem Rows */}
                         <div className="divide-y divide-white/[0.03]">
                           {topicProblems.map((p, idx) => (
                             <div key={p.id}>
-                              {/* Desktop Row */}
-                              <div className="hidden md:block">
-                                <DesktopRow problem={p} idx={idx} toggling={toggling} onToggle={handleToggle} />
-                              </div>
-                              {/* Mobile Card */}
-                              <div className="md:hidden">
-                                <MobileCard problem={p} toggling={toggling} onToggle={handleToggle} />
-                              </div>
+                              <div className="hidden md:block"><DesktopDataRow problem={p} idx={idx} toggling={toggling} onToggle={handleToggle} /></div>
+                              <div className="md:hidden"><MobileDataCard problem={p} toggling={toggling} onToggle={handleToggle} /></div>
                             </div>
                           ))}
                         </div>
@@ -334,97 +374,125 @@ const DSASheet = () => {
               );
             })
           )}
-        </motion.div>
-
-        {/* ── Legend ──────────────────────────────────────────────────────── */}
-        {!loading && problems.length > 0 && (
-          <div className="mt-8 flex flex-wrap justify-center sm:justify-start items-center gap-6 text-[11px] font-mono text-zinc-500">
-            <span className="flex items-center gap-2"><CheckCircle2 size={13} className="text-emerald-400 shadow-sm" /> Mark Completed</span>
-            <span className="flex items-center gap-2"><Star size={13} className="text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.5)]" /> Needs Revision</span>
-            <span className="flex items-center gap-2"><ExternalLink size={13} /> Open Environment</span>
-          </div>
-        )}
+        </section>
       </main>
-
       <AppFooter />
     </div>
   );
-};
+}
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
-const DesktopRow = ({ problem: p, idx, toggling, onToggle }: { problem: DSAProblem, idx: number, toggling: Set<string>, onToggle: any }) => {
-  const isTogglingDone = toggling.has(`${p.id}-is_completed`);
-  const isTogglingRev  = toggling.has(`${p.id}-needs_revision`);
-
-  return (
-    <div className={`group grid grid-cols-[2.5rem_1fr_90px_90px_48px_48px] items-center px-6 py-3.5 transition-all hover:bg-white/[0.02] ${p.is_completed ? "bg-emerald-500/[0.015]" : ""}`}>
-      <span className="text-[12px] text-zinc-600 font-mono">{String(idx + 1).padStart(2, '0')}</span>
-
-      <a href={p.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group/link min-w-0 pr-4">
-        <span className={`text-[13px] font-medium truncate transition-colors ${p.is_completed ? "text-zinc-500 line-through decoration-zinc-700" : "text-zinc-200 group-hover/link:text-cyan-400"}`}>
-          {p.title}
-        </span>
-        <ExternalLink size={11} className="text-zinc-700 group-hover/link:text-cyan-500 opacity-0 group-hover/link:opacity-100 transition-all transform -translate-y-1 group-hover/link:translate-y-0" />
-      </a>
-
-      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase border w-fit ${DIFF_STYLES[p.difficulty]}`}>
-        {p.difficulty}
-      </span>
-
-      <span className="text-[11px] text-zinc-500 tracking-wide">{p.platform}</span>
-
-      <div className="flex justify-center">
-        <button onClick={() => onToggle(p.id, "is_completed", p.is_completed)} disabled={isTogglingDone}
-          className="p-1.5 rounded-lg hover:bg-white/[0.08] transition-all active:scale-75">
-          {isTogglingDone ? <Loader2 size={16} className="animate-spin text-zinc-500" /> : p.is_completed ? <CheckCircle2 size={16} className="text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]" /> : <Circle size={16} className="text-zinc-700 hover:text-zinc-400" />}
-        </button>
-      </div>
-
-      <div className="flex justify-center">
-        <button onClick={() => onToggle(p.id, "needs_revision", p.needs_revision)} disabled={isTogglingRev}
-          className="p-1.5 rounded-lg hover:bg-white/[0.08] transition-all active:scale-75">
-          {isTogglingRev ? <Loader2 size={14} className="animate-spin text-zinc-500" /> : <Star size={14} className={`transition-colors ${p.needs_revision ? "text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]" : "text-zinc-700 hover:text-amber-400"}`} />}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const MobileCard = ({ problem: p, toggling, onToggle }: { problem: DSAProblem, toggling: Set<string>, onToggle: any }) => {
-  const isTogglingDone = toggling.has(`${p.id}-is_completed`);
-  const isTogglingRev  = toggling.has(`${p.id}-needs_revision`);
-
-  return (
-    <div className={`flex items-start gap-3 p-4 transition-colors hover:bg-white/[0.01] ${p.is_completed ? "bg-emerald-500/[0.015]" : ""}`}>
-      <button onClick={() => onToggle(p.id, "is_completed", p.is_completed)} disabled={isTogglingDone} className="mt-0.5 flex-shrink-0 active:scale-90 transition-transform">
-        {isTogglingDone ? <Loader2 size={18} className="animate-spin text-zinc-500" /> : p.is_completed ? <CheckCircle2 size={18} className="text-emerald-400" /> : <Circle size={18} className="text-zinc-600" />}
+// 1. Unified Segmented Control
+const SegmentedControl = ({ options, selected, onChange }: { options: string[], selected: string, onChange: (v: string) => void }) => (
+  <div className="flex items-center shrink-0">
+    {options.map(opt => (
+      <button key={opt} onClick={() => onChange(opt)}
+        className={`px-3 py-1.5 text-[13px] font-medium rounded-lg transition-all whitespace-nowrap ${selected === opt ? "bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.2)] border border-white/[0.05]" : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] border border-transparent"}`}>
+        {opt}
       </button>
-
-      <div className="flex-1 min-w-0">
-        <a href={p.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 mb-2 group/link">
-          <span className={`text-[14px] font-medium leading-tight ${p.is_completed ? "line-through text-zinc-500 decoration-zinc-700" : "text-zinc-200 group-hover/link:text-cyan-400 transition-colors"}`}>
-            {p.title}
-          </span>
-        </a>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${DIFF_STYLES[p.difficulty]}`}>{p.difficulty}</span>
-          <span className="text-[11px] text-zinc-600">{p.platform}</span>
-        </div>
-      </div>
-
-      <button onClick={() => onToggle(p.id, "needs_revision", p.needs_revision)} disabled={isTogglingRev} className="mt-0.5 flex-shrink-0 active:scale-90 transition-transform">
-        {isTogglingRev ? <Loader2 size={16} className="animate-spin text-zinc-500" /> : <Star size={16} className={`${p.needs_revision ? "text-amber-400 fill-amber-400" : "text-zinc-600"}`} />}
-      </button>
-    </div>
-  );
-};
-
-const StatPill = ({ label, value, color, glow = "" }: { label: string; value: number; color: string; glow?: string }) => (
-  <div className="flex flex-col">
-    <span className={`text-3xl font-bold tabular-nums tracking-tight ${color} ${glow}`}>{value}</span>
-    <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest mt-1">{label}</span>
+    ))}
   </div>
 );
 
-export default DSASheet;
+// 2. Desktop Row Item
+const DesktopDataRow = ({ problem: p, idx, toggling, onToggle }: any) => {
+  const diffStyle = DIFF_STYLES[p.difficulty] || DIFF_STYLES["Easy"];
+  return (
+    <div className={`group grid grid-cols-[3rem_1fr_100px_100px_60px_60px] items-center px-6 py-4 transition-colors hover:bg-white/[0.02] ${p.is_completed ? "opacity-60 bg-emerald-900/[0.02]" : ""}`}>
+      <span className="text-[12px] text-zinc-600 font-mono">{(idx + 1).toString().padStart(2, '0')}</span>
+      
+      <a href={p.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 pr-4 group/link">
+        <span className={`text-[14.5px] font-medium truncate transition-colors ${p.is_completed ? "line-through decoration-zinc-600 text-zinc-500" : "text-zinc-200 group-hover/link:text-cyan-400"}`}>
+          {p.title}
+        </span>
+        <ExternalLink size={12} className="text-zinc-600 opacity-0 group-hover/link:opacity-100 transition-all -translate-y-1 group-hover/link:translate-y-0" />
+      </a>
+
+      <div className="flex items-center">
+        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border backdrop-blur-sm ${diffStyle.bg} ${diffStyle.border} ${diffStyle.text}`}>
+          {p.difficulty}
+        </span>
+      </div>
+
+      <span className="text-[13px] text-zinc-500 capitalize">{p.platform}</span>
+
+      <div className="flex justify-center">
+        <ActionButton type="is_completed" problem={p} toggling={toggling} onToggle={onToggle} />
+      </div>
+      <div className="flex justify-center">
+        <ActionButton type="needs_revision" problem={p} toggling={toggling} onToggle={onToggle} />
+      </div>
+    </div>
+  );
+};
+
+// 3. Mobile Card Item
+const MobileDataCard = ({ problem: p, toggling, onToggle }: any) => {
+  const diffStyle = DIFF_STYLES[p.difficulty] || DIFF_STYLES["Easy"];
+  return (
+    <div className="p-5 flex gap-3 hover:bg-white/[0.02] transition-colors">
+      <div className="mt-1"><ActionButton type="is_completed" problem={p} toggling={toggling} onToggle={onToggle} /></div>
+      <div className="flex-1 min-w-0">
+        <a href={p.url} target="_blank" rel="noreferrer" className={`block text-[15px] font-medium mb-2 leading-snug truncate ${p.is_completed ? "line-through text-zinc-500 decoration-zinc-700" : "text-zinc-200"}`}>
+          {p.title}
+        </a>
+        <div className="flex items-center gap-2.5 text-[10px]">
+          <span className={`px-2 py-0.5 rounded border uppercase font-bold ${diffStyle.text} ${diffStyle.border} ${diffStyle.bg}`}>{p.difficulty}</span>
+          <span className="text-zinc-500 uppercase tracking-wider font-medium">{p.platform}</span>
+        </div>
+      </div>
+      <div className="mt-1"><ActionButton type="needs_revision" problem={p} toggling={toggling} onToggle={onToggle} /></div>
+    </div>
+  );
+};
+
+// 4. Action Button Logic
+const ActionButton = ({ type, problem, toggling, onToggle }: any) => {
+  const isToggling = toggling.has(`${problem.id}-${type}`);
+  const isDone = type === "is_completed";
+  const active = problem[type];
+
+  return (
+    <button 
+      onClick={() => onToggle(problem.id, type, active)} disabled={isToggling}
+      className="p-1.5 rounded-lg text-zinc-600 hover:bg-white/[0.08] active:scale-90 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50"
+    >
+      {isToggling ? <Loader2 size={18} className="animate-spin text-zinc-500" /> : 
+        isDone ? (active ? <CheckCircle2 size={20} className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]" /> : <Circle size={20} className="hover:text-zinc-400" />) :
+                 (active ? <Star size={18} className="text-amber-400 fill-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]" /> : <Star size={18} className="hover:text-amber-400/50" />)
+      }
+    </button>
+  );
+};
+
+// 5. Shared UI Fragments
+const StatBlock = ({ label, value, color = "text-white", glow = "" }: { label: string, value: number, color?: string, glow?: string }) => (
+  <div>
+    <div className={`text-3xl font-bold tracking-tight mb-1 ${color} ${glow}`}>{value}</div>
+    <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">{label}</div>
+  </div>
+);
+
+const EmptyState = ({ clearFilters, hasFilters }: any) => (
+  <div className="flex flex-col items-center justify-center py-24 text-center border border-white/[0.06] rounded-2xl bg-white/[0.01] backdrop-blur-md shadow-inner">
+    <div className="w-14 h-14 bg-white/[0.03] rounded-2xl flex items-center justify-center mb-5 border border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
+      <Search size={24} className="text-zinc-500" />
+    </div>
+    <h3 className="text-zinc-200 font-semibold text-lg">No matching problems</h3>
+    <p className="text-zinc-500 text-sm mt-1 mb-5">Try adjusting your filters or search terms.</p>
+    {hasFilters && (
+      <button onClick={clearFilters} className="px-5 py-2.5 bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 text-sm font-medium rounded-xl transition-all border border-white/[0.08] shadow-sm">
+        Clear all filters
+      </button>
+    )}
+  </div>
+);
+
+const SkeletonLoader = () => (
+  <div className="space-y-5">
+    {[1, 2, 3].map(i => (
+      <div key={i} className="h-20 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-md animate-pulse shadow-sm" />
+    ))}
+  </div>
+);
