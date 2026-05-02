@@ -10,7 +10,8 @@ import {
   Home, Terminal, Cpu, BookOpen, MessageCircle, LogOut, Menu, X,
   Bell, CheckCircle2, UserCircle2, UserPen, ChevronDown, Zap, Activity,
   Sparkles, Sun, Moon, Code2, BarChart3, BrainCircuit, Network,
-  TerminalSquare, BookText, Trophy, GraduationCap, Layers, Github, Globe, Newspaper
+  TerminalSquare, BookText, Trophy, GraduationCap, Layers, Github, Globe, Newspaper,
+  ClipboardList
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -42,9 +43,10 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Learn",
     icon: GraduationCap,
     items: [
-      { name: "Notes",   path: "/notes",        icon: BookText,        description: "Programming, OOPs & DSA notes" },
-      { name: "Contests",        path: "/contests",    icon: Trophy,          description: "Live coding contests" },
-      { name: "Quiz Panel",      path: "/quiz-panel",  icon: BrainCircuit,    description: "Create or Join quizzes" },
+      { name: "Notes",      path: "/notes",      icon: BookText,      description: "Programming, OOPs & DSA notes" },
+      { name: "DSA Sheet",  path: "/dsa-sheet",  icon: ClipboardList,  description: "Track your DSA practice progress" },
+      { name: "Contests",   path: "/contests",   icon: Trophy,         description: "Live coding contests" },
+      { name: "Quiz Panel", path: "/quiz-panel", icon: BrainCircuit,   description: "Create or Join quizzes" },
     ],
   },
 ];

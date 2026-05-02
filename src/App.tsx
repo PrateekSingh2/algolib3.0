@@ -65,6 +65,7 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const Cookies = lazy(() => import("./pages/Cookies"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
+const DSASheet = lazy(() => import("./pages/DSASheet"));
 const queryClient = new QueryClient();
 
 // Removed sign in handlers to AuthContext to fix Fast Refresh issues
@@ -800,6 +801,7 @@ const AppRoutes = () => {
         <Route path="/quiz-panel" element={<QuizPanel />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:id" element={<BlogPost />} />
+        <Route path="/dsa-sheet" element={<DSASheet />} />
 
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
