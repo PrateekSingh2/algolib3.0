@@ -44,7 +44,7 @@ const NAV_GROUPS: NavGroup[] = [
     icon: GraduationCap,
     items: [
       { name: "Notes",      path: "/notes",      icon: BookText,      description: "Programming, OOPs & DSA notes" },
-      { name: "DSA Sheet",  path: "/dsa-sheet",  icon: ClipboardList,  description: "Track your DSA practice progress" },
+      { name: "DSA Sheets",  path: "/sheets",  icon: ClipboardList,  description: "Proper roadmap for DSA practice with questions" },
       { name: "Contests",   path: "/contests",   icon: Trophy,         description: "Live coding contests" },
       { name: "Quiz Panel", path: "/quiz-panel", icon: BrainCircuit,   description: "Create or Join quizzes" },
     ],
@@ -138,18 +138,23 @@ const Navbar = () => {
     e.preventDefault();
     setIsNotifOpen(false);
     setIsMobileOpen(false);
+    
     if (location.pathname === "/discussion") {
-      // Already on the page — scroll directly
+      // Already on the page — scroll directly with an offset for the navbar
       const el = document.getElementById(id);
       if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        const yOffset = -100; 
+        const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+        
+        // Trigger the glow animation
         el.classList.add("notif-highlight");
-        setTimeout(() => el.classList.remove("notif-highlight"), 2000);
+        setTimeout(() => el.classList.remove("notif-highlight"), 2500);
       }
       return;
     }
-    // Navigate with state so Community page can scroll after mount
-    navigate("/discussion", { state: { scrollToPost: id } });
+    // Navigate with state so Community page can scroll and highlight after mount
+    navigate("/discussion", { state: { scrollToPost: id, highlight: true } });
   };
 
   const avatarSrc  = user?.photoURL  || "https://placehold.co/96x96/111/fff?text=U";
@@ -287,7 +292,7 @@ const Navbar = () => {
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="pointer-events-auto flex items-center p-1.5 rounded-full bg-[#09090b]/85 backdrop-blur-xl border border-white/[0.12] shadow-[0_8px_40px_rgba(0,0,0,0.5)]"
+          className="pointer-events-auto flex items-center p-1.5 rounded-full bg-[#050505]/40 backdrop-blur-3xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
         >
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 pl-4 pr-3 py-1.5 mr-2 rounded-full hover:bg-white/[0.06] transition-colors group">
@@ -346,7 +351,7 @@ const Navbar = () => {
               {"</>"}
             </Link>
 
-            {/* Notifications */}
+            {/* Notifications (Placed correctly before Profile) */}
             {user && profile?.is_profile_complete && (
               <div className="relative" ref={notifDeskRef}>
                 <button onClick={handleNotifOpen}
@@ -391,7 +396,7 @@ const Navbar = () => {
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="relative flex items-center justify-between p-2.5 rounded-[20px] bg-[#09090b]/85 backdrop-blur-xl border border-white/[0.10] shadow-[0_8px_32px_rgba(0,0,0,0.5)] z-50"
+          className="relative flex items-center justify-between p-2.5 rounded-[20px] bg-[#050505]/50 backdrop-blur-3xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)] z-50"
         >
           <Link to="/" className="flex items-center gap-2 px-2 group">
             <Zap className="w-4 h-4 text-zinc-100 group-hover:text-blue-400 transition-colors" fill="currentColor" />
@@ -399,6 +404,7 @@ const Navbar = () => {
           </Link>
 
           <div className="flex items-center gap-1">
+            {/* Mobile Notification Bell */}
             {user && profile?.is_profile_complete && (
               <div className="relative" ref={notifMobRef}>
                 <button onClick={handleNotifOpen} className={`p-2 rounded-xl relative transition-colors ${isNotifOpen ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"}`}>
@@ -413,6 +419,8 @@ const Navbar = () => {
                 <NotifPanel mobile />
               </div>
             )}
+            
+            {/* Mobile Profile */}
             {user && (
               <div className="relative" ref={mProfileRef}>
                 <button onClick={() => { setIsProfileOpen(p => !p); setIsNotifOpen(false); }}
@@ -429,6 +437,7 @@ const Navbar = () => {
           </div>
         </motion.div>
 
+        {/* ... Mobile Dropdown content ... */}
         <AnimatePresence>
           {isMobileOpen && (
             <>
@@ -593,7 +602,7 @@ const Navbar = () => {
         )}
       </AnimatePresence>
 
-      {/* Shared CSS */}
+      {/* Shared CSS (Now contains the missing highlight animation) */}
       <style>{`
         .menu-item {
           display: flex; align-items: center; gap: 10px;
@@ -609,6 +618,18 @@ const Navbar = () => {
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+
+        /* The Animation CSS required for the Notification Click Highlight feature */
+        @keyframes highlight-flash {
+          0%   { background-color: rgba(59, 130, 246, 0.25); box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); transform: scale(1.01); }
+          50%  { background-color: rgba(59, 130, 246, 0.1);  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+          100% { background-color: transparent;              box-shadow: none;                             transform: scale(1); }
+        }
+        .notif-highlight {
+          animation: highlight-flash 2.5s ease-out;
+          border-radius: 16px;
+          transition: all 0.3s ease;
+        }
       `}</style>
     </>
   );

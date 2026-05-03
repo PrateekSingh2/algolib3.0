@@ -1,164 +1,248 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Layers, Database, Zap, BookOpen, Search, FolderTree, TerminalSquare, ChevronRight } from 'lucide-react';
+import {
+  Layers, Database, Zap, BookOpen, Search, FolderTree,
+  TerminalSquare, ChevronRight, ChevronLeft, Hash, Code,
+  Shuffle, Activity, Network, ArrowRight
+} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { TOPIC_NAV, TOPICS_DATA } from './TopicDetail';
+import { motion } from 'framer-motion';
 
-// ─── Data Structure ──────────────────────────────────────────────────────────
+// ─── Icon & Color Mappings ────────────────────────────────────────────────────
 
-const SHEET_CATEGORIES = [
-  {
-    category: "DSA Sheets",
-    description: "Comprehensive roadmaps to build your core data structures and algorithms foundation.",
-    items: [
-      {
-        title: "Starter Sheet",
-        description: "Level up your fundamentals with our curated beginner roadmap. Track your progress seamlessly.",
-        accentColor: "bg-rose-500",
-        iconColor: "text-rose-400",
-        glowColor: "shadow-[0_0_20px_rgba(244,63,94,0.6)]",
-        bgGradient: "from-rose-500/20 via-rose-500/5 to-transparent",
-        route: "/dsa-sheet",
-        icon: Database,
-      }
-    ]
-  },
-  {
-    category: "Competitive Programming",
-    description: "Advanced algorithms, math, and problem-solving techniques to dominate contests.",
-    items: [
-      {
-        title: "CP Sheet",
-        description: "Master competitive programming. Learn advanced segment trees, graph theory, and combinatorics.",
-        accentColor: "bg-emerald-500",
-        iconColor: "text-emerald-400",
-        glowColor: "shadow-[0_0_20px_rgba(16,185,129,0.6)]",
-        bgGradient: "from-emerald-500/20 via-emerald-500/5 to-transparent",
-        route: "/cp-sheet",
-        icon: TerminalSquare,
-      }
-    ]
-  },
-  {
-    category: "Topic Deep Dives",
-    description: "Focused practice sheets targeting specific algorithmic concepts and patterns.",
-    items: [
-      {
-        title: "Arrays",
-        description: "Fundamental data structure for storing collections. Master two-pointers, sliding window, and prefixes.",
-        accentColor: "bg-pink-500",
-        iconColor: "text-pink-400",
-        glowColor: "shadow-[0_0_20px_rgba(236,72,153,0.6)]",
-        bgGradient: "from-pink-500/20 via-pink-500/5 to-transparent",
-        route: "/dsa-sheet?topic=Arrays", 
-        icon: Layers,
-      },
-      {
-        title: "Introduction to DSA",
-        description: "Primer on Data Structures and Algorithms. Learn space-time complexity and basic operations.",
-        accentColor: "bg-purple-500",
-        iconColor: "text-purple-400",
-        glowColor: "shadow-[0_0_20px_rgba(168,85,247,0.6)]",
-        bgGradient: "from-purple-500/20 via-purple-500/5 to-transparent",
-        route: "/dsa-sheet",
-        icon: BookOpen,
-      },
-      {
-        title: "Binary Search",
-        description: "Efficient searching algorithm. Master searching on arrays, answer ranges, and 2D matrices.",
-        accentColor: "bg-cyan-500",
-        iconColor: "text-cyan-400",
-        glowColor: "shadow-[0_0_20px_rgba(6,182,212,0.6)]",
-        bgGradient: "from-cyan-500/20 via-cyan-500/5 to-transparent",
-        route: "/dsa-sheet?topic=Binary+Search",
-        icon: Search,
-      },
-      {
-        title: "Binary Search Tree",
-        description: "Hierarchical data structure. Learn tree traversals, balancing, and lowest common ancestors.",
-        accentColor: "bg-amber-500",
-        iconColor: "text-amber-400",
-        glowColor: "shadow-[0_0_20px_rgba(245,158,11,0.6)]",
-        bgGradient: "from-amber-500/20 via-amber-500/5 to-transparent",
-        route: "/dsa-sheet?topic=Trees",
-        icon: FolderTree,
-      }
-    ]
+const getTopicIcon = (slug: string) => {
+  switch (slug) {
+    case 'arrays': return Layers;
+    case 'maths': return Hash;
+    case 'binary-search': return Search;
+    case 'strings': return Code;
+    case 'linked-list': return Shuffle;
+    case 'stacks-queues': return Database;
+    case 'trees': return FolderTree;
+    case 'graphs': return Network;
+    case 'dynamic-programming': return Activity;
+    case 'greedy': return Zap;
+    default: return BookOpen;
   }
+};
+
+const getTopicColorClasses = (slug: string) => {
+  switch (slug) {
+    case 'arrays':            return { accent: '#f472b6', accentBg: 'rgba(244,114,182,0.12)', accentBorder: 'rgba(244,114,182,0.25)', textColor: 'text-pink-400',    glow: 'rgba(244,114,182,0.4)' };
+    case 'maths':             return { accent: '#fb923c', accentBg: 'rgba(251,146,60,0.12)',  accentBorder: 'rgba(251,146,60,0.25)',  textColor: 'text-orange-400',  glow: 'rgba(251,146,60,0.4)'  };
+    case 'binary-search':     return { accent: '#22d3ee', accentBg: 'rgba(34,211,238,0.12)',  accentBorder: 'rgba(34,211,238,0.25)',  textColor: 'text-cyan-400',    glow: 'rgba(34,211,238,0.4)'  };
+    case 'strings':           return { accent: '#818cf8', accentBg: 'rgba(129,140,248,0.12)', accentBorder: 'rgba(129,140,248,0.25)', textColor: 'text-indigo-400',  glow: 'rgba(129,140,248,0.4)' };
+    case 'linked-list':       return { accent: '#34d399', accentBg: 'rgba(52,211,153,0.12)',  accentBorder: 'rgba(52,211,153,0.25)',  textColor: 'text-emerald-400', glow: 'rgba(52,211,153,0.4)'  };
+    case 'stacks-queues':     return { accent: '#fbbf24', accentBg: 'rgba(251,191,36,0.12)',  accentBorder: 'rgba(251,191,36,0.25)',  textColor: 'text-amber-400',   glow: 'rgba(251,191,36,0.4)'  };
+    case 'trees':             return { accent: '#a3e635', accentBg: 'rgba(163,230,53,0.12)',  accentBorder: 'rgba(163,230,53,0.25)',  textColor: 'text-lime-400',    glow: 'rgba(163,230,53,0.4)'  };
+    case 'graphs':            return { accent: '#2dd4bf', accentBg: 'rgba(45,212,191,0.12)',  accentBorder: 'rgba(45,212,191,0.25)',  textColor: 'text-teal-400',    glow: 'rgba(45,212,191,0.4)'  };
+    case 'dynamic-programming': return { accent: '#60a5fa', accentBg: 'rgba(96,165,250,0.12)', accentBorder: 'rgba(96,165,250,0.25)', textColor: 'text-blue-400',   glow: 'rgba(96,165,250,0.4)'  };
+    case 'greedy':            return { accent: '#f87171', accentBg: 'rgba(248,113,113,0.12)', accentBorder: 'rgba(248,113,113,0.25)', textColor: 'text-rose-400',    glow: 'rgba(248,113,113,0.4)' };
+    default:                  return { accent: '#c084fc', accentBg: 'rgba(192,132,252,0.12)', accentBorder: 'rgba(192,132,252,0.25)', textColor: 'text-purple-400',  glow: 'rgba(192,132,252,0.4)' };
+  }
+};
+
+const TOPIC_ITEMS = TOPIC_NAV.map(nav => {
+  const topic = TOPICS_DATA[nav.slug];
+  const colors = getTopicColorClasses(nav.slug);
+  return {
+    title: topic.title,
+    description: topic.subtitle,
+    route: `/topic/${nav.slug}`,
+    icon: getTopicIcon(nav.slug),
+    ...colors
+  };
+});
+
+// ─── Feature Sheet Data ───────────────────────────────────────────────────────
+
+const FEATURED_SHEETS = [
+  {
+    title: 'Starter DSA Sheet',
+    tag: 'Foundation',
+    description: 'A curated 150-problem beginner roadmap covering arrays, strings, recursion, and essential patterns. Built to take you from zero to interview-ready.',
+    route: '/dsa-sheet',
+    icon: Database,
+    accent: '#f87171',
+    accentBg: 'rgba(248,113,113,0.10)',
+    accentBorder: 'rgba(248,113,113,0.2)',
+    textColor: 'text-rose-400',
+    glow: 'rgba(248,113,113,0.35)',
+    stats: [{ label: 'Problems', value: '150+' }, { label: 'Topics', value: '12' }, { label: 'Difficulty', value: 'Easy–Med' }],
+  },
+  {
+    title: 'CP Sheet',
+    tag: 'Advanced',
+    description: 'Master competitive programming with segment trees, advanced graph algorithms, combinatorics, and contest-level problem solving techniques.',
+    route: '/cp-sheet',
+    icon: TerminalSquare,
+    accent: '#34d399',
+    accentBg: 'rgba(52,211,153,0.10)',
+    accentBorder: 'rgba(52,211,153,0.2)',
+    textColor: 'text-emerald-400',
+    glow: 'rgba(52,211,153,0.35)',
+    stats: [{ label: 'Problems', value: '200+' }, { label: 'Topics', value: '18' }, { label: 'Difficulty', value: 'Med–Hard' }],
+  },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Sheets() {
-  return (
-    <div className="min-h-screen bg-[#050505] text-zinc-300 font-sans selection:bg-cyan-500/30 flex flex-col overflow-hidden">
-      <Helmet><title>Practice Sheets — AlgoLib</title></Helmet>
+  const scrollRef = useRef<HTMLDivElement>(null);
 
+  const scroll = (dir: 'left' | 'right') => {
+    scrollRef.current?.scrollBy({ left: dir === 'right' ? 340 : -340, behavior: 'smooth' });
+  };
+
+  return (
+    <div className="min-h-screen text-zinc-300 font-sans selection:bg-cyan-500/30 flex flex-col" style={{ backgroundColor: '#0d0f12' }}>
+      <Helmet><title>Practice Sheets — AlgoLib</title></Helmet>
       <Navbar />
 
-      {/* ─── Ultra-Premium Ambient Mesh Background ─── */}
-      {/* These glowing orbs provide the colorful backdrop needed for the glassmorphism to look incredible */}
+      {/* ─── Background ─── */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-5%] w-[40vw] h-[40vw] rounded-full bg-blue-600/10 blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: '8s' }} />
-        <div className="absolute top-[20%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-purple-600/10 blur-[150px] mix-blend-screen animate-pulse" style={{ animationDuration: '12s', animationDelay: '2s' }} />
-        <div className="absolute bottom-[-10%] left-[20%] w-[40vw] h-[40vw] rounded-full bg-emerald-600/5 blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: '10s', animationDelay: '1s' }} />
+        {/* Base dark tone */}
+        <div className="absolute inset-0" style={{ backgroundColor: '#0d0f12' }} />
+
+        {/* Subtle dot grid */}
+        <div
+          className="absolute inset-0 opacity-[0.18]"
+          style={{
+            backgroundImage: 'radial-gradient(circle, #4b5563 1px, transparent 1px)',
+            backgroundSize: '32px 32px',
+          }}
+        />
+
+        {/* Vignette — darkens edges */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_40%,_#080b0f_100%)]" />
+
+        {/* Glowing orbs — toned down for the darker palette */}
+        <div
+          className="absolute rounded-full animate-pulse"
+          style={{
+            top: '-8%', left: '-6%',
+            width: '45vw', height: '45vw',
+            background: 'radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%)',
+            filter: 'blur(60px)',
+            animationDuration: '12s',
+          }}
+        />
+        <div
+          className="absolute rounded-full animate-pulse"
+          style={{
+            top: '5%', right: '-12%',
+            width: '55vw', height: '55vw',
+            background: 'radial-gradient(circle, rgba(139,92,246,0.14) 0%, transparent 70%)',
+            filter: 'blur(80px)',
+            animationDuration: '16s',
+            animationDelay: '3s',
+          }}
+        />
+        <div
+          className="absolute rounded-full animate-pulse"
+          style={{
+            bottom: '-10%', left: '15%',
+            width: '50vw', height: '50vw',
+            background: 'radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%)',
+            filter: 'blur(80px)',
+            animationDuration: '14s',
+            animationDelay: '6s',
+          }}
+        />
+        <div
+          className="absolute rounded-full animate-pulse"
+          style={{
+            top: '45%', left: '35%',
+            width: '25vw', height: '25vw',
+            background: 'radial-gradient(circle, rgba(6,182,212,0.07) 0%, transparent 70%)',
+            filter: 'blur(60px)',
+            animationDuration: '9s',
+            animationDelay: '1.5s',
+          }}
+        />
+
+        {/* Horizontal decorative line at top */}
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
       </div>
 
-      <main className="relative z-10 flex-1 w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-28 md:pt-36 pb-24">
-        
-        {/* ─── Header ─── */}
-        <header className="mb-20 text-center md:text-left flex flex-col md:items-start items-center">
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col items-center md:items-start"
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.1] backdrop-blur-xl mb-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),_0_4px_20px_rgba(0,0,0,0.3)]">
-              <Layers size={14} className="text-cyan-400" />
-              <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-widest">Curriculum Hub</span>
-            </div>
-            <h1 className="text-4xl sm:text-[52px] font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 tracking-tight mb-5 drop-shadow-2xl">
-              Practice Sheets
-            </h1>
-            <p className="text-zinc-400 max-w-2xl text-base sm:text-lg leading-relaxed font-medium">
-              Curated problem sets designed to build your algorithmic intuition. Choose a path, track your progress, and master technical interviews.
-            </p>
-          </motion.div>
-        </header>
+      {/* ─── Main Content ─── */}
+      <main className="relative z-10 flex-1 w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-28 md:pt-36 pb-28">
 
-        {/* ─── Sheet Categories Render ─── */}
-        <div className="space-y-20">
-          {SHEET_CATEGORIES.map((section, sectionIdx) => (
-            <motion.section 
-              key={section.category}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6, delay: sectionIdx * 0.1, ease: [0.16, 1, 0.3, 1] }}
+        {/* ── Hero Header ── */}
+        <motion.header
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-16 text-center md:text-left"
+        >
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border mb-6" style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}>
+            <Layers size={13} className="text-indigo-400" />
+            <span className="text-[10.5px] font-semibold text-zinc-400 uppercase tracking-[0.15em]">Curriculum Hub</span>
+          </div>
+
+          <h1 className="text-[42px] sm:text-[60px] font-black tracking-tight leading-[1.05] mb-5">
+            <span className="text-white">Practice</span>{' '}
+            <span className="bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">Sheets</span>
+          </h1>
+          <p className="text-zinc-500 max-w-xl text-[15px] sm:text-base leading-relaxed">
+            Curated problem sets to build algorithmic intuition. Pick a path, track your progress, and get interview-ready.
+          </p>
+        </motion.header>
+
+        {/* ── Featured Sheets ── */}
+        <section className="mb-20">
+          <SectionLabel index={0} label="Core Sheets" desc="Structured roadmaps for every stage of your journey." />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
+            {FEATURED_SHEETS.map((sheet, i) => (
+              <FeaturedCard key={sheet.route} sheet={sheet} index={i} />
+            ))}
+          </div>
+        </section>
+
+        {/* ── Topic Deep Dives ── */}
+        <section>
+          <SectionLabel index={1} label="Topic Deep Dives" desc="Focused practice targeting specific algorithmic concepts and patterns." />
+
+          <div className="relative mt-6 group/scroll">
+            {/* Scroll Fade Overlays */}
+            <div className="absolute left-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-gradient-to-r from-[#0d0f12] to-transparent" />
+            <div className="absolute right-0 top-0 bottom-0 w-12 z-10 pointer-events-none bg-gradient-to-l from-[#0d0f12] to-transparent" />
+
+            {/* Scroll Track */}
+            <div
+              ref={scrollRef}
+              className="flex gap-4 overflow-x-auto pb-3 pt-1 px-1"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              <div className="mb-8 flex items-end gap-4 border-b border-white/[0.06] pb-5">
-                <div>
-                  <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-2">
-                    {section.category}
-                  </h2>
-                  <p className="text-[15px] text-zinc-400 font-medium">
-                    {section.description}
-                  </p>
+              <style>{`.scroll-hide::-webkit-scrollbar { display: none; }`}</style>
+              {TOPIC_ITEMS.map((item, idx) => (
+                <div key={idx} className="shrink-0 w-[240px] sm:w-[270px]" style={{ height: 230 }}>
+                  <TopicCard item={item} index={idx} />
                 </div>
-              </div>
+              ))}
+            </div>
 
-              {/* Grid Layout for Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {section.items.map((item, idx) => (
-                  <SheetCard key={idx} item={item} index={idx} />
-                ))}
-              </div>
-            </motion.section>
-          ))}
-        </div>
+            {/* Nav Buttons */}
+            <button
+              onClick={() => scroll('left')}
+              className="hidden md:flex absolute -left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center text-zinc-300 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:text-white border"
+              style={{ background: '#0f1318', borderColor: 'rgba(255,255,255,0.1)' }}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={() => scroll('right')}
+              className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center text-zinc-300 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:text-white border"
+              style={{ background: '#0f1318', borderColor: 'rgba(255,255,255,0.1)' }}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </section>
 
       </main>
 
@@ -167,67 +251,153 @@ export default function Sheets() {
   );
 }
 
-// ─── Ultimate Glassmorphism Card ─────────────────────────────────────────────
+// ─── Section Label ────────────────────────────────────────────────────────────
 
-const SheetCard = ({ item, index }: { item: any, index: number }) => {
-  return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95, y: 20 }}
-      whileInView={{ opacity: 1, scale: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * 0.05, ease: [0.16, 1, 0.3, 1] }}
-      className="relative group flex flex-col rounded-[24px] overflow-hidden transition-all duration-500 h-full min-h-[220px]"
-    >
-      {/* 1. Base Glass Layer */}
-      <div className="absolute inset-0 bg-[#0c0c0e]/60 backdrop-blur-3xl border border-white/[0.08] rounded-[24px] group-hover:bg-[#121214]/80 group-hover:border-white/[0.18] transition-all duration-500 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),_0_8px_40px_rgba(0,0,0,0.4)]" />
-      
-      {/* 2. Hover Color Bleed Gradient */}
-      <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-gradient-to-br ${item.bgGradient}`} />
+const SectionLabel = ({ label, desc, index }: { label: string; desc: string; index: number }) => (
+  <motion.div
+    initial={{ opacity: 0, x: -16 }}
+    whileInView={{ opacity: 1, x: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.55, delay: index * 0.05, ease: [0.16, 1, 0.3, 1] }}
+    className="flex flex-col gap-1 border-b pb-4"
+    style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+  >
+    <h2 className="text-[20px] sm:text-2xl font-bold text-white tracking-tight">{label}</h2>
+    <p className="text-[13.5px] text-zinc-500">{desc}</p>
+  </motion.div>
+);
 
-      {/* 3. Content Wrapper */}
-      <div className="relative z-10 flex flex-col h-full p-6">
-        
-        {/* Top Section */}
-        <div className="flex gap-4 mb-8 flex-1">
-          {/* Glowing Accent Line */}
-          <div className={`w-1.5 rounded-full shrink-0 ${item.accentColor} ${item.glowColor} opacity-70 group-hover:opacity-100 group-hover:scale-y-110 transition-all duration-500 origin-top shadow-lg`} />
-          
-          <div className="pt-0.5">
-            <div className="flex items-center gap-3 mb-3">
-              {/* Icon Container with Glass Effect */}
-              <div className={`p-2 rounded-xl bg-white/[0.03] border border-white/[0.05] group-hover:bg-white/[0.08] group-hover:border-white/[0.15] transition-all duration-300 shadow-inner ${item.iconColor}`}>
-                <item.icon size={18} strokeWidth={2.5} />
-              </div>
-              <h3 className="text-white font-bold text-[18px] tracking-tight leading-tight group-hover:text-white transition-colors">
-                {item.title}
-              </h3>
-            </div>
-            <p className="text-zinc-400 text-[13.5px] leading-relaxed line-clamp-3 group-hover:text-zinc-300 transition-colors font-medium">
-              {item.description}
-            </p>
+// ─── Featured Sheet Card ──────────────────────────────────────────────────────
+
+const FeaturedCard = ({ sheet, index }: { sheet: any; index: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.5, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
+    className="relative group rounded-2xl overflow-hidden flex flex-col"
+    style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}
+  >
+    {/* Hover accent gradient */}
+    <div
+      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+      style={{ background: `radial-gradient(ellipse at top left, ${sheet.accentBg} 0%, transparent 70%)` }}
+    />
+
+    {/* Top accent bar */}
+    <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(to right, ${sheet.accent}55, transparent)` }} />
+
+    <div className="relative z-10 p-6 flex flex-col h-full">
+      {/* Header row */}
+      <div className="flex items-start justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: sheet.accentBg, border: `1px solid ${sheet.accentBorder}` }}
+          >
+            <sheet.icon size={19} style={{ color: sheet.accent }} />
+          </div>
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: sheet.accent }}>{sheet.tag}</span>
+            <h3 className="text-white font-bold text-[17px] leading-snug">{sheet.title}</h3>
           </div>
         </div>
-
-        {/* Bottom Section: Glassmorphic Button */}
-        <div className="mt-auto">
-          <Link 
-            to={item.route} 
-            className="relative flex items-center justify-center gap-2 w-full py-3 rounded-[14px] font-semibold text-[13.5px] text-zinc-300 transition-all duration-300 group-hover:text-white overflow-hidden"
-          >
-            {/* Button Glass Base */}
-            <div className="absolute inset-0 bg-white/[0.03] border border-white/[0.06] rounded-[14px] group-hover:bg-white/[0.1] group-hover:border-white/[0.2] transition-all duration-300 backdrop-blur-md shadow-inner" />
-            
-            <span className="relative z-10 tracking-wide">Start Learning</span>
-            
-            {/* Animated Arrow */}
-            <ChevronRight 
-              size={16} 
-              className={`relative z-10 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300 ${item.iconColor}`} 
-              strokeWidth={2.5}
-            />
-          </Link>
-        </div>
       </div>
-    </motion.div>
-  );
-};
+
+      {/* Description */}
+      <p className="text-zinc-500 text-[13.5px] leading-relaxed mb-6 flex-1 group-hover:text-zinc-400 transition-colors duration-300">
+        {sheet.description}
+      </p>
+
+      {/* Stats row */}
+      <div className="flex items-center gap-4 mb-6">
+        {sheet.stats.map((s: any) => (
+          <div key={s.label} className="flex flex-col">
+            <span className="text-[11px] text-zinc-600 font-medium uppercase tracking-wider">{s.label}</span>
+            <span className="text-sm font-bold text-zinc-200">{s.value}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <Link
+        to={sheet.route}
+        className="flex items-center gap-2 w-full justify-center py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-300"
+        style={{
+          background: sheet.accentBg,
+          border: `1px solid ${sheet.accentBorder}`,
+          color: sheet.accent,
+        }}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLElement).style.background = sheet.accentBorder;
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLElement).style.background = sheet.accentBg;
+        }}
+      >
+        Start Learning
+        <ArrowRight size={14} strokeWidth={2.5} />
+      </Link>
+    </div>
+  </motion.div>
+);
+
+// ─── Topic Card (Horizontal Scroll) ──────────────────────────────────────────
+
+const TopicCard = ({ item, index }: { item: any; index: number }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.94 }}
+    whileInView={{ opacity: 1, scale: 1 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.45, delay: Math.min(index * 0.04, 0.3), ease: [0.16, 1, 0.3, 1] }}
+    className="relative group flex flex-col h-full rounded-[18px] overflow-hidden transition-all duration-300"
+    style={{
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.06)',
+    }}
+  >
+    {/* Hover glow bg */}
+    <div
+      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-400 pointer-events-none"
+      style={{ background: `radial-gradient(ellipse at top left, ${item.accentBg} 0%, transparent 75%)` }}
+    />
+
+    {/* Top accent line */}
+    <div
+      className="absolute top-0 left-0 right-0 h-[1.5px] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+      style={{ background: `linear-gradient(to right, ${item.accent}80, transparent)` }}
+    />
+
+    <div className="relative z-10 flex flex-col h-full p-5">
+      {/* Icon */}
+      <div
+        className="w-9 h-9 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110"
+        style={{ background: item.accentBg, border: `1px solid ${item.accentBorder}` }}
+      >
+        <item.icon size={16} style={{ color: item.accent }} strokeWidth={2.2} />
+      </div>
+
+      {/* Title + desc */}
+      <h3 className="text-white font-semibold text-[15px] leading-snug mb-2 group-hover:text-white transition-colors">
+        {item.title}
+      </h3>
+      <p className="text-zinc-600 text-[12.5px] leading-relaxed line-clamp-3 group-hover:text-zinc-400 transition-colors duration-300 flex-1">
+        {item.description}
+      </p>
+
+      {/* CTA */}
+      <div className="mt-auto pt-4">
+        <Link
+          to={item.route}
+          className="flex items-center gap-1.5 text-[12px] font-semibold transition-all duration-300"
+          style={{ color: `${item.accent}99` }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = item.accent; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = `${item.accent}99`; }}
+        >
+          Explore
+          <ChevronRight size={13} strokeWidth={2.5} className="transition-transform duration-200 group-hover:translate-x-1" />
+        </Link>
+      </div>
+    </div>
+  </motion.div>
+);

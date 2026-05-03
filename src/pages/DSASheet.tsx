@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useDeferredValue, useRef } f
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
+import { Link } from "react-router-dom";
 import {
   Search, Star, CheckCircle2, Circle, Filter,
   ExternalLink, Loader2, RefreshCw, X,
@@ -169,7 +170,13 @@ export default function DSASheet() {
       </div>
 
       <main className="relative z-10 w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-28 md:pt-32 pb-24">
-        
+
+        {/* Back button */}
+        <Link to="/sheets" className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-200 text-sm mb-8 transition-colors group">
+          <ChevronRight size={15} className="rotate-180 group-hover:-translate-x-0.5 transition-transform" />
+          Back to Sheets
+        </Link>
+
         {/* ─── Header ─── */}
         <header className="mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 backdrop-blur-md shadow-[0_0_15px_rgba(6,182,212,0.15)] mb-4">

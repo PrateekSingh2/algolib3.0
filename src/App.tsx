@@ -67,6 +67,8 @@ const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const Sheets = lazy(() => import("./pages/Sheets"));
 const DSASheet = lazy(() => import("./pages/DSASheet"));
+const CPSheet = lazy(() => import("./pages/CPSheet"));
+const TopicDetail = lazy(() => import("./pages/TopicDetail"));
 const queryClient = new QueryClient();
 
 // Removed sign in handlers to AuthContext to fix Fast Refresh issues
@@ -803,7 +805,9 @@ const AppRoutes = () => {
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:id" element={<BlogPost />} />
         <Route path="/dsa-sheet" element={<DSASheet />} />
-        <Route path="/sheets"element={<Sheets />} />
+        <Route path="/cp-sheet" element={<CPSheet />} />
+        <Route path="/sheets" element={<Sheets />} />
+        <Route path="/topic/:slug" element={<TopicDetail />} />
 
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
