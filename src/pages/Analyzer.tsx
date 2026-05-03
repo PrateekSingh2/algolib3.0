@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { 
-  Zap, AlertCircle, Send, Paperclip, Loader2, Sparkles, Copy, 
-  Check, Edit2, Trash2, Menu, Code2, ArrowRightLeft, Plus, MessageSquare,
+  Zap, AlertCircle, Send, Loader2, Sparkles, Copy, 
+  Check, Edit2, Trash2, Menu, Code2, ArrowRightLeft, Plus, MessageSquare
 } from 'lucide-react';
 
 // ─── FIREBASE IMPORTS ────────────────────────────────────────────────────────
@@ -58,6 +58,13 @@ const COMPLEXITY_COLORS = {
 
 const TRANSLATE_LANGS = ["Python", "Java", "C++", "JavaScript", "Go", "Rust"];
 
+const SUGGESTIONS = [
+  { icon: <Zap size={14}/>, text: "Optimize sorting algorithm" },
+  { icon: <Code2 size={14}/>, text: "Explain dynamic programming" },
+  { icon: <ArrowRightLeft size={14}/>, text: "Translate Python to C++" },
+  { icon: <AlertCircle size={14}/>, text: "Find memory leaks" },
+];
+
 // ─── Utility: Custom Markdown Parser for Text & Code Blocks ──────────────────
 const formatTextWithMarkdown = (text: string) => {
   let html = text
@@ -78,7 +85,6 @@ const formatTextWithMarkdown = (text: string) => {
   return html;
 };
 
-// 2. The main renderer that splits Code Blocks from Regular Text
 const renderFormattedText = (text: string, onCopy: (text: string) => void) => {
   if (!text) return null;
   
@@ -190,6 +196,14 @@ export default function Analyzer() {
     if (window.innerWidth < 768) setIsSidebarOpen(false); 
   };
 
+  const handleSuggestionClick = (text: string) => {
+    setInputCode(text);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.style.height = 'auto';
+    }
+  };
+
   // ─── Firebase Auth & Listeners ─────────────────────────────────────────────
   useEffect(() => {
     let unsubscribeCredits: () => void;
@@ -292,6 +306,7 @@ export default function Analyzer() {
     const pendingMessages = [...messages, { role: 'user', content: trimmed } as ChatMessage];
     setMessages(pendingMessages);
     setInputCode('');
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
     executeRequest('analyze', trimmed, pendingMessages);
   };
 
@@ -518,31 +533,65 @@ export default function Analyzer() {
           )}
 
           <div className={`input-dock-area ${isHomeState ? 'state-centered' : 'state-docked'}`}>
-            <div className="input-bounds">
+            <div className="input-bounds w-full max-w-4xl mx-auto">
+              
               {isHomeState && (
-                <div className="greeting-header">
-                  <h1><span className="gradient-text">Hello, {userName}</span></h1>
-                  <h2 className="text-2xl text-zinc-500 font-medium mt-2">What are your queries to be resolve?</h2>
+                <div className="greeting-header flex items-center justify-center gap-4 mb-8">
+                  <h1 className="text-3xl md:text-[40px] font-normal text-white tracking-tight">Want to clarify concepts?</h1>
+                  <Sparkles className="text-zinc-500 w-8 h-8 md:w-10 md:h-10 opacity-60" strokeWidth={1} />
                 </div>
               )}
               
-              <div className="search-box-wrapper glass-input-wrapper">
-                <button className="icon-btn" disabled><Paperclip size={20} /></button>
-                <textarea
-                  ref={textareaRef}
-                  className="gemini-input custom-scrollbar"
-                  placeholder="Ask a question or paste code..."
-                  value={inputCode}
-                  onChange={handleInput}
-                  onKeyDown={handleKeyDown}
-                  rows={1}
-                  disabled={isAnalyzing}
-                />
-                <button className={`send-btn ${inputCode.trim() ? 'active' : ''}`} onClick={handleAnalyze} disabled={!inputCode.trim() || isAnalyzing}>
-                  <Send size={18} className="send-icon" />
-                </button>
+              {/* Google AI Studio Style Animated Input Box */}
+              <div className="ai-studio-input-wrapper">
+                <div className="ai-studio-input-inner">
+                  <textarea
+                    ref={textareaRef}
+                    className="w-full bg-transparent text-gray-200 resize-none outline-none min-h-[44px] text-[15px] md:text-base custom-scrollbar placeholder:text-zinc-500"
+                    placeholder="Ask anything about Computer Science..."
+                    value={inputCode}
+                    onChange={handleInput}
+                    onKeyDown={handleKeyDown}
+                    rows={1}
+                    disabled={isAnalyzing}
+                  />
+                  
+                  {/* Bottom Controls - Icons Removed, Button Right-Aligned */}
+                  <div className="flex justify-end items-end mt-1">
+                    <button 
+                      className={`flex items-center gap-2 px-5 py-2 rounded-full font-medium text-[13px] transition-all ${
+                        inputCode.trim() && !isAnalyzing 
+                          ? 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 shadow-[0_0_15px_rgba(37,99,235,0.2)]' 
+                          : 'bg-white/5 text-zinc-500 cursor-not-allowed'
+                      }`}
+                      onClick={handleAnalyze} 
+                      disabled={!inputCode.trim() || isAnalyzing}
+                    >
+                      {isAnalyzing ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                      {inputCode.trim() ? "Submit" : "Ready"}
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="disclaimer-text">AlgoLib AI may produce inaccurate information. Always verify critical system code.</div>
+
+              {/* Suggestion Chips */}
+              {isHomeState && (
+                <div className="flex gap-3 justify-center md:justify-start mt-6 overflow-x-auto hide-scrollbar pb-2">
+                  {SUGGESTIONS.map((sug, idx) => (
+                    <button 
+                      key={idx} 
+                      onClick={() => handleSuggestionClick(sug.text)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/10 hover:bg-white/5 hover:border-white/20 text-zinc-300 text-sm whitespace-nowrap transition-all shadow-sm"
+                    >
+                      <span className="text-zinc-400">{sug.icon}</span> {sug.text}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="text-center text-xs text-zinc-600 mt-6">
+                AlgoLib AI may produce inaccurate information. Always verify critical system code.
+              </div>
             </div>
           </div>
         </main>
@@ -557,12 +606,75 @@ export default function Analyzer() {
 
         /* UI Polish: Glassmorphism & Glows */
         .glass-panel { background: rgba(30, 31, 32, 0.4); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .glass-input-wrapper { background: rgba(30, 31, 32, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 28px; padding: 12px 16px; display: flex; align-items: flex-end; gap: 12px; transition: all 0.3s ease; box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
-        .glass-input-wrapper:focus-within { border-color: rgba(66, 133, 244, 0.5); box-shadow: 0 4px 32px rgba(66, 133, 244, 0.15); background: rgba(30, 31, 32, 0.8); }
         .glow-hover { transition: all 0.3s ease; }
         .glow-hover:hover { box-shadow: 0 0 16px rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
         .pulse-glow { box-shadow: 0 0 12px rgba(66, 133, 244, 0.4); }
         .glow-text { text-shadow: 0 0 16px currentColor; }
+
+        /* ─── ANIMATED GLOWING INPUT BORDER ─── */
+        .ai-studio-input-wrapper {
+          position: relative;
+          border-radius: 26px;
+          padding: 1px; /* The thickness of the glowing border */
+          background: #1e1f20; /* Base background when not glowing */
+          overflow: hidden; /* Clips the rotating pseudo-element to stay inside the border */
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+          z-index: 1;
+        }
+
+        /* The spinning conic gradient */
+        .ai-studio-input-wrapper::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: conic-gradient(
+            from 0deg,
+            transparent 0deg,
+            rgba(59,130,246, 0.8) 60deg,    /* Blue */
+            rgba(168,85,247, 0.8) 120deg,   /* Purple */
+            rgba(239,68,68, 0.8) 180deg,    /* Red */
+            rgba(245,158,11, 0.8) 240deg,   /* Yellow */
+            transparent 300deg,
+            transparent 360deg
+          );
+          animation: rotateGlow 12s linear infinite;
+          z-index: -1;
+          opacity: 0.3; /* Faint glow by default */
+          transition: opacity 0.8s ease;
+        }
+
+        /* Intensify glow on focus */
+        .ai-studio-input-wrapper:focus-within::before {
+          opacity: 1;
+          animation: rotateGlow 8s linear infinite; /* Spin faster when focused */
+        }
+        
+        .ai-studio-input-wrapper:focus-within {
+          box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 15px rgba(59,130,246,0.15);
+        }
+
+        .ai-studio-input-inner {
+          background: #1e1f20; /* Masks the center, leaving only the 1px animated padding */
+          border-radius: 25px; 
+          padding: 12px 16px; /* Tightened vertical padding */
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+        }
+
+        @keyframes rotateGlow {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        /* ────────────────────────────────────────── */
+
+        /* Hide scrollbar for chips */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         /* Custom Scrollbar */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -593,7 +705,7 @@ export default function Analyzer() {
         .delete-btn { background: transparent; border: none; color: #f28b82; cursor: pointer; padding: 4px; }
 
         /* Main Viewport & Chat */
-        .app-viewport { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; background: radial-gradient(circle at top right, rgba(66, 133, 244, 0.03), transparent 40%); }
+        .app-viewport { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; background: #0d0d10; }
         .top-utilities { padding: 16px 24px 0; display: flex; justify-content: space-between; align-items: center; z-index: 40; }
         .tokens-indicator { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 24px; }
 
@@ -651,21 +763,9 @@ export default function Analyzer() {
         .error-card { background: rgba(242, 139, 130, 0.1); color: #f28b82; padding: 14px 18px; border-radius: 16px; display: flex; align-items: center; gap: 12px; }
 
         /* Input Dock */
-        .input-dock-area { padding: 0 24px 24px; background: linear-gradient(180deg, transparent 0%, #0d0d10 25%, #0d0d10 100%); z-index: 10; }
-        .input-dock-area.state-centered { flex: 1; display: flex; align-items: center; justify-content: center; background: transparent; }
-        .input-dock-area.state-docked { flex-shrink: 0; }
-        .input-bounds { width: 100%; max-width: 820px; margin: 0 auto; }
-        .greeting-header { margin-bottom: 40px; text-align: center;}
-        .greeting-header h1 { margin: 0; font-size: 44px; font-weight: 600; letter-spacing: -0.5px; }
-        .gradient-text { background: linear-gradient(74deg, #4285f4 0%, #9b72cb 46%, #d96570 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 30px rgba(66, 133, 244, 0.2); }
-        .gemini-input { flex: 1; background: transparent; border: none; color: #e3e3e3; font-family: inherit; font-size: 16px; line-height: 1.5; resize: none; max-height: 200px; padding: 10px 0; outline: none; }
-        .gemini-input::placeholder { color: #5f6368; }
-        .icon-btn { color: #5f6368; background: none; border: none; padding: 8px; cursor: not-allowed; display: flex; align-items: center; justify-content: center; }
-        .send-btn { background: transparent; color: #5f6368; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
-        .send-btn.active { color: #8ab4f8; background: rgba(138, 180, 248, 0.1); box-shadow: 0 0 12px rgba(138, 180, 248, 0.3); }
-        .disclaimer-text { text-align: center; font-size: 12px; color: #5f6368; margin-top: 16px; }
-        
-        .chat-prose { display: block; margin-bottom: 12px; line-height: 1.7; font-size: 15px; color: #d1d5db; }
+        .input-dock-area { padding: 0 24px 24px; z-index: 10; width: 100%; }
+        .input-dock-area.state-centered { flex: 1; display: flex; align-items: center; justify-content: center; }
+        .input-dock-area.state-docked { flex-shrink: 0; background: linear-gradient(180deg, transparent 0%, #0d0d10 25%, #0d0d10 100%); }
         
         .chat-h1 { font-size: 1.5em; font-weight: 600; color: #fff; margin: 20px 0 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; }
         .chat-h2 { font-size: 1.25em; font-weight: 600; color: #fff; margin: 18px 0 8px 0; }
@@ -679,54 +779,19 @@ export default function Analyzer() {
 
         /* --- MOBILE RESPONSIVENESS FIXES --- */
         @media (max-width: 768px) {
-          /* 1. Fix the Sidebar & Double Hamburger */
           .gemini-sidebar { 
             position: absolute; 
             z-index: 100; 
             height: 100%; 
             background: rgba(20, 20, 22, 0.95); 
           }
-          .gemini-sidebar.closed { 
-            width: 0; 
-            transform: translateX(-100%); 
-            opacity: 0; 
-            border: none; 
-          }
-          .gemini-sidebar.open { 
-            width: 280px; 
-            transform: translateX(0); 
-            opacity: 1; 
-            box-shadow: 4px 0 32px rgba(0,0,0,0.6); 
-          }
-          
-          /* 2. Add Dark Overlay behind open sidebar */
-          .sidebar-backdrop { 
-            position: absolute; 
-            inset: 0; 
-            background: rgba(0,0,0,0.6); 
-            backdrop-filter: blur(2px); 
-            -webkit-backdrop-filter: blur(2px);
-            z-index: 90; 
-          }
-          
-          /* 3. Scale down the giant greeting text */
-          .greeting-header h1 { 
-            font-size: 32px; 
-            line-height: 1.2; 
-          }
-          .greeting-header h2 { 
-            font-size: 18px; 
-          }
-          
-          /* 4. Optimize spacing for small screens */
+          .gemini-sidebar.closed { width: 0; transform: translateX(-100%); opacity: 0; border: none; }
+          .gemini-sidebar.open { width: 280px; transform: translateX(0); opacity: 1; box-shadow: 4px 0 32px rgba(0,0,0,0.6); }
+          .sidebar-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); z-index: 90; }
           .chat-content-bounds { padding: 0 16px; }
           .message-row { gap: 12px; }
           .ai-avatar { width: 28px; height: 28px; }
-          
-          /* 5. Tighten the input dock */
           .input-dock-area { padding: 0 16px 16px; }
-          .glass-input-wrapper { padding: 8px 12px; border-radius: 20px; }
-          .gemini-input { font-size: 15px; }
           .top-utilities { padding: 16px 16px 0; }
         }
       `}</style>

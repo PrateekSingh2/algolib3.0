@@ -6,6 +6,7 @@ import {
   Play, Database, Braces, Code2, Sparkles, LayoutGrid, TerminalSquare, AlertTriangle, Hexagon, Component
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 // A dynamic icon selector based on the theme string you set in the Dashboard
 const themeToIcon = (theme: string) => {
@@ -91,7 +92,7 @@ export default function QuizPanel() {
         {/* HERO SECTION */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center sm:text-left w-full mb-12 lg:mb-16">
           <div className="inline-flex items-center justify-center p-1 px-3 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-6 backdrop-blur-md">
-            <Sparkles size={14} className="mr-2" /> Assessment Matrix
+            <Sparkles size={14} className="mr-2" /> Assessment Ground
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black mb-4 tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-zinc-200 to-zinc-600">
             Proctored Evaluation Hub
@@ -113,7 +114,7 @@ export default function QuizPanel() {
           >
             <div className="flex items-center gap-3 mb-2">
               <Play size={18} className="text-sky-400" />
-              <h2 className="text-lg font-bold text-white tracking-tight">Live Environments (Tours)</h2>
+              <h2 className="text-lg font-bold text-white tracking-tight">Practice Open Quiz</h2>
               <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent ml-4"></div>
             </div>
 
@@ -161,7 +162,7 @@ export default function QuizPanel() {
                           </div>
                           
                           <div className="flex items-center gap-2 mt-auto">
-                            <span className="text-xs font-bold text-white">Initialize Environment</span>
+                            <span className="text-xs font-bold text-white">Attempt Now</span>
                             <ChevronRight size={16} className="text-zinc-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
                           </div>
                         </div>
@@ -181,7 +182,7 @@ export default function QuizPanel() {
           >
             <div className="flex items-center gap-3 mb-2">
               <TerminalSquare size={18} className="text-indigo-400" />
-              <h2 className="text-lg font-bold text-white tracking-tight">System Operations</h2>
+              <h2 className="text-lg font-bold text-white tracking-tight">Control Panel</h2>
               <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent ml-4"></div>
             </div>
 
@@ -248,8 +249,8 @@ export default function QuizPanel() {
 
           </motion.div>
         </div>
-
       </main>
+      <Footer />
     </div>
   );
 }

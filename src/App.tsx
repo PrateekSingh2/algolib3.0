@@ -65,6 +65,7 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 const Cookies = lazy(() => import("./pages/Cookies"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
+const Sheets = lazy(() => import("./pages/Sheets"));
 const DSASheet = lazy(() => import("./pages/DSASheet"));
 const queryClient = new QueryClient();
 
@@ -78,7 +79,7 @@ const SYSTEM_MODULES = [
   { id: '/', name: 'Home' }, { id: '/compiler', name: 'Compiler' }, { id: '/visualizer', name: 'Visualizer Dashboard' },
   { id: '/analyzer', name: 'AI Analyzer' }, { id: '/view-profile', name: 'View Profile' }, { id: '/edit-profile', name: 'Edit Profile' },
   { id: '/contests', name: 'Contest' }, { id: '/quiz-panel', name: 'Quiz' }, { id: '/discussion', name: 'Community' },
-  { id: '/docs', name: 'Documentation' }, { id: '/notes', name: 'AlgoLib Notes' }
+  { id: '/docs', name: 'Documentation' }, { id: '/notes', name: 'AlgoLib Notes' }, { id: '/sheets', name: 'Practice Sheets' }
 ];
 
 const MaintenanceGuard = ({ children }: { children: React.ReactNode }) => {
@@ -802,6 +803,7 @@ const AppRoutes = () => {
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:id" element={<BlogPost />} />
         <Route path="/dsa-sheet" element={<DSASheet />} />
+        <Route path="/sheets"element={<Sheets />} />
 
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />

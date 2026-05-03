@@ -8,7 +8,7 @@ import {
   ChevronDown, ClipboardList, ChevronRight
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import AppFooter from "@/components/AppFooter";
+import Footer from "@/components/Footer";
 import { getDSAProgress, toggleDSAStatus, DSAProblem } from "@/lib/dsaApi";
 
 // ─── Constants & Configurations ──────────────────────────────────────────────
@@ -58,11 +58,9 @@ export default function DSASheet() {
 
   // ─── Global Keyboard Shortcuts ───
   useEffect(() => {
-    // Detect OS for accurate shortcut display
     setIsMac(typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0);
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for Ctrl + / OR Cmd + /
       if ((e.ctrlKey || e.metaKey) && e.key === '/') {
         e.preventDefault();
         searchInputRef.current?.focus();
@@ -144,7 +142,6 @@ export default function DSASheet() {
     return Object.entries(groups).filter(([_, probs]) => probs.length > 0);
   }, [filteredProblems]);
 
-  // ─── Utility Methods ───
   const total = problems.length;
   const completed = problems.filter(p => p.is_completed).length;
   const pct = total ? Math.round((completed / total) * 100) : 0;
@@ -156,40 +153,28 @@ export default function DSASheet() {
     <div className="min-h-screen bg-[#030303] text-zinc-300 font-sans selection:bg-cyan-500/30">
       <Helmet><title>DSA Master Sheet — AlgoLib</title></Helmet>
 
-      {/* ─── BULLETPROOF LOCAL STYLE BLOCK ─── */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          #dsa-filter-track::-webkit-scrollbar {
-            display: none !important;
-            height: 0px !important;
-            width: 0px !important;
-            background: transparent !important;
-            -webkit-appearance: none !important;
-          }
-          #dsa-filter-track {
-            scrollbar-width: none !important;
-            -ms-overflow-style: none !important;
-          }
-        `
-      }} />
+      {/* Local styles for sleek dropdown scrollbar */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+      `}} />
 
       <Navbar />
 
       {/* Deep Glassmorphism Ambient Mesh Gradient */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {/* Top Left Cyan Glow */}
         <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyan-900/20 blur-[150px]" />
-        {/* Bottom Right Purple Glow */}
         <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-indigo-900/10 blur-[150px]" />
       </div>
 
-      <main className="relative z-10 w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-32 pb-24">
+      <main className="relative z-10 w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-28 md:pt-32 pb-24">
         
         {/* ─── Header ─── */}
         <header className="mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 backdrop-blur-md shadow-[0_0_15px_rgba(6,182,212,0.15)] mb-4">
             <ClipboardList size={14} className="text-cyan-400" />
-            <span className="text-[11px] font-mono text-cyan-400/80 uppercase tracking-widest">Master Curriculum</span>
+            <span className="text-[11px] font-mono text-cyan-400/80 uppercase tracking-widest">Roadmap sheet</span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-3 drop-shadow-md">DSA Practice Sheet</h1>
           <p className="text-zinc-400 max-w-2xl text-sm sm:text-base leading-relaxed">
@@ -197,9 +182,8 @@ export default function DSASheet() {
           </p>
         </header>
 
-        {/* ─── Global Progress Card (GLASSMORPHISM FIX) ─── */}
+        {/* ─── Global Progress Card ─── */}
         <section className="mb-8 relative overflow-hidden rounded-2xl bg-white/[0.02] border border-white/[0.08] p-6 sm:p-8 backdrop-blur-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
-          {/* Subtle inner top highlight */}
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -211,7 +195,6 @@ export default function DSASheet() {
               <StatBlock label="Revision Queue" value={problems.filter(p => p.needs_revision).length} color="text-amber-400" glow="drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]" />
             </div>
 
-            {/* FIXED ALIGNMENT: Matrix & Refresh Button */}
             <div className="flex flex-col w-full md:w-[35%] xl:w-[30%]">
               <div className="flex justify-between items-end mb-3">
                 <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-widest">Completion Matrix</span>
@@ -232,19 +215,18 @@ export default function DSASheet() {
           </div>
         </section>
 
-        {/* ─── Advanced Filter Engine (GLASSMORPHISM & UI FIX) ─── */}
-        <section className="sticky top-24 z-20 mb-8 p-3 rounded-2xl bg-[#080808]/70 border border-white/[0.08] backdrop-blur-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] flex flex-col xl:flex-row gap-3">
+        {/* ─── STICKY Advanced Filter Engine (MOBILE OPTIMIZED) ─── */}
+        <section className="relative z-40 mb-8 p-3 rounded-2xl bg-[#080808]/85 border border-white/[0.08] backdrop-blur-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] flex flex-col xl:flex-row gap-3 transition-all">
           
           {/* Command Search */}
-          <div className="relative flex-1 group min-w-[200px]">
+          <div className="relative flex-1 group w-full">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-cyan-400 transition-colors z-10" />
             <input 
               ref={searchInputRef}
               value={search} onChange={e => setSearch(e.target.value)} 
-              placeholder="Fuzzy search (e.g., 'twosum', 'dp')..."
+              placeholder="Fuzzy search (e.g., 'twosum')..."
               className="w-full pl-11 pr-14 py-3.5 bg-black/40 border border-white/[0.06] rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/40 transition-all shadow-inner focus:bg-white/[0.02]" 
             />
-            {/* Keyboard Shortcut Indicator - Disappears when typing */}
             {!search && (
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none opacity-60 group-focus-within:opacity-0 transition-opacity duration-200">
                 <kbd className="hidden sm:inline-flex items-center px-2 py-1 rounded bg-white/[0.08] border border-white/[0.1] text-[10px] font-medium text-zinc-400 font-sans tracking-widest shadow-sm">
@@ -259,12 +241,10 @@ export default function DSASheet() {
             )}
           </div>
 
-          <div 
-            id="dsa-filter-track"
-            className="flex items-center gap-3 overflow-x-auto overflow-y-hidden w-full xl:w-auto scroll-smooth"
-          >
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 w-full xl:w-auto z-50">
+            
             {/* Custom Topic Dropdown */}
-            <div className="relative shrink-0 min-w-[160px] h-full">
+            <div className="relative w-full lg:w-auto min-w-[160px] shrink-0 z-50">
               <button 
                 onClick={() => setTopicDropdownOpen(!topicDropdownOpen)}
                 className="w-full h-full flex items-center justify-between px-4 py-3.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm font-medium hover:bg-white/[0.06] transition-colors backdrop-blur-md"
@@ -275,7 +255,7 @@ export default function DSASheet() {
               <AnimatePresence>
                 {topicDropdownOpen && (
                   <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }}
-                    className="absolute top-[calc(100%+8px)] right-0 mt-0 w-full sm:w-64 bg-[#0d0d0d]/95 backdrop-blur-3xl border border-white/[0.1] rounded-xl p-1.5 shadow-2xl z-50">
+                    className="absolute top-[calc(100%+8px)] left-0 mt-0 w-full sm:w-64 max-h-[50vh] overflow-y-auto bg-[#0d0d0d]/95 backdrop-blur-3xl border border-white/[0.1] rounded-xl p-1.5 shadow-2xl z-[100] custom-scrollbar">
                     {TOPICS.map(t => (
                       <button key={t} onClick={() => { setTopic(t); setTopicDropdownOpen(false); }}
                         className={`w-full text-left px-4 py-2.5 text-sm rounded-lg transition-all ${topic === t ? "bg-cyan-500/15 text-cyan-400 shadow-sm" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"}`}>
@@ -287,12 +267,19 @@ export default function DSASheet() {
               </AnimatePresence>
             </div>
 
-            {/* Unified Segmented Controls Track */}
-            <div className="flex items-center gap-2 shrink-0 bg-black/50 border border-white/[0.06] shadow-inner rounded-xl p-1.5 h-full">
-              <SegmentedControl options={STATUSES} selected={status} onChange={setStatus} />
-              <div className="w-px h-6 bg-white/[0.08] shrink-0 mx-1" />
-              <SegmentedControl options={DIFFICULTIES} selected={difficulty} onChange={setDifficulty} />
+            {/* Mobile Optimized Segmented Controls (Stacks cleanly, expands fully) */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+              {/* Status Track */}
+              <div className="flex bg-black/50 border border-white/[0.06] shadow-inner rounded-xl p-1.5 w-full sm:w-auto">
+                <SegmentedControl options={STATUSES} selected={status} onChange={setStatus} />
+              </div>
+              
+              {/* Difficulty Track */}
+              <div className="flex bg-black/50 border border-white/[0.06] shadow-inner rounded-xl p-1.5 w-full sm:w-auto">
+                <SegmentedControl options={DIFFICULTIES} selected={difficulty} onChange={setDifficulty} />
+              </div>
             </div>
+
           </div>
         </section>
 
@@ -376,19 +363,19 @@ export default function DSASheet() {
           )}
         </section>
       </main>
-      <AppFooter />
+      <Footer />
     </div>
   );
 }
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
-// 1. Unified Segmented Control
+// 1. Unified Segmented Control (Flex-1 ensures equal spacing and perfect mobile wrapping)
 const SegmentedControl = ({ options, selected, onChange }: { options: string[], selected: string, onChange: (v: string) => void }) => (
-  <div className="flex items-center shrink-0">
+  <div className="flex items-center gap-1 w-full sm:w-auto">
     {options.map(opt => (
       <button key={opt} onClick={() => onChange(opt)}
-        className={`px-3 py-1.5 text-[13px] font-medium rounded-lg transition-all whitespace-nowrap ${selected === opt ? "bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.2)] border border-white/[0.05]" : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] border border-transparent"}`}>
+        className={`flex-1 sm:flex-none px-2 py-1.5 text-[12px] sm:text-[13px] font-medium rounded-lg transition-all text-center ${selected === opt ? "bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.2)] border border-white/[0.05]" : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] border border-transparent"}`}>
         {opt}
       </button>
     ))}

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { Trophy, Clock, Calendar, ChevronRight, Activity, Code2, Sparkles, ArrowRight, Loader2, BarChart2, X, Medal, HeartHandshake, Lock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import AppFooter from '@/components/AppFooter';
+import Footer from '@/components/Footer';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -480,7 +480,7 @@ export default function Contests() {
           </motion.div>
         )}
       </main>
-      <AppFooter />
+      <Footer />
     </div>
   );
 }
