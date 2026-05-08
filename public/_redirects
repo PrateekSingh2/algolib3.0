@@ -1,2 +1,2 @@
-/discover  https://discover-algolib.netlify.app/  200
+/discover  https://discover-algolib.netlify.app/discover/:splat  200
 /* /index.html 200
