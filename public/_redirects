@@ -1,4 +1,2 @@
-# Proxy /discover/* to the Next.js Content Site
-/discover/*  https://discover-algolib.netlify.app/discover/:splat  200
-
-/* /index.html  200
+/discover  https://discover-algolib.netlify.app/  200
+/* /index.html 200
