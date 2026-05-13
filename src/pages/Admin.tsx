@@ -9,8 +9,11 @@ import {
     Lock, Terminal, Clock, Copy, Check, Hash, ShieldCheck, Save, RefreshCw, X, Code, FileJson, CloudLightning,
     Settings, Loader2, Edit3, ShieldAlert, Search, Users, Activity, Database, ChevronUp, MessageSquare, AlertTriangle, Trash2,
     Megaphone, Radio, ExternalLink, Eye, BarChart3, PieChart as PieChartIcon, Download, User as UserIcon, AlignLeft, Send, Github, Trophy, Plus, Calendar, List, UserPlus, UserMinus, FileText, CheckCircle2, XCircle, Code2, Construction,
-    Coins, Zap, Mail, Paperclip
+    Coins, Zap, Mail, Paperclip, FileCheck, Image as ImageIcon
 } from "lucide-react";
+
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import Navbar from '@/components/Navbar';
@@ -25,6 +28,20 @@ interface AdminUser { email: string; added_by: string; created_at: string; }
 interface TestCaseData { displayInput: string; rawInput: string; expected: string; explanation: string; isPublic: boolean; hasMultipleAnswers: boolean; imageUrl?: string; }
 interface ProblemData { dbId?: string; title: string; description: string; inputFormat: string; outputFormat: string; constraints: string; difficulty: string; testCases: TestCaseData[]; }
 interface SubmissionData { id: string; created_at: string; user_uid: string; problem_id: string; contest_id: string; language: string; code: string; passed: boolean; score_awarded: number; time_taken_seconds: number; problemTitle?: string; }
+interface PendingContent { id: string; title: string; slug: string; type: 'research' | 'news'; content_markdown: string | null; crisp_json: unknown; image_url: string | null; seo_desc: string | null; created_at: string; status: string; }
+
+// --- Safe Parser for Crisp JSON ---
+function parseCrispJson(raw: unknown): string[] {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw as string[];
+    if (typeof raw === 'string') {
+        try {
+            const p = JSON.parse(raw);
+            return Array.isArray(p) ? (p as string[]) : [];
+        } catch { return []; }
+    }
+    return [];
+}
 
 const uploadToCloudinary = async (file: File) => {
     const formData = new FormData();
@@ -93,7 +110,7 @@ const Admin = () => {
     const [user, setUser] = useState<User | null>(null);
     const [isAdmin, setIsAdmin] = useState<boolean>(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"forge" | "contests" | "submissions" | "moderation" | "broadcast" | "insights" | "admins" | "maintenance" | "credits" | "mailroom">("forge");
+    const [activeTab, setActiveTab] = useState<"forge" | "contests" | "submissions" | "moderation" | "broadcast" | "insights" | "admins" | "maintenance" | "credits" | "mailroom" | "review">("forge");
     const [customAlert, setCustomAlert] = useState<{ isOpen: boolean, message: string, title?: string, type: "info" | "error" | "warning" }>({ isOpen: false, message: "", type: "info" });
     const showAlert = (message: string, type: "info" | "error" | "warning" = "error", title?: string) => setCustomAlert({ isOpen: true, message, type, title });
 
@@ -172,6 +189,22 @@ const Admin = () => {
     const [mailAttachments, setMailAttachments] = useState<{filename: string, content: string, contentType: string, size: number}[]>([]);
     const [isSendingMail, setIsSendingMail] = useState(false);
 
+    // --- Content Review State ---
+    const [pendingReviewData, setPendingReviewData] = useState<PendingContent[]>([]);
+    const [isReviewLoading, setIsReviewLoading] = useState(false);
+    const [reviewEditingId, setReviewEditingId] = useState<string | null>(null);
+    const [reviewEditForm, setReviewEditForm] = useState({ title: "", content_markdown: "", image_url: "", seo_desc: "" });
+    const [reviewProcessingId, setReviewProcessingId] = useState<string | null>(null);
+
+    const loadPendingReviews = async () => {
+        setIsReviewLoading(true);
+        try {
+            const token = await user?.getIdToken();
+            const response = await fetch('/.netlify/functions/get-pending-content', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (response.ok) { const data = await response.json(); setPendingReviewData(data); }
+        } catch (e) { console.error(e); } finally { setIsReviewLoading(false); }
+    };
+
     useEffect(() => { const savedConfig = localStorage.getItem("algolib_gist_config"); if (savedConfig) setGistConfig(JSON.parse(savedConfig)); }, []);
 
     useEffect(() => {
@@ -193,9 +226,10 @@ const Admin = () => {
     }, []);
 
     useEffect(() => {
-        if (isAdmin && (activeTab === "admins" || activeTab === "submissions" || activeTab === "contests")) {
+        if (isAdmin && (activeTab === "admins" || activeTab === "submissions" || activeTab === "contests" || activeTab === "review")) {
             if (activeTab === "admins") loadAdminsList();
-            if (existingContests.length === 0) loadContestsListSilent();
+            if (activeTab === "contests" && existingContests.length === 0) loadContestsListSilent();
+            if (activeTab === "review" && pendingReviewData.length === 0) loadPendingReviews();
         }
     }, [activeTab, isAdmin]);
 
@@ -448,6 +482,39 @@ const Admin = () => {
         } catch (err: any) {
             showAlert("Sync Failed: " + err.message);
         }
+    };
+
+    const handleReviewAction = async (id: string, action: 'approve' | 'reject') => {
+        setReviewProcessingId(id);
+        try {
+            const token = await user?.getIdToken();
+            const response = await fetch('/.netlify/functions/manage-pending-content', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, action })
+            });
+            if (!response.ok) throw new Error("Action failed");
+            setPendingReviewData(prev => prev.filter(p => p.id !== id));
+            setStatusMsg(`Node ${action}d successfully`);
+            setTimeout(() => setStatusMsg(""), 3000);
+        } catch (err: any) { showAlert(err.message); } finally { setReviewProcessingId(null); }
+    };
+
+    const handleReviewSave = async (id: string) => {
+        setReviewProcessingId(id);
+        try {
+            const token = await user?.getIdToken();
+            const response = await fetch('/.netlify/functions/manage-pending-content', {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, data: reviewEditForm })
+            });
+            if (!response.ok) throw new Error("Update failed");
+            setPendingReviewData(prev => prev.map(p => p.id === id ? { ...p, ...reviewEditForm } : p));
+            setReviewEditingId(null);
+            setStatusMsg("Node updated successfully");
+            setTimeout(() => setStatusMsg(""), 3000);
+        } catch (err: any) { showAlert(err.message); } finally { setReviewProcessingId(null); }
     };
 
     const toggleMaintenanceRoute = (routeId: string) => { if (maintainedRoutes.includes(routeId)) { setMaintainedRoutes(prev => prev.filter(r => r !== routeId)); } else { setMaintainedRoutes(prev => [...prev, routeId]); } };
@@ -722,7 +789,8 @@ const Admin = () => {
                                     { id: 'submissions', label: 'Telemetry', icon: FileText }, { id: 'moderation', label: 'Comms', icon: ShieldCheck },
                                     { id: 'broadcast', label: 'Broadcast', icon: Radio }, { id: 'insights', label: 'Insights', icon: BarChart3 },
                                     { id: 'admins', label: 'Security', icon: UserPlus }, { id: 'maintenance', label: 'Lockdown', icon: Construction },
-                                    { id: 'credits', label: 'AI Credits', icon: Coins }, { id: 'mailroom', label: 'Mailroom', icon: Mail }
+                                    { id: 'credits', label: 'AI Credits', icon: Coins }, { id: 'mailroom', label: 'Mailroom', icon: Mail },
+                                    { id: 'review', label: 'Review', icon: FileCheck }
                                 ].map(tab => (
                                     <button key={tab.id} onClick={() => { setActiveTab(tab.id as any); setIsMobileNavOpen(false); }} className={`flex items-center gap-3 px-4 py-3 w-full text-sm font-semibold rounded-xl transition-all ${activeTab === tab.id ? 'bg-white/10 text-white border border-white/10 shadow-inner' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/5 border border-transparent'}`}>
                                         <tab.icon size={18} className={`${activeTab === tab.id ? 'text-sky-400' : ''}`} />
@@ -772,7 +840,8 @@ const Admin = () => {
                                 { id: 'submissions', label: 'Telemetry', icon: FileText }, { id: 'moderation', label: 'Comms', icon: ShieldCheck },
                                 { id: 'broadcast', label: 'Broadcast', icon: Radio }, { id: 'insights', label: 'Insights', icon: BarChart3 },
                                 { id: 'admins', label: 'Security', icon: UserPlus }, { id: 'maintenance', label: 'Lockdown', icon: Construction },
-                                { id: 'credits', label: 'AI Credits', icon: Coins }, { id: 'mailroom', label: 'Mailroom', icon: Mail }
+                                { id: 'credits', label: 'AI Credits', icon: Coins }, { id: 'mailroom', label: 'Mailroom', icon: Mail },
+                                { id: 'review', label: 'Review', icon: FileCheck }
                             ].map(tab => (
                                 <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative flex items-center gap-3 px-4 py-3 w-full text-xs font-semibold rounded-xl transition-all whitespace-nowrap overflow-hidden group ${activeTab === tab.id ? 'text-white' : 'text-zinc-500 hover:text-zinc-200'}`}>
                                     {activeTab === tab.id && <motion.div layoutId="sidebarGlow" className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent border-l-2 border-white rounded-xl" />}
@@ -1843,6 +1912,116 @@ const Admin = () => {
                                     </button>
                                 </div>
                             </div>
+                        </motion.div>
+                    )}
+                    {activeTab === "review" && (
+                        <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6 max-w-6xl mx-auto">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-white flex items-center gap-3 tracking-tight">
+                                        <FileCheck size={24} className="text-sky-400 drop-shadow-[0_0_12px_rgba(56,189,248,0.4)]" /> Content Moderation
+                                    </h2>
+                                    <p className="text-xs font-medium text-zinc-400 mt-1">Review, refine, and approve pending AI-generated content nodes.</p>
+                                </div>
+                                <div className="bg-sky-500/10 text-sky-400 px-3 py-1.5 rounded-lg border border-sky-500/20 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <Database size={14} /> {pendingReviewData.length} Nodes Pending
+                                </div>
+                            </div>
+
+                            {isReviewLoading ? (
+                                <div className="p-12 flex flex-col items-center justify-center text-zinc-500">
+                                    <Loader2 className="animate-spin mb-4" size={32} />
+                                    <p className="text-[10px] uppercase tracking-widest font-bold">Accessing Data Stream...</p>
+                                </div>
+                            ) : pendingReviewData.length === 0 ? (
+                                <div className={`${pCard} p-16 flex flex-col items-center justify-center text-center`}>
+                                    <CheckCircle2 size={48} className="text-emerald-500/30 mb-4" />
+                                    <h3 className="text-lg font-bold text-white mb-2 tracking-tight">Queue is Clear</h3>
+                                    <p className="text-xs text-zinc-500 font-medium">No pending content nodes require moderation at this time.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {pendingReviewData.map(item => (
+                                        <div key={item.id} className={`${pCard} p-6 md:p-8 space-y-6`}>
+                                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border ${item.type === 'research' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                                                        {item.type}
+                                                    </div>
+                                                    <span className="text-[10px] text-zinc-500 font-mono tracking-wider">{toLocalDatetime(item.created_at)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 w-full md:w-auto">
+                                                    <button onClick={() => { setReviewEditingId(reviewEditingId === item.id ? null : item.id); setReviewEditForm({ title: item.title, content_markdown: item.content_markdown || "", image_url: item.image_url || "", seo_desc: item.seo_desc || "" }); }} className="flex-1 md:flex-none px-4 py-2 bg-white/5 hover:bg-white/10 text-zinc-300 font-bold text-xs rounded-xl transition-all border border-white/5 flex items-center justify-center gap-2 shadow-inner"><Edit3 size={14} /> {reviewEditingId === item.id ? 'Cancel Edit' : 'Edit Mode'}</button>
+                                                    <button onClick={() => handleReviewAction(item.id, 'reject')} disabled={reviewProcessingId === item.id} className="flex-1 md:flex-none px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold text-xs rounded-xl transition-all border border-red-500/20 disabled:opacity-50 flex items-center justify-center gap-2 shadow-inner"><Trash2 size={14} /> Reject</button>
+                                                    <button onClick={() => handleReviewAction(item.id, 'approve')} disabled={reviewProcessingId === item.id} className="flex-1 md:flex-none px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:scale-[1.02] text-black font-bold text-xs rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest"><Check size={14} /> Approve</button>
+                                                </div>
+                                            </div>
+
+                                            {reviewEditingId === item.id ? (
+                                                <div className="space-y-6 bg-[#020202] p-6 rounded-xl border border-white/5 shadow-inner">
+                                                    <div><label className={pLabel}>Node Nomenclature (Title)</label><input value={reviewEditForm.title} onChange={e => setReviewEditForm({...reviewEditForm, title: e.target.value})} className={pInput} /></div>
+                                                    <div><label className={pLabel}>SEO Parameters (Description)</label><textarea value={reviewEditForm.seo_desc} onChange={e => setReviewEditForm({...reviewEditForm, seo_desc: e.target.value})} rows={2} className={`${pInput} resize-y text-xs`} /></div>
+                                                    
+                                                    <div>
+                                                        <label className={pLabel}>Media Asset URL</label>
+                                                        <div className="flex gap-3">
+                                                            <input value={reviewEditForm.image_url} onChange={e => setReviewEditForm({...reviewEditForm, image_url: e.target.value})} className={`${pInput} flex-1`} placeholder="https://..." />
+                                                            <label className="cursor-pointer px-4 py-2 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 text-xs font-bold uppercase tracking-widest rounded-xl transition-colors flex items-center gap-2">
+                                                                <ImageIcon size={14} /> Upload
+                                                                <input type="file" className="hidden" onChange={async (e) => {
+                                                                    const f = e.target.files?.[0];
+                                                                    if (f) {
+                                                                        setStatusMsg("Uploading to secure cloud...");
+                                                                        try { 
+                                                                            const url = await uploadToCloudinary(f); 
+                                                                            setReviewEditForm(p => ({...p, image_url: url})); 
+                                                                            setStatusMsg("Upload successful");
+                                                                            setTimeout(() => setStatusMsg(""), 3000);
+                                                                        }
+                                                                        catch { showAlert("Upload failed"); setStatusMsg(""); }
+                                                                    }
+                                                                }} accept="image/*" />
+                                                            </label>
+                                                        </div>
+                                                        {reviewEditForm.image_url && <div className="mt-3 relative w-full h-32 rounded-lg border border-white/10 overflow-hidden bg-black/50"><img src={reviewEditForm.image_url} alt="Preview" className="w-full h-full object-cover opacity-80" /></div>}
+                                                    </div>
+
+                                                    <div>
+                                                        <label className={pLabel}>Manifest (Markdown Content)</label>
+                                                        <textarea value={reviewEditForm.content_markdown} onChange={e => setReviewEditForm({...reviewEditForm, content_markdown: e.target.value})} rows={12} className={`${pInput} resize-y font-mono text-[11px] leading-relaxed custom-scrollbar`} />
+                                                    </div>
+
+                                                    <button onClick={() => handleReviewSave(item.id)} disabled={reviewProcessingId === item.id} className="w-full py-3 bg-white hover:bg-zinc-200 text-black font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] flex items-center justify-center gap-2"><Save size={16} /> Save Edits</button>
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-8">
+                                                    <div className="space-y-6">
+                                                        {item.image_url && <div className="relative w-full aspect-video rounded-xl border border-white/10 overflow-hidden shadow-lg"><img src={item.image_url} alt="Cover" className="w-full h-full object-cover" /><div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" /></div>}
+                                                        <div><h3 className="text-xl font-bold text-white tracking-tight leading-tight mb-2">{item.title}</h3><p className="text-xs text-zinc-400 leading-relaxed font-medium">{item.seo_desc}</p></div>
+                                                        
+                                                        {parseCrispJson(item.crisp_json).length > 0 && (
+                                                            <div className="bg-[#020202] p-5 rounded-xl border border-white/5 shadow-inner">
+                                                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-sky-400 mb-4 flex items-center gap-2"><Zap size={12} /> Key Insights</h4>
+                                                                <ul className="space-y-3">
+                                                                    {parseCrispJson(item.crisp_json).map((insight, idx) => (
+                                                                        <li key={idx} className="flex gap-3 text-xs text-zinc-300 leading-relaxed"><div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1.5 shrink-0" />{insight}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="bg-[#020202] rounded-xl border border-white/5 p-6 shadow-inner h-[600px] overflow-y-auto custom-scrollbar">
+                                                        <div className="prose prose-invert prose-sm max-w-none prose-headings:text-white prose-p:text-zinc-300 prose-p:leading-relaxed prose-a:text-sky-400 hover:prose-a:text-sky-300 prose-strong:text-white prose-code:text-rose-400 prose-code:bg-rose-400/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10">
+                                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.content_markdown || ""}</ReactMarkdown>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </motion.div>
                     )}
 
