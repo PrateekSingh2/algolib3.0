@@ -63,8 +63,6 @@ const Compiler = lazy(() => import("./pages/Compiler"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Cookies = lazy(() => import("./pages/Cookies"));
-const Blog = lazy(() => import("./pages/Blog"));
-const BlogPost = lazy(() => import("./pages/BlogPost"));
 const Sheets = lazy(() => import("./pages/Sheets"));
 const DSASheet = lazy(() => import("./pages/DSASheet"));
 const CPSheet = lazy(() => import("./pages/CPSheet"));
@@ -733,7 +731,7 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, profile, loading } = useAuth();
   const location = useLocation();
 
-  const publicRoutes = ['/terms', '/privacy', '/cookies', '/developer', '/support', '/docs', '/compiler', '/visualizer', '/blog'];
+  const publicRoutes = ['/terms', '/privacy', '/cookies', '/developer', '/support', '/docs', '/compiler', '/visualizer', '/discover'];
   const isPublicRoute = publicRoutes.includes(location.pathname.replace(/\/$/, '')) || location.pathname.startsWith('/blog/');
 
   const getCleanPath = (path: string) => {
@@ -802,8 +800,6 @@ const AppRoutes = () => {
         <Route path="/quiz/:id" element={<Quiz />} />
         <Route path="/quiz-forge" element={<QuizForge />} />
         <Route path="/quiz-panel" element={<QuizPanel />} />
-        <Route path="/blog" element={<Blog />} />
-        <Route path="/blog/:id" element={<BlogPost />} />
         <Route path="/dsa-sheet" element={<DSASheet />} />
         <Route path="/cp-sheet" element={<CPSheet />} />
         <Route path="/sheets" element={<Sheets />} />
