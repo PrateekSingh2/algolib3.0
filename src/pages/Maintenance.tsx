@@ -82,17 +82,17 @@ export default function Maintenance({ availableModules = [] }: MaintenanceProps)
     <div className="relative min-h-screen w-full bg-[#09090b] overflow-hidden flex flex-col items-center justify-center font-sans py-20 px-4 sm:px-6 select-none">
       
       {/* Code Rain Background Layer */}
-      <canvas ref={canvasRef} className="absolute inset-0 z-0 opacity-80 pointer-events-none mix-blend-screen" />
+      <canvas ref={canvasRef} className="absolute inset-0 z-0 opacity-100 pointer-events-none mix-blend-screen" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#09090b_90%)] z-0 pointer-events-none opacity-100"></div>
 
       <motion.div 
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="relative z-10 w-full max-w-4xl bg-[#09090b]/50 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative z-10 w-full max-w-4xl bg-[#09090b]/10 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
       >
         {/* Subtle Edge Highlight */}
-        <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[#10b981]/50 to-transparent"></div>
+        <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[#10b981]/10 to-transparent"></div>
 
         <div className="p-10 sm:p-12 flex flex-col items-center text-center flex-1 relative z-10">
           
