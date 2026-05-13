@@ -54,7 +54,7 @@ const NAV_GROUPS: NavGroup[] = [
 const NAV_LINKS = [
   { name: "Home",       path: "/",           icon: Home },
   { name: "Community",  path: "/discussion", icon: MessageCircle },
-  { name: "Blog",       path: "/blog",       icon: Newspaper },
+  { name: "News/Research",       path: "/discover",       icon: Newspaper },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
