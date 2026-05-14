@@ -57,7 +57,7 @@ const NAV_GROUPS: NavGroup[] = [
 const NAV_LINKS = [
   { name: "Home", path: "/", icon: Home, isExternal: false },
   { name: "Community", path: "/discussion", icon: MessageCircle, isExternal: false },
-  { name: "News/Research", path: "http://localhost:3000/discover", icon: Newspaper, isExternal: true },
+  { name: "News/Research", path: "https://discover-algolib.netlify.app/discover", icon: Newspaper, isExternal: true },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
