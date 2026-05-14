@@ -173,7 +173,7 @@ const Support = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-white">Direct Email</p>
-                  <p className="text-xs text-zinc-500">prateeksinghrajawat2006@gmail.com</p>
+                  <p className="text-xs text-zinc-500">teamalgolib@gmail.com</p>
                 </div>
               </div>
 
@@ -267,6 +267,7 @@ const Support = () => {
                     >
                       <option value="Bug Report">Report a Bug / Anomaly</option>
                       <option value="Feedback">Suggest Feedback</option>
+                      <option value="Article Issue">Report issues in Article</option>
                       <option value="Feature Request">Request a Feature</option>
                       <option value="Account Issue">Account Troubleshooting</option>
                       <option value="Data Deletion">Data Deletion Request</option>

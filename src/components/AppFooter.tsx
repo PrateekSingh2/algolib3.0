@@ -21,7 +21,7 @@ const AppFooter = () => {
         
         <Link to="/docs" className="hover:text-zinc-300 transition-colors">Docs</Link>
         <Link to="/support" className="hover:text-zinc-300 transition-colors cursor-pointer">Support</Link>
-        <Link to="https://mail.google.com/mail/?view=cm&fs=1&to=prateeksinghrajawat2006@gmail.com&subject=Connect%20with%20AlgoLib" target="_blank" rel="noreferrer" className="hover:text-zinc-300 transition-colors cursor-pointer">Contact</Link>
+        <Link to="https://mail.google.com/mail/?view=cm&fs=1&to=teamalgolib@gmail.com&subject=Connect%20with%20AlgoLib" target="_blank" rel="noreferrer" className="hover:text-zinc-300 transition-colors cursor-pointer">Contact</Link>
       </div>
     </footer>
   );

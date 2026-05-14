@@ -66,7 +66,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
               <h4 className="text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90">Platform</h4>
               <ul className="space-y-3.5 flex flex-col items-center md:items-start">
                 <FooterLink name="Community" path="/discussion" isRestricted={true} onClick={handleLinkClick} />
-                <FooterLink name="Official Blog" path="/blog" isRestricted={false} onClick={handleLinkClick} />
+                <FooterLink name="News & Research" path="https://discover-algolib.netlify.app/discover" isRestricted={false} onClick={handleLinkClick} />
                 <FooterLink name="Documentation" path="/docs" isRestricted={false} onClick={handleLinkClick} />
                 <FooterLink name="Support" path="/support" isRestricted={false} onClick={handleLinkClick} />
               </ul>
@@ -105,7 +105,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
               <ul className="space-y-3.5 flex flex-col items-center md:items-start">
                 <SocialTextLink href="https://www.linkedin.com/company/algolib-official/" icon={<Linkedin size={15} />} label="LinkedIn" />
                 <SocialTextLink href="https://www.instagram.com/algolib.official/" icon={<Instagram size={15} />} label="Instagram" />
-                <SocialTextLink href="https://mail.google.com/mail/?view=cm&fs=1&to=prateeksinghrajawat2006@gmail.com&subject=Connect%20with%20AlgoLib" icon={<Mail size={15} />} label="Email" />
+                <SocialTextLink href="https://mail.google.com/mail/?view=cm&fs=1&to=teamalgolib@gmail.com&subject=Connect%20with%20AlgoLib" icon={<Mail size={15} />} label="Email" />
               </ul>
             </div>
 
@@ -126,7 +126,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
           <div className="w-full md:w-1/3 flex items-center justify-center gap-1.5 order-2 text-zinc-500">
             <MapPin size={13} className="text-cyan-500 shrink-0" />
             <span className="text-[11px] font-medium tracking-wide text-center">
-              MITS, Gwalior, Madhya Pradesh, India
+              DD Nagar, Gwalior, Madhya Pradesh, India
             </span>
           </div>
           

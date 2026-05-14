@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
-const DEVELOPER_EXTERNAL_URL = "https://github.com";
+const DEVELOPER_EXTERNAL_URL = "https://algolib.netlify.app/developer";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const timeAgo = (ts: number) => {
