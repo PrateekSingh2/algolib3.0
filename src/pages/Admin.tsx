@@ -111,7 +111,7 @@ const Admin = () => {
     const [user, setUser] = useState<User | null>(null);
     const [isAdmin, setIsAdmin] = useState<boolean>(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"forge" | "contests" | "submissions" | "moderation" | "broadcast" | "insights" | "admins" | "maintenance" | "credits" | "mailroom" | "review">("forge");
+    const [activeTab, setActiveTab] = useState<"forge" | "contests" | "submissions" | "moderation" | "broadcast" | "insights" | "admins" | "maintenance" | "credits" | "mailroom" | "review" | "database">("forge");
     const [customAlert, setCustomAlert] = useState<{ isOpen: boolean, message: string, title?: string, type: "info" | "error" | "warning" }>({ isOpen: false, message: "", type: "info" });
     const showAlert = (message: string, type: "info" | "error" | "warning" = "error", title?: string) => setCustomAlert({ isOpen: true, message, type, title });
 
@@ -197,6 +197,13 @@ const Admin = () => {
     const [reviewEditForm, setReviewEditForm] = useState({ title: "", content_markdown: "", image_url: "", seo_desc: "" });
     const [reviewProcessingId, setReviewProcessingId] = useState<string | null>(null);
 
+    // --- Published Database State ---
+    const [publishedData, setPublishedData] = useState<PendingContent[]>([]);
+    const [isPublishedLoading, setIsPublishedLoading] = useState(false);
+    const [editingPublishedId, setEditingPublishedId] = useState<string | null>(null);
+    const [publishedEditBuffer, setPublishedEditBuffer] = useState({ title: "", slug: "", content_markdown: "", image_url: "", seo_desc: "" });
+    const [isCommittingUpdate, setIsCommittingUpdate] = useState(false);
+
     const loadPendingReviews = async () => {
         setIsReviewLoading(true);
         try {
@@ -204,6 +211,43 @@ const Admin = () => {
             const response = await fetch('/.netlify/functions/get-pending-content', { headers: { 'Authorization': `Bearer ${token}` } });
             if (response.ok) { const data = await response.json(); setPendingReviewData(data); }
         } catch (e) { console.error(e); } finally { setIsReviewLoading(false); }
+    };
+
+    const fetchPublishedDatabase = async () => {
+        setIsPublishedLoading(true);
+        try {
+            const token = await user?.getIdToken();
+            const response = await fetch('/.netlify/functions/get-published-content', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (response.ok) { const data = await response.json(); setPublishedData(data); }
+        } catch (e) { console.error("Error fetching published database", e); } finally { setIsPublishedLoading(false); }
+    };
+
+    const handleStartInlineEdit = (node: PendingContent) => {
+        setPublishedEditBuffer({
+            title: node.title || "",
+            slug: node.slug || "",
+            content_markdown: node.content_markdown || "",
+            image_url: node.image_url || "",
+            seo_desc: node.seo_desc || ""
+        });
+        setEditingPublishedId(node.id);
+    };
+
+    const handleCommitDatabaseUpdate = async (id: string) => {
+        setIsCommittingUpdate(true);
+        try {
+            const token = await user?.getIdToken();
+            const response = await fetch('/.netlify/functions/update-published-content', {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, data: publishedEditBuffer })
+            });
+            if (!response.ok) throw new Error("Update failed");
+            setPublishedData(prev => prev.map(p => p.id === id ? { ...p, ...publishedEditBuffer } : p));
+            setEditingPublishedId(null);
+            setStatusMsg("Live Content Updated");
+            setTimeout(() => setStatusMsg(""), 3000);
+        } catch (err: any) { showAlert(err.message); } finally { setIsCommittingUpdate(false); }
     };
 
     useEffect(() => { const savedConfig = localStorage.getItem("algolib_gist_config"); if (savedConfig) setGistConfig(JSON.parse(savedConfig)); }, []);
@@ -227,10 +271,11 @@ const Admin = () => {
     }, []);
 
     useEffect(() => {
-        if (isAdmin && (activeTab === "admins" || activeTab === "submissions" || activeTab === "contests" || activeTab === "review")) {
+        if (isAdmin && (activeTab === "admins" || activeTab === "submissions" || activeTab === "contests" || activeTab === "review" || activeTab === "database")) {
             if (activeTab === "admins") loadAdminsList();
             if (activeTab === "contests" && existingContests.length === 0) loadContestsListSilent();
             if (activeTab === "review" && pendingReviewData.length === 0) loadPendingReviews();
+            if (activeTab === "database" && publishedData.length === 0) fetchPublishedDatabase();
         }
     }, [activeTab, isAdmin]);
 
@@ -791,7 +836,7 @@ const Admin = () => {
                                     { id: 'broadcast', label: 'Broadcast', icon: Radio }, { id: 'insights', label: 'Insights', icon: BarChart3 },
                                     { id: 'admins', label: 'Security', icon: UserPlus }, { id: 'maintenance', label: 'Lockdown', icon: Construction },
                                     { id: 'credits', label: 'AI Credits', icon: Coins }, { id: 'mailroom', label: 'Mailroom', icon: Mail },
-                                    { id: 'review', label: 'Review', icon: FileCheck }
+                                    { id: 'review', label: 'Review', icon: FileCheck }, { id: 'database', label: 'Database', icon: Database }
                                 ].map(tab => (
                                     <button key={tab.id} onClick={() => { setActiveTab(tab.id as any); setIsMobileNavOpen(false); }} className={`flex items-center gap-3 px-4 py-3 w-full text-sm font-semibold rounded-xl transition-all ${activeTab === tab.id ? 'bg-white/10 text-white border border-white/10 shadow-inner' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/5 border border-transparent'}`}>
                                         <tab.icon size={18} className={`${activeTab === tab.id ? 'text-sky-400' : ''}`} />
@@ -842,7 +887,7 @@ const Admin = () => {
                                 { id: 'broadcast', label: 'Broadcast', icon: Radio }, { id: 'insights', label: 'Insights', icon: BarChart3 },
                                 { id: 'admins', label: 'Security', icon: UserPlus }, { id: 'maintenance', label: 'Lockdown', icon: Construction },
                                 { id: 'credits', label: 'AI Credits', icon: Coins }, { id: 'mailroom', label: 'Mailroom', icon: Mail },
-                                { id: 'review', label: 'Review', icon: FileCheck }
+                                { id: 'review', label: 'Review', icon: FileCheck }, { id: 'database', label: 'Database', icon: Database }
                             ].map(tab => (
                                 <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`relative flex items-center gap-3 px-4 py-3 w-full text-xs font-semibold rounded-xl transition-all whitespace-nowrap overflow-hidden group ${activeTab === tab.id ? 'text-white' : 'text-zinc-500 hover:text-zinc-200'}`}>
                                     {activeTab === tab.id && <motion.div layoutId="sidebarGlow" className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent border-l-2 border-white rounded-xl" />}
@@ -2016,6 +2061,105 @@ const Admin = () => {
                                                         <div className="prose prose-invert prose-sm max-w-none prose-headings:text-white prose-p:text-zinc-300 prose-p:leading-relaxed prose-a:text-sky-400 hover:prose-a:text-sky-300 prose-strong:text-white prose-code:text-rose-400 prose-code:bg-rose-400/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-black/50 prose-pre:border prose-pre:border-white/10">
                                                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.content_markdown || ""}</ReactMarkdown>
                                                         </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+
+                    {activeTab === "database" && (
+                        <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6 max-w-6xl mx-auto">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-white flex items-center gap-3 tracking-tight">
+                                        <Database size={24} className="text-sky-400 drop-shadow-[0_0_12px_rgba(56,189,248,0.4)]" /> Live Content Index
+                                    </h2>
+                                    <p className="text-xs font-medium text-zinc-400 mt-1">Directly manage and commit updates to production endpoints.</p>
+                                </div>
+                                <div className="bg-sky-500/10 text-sky-400 px-3 py-1.5 rounded-lg border border-sky-500/20 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <Database size={14} /> {publishedData.length} Live Nodes
+                                </div>
+                            </div>
+
+                            {isPublishedLoading ? (
+                                <div className="p-12 flex flex-col items-center justify-center text-zinc-500">
+                                    <Loader2 className="animate-spin mb-4" size={32} />
+                                    <p className="text-[10px] uppercase tracking-widest font-bold">Accessing Production Database...</p>
+                                </div>
+                            ) : publishedData.length === 0 ? (
+                                <div className={`${pCard} p-16 flex flex-col items-center justify-center text-center`}>
+                                    <Database size={48} className="text-emerald-500/30 mb-4" />
+                                    <h3 className="text-lg font-bold text-white mb-2 tracking-tight">Database Empty</h3>
+                                    <p className="text-xs text-zinc-500 font-medium">No published content was found.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {publishedData.map(item => (
+                                        <div key={item.id} className={`${pCard} p-6 md:p-8 space-y-6`}>
+                                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border ${item.type === 'research' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                                                        {item.type}
+                                                    </div>
+                                                    <span className="text-[10px] text-zinc-500 font-mono tracking-wider">{toLocalDatetime(item.created_at)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 w-full md:w-auto">
+                                                    <button onClick={() => { editingPublishedId === item.id ? setEditingPublishedId(null) : handleStartInlineEdit(item) }} className="flex-1 md:flex-none px-4 py-2 bg-white/5 hover:bg-white/10 text-zinc-300 font-bold text-xs rounded-xl transition-all border border-white/5 flex items-center justify-center gap-2 shadow-inner"><Edit3 size={14} /> {editingPublishedId === item.id ? 'Cancel Edit' : 'Quick Edit'}</button>
+                                                </div>
+                                            </div>
+
+                                            {editingPublishedId === item.id ? (
+                                                <div className="space-y-6 bg-[#020202] p-6 rounded-xl border border-white/5 shadow-inner">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <div><label className={pLabel}>Node Nomenclature (Title)</label><input value={publishedEditBuffer.title} onChange={e => setPublishedEditBuffer({...publishedEditBuffer, title: e.target.value})} className={pInput} /></div>
+                                                        <div><label className={pLabel}>Canonical Slug</label><input value={publishedEditBuffer.slug} onChange={e => setPublishedEditBuffer({...publishedEditBuffer, slug: e.target.value})} className={`${pInput} font-mono`} /></div>
+                                                    </div>
+                                                    <div><label className={pLabel}>SEO Parameters (Description)</label><textarea value={publishedEditBuffer.seo_desc} onChange={e => setPublishedEditBuffer({...publishedEditBuffer, seo_desc: e.target.value})} rows={2} className={`${pInput} resize-y text-xs`} /></div>
+                                                    
+                                                    <div>
+                                                        <label className={pLabel}>Media Asset URL</label>
+                                                        <div className="flex gap-3">
+                                                            <input value={publishedEditBuffer.image_url} onChange={e => setPublishedEditBuffer({...publishedEditBuffer, image_url: e.target.value})} className={`${pInput} flex-1`} placeholder="https://..." />
+                                                            <label className="cursor-pointer px-4 py-2 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 text-xs font-bold uppercase tracking-widest rounded-xl transition-colors flex items-center gap-2">
+                                                                <ImageIcon size={14} /> Upload
+                                                                <input type="file" className="hidden" onChange={async (e) => {
+                                                                    const f = e.target.files?.[0];
+                                                                    if (f) {
+                                                                        setStatusMsg("Uploading to secure cloud...");
+                                                                        try { 
+                                                                            const url = await uploadToCloudinary(f); 
+                                                                            setPublishedEditBuffer(p => ({...p, image_url: url})); 
+                                                                            setStatusMsg("Upload successful");
+                                                                            setTimeout(() => setStatusMsg(""), 3000);
+                                                                        }
+                                                                        catch { showAlert("Upload failed"); setStatusMsg(""); }
+                                                                    }
+                                                                }} accept="image/*" />
+                                                            </label>
+                                                        </div>
+                                                        {publishedEditBuffer.image_url && <div className="mt-3 relative w-full h-32 rounded-lg border border-white/10 overflow-hidden bg-black/50"><img src={publishedEditBuffer.image_url} alt="Preview" className="w-full h-full object-cover opacity-80" /></div>}
+                                                    </div>
+
+                                                    <div>
+                                                        <label className={pLabel}>Manifest (Markdown Content)</label>
+                                                        <textarea value={publishedEditBuffer.content_markdown} onChange={e => setPublishedEditBuffer({...publishedEditBuffer, content_markdown: e.target.value})} rows={12} className={`${pInput} resize-y font-mono text-[11px] leading-relaxed custom-scrollbar`} />
+                                                    </div>
+
+                                                    <button onClick={() => handleCommitDatabaseUpdate(item.id)} disabled={isCommittingUpdate} className="w-full py-3 bg-gradient-to-r from-sky-500 to-indigo-500 hover:scale-[1.01] text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-[0_0_20px_rgba(56,189,248,0.2)] disabled:opacity-50 flex items-center justify-center gap-2">
+                                                        {isCommittingUpdate ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Commit Live Overwrite
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-4">
+                                                    <div><h3 className="text-xl font-bold text-white tracking-tight leading-tight mb-2">{item.title}</h3><p className="text-xs font-mono text-sky-400 bg-sky-500/10 px-2 py-1 rounded inline-block border border-sky-500/20 mb-2">/{item.slug}</p></div>
+                                                    <div className="bg-[#020202] rounded-xl border border-white/5 p-4 shadow-inner">
+                                                        <p className="text-xs text-zinc-400 leading-relaxed font-mono line-clamp-3">
+                                                            {item.content_markdown || "No content provided."}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             )}

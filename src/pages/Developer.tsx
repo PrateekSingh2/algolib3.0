@@ -130,7 +130,7 @@ const Developer = () => {
     },
     { 
       name: 'Shiva Agrawal', 
-      role: 'CPO & Head of Design', 
+      role: 'CPO & Lead Engineer', 
       imageUrl: 'https://ik.imagekit.io/g7e4hyclo/shiva.png',
       github: 'https://github.com/shivaaggrawal',
       linkedin: 'https://www.linkedin.com/in/shiva-agrawal-048ba2361',
@@ -148,11 +148,11 @@ const Developer = () => {
     },
     { 
       name: 'Sarvagya Singhai', 
-      role: 'CMO & Head of Community', 
+      role: 'Head of Content & Articles Lead', 
       imageUrl: 'https://ik.imagekit.io/g7e4hyclo/sarv.jpeg',
       github: 'https://github.com/singhaisarvagya8-hue',
       linkedin: 'https://www.linkedin.com/in/sarvagya-singhai-5058a5381',
-      bio: 'Strategic communicator and community builder, amplifying our message across digital channels.',
+      bio: 'Reviewer of all content and articles, ensuring technical accuracy and clarity in our educational materials.',
       icon: Cpu
     },
   ];

@@ -14,6 +14,9 @@ import {
   ClipboardList
 } from "lucide-react";
 
+// ─── Configuration ────────────────────────────────────────────────────────────
+const DEVELOPER_EXTERNAL_URL = "https://github.com";
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const timeAgo = (ts: number) => {
   const s = Math.floor((Date.now() - ts) / 1000);
@@ -43,18 +46,18 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Learn",
     icon: GraduationCap,
     items: [
-      { name: "Notes",      path: "/notes",      icon: BookText,      description: "Programming, OOPs & DSA notes" },
-      { name: "DSA Sheets",  path: "/sheets",  icon: ClipboardList,  description: "Proper roadmap for DSA practice with questions" },
-      { name: "Contests",   path: "/contests",   icon: Trophy,         description: "Live coding contests" },
-      { name: "Quiz Panel", path: "/quiz-panel", icon: BrainCircuit,   description: "Create or Join quizzes" },
+      { name: "Notes",       path: "/notes",      icon: BookText,        description: "Programming, OOPs & DSA notes" },
+      { name: "DSA Sheets",  path: "/sheets",     icon: ClipboardList,  description: "Proper roadmap for DSA practice with questions" },
+      { name: "Contests",    path: "/contests",   icon: Trophy,         description: "Live coding contests" },
+      { name: "Quiz Panel",  path: "/quiz-panel", icon: BrainCircuit,   description: "Create or Join quizzes" },
     ],
   },
 ];
 
 const NAV_LINKS = [
-  { name: "Home",       path: "/",           icon: Home },
-  { name: "Community",  path: "/discussion", icon: MessageCircle },
-  { name: "News/Research",       path: "/discover",       icon: Newspaper },
+  { name: "Home", path: "/", icon: Home, isExternal: false },
+  { name: "Community", path: "/discussion", icon: MessageCircle, isExternal: false },
+  { name: "News/Research", path: "http://localhost:3000/discover", icon: Newspaper, isExternal: true },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -140,21 +143,37 @@ const Navbar = () => {
     setIsMobileOpen(false);
     
     if (location.pathname === "/discussion") {
-      // Already on the page — scroll directly with an offset for the navbar
       const el = document.getElementById(id);
       if (el) {
         const yOffset = -100; 
         const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
         window.scrollTo({ top: y, behavior: 'smooth' });
         
-        // Trigger the glow animation
         el.classList.add("notif-highlight");
         setTimeout(() => el.classList.remove("notif-highlight"), 2500);
       }
       return;
     }
-    // Navigate with state so Community page can scroll and highlight after mount
     navigate("/discussion", { state: { scrollToPost: id, highlight: true } });
+  };
+
+  // ─── Secure Session Handoff Interceptor ──────────────────────────────────────
+  const handleExternalNavigation = async (e: React.MouseEvent, targetUrl: string) => {
+    e.preventDefault();
+    if (user) {
+      try {
+        const token = await user.getIdToken(true);
+        const encodedName = encodeURIComponent(profile?.display_name || user.displayName || "");
+        const encodedPhoto = encodeURIComponent(user.photoURL || "");
+        const separator = targetUrl.includes("?") ? "&" : "?";
+        
+        window.location.href = `${targetUrl}${separator}authToken=${token}&displayName=${encodedName}&photoURL=${encodedPhoto}`;
+      } catch (error) {
+        window.location.href = targetUrl;
+      }
+    } else {
+      window.location.href = targetUrl;
+    }
   };
 
   const avatarSrc  = user?.photoURL  || "https://placehold.co/96x96/111/fff?text=U";
@@ -171,7 +190,6 @@ const Navbar = () => {
           transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
           className={`absolute ${mobile ? "right-0 top-14" : "right-0 top-[calc(100%+14px)]"} w-64 bg-[#0c0c0e]/95 backdrop-blur-xl border border-white/[0.1] rounded-2xl p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[420]`}
         >
-          {/* Avatar header */}
           <div className="px-3 pt-3 pb-3.5 mb-1 border-b border-white/[0.05] flex items-center gap-3">
             <div className="relative shrink-0">
               <img src={avatarSrc} alt="avatar" className="w-9 h-9 rounded-full object-cover ring-2 ring-white/10" />
@@ -248,7 +266,6 @@ const Navbar = () => {
     </AnimatePresence>
   );
 
-  // ── Desktop Dropdown ─────────────────────────────────────────────────────────
   const GroupDropdown = ({ group }: { group: NavGroup }) => (
     <AnimatePresence>
       {openGroup === group.label && (
@@ -280,8 +297,7 @@ const Navbar = () => {
     </AnimatePresence>
   );
 
-  const isNotesActive = location.pathname === "/notes";
-  const isDevActive   = location.pathname === "/developer";
+  const isDevActive = location.pathname === "/developer";
 
   return (
     <>
@@ -294,23 +310,36 @@ const Navbar = () => {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="pointer-events-auto flex items-center p-1.5 rounded-full bg-[#050505]/40 backdrop-blur-3xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
         >
-          {/* Logo */}
           <Link to="/" className="flex items-center gap-2 pl-4 pr-3 py-1.5 mr-2 rounded-full hover:bg-white/[0.06] transition-colors group">
             <Zap className="w-[17px] h-[17px] text-zinc-100 group-hover:text-blue-400 transition-colors" fill="currentColor" />
             <span className="font-extrabold text-white text-[14px] tracking-tight">ALGO<span className="text-zinc-500 font-semibold">LIB</span></span>
           </Link>
 
-          {/* Simple nav links */}
           <div className="flex items-center gap-0.5">
             {NAV_LINKS.map((tab) => {
-              const isActive = location.pathname === tab.path;
+              const isActive = tab.path === "/" 
+                ? location.pathname === "/" 
+                : location.pathname.startsWith(tab.path);
+              
+              const baseClasses = `relative z-10 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold tracking-wide transition-colors ${isActive ? "text-white" : "text-zinc-400 hover:text-zinc-200"}`;
+
               return (
                 <div key={tab.name} className="relative">
-                  <Link to={tab.path}
-                    className={`relative z-10 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold tracking-wide transition-colors ${isActive ? "text-white" : "text-zinc-400 hover:text-zinc-200"}`}>
-                    <tab.icon className="w-[14px] h-[14px]" />
-                    {tab.name}
-                  </Link>
+                  {tab.isExternal ? (
+                    <a 
+                      href={tab.path} 
+                      onClick={(e) => handleExternalNavigation(e, tab.path)}
+                      className={baseClasses}
+                    >
+                      <tab.icon className="w-[14px] h-[14px]" />
+                      {tab.name}
+                    </a>
+                  ) : (
+                    <Link to={tab.path} className={baseClasses}>
+                      <tab.icon className="w-[14px] h-[14px]" />
+                      {tab.name}
+                    </Link>
+                  )}
                   {isActive && (
                     <motion.div layoutId="desk-active-nav"
                       className="absolute inset-0 rounded-full bg-white/[0.08] border border-white/[0.04] z-0"
@@ -320,9 +349,8 @@ const Navbar = () => {
               );
             })}
 
-            {/* Group dropdowns */}
             {NAV_GROUPS.map((group) => {
-              const isGroupActive = group.items.some(i => i.path === location.pathname);
+              const isGroupActive = group.items.some(i => location.pathname.startsWith(i.path));
               const isOpen = openGroup === group.label;
               return (
                 <div key={group.label} className="relative">
@@ -342,16 +370,17 @@ const Navbar = () => {
 
           <div className="w-px h-5 bg-white/[0.08] mx-3" />
 
-          {/* Right actions */}
           <div className="flex items-center gap-1 pr-1.5">
-
-            {/* Dev */}
-            <Link to="/developer" title="Developer"
-              className={`p-2 rounded-full font-mono font-bold text-[13px] leading-none flex items-center justify-center transition-colors ${isDevActive ? "text-white bg-white/[0.08]" : "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]"}`}>
+            <a 
+              href={DEVELOPER_EXTERNAL_URL} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              title="External Developer Site"
+              className={`p-2 rounded-full font-mono font-bold text-[13px] leading-none flex items-center justify-center transition-colors ${isDevActive ? "text-white bg-white/[0.08]" : "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]"}`}
+            >
               {"</>"}
-            </Link>
+            </a>
 
-            {/* Notifications (Placed correctly before Profile) */}
             {user && profile?.is_profile_complete && (
               <div className="relative" ref={notifDeskRef}>
                 <button onClick={handleNotifOpen}
@@ -368,7 +397,6 @@ const Navbar = () => {
               </div>
             )}
 
-            {/* Profile or sign-in */}
             {user ? (
               <div className="relative ml-1" ref={profileRef}>
                 <button onClick={() => { setIsProfileOpen(p => !p); setIsNotifOpen(false); }}
@@ -404,7 +432,6 @@ const Navbar = () => {
           </Link>
 
           <div className="flex items-center gap-1">
-            {/* Mobile Notification Bell */}
             {user && profile?.is_profile_complete && (
               <div className="relative" ref={notifMobRef}>
                 <button onClick={handleNotifOpen} className={`p-2 rounded-xl relative transition-colors ${isNotifOpen ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:text-white hover:bg-white/[0.04]"}`}>
@@ -420,7 +447,6 @@ const Navbar = () => {
               </div>
             )}
             
-            {/* Mobile Profile */}
             {user && (
               <div className="relative" ref={mProfileRef}>
                 <button onClick={() => { setIsProfileOpen(p => !p); setIsNotifOpen(false); }}
@@ -437,7 +463,6 @@ const Navbar = () => {
           </div>
         </motion.div>
 
-        {/* ... Mobile Dropdown content ... */}
         <AnimatePresence>
           {isMobileOpen && (
             <>
@@ -453,27 +478,45 @@ const Navbar = () => {
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                 className="absolute top-full left-0 right-0 mt-3 bg-[#09090b]/95 backdrop-blur-2xl border border-white/[0.10] rounded-[24px] p-2.5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)] flex flex-col gap-0.5 z-50 max-h-[80vh] overflow-y-auto"
               >
-                {/* Simple links */}
                 {NAV_LINKS.map((tab) => {
-                  const isActive = location.pathname === tab.path;
-                  return (
-                    <Link key={tab.name} to={tab.path} onClick={() => setIsMobileOpen(false)}
-                      className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden">
+                  const isActive = tab.path === "/" 
+                    ? location.pathname === "/" 
+                    : location.pathname.startsWith(tab.path);
+
+                  const contentJSX = (
+                    <>
                       {isActive && <div className="absolute inset-0 bg-white/[0.06] border border-white/[0.04] rounded-[16px] z-0" />}
                       <div className={`relative z-10 p-1.5 rounded-lg border ${isActive ? "bg-white/[0.08] border-white/[0.05] text-white" : "border-transparent text-zinc-500 group-hover:text-zinc-300 group-hover:bg-white/[0.04] group-hover:border-white/[0.05]"} transition-all`}>
                         <tab.icon size={18} />
                       </div>
                       <span className={`relative z-10 text-[15px] font-semibold transition-colors ${isActive ? "text-zinc-100" : "text-zinc-400 group-hover:text-zinc-200"}`}>{tab.name}</span>
+                    </>
+                  );
+
+                  return tab.isExternal ? (
+                    <a 
+                      key={tab.name} 
+                      href={tab.path} 
+                      onClick={(e) => {
+                        setIsMobileOpen(false);
+                        handleExternalNavigation(e, tab.path);
+                      }}
+                      className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden"
+                    >
+                      {contentJSX}
+                    </a>
+                  ) : (
+                    <Link key={tab.name} to={tab.path} onClick={() => setIsMobileOpen(false)} className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden">
+                      {contentJSX}
                     </Link>
                   );
                 })}
 
-                {/* Groups */}
                 {NAV_GROUPS.map((group) => (
                   <div key={group.label}>
                     <div className="px-4 py-2 text-[11px] font-semibold tracking-widest text-zinc-600 uppercase">{group.label}</div>
                     {group.items.map((item) => {
-                      const isActive = location.pathname === item.path;
+                      const isActive = location.pathname.startsWith(item.path);
                       return (
                         <Link key={item.name} to={item.path} onClick={() => setIsMobileOpen(false)}
                           className="relative px-4 py-3 rounded-[16px] flex items-center gap-4 group overflow-hidden">
@@ -493,20 +536,18 @@ const Navbar = () => {
 
                 <div className="h-px bg-white/[0.06] my-2 mx-4" />
 
-                {/* Notes & Dev */}
-                {[{ name: "Developer", path: "/developer", icon: Code2 }].map((item) => {
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <Link key={item.name} to={item.path} onClick={() => setIsMobileOpen(false)}
-                      className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden">
-                      {isActive && <div className="absolute inset-0 bg-white/[0.06] border border-white/[0.04] rounded-[16px] z-0" />}
-                      <div className={`relative z-10 p-1.5 rounded-lg border ${isActive ? "bg-white/[0.08] border-white/[0.05] text-white" : "border-transparent text-zinc-500 group-hover:text-zinc-300 group-hover:bg-white/[0.04] group-hover:border-white/[0.05]"} transition-all`}>
-                        <item.icon size={18} />
-                      </div>
-                      <span className={`relative z-10 text-[15px] font-semibold transition-colors ${isActive ? "text-zinc-100" : "text-zinc-400 group-hover:text-zinc-200"}`}>{item.name}</span>
-                    </Link>
-                  );
-                })}
+                <a 
+                  href={DEVELOPER_EXTERNAL_URL} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  onClick={() => setIsMobileOpen(false)}
+                  className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden"
+                >
+                  <div className="relative z-10 p-1.5 rounded-lg border border-transparent text-zinc-500 group-hover:text-zinc-300 group-hover:bg-white/[0.04] group-hover:border-white/[0.05] transition-all">
+                    <Code2 size={18} />
+                  </div>
+                  <span className="relative z-10 text-[15px] font-semibold text-zinc-400 group-hover:text-zinc-200 transition-colors">Developer</span>
+                </a>
 
                 {!user && (
                   <button
@@ -540,12 +581,10 @@ const Navbar = () => {
               onClick={(e) => e.stopPropagation()}
               className="relative w-full max-w-md bg-[#0A0A0A] border border-white/10 rounded-2xl shadow-[0_0_60px_rgba(0,0,0,0.9)] overflow-hidden"
             >
-              {/* Top glow accent */}
               <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-500/60 to-transparent" />
               <div className="absolute -top-20 -right-20 w-40 h-40 bg-cyan-500/10 blur-[50px] rounded-full pointer-events-none" />
 
               <div className="p-8 relative z-10">
-                {/* Header */}
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -566,7 +605,6 @@ const Navbar = () => {
                   Select an auth protocol to securely sync your algorithmic environment.
                 </p>
 
-                {/* Auth buttons */}
                 <div className="flex flex-col gap-3">
                   <button
                     onClick={() => { setIsAuthModalOpen(false); executeGoogleSignIn(); }}
@@ -602,7 +640,6 @@ const Navbar = () => {
         )}
       </AnimatePresence>
 
-      {/* Shared CSS (Now contains the missing highlight animation) */}
       <style>{`
         .menu-item {
           display: flex; align-items: center; gap: 10px;
@@ -619,11 +656,10 @@ const Navbar = () => {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
 
-        /* The Animation CSS required for the Notification Click Highlight feature */
         @keyframes highlight-flash {
           0%   { background-color: rgba(59, 130, 246, 0.25); box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); transform: scale(1.01); }
           50%  { background-color: rgba(59, 130, 246, 0.1);  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
-          100% { background-color: transparent;              box-shadow: none;                             transform: scale(1); }
+          100% { background-color: transparent;              box-shadow: none;                              transform: scale(1); }
         }
         .notif-highlight {
           animation: highlight-flash 2.5s ease-out;

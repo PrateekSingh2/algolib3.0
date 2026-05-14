@@ -1,3 +1,9 @@
-/_next/* https://discover-algolib.netlify.app/_next/:splat 200
+# Ensure specific static files pass cleanly
+/discover/_next/* https://discover-algolib.netlify.app/_next/:splat 200
+
+# Proxy the exact base route cleanly
+/discover https://discover-algolib.netlify.app/discover 200
+
+# Proxy all deep nested sub-routes
 /discover/* https://discover-algolib.netlify.app/discover/:splat 200
 /* /index.html 200
