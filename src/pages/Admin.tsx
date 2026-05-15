@@ -119,6 +119,12 @@ const Admin = () => {
     const showConfirm = (message: string, title: string, onConfirm: () => void) => setCustomConfirm({ isOpen: true, message, title, onConfirm });
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
+    // Universal Passcode-Confirm Modal (for ALL destructive/irreversible actions)
+    const [passcodeConfirm, setPasscodeConfirm] = useState<{ isOpen: boolean, title: string, message: string, passcodeInput: string, isPending: boolean, onConfirm: (passcode: string) => void | Promise<void> }>({ isOpen: false, title: "", message: "", passcodeInput: "", isPending: false, onConfirm: () => {} });
+    const showPasscodeConfirm = (title: string, message: string, onConfirm: (passcode: string) => void | Promise<void>) => {
+        setPasscodeConfirm({ isOpen: true, title, message, passcodeInput: "", isPending: false, onConfirm });
+    };
+
     const [mode, setMode] = useState<"create" | "edit">("create");
     const [activeCodeTab, setActiveCodeTab] = useState<"java" | "cpp" | "python">("java");
     const [tags, setTags] = useState<string[]>([]);
@@ -700,13 +706,24 @@ const Admin = () => {
     };
 
     const handleDeleteContest = (id: string) => {
-        showConfirm("Delete this contest? All related records will be destroyed.", "Confirm Deletion", async () => {
+        showPasscodeConfirm("Delete Contest", "This will permanently destroy the contest and all its related records. Enter master passcode to confirm.", async (passcode: string) => {
+            setPasscodeConfirm(prev => ({ ...prev, isPending: true }));
             try {
-                setStatusMsg("Erasing records..."); const token = await user?.getIdToken();
+                const token = await user?.getIdToken();
+                // Verify passcode via backend before proceeding
+                const verifyRes = await fetch('/.netlify/functions/manage-admins', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verify_only', passcode }) });
+                const verifyData = await verifyRes.json();
+                if (!verifyRes.ok || !verifyData.verified) {
+                    setPasscodeConfirm(prev => ({ ...prev, isPending: false, isOpen: false }));
+                    if (verifyData.error?.includes('Unauthorized')) { setShowUnauthorizedModal(true); } else { showAlert("Invalid passcode. Deletion aborted."); }
+                    return;
+                }
+                setPasscodeConfirm(prev => ({ ...prev, isOpen: false, isPending: false }));
+                setStatusMsg("Erasing records...");
                 const response = await fetch(`/.netlify/functions/manage-contest?id=${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
                 if (!response.ok) throw new Error("Delete failed");
                 setExistingContests(prev => prev.filter(c => c.id !== id)); setStatusMsg("Deleted Successfully"); setTimeout(() => setStatusMsg(""), 3000);
-            } catch (err: any) { showAlert("Delete Failed: " + err.message); setStatusMsg(""); }
+            } catch (err: any) { showAlert("Delete Failed: " + err.message); setStatusMsg(""); setPasscodeConfirm(prev => ({ ...prev, isPending: false, isOpen: false })); }
         });
     };
 
@@ -729,8 +746,44 @@ const Admin = () => {
     const removeTestCase = (pIndex: number, tcIndex: number) => { const newP = [...problems]; newP[pIndex].testCases = newP[pIndex].testCases.filter((_, i) => i !== tcIndex); setProblems(newP); };
     const updateTestCase = (pIndex: number, tcIndex: number, field: string, value: any) => { const newP = [...problems]; newP[pIndex].testCases[tcIndex] = { ...newP[pIndex].testCases[tcIndex], [field]: value }; setProblems(newP); };
 
-    const handleDeletePost = (postId: string) => { showConfirm("Delete post?", "Confirm Purge", async () => { setIsDeleting(postId); try { await deleteDoc(doc(firestoreDB, "community_posts", postId)); } catch (e) { showAlert("Failed."); } finally { setIsDeleting(null); } }); };
-    const handleDeleteReply = (postId: string, replyId: string) => { showConfirm("Delete reply?", "Confirm Purge", async () => { setIsDeleting(`reply-${replyId}`); try { const post = posts.find(p => p.id === postId); if (!post || !post.replies) return; await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: post.replies.filter(r => r.id !== replyId) }); } catch (e) { showAlert("Failed."); } finally { setIsDeleting(null); } }); };
+    const handleDeletePost = (postId: string) => {
+        showPasscodeConfirm("Delete Community Post", "Permanently removes this post and all its replies from the matrix. Enter master passcode.", async (passcode: string) => {
+            setPasscodeConfirm(prev => ({ ...prev, isPending: true }));
+            try {
+                const token = await user?.getIdToken();
+                const verifyRes = await fetch('/.netlify/functions/manage-admins', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verify_only', passcode }) });
+                const verifyData = await verifyRes.json();
+                if (!verifyRes.ok || !verifyData.verified) {
+                    setPasscodeConfirm(prev => ({ ...prev, isPending: false, isOpen: false }));
+                    if (verifyData.error?.includes('Unauthorized')) { setShowUnauthorizedModal(true); } else { showAlert("Invalid passcode."); }
+                    return;
+                }
+                setPasscodeConfirm(prev => ({ ...prev, isOpen: false, isPending: false }));
+                setIsDeleting(postId);
+                await deleteDoc(doc(firestoreDB, "community_posts", postId));
+            } catch (e) { showAlert("Failed."); setPasscodeConfirm(prev => ({ ...prev, isPending: false, isOpen: false })); } finally { setIsDeleting(null); }
+        });
+    };
+    const handleDeleteReply = (postId: string, replyId: string) => {
+        showPasscodeConfirm("Delete Reply", "Permanently removes this reply from the discussion thread. Enter master passcode.", async (passcode: string) => {
+            setPasscodeConfirm(prev => ({ ...prev, isPending: true }));
+            try {
+                const token = await user?.getIdToken();
+                const verifyRes = await fetch('/.netlify/functions/manage-admins', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'verify_only', passcode }) });
+                const verifyData = await verifyRes.json();
+                if (!verifyRes.ok || !verifyData.verified) {
+                    setPasscodeConfirm(prev => ({ ...prev, isPending: false, isOpen: false }));
+                    if (verifyData.error?.includes('Unauthorized')) { setShowUnauthorizedModal(true); } else { showAlert("Invalid passcode."); }
+                    return;
+                }
+                setPasscodeConfirm(prev => ({ ...prev, isOpen: false, isPending: false }));
+                setIsDeleting(`reply-${replyId}`);
+                const post = posts.find(p => p.id === postId);
+                if (!post || !post.replies) return;
+                await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: post.replies.filter(r => r.id !== replyId) });
+            } catch (e) { showAlert("Failed."); setPasscodeConfirm(prev => ({ ...prev, isPending: false, isOpen: false })); } finally { setIsDeleting(null); }
+        });
+    };
 
     const filteredCredits = useMemo(() => {
         return insightsData.filter(u => {
@@ -834,10 +887,84 @@ const Admin = () => {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
                         <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} className="w-full max-w-sm bg-[#050505] border border-white/10 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
                             <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/10 blur-[60px] rounded-full pointer-events-none"></div>
-                            <div className="flex flex-col items-center text-center mb-8 relative z-10"><div className="w-16 h-16 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center mb-4 shadow-inner"><ShieldCheck size={28} className="text-emerald-400" /></div><h3 className="text-xl font-bold text-white mb-2">Authorization</h3><p className="text-xs text-zinc-400">Master passcode required.</p></div>
+                            <div className="flex flex-col items-center text-center mb-8 relative z-10"><div className="w-16 h-16 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center mb-4 shadow-inner"><ShieldCheck size={28} className="text-emerald-400" /></div><h3 className="text-xl font-bold text-white mb-2">Grant Authorization</h3><p className="text-xs text-zinc-400">Master passcode required to add <span className="text-emerald-400 font-bold">{newAdminEmail}</span> as admin.</p></div>
                             <div className="space-y-5 relative z-10">
                                 <div><input type="password" value={adminPasscode} onChange={(e) => setAdminPasscode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && executeAddAdmin()} placeholder="••••••••" className="w-full bg-[#020202] border border-white/10 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.3em] text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-inner transition-all font-mono" autoFocus /></div>
                                 <div className="flex gap-3"><button onClick={() => setShowAddAdminPasscodeModal(false)} className={`${pBtn} flex-1 bg-white/5 text-zinc-300 hover:bg-white/10`}>Abort</button><button onClick={executeAddAdmin} disabled={!adminPasscode || isAddingAdmin} className={`${pBtn} flex-1 bg-emerald-500 hover:bg-emerald-400 text-black disabled:opacity-50`}>{isAddingAdmin ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Authorize</button></div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {/* Remove Admin Passcode Modal — was MISSING, now added */}
+                {showRemoveAdminPasscodeModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+                        <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} className="w-full max-w-sm bg-[#050505] border border-red-500/20 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+                            <div className="absolute -top-10 -right-10 w-40 h-40 bg-red-500/10 blur-[60px] rounded-full pointer-events-none"></div>
+                            <div className="flex flex-col items-center text-center mb-8 relative z-10">
+                                <div className="w-16 h-16 rounded-xl bg-zinc-900 border border-red-500/20 flex items-center justify-center mb-4 shadow-inner"><UserMinus size={28} className="text-red-400" /></div>
+                                <h3 className="text-xl font-bold text-white mb-2">Revoke Clearance</h3>
+                                <p className="text-xs text-zinc-400">Enter master passcode to revoke admin access for</p>
+                                <p className="text-sm font-bold text-red-400 mt-1 break-all">{adminToRemove}</p>
+                            </div>
+                            <div className="space-y-5 relative z-10">
+                                <div><input type="password" value={adminPasscode} onChange={(e) => setAdminPasscode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && executeRemoveAdmin()} placeholder="••••••••" className="w-full bg-[#020202] border border-white/10 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.3em] text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 shadow-inner transition-all font-mono" autoFocus /></div>
+                                <div className="flex gap-3">
+                                    <button onClick={() => { setShowRemoveAdminPasscodeModal(false); setAdminToRemove(null); setAdminPasscode(""); }} className={`${pBtn} flex-1 bg-white/5 text-zinc-300 hover:bg-white/10`}>Abort</button>
+                                    <button onClick={executeRemoveAdmin} disabled={!adminPasscode || isRevokingId !== null} className={`${pBtn} flex-1 bg-red-600 hover:bg-red-500 text-white disabled:opacity-50`}>{isRevokingId ? <Loader2 size={16} className="animate-spin" /> : <UserMinus size={16} />} Revoke</button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {/* Unauthorized Modal — was MISSING, now added */}
+                {showUnauthorizedModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[400] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+                        <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ type: 'spring', damping: 20 }} className="w-full max-w-sm bg-[#050505] border border-red-500/30 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+                            <div className="absolute inset-0 bg-red-950/10 pointer-events-none" />
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 to-rose-600" />
+                            <div className="flex flex-col items-center text-center relative z-10">
+                                <div className="w-20 h-20 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6 shadow-inner">
+                                    <ShieldAlert size={36} className="text-red-500" />
+                                </div>
+                                <h3 className="text-2xl font-black text-white mb-2 tracking-tight">⚠ SECURITY BREACH</h3>
+                                <p className="text-sm text-red-400 font-bold mb-2 uppercase tracking-widest">Unauthorized Passcode</p>
+                                <p className="text-xs text-zinc-400 leading-relaxed mb-8">The passcode you entered is incorrect. This incident has been logged. Repeated attempts may result in access suspension.</p>
+                                <button onClick={() => setShowUnauthorizedModal(false)} className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-all shadow-lg text-sm tracking-widest uppercase">Acknowledged</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {/* Universal Passcode-Confirm Modal for all destructive actions */}
+                {passcodeConfirm.isOpen && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[350] flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+                        <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} className="w-full max-w-sm bg-[#050505] border border-amber-500/20 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+                            <div className="absolute -top-10 -right-10 w-40 h-40 bg-amber-500/10 blur-[60px] rounded-full pointer-events-none"></div>
+                            <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/50 to-red-500/50" />
+                            <div className="flex flex-col items-center text-center mb-8 relative z-10">
+                                <div className="w-16 h-16 rounded-xl bg-zinc-900 border border-amber-500/20 flex items-center justify-center mb-4 shadow-inner"><AlertTriangle size={28} className="text-amber-400" /></div>
+                                <h3 className="text-xl font-bold text-white mb-1">{passcodeConfirm.title}</h3>
+                                <p className="text-xs text-zinc-400 leading-relaxed">{passcodeConfirm.message}</p>
+                            </div>
+                            <div className="space-y-5 relative z-10">
+                                <div>
+                                    <label className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-2 block">Master Passcode Required</label>
+                                    <input
+                                        type="password"
+                                        value={passcodeConfirm.passcodeInput}
+                                        onChange={(e) => setPasscodeConfirm(prev => ({ ...prev, passcodeInput: e.target.value }))}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' && passcodeConfirm.passcodeInput && !passcodeConfirm.isPending) { passcodeConfirm.onConfirm(passcodeConfirm.passcodeInput); } }}
+                                        placeholder="••••••••"
+                                        className="w-full bg-[#020202] border border-white/10 rounded-xl px-4 py-3 text-center text-2xl tracking-[0.3em] text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50 shadow-inner transition-all font-mono"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setPasscodeConfirm(prev => ({ ...prev, isOpen: false, passcodeInput: "", isPending: false }))} disabled={passcodeConfirm.isPending} className={`${pBtn} flex-1 bg-white/5 text-zinc-300 hover:bg-white/10 disabled:opacity-50`}>Abort</button>
+                                    <button onClick={() => { if (passcodeConfirm.passcodeInput) passcodeConfirm.onConfirm(passcodeConfirm.passcodeInput); }} disabled={!passcodeConfirm.passcodeInput || passcodeConfirm.isPending} className={`${pBtn} flex-1 bg-amber-500 hover:bg-amber-400 text-black disabled:opacity-50`}>{passcodeConfirm.isPending ? <Loader2 size={16} className="animate-spin" /> : <AlertTriangle size={16} />} {passcodeConfirm.isPending ? 'Verifying...' : 'Confirm Delete'}</button>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>
