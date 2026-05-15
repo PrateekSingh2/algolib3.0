@@ -24,8 +24,19 @@ exports.handler = async (event) => {
       const { data: verified, error: verifyErr } = await supabaseAdmin.rpc('verify_admin_passcode', { provided_passcode: passcode });
       if (verifyErr || !verified) throw new Error('Unauthorized Passcode');
 
+      // 🚨 CRITICAL FIX: Prevent deleting the System Init Owner
+      const SYSTEM_OWNER_EMAIL = 'rajawatprateek853@gmail.com';
+      if (email_to_remove.toLowerCase() === SYSTEM_OWNER_EMAIL.toLowerCase()) {
+        return { 
+          statusCode: 403, 
+          body: JSON.stringify({ error: 'Security Exception: Cannot remove the System Init owner.' }) 
+        };
+      }
+
+      // Proceed to delete if it is a regular admin
       const { error } = await supabaseAdmin.from('admins').delete().eq('email', email_to_remove.toLowerCase());
       if (error) throw error;
+      
     } else {
       return { statusCode: 400, body: JSON.stringify({ error: 'Invalid action' }) };
     }
