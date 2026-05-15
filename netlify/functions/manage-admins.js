@@ -21,7 +21,10 @@ exports.handler = async (event) => {
       if (insertErr) throw insertErr;
 
     } else if (action === 'remove') {
-      const { error } = await supabaseAdmin.rpc('remove_admin_with_passcode', { email_to_remove, provided_passcode: passcode });
+      const { data: verified, error: verifyErr } = await supabaseAdmin.rpc('verify_admin_passcode', { provided_passcode: passcode });
+      if (verifyErr || !verified) throw new Error('Unauthorized Passcode');
+
+      const { error } = await supabaseAdmin.from('admins').delete().eq('email', email_to_remove.toLowerCase());
       if (error) throw error;
     } else {
       return { statusCode: 400, body: JSON.stringify({ error: 'Invalid action' }) };
