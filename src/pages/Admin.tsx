@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc, setDoc, updateDoc, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc, setDoc, updateDoc, getDocs, where } from "firebase/firestore";
 import { ref, onValue } from "firebase/database";
 import { auth, firestoreDB, loginWithGoogle, logout, rtdb } from "../lib/firebase";
 
@@ -135,6 +135,7 @@ const Admin = () => {
     const [adminToRemove, setAdminToRemove] = useState<string | null>(null);
     const [showRemoveAdminPasscodeModal, setShowRemoveAdminPasscodeModal] = useState(false);
     const [isRemovingAdmin, setIsRemovingAdmin] = useState(false);
+    const [isRevokingId, setIsRevokingId] = useState<string | null>(null);
 
     const [contestView, setContestView] = useState<"editor" | "manager">("editor");
     const [cId, setCId] = useState("");
@@ -208,17 +209,6 @@ const Admin = () => {
     const [isTriggering, setIsTriggering] = useState(false);
     const [triggerMessage, setTriggerMessage] = useState<string | null>(null);
 
-    // Global Lockdown State
-    const [isGlobalLockdown, setIsGlobalLockdown] = useState(false);
-
-    // Listen for real-time lockdown status on mount
-    useEffect(() => {
-        const unsub = onSnapshot(doc(firestoreDB, 'system_settings', 'status'), (docSnap) => {
-        if (docSnap.exists()) setIsGlobalLockdown(docSnap.data().global_lockdown === true);
-        });
-        return () => unsub();
-    }, []);
-
     const loadPendingReviews = async () => {
         setIsReviewLoading(true);
         try {
@@ -278,18 +268,6 @@ const Admin = () => {
         } finally {
         setIsTriggering(false);
         setTimeout(() => setTriggerMessage(null), 5000);
-        }
-    };
-
-    const handleToggleGlobalLockdown = async () => {
-        if(!window.confirm(`Are you sure you want to ${isGlobalLockdown ? 'DISABLE' : 'ENABLE'} Global Lockdown?`)) return;
-        try {
-        await setDoc(doc(firestoreDB, 'system_settings', 'status'), {
-            global_lockdown: !isGlobalLockdown,
-            updated_at: new Date().toISOString()
-        }, { merge: true });
-        } catch (err) {
-        console.error("Lockdown toggle failed");
         }
     };
 
@@ -634,14 +612,40 @@ const Admin = () => {
     const handleRemoveAdminClick = (email: string) => { setAdminToRemove(email); setAdminPasscode(""); setShowRemoveAdminPasscodeModal(true); };
 
     const executeRemoveAdmin = async () => {
-        if (!adminPasscode || !adminToRemove) return; setShowRemoveAdminPasscodeModal(false); setIsRemovingAdmin(true);
+        if (!adminPasscode || !adminToRemove) return; 
+        const emailToRemove = adminToRemove;
+        setShowRemoveAdminPasscodeModal(false); 
+        setIsRevokingId(emailToRemove);
         try {
             const token = await user?.getIdToken();
-            const response = await fetch('/.netlify/functions/manage-admins', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remove', passcode: adminPasscode, email_to_remove: adminToRemove }) });
+            const response = await fetch('/.netlify/functions/manage-admins', { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remove', passcode: adminPasscode, email_to_remove: emailToRemove }) });
             const data = await response.json();
             if (!response.ok) { if (data.error && data.error.includes("Unauthorized Passcode")) throw new Error("Unauthorized Passcode"); throw new Error(data.error || "Operation failed"); }
-            setStatusMsg("Privileges Revoked!"); setTimeout(() => setStatusMsg(""), 3000); loadAdminsList();
-        } catch (err: any) { if (err.message.includes("Unauthorized Passcode")) { setShowUnauthorizedModal(true); } else { showAlert(err.message || "Operation failed."); } } finally { setIsRemovingAdmin(false); setAdminPasscode(""); setAdminToRemove(null); }
+            
+            // Downgrade in Firestore
+            const usersRef = collection(firestoreDB, "users");
+            const q = query(usersRef, where("email", "==", emailToRemove));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const userId = snap.docs[0].id;
+                await updateDoc(doc(firestoreDB, "users", userId), { role: 'user' });
+            }
+
+            // Optimistic update
+            setAdminsList(prev => prev.filter(a => a.email !== emailToRemove));
+
+            setStatusMsg("Privileges Revoked!"); setTimeout(() => setStatusMsg(""), 3000); 
+        } catch (err: any) { 
+            if (err.message === "Unauthorized Passcode" || err.message.includes("Unauthorized Passcode")) { 
+                setShowUnauthorizedModal(true); 
+            } else { 
+                showAlert(err.message || "Operation failed."); 
+            } 
+        } finally { 
+            setIsRevokingId(null);
+            setAdminPasscode(""); 
+            setAdminToRemove(null); 
+        }
     };
 
     const fetchFromGist = async () => {
@@ -1800,7 +1804,7 @@ const Admin = () => {
                                                     <tr key={admin.email} className="hover:bg-white/[0.02] transition-colors">
                                                         <td className="p-4 pl-6"><div className="flex items-center gap-4"><div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-800 to-black border border-white/10 flex items-center justify-center text-lg font-bold text-white shadow-inner">{admin.email.charAt(0).toUpperCase()}</div><div><p className="text-white font-bold text-sm tracking-tight mb-0.5">{admin.email}</p>{user?.email === admin.email && <span className="text-[9px] font-bold tracking-widest uppercase bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded border border-sky-500/30">Current Client</span>}</div></div></td>
                                                         <td className="p-4"><span className="text-zinc-400 text-[10px] font-medium font-mono bg-[#020202] shadow-inner border border-white/5 px-3 py-1.5 rounded-lg">{admin.added_by}</span></td>
-                                                        <td className="p-4 pr-6 text-right"><div className="flex items-center justify-end gap-5 text-zinc-500 font-bold text-[10px] tracking-widest uppercase"><span>{new Date(admin.created_at).toLocaleDateString()}</span>{admin.added_by !== 'system_init' ? (<button onClick={() => handleRemoveAdminClick(admin.email)} className="p-2 text-zinc-500 bg-white/5 border border-white/5 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 rounded-lg transition-colors shadow-sm" title="Revoke Clearance"><Trash2 size={16} /></button>) : (<span className="p-2 bg-emerald-500/5 border border-emerald-500/20 text-emerald-500 rounded-lg cursor-not-allowed shadow-inner" title="System Founder (Immutable)"><ShieldCheck size={16} /></span>)}</div></td>
+                                                        <td className="p-4 pr-6 text-right"><div className="flex items-center justify-end gap-5 text-zinc-500 font-bold text-[10px] tracking-widest uppercase"><span>{new Date(admin.created_at).toLocaleDateString()}</span>{admin.added_by !== 'system_init' ? (<button onClick={() => handleRemoveAdminClick(admin.email)} disabled={user?.email === admin.email || isRevokingId === admin.email} className="p-2 text-zinc-500 bg-white/5 border border-white/5 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" title="Revoke Clearance">{isRevokingId === admin.email ? <Loader2 size={16} className="animate-spin text-red-400" /> : <Trash2 size={16} />}</button>) : (<span className="p-2 bg-emerald-500/5 border border-emerald-500/20 text-emerald-500 rounded-lg cursor-not-allowed shadow-inner" title="System Founder (Immutable)"><ShieldCheck size={16} /></span>)}</div></td>
                                                     </tr>
                                                 ))}
                                                 {adminsList.length === 0 && (<tr><td colSpan={3} className="p-12 text-center text-zinc-600 text-[10px] font-bold tracking-widest uppercase">Loading security matrix...</td></tr>)}
@@ -1808,32 +1812,6 @@ const Admin = () => {
                                         </table>
                                     </div>
                                 </div>
-
-                                <div className="bg-rose-500/5 border border-rose-500/20 rounded-xl p-5 shadow-md">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <h3 className="text-sm font-bold text-rose-400 flex items-center gap-2">
-                                                <ShieldAlert className="w-4 h-4" /> Global Site Lockdown
-                                            </h3>
-                                            <p className="text-xs text-zinc-400 mt-1">
-                                                Immediately blocks all non-admin traffic across the Vite app and Next.js content site.
-                                            </p>
-                                        </div>
-                                        
-                                        {/* Lockdown Toggle Switch */}
-                                        <button
-                                            onClick={handleToggleGlobalLockdown}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                                isGlobalLockdown ? 'bg-rose-500' : 'bg-white/10'
-                                            }`}
-                                            >
-                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                                isGlobalLockdown ? 'translate-x-6' : 'translate-x-1'
-                                            }`} />
-                                        </button>
-                                    </div>
-                                </div>
-
                             </div>
                         </motion.div>
                     )}
