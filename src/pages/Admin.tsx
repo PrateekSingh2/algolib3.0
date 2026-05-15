@@ -204,6 +204,21 @@ const Admin = () => {
     const [publishedEditBuffer, setPublishedEditBuffer] = useState({ title: "", slug: "", content_markdown: "", image_url: "", seo_desc: "" });
     const [isCommittingUpdate, setIsCommittingUpdate] = useState(false);
 
+    // Hugging Face Trigger State
+    const [isTriggering, setIsTriggering] = useState(false);
+    const [triggerMessage, setTriggerMessage] = useState<string | null>(null);
+
+    // Global Lockdown State
+    const [isGlobalLockdown, setIsGlobalLockdown] = useState(false);
+
+    // Listen for real-time lockdown status on mount
+    useEffect(() => {
+        const unsub = onSnapshot(doc(firestoreDB, 'system_settings', 'status'), (docSnap) => {
+        if (docSnap.exists()) setIsGlobalLockdown(docSnap.data().global_lockdown === true);
+        });
+        return () => unsub();
+    }, []);
+
     const loadPendingReviews = async () => {
         setIsReviewLoading(true);
         try {
@@ -248,6 +263,34 @@ const Admin = () => {
             setStatusMsg("Live Content Updated");
             setTimeout(() => setStatusMsg(""), 3000);
         } catch (err: any) { showAlert(err.message); } finally { setIsCommittingUpdate(false); }
+    };
+
+    // --- ADD THESE NEW HANDLERS ---
+    const handleTriggerAutomation = async () => {
+        setIsTriggering(true);
+        setTriggerMessage("Waking up automation engine...");
+        try {
+        const res = await fetch('/.netlify/functions/trigger-engine', { method: 'POST' });
+        if (!res.ok) throw new Error("Failed");
+        setTriggerMessage("Triggered! Content arriving shortly.");
+        } catch (err) {
+        setTriggerMessage("Error contacting engine.");
+        } finally {
+        setIsTriggering(false);
+        setTimeout(() => setTriggerMessage(null), 5000);
+        }
+    };
+
+    const handleToggleGlobalLockdown = async () => {
+        if(!window.confirm(`Are you sure you want to ${isGlobalLockdown ? 'DISABLE' : 'ENABLE'} Global Lockdown?`)) return;
+        try {
+        await setDoc(doc(firestoreDB, 'system_settings', 'status'), {
+            global_lockdown: !isGlobalLockdown,
+            updated_at: new Date().toISOString()
+        }, { merge: true });
+        } catch (err) {
+        console.error("Lockdown toggle failed");
+        }
     };
 
     useEffect(() => { const savedConfig = localStorage.getItem("algolib_gist_config"); if (savedConfig) setGistConfig(JSON.parse(savedConfig)); }, []);
@@ -1766,6 +1809,31 @@ const Admin = () => {
                                     </div>
                                 </div>
 
+                                <div className="bg-rose-500/5 border border-rose-500/20 rounded-xl p-5 shadow-md">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-rose-400 flex items-center gap-2">
+                                                <ShieldAlert className="w-4 h-4" /> Global Site Lockdown
+                                            </h3>
+                                            <p className="text-xs text-zinc-400 mt-1">
+                                                Immediately blocks all non-admin traffic across the Vite app and Next.js content site.
+                                            </p>
+                                        </div>
+                                        
+                                        {/* Lockdown Toggle Switch */}
+                                        <button
+                                            onClick={handleToggleGlobalLockdown}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                                isGlobalLockdown ? 'bg-rose-500' : 'bg-white/10'
+                                            }`}
+                                            >
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                                isGlobalLockdown ? 'translate-x-6' : 'translate-x-1'
+                                            }`} />
+                                        </button>
+                                    </div>
+                                </div>
+
                             </div>
                         </motion.div>
                     )}
@@ -1962,15 +2030,30 @@ const Admin = () => {
                     )}
                     {activeTab === "review" && (
                         <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6 max-w-6xl mx-auto">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 border-b border-white/10 pb-4">
                                 <div>
-                                    <h2 className="text-2xl font-bold text-white flex items-center gap-3 tracking-tight">
-                                        <FileCheck size={24} className="text-sky-400 drop-shadow-[0_0_12px_rgba(56,189,248,0.4)]" /> Content Moderation
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <Construction className="text-sky-400 w-5 h-5" /> Content Engine Control
                                     </h2>
-                                    <p className="text-xs font-medium text-zinc-400 mt-1">Review, refine, and approve pending AI-generated content nodes.</p>
                                 </div>
-                                <div className="bg-sky-500/10 text-sky-400 px-3 py-1.5 rounded-lg border border-sky-500/20 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-                                    <Database size={14} /> {pendingReviewData.length} Nodes Pending
+
+                                <div className="flex items-center gap-3">
+                                    {/* THE NEW TRIGGER BUTTON */}
+                                    <div className="flex items-center gap-2">
+                                        {triggerMessage && (
+                                            <span className={`text-[11px] font-medium ${triggerMessage.includes('Error') ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                            {triggerMessage}
+                                            </span>
+                                        )}
+                                        <button
+                                            onClick={handleTriggerAutomation}
+                                            disabled={isTriggering}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all text-xs font-bold disabled:opacity-50"
+                                        >
+                                            {isTriggering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                                            Fetch New Data
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
