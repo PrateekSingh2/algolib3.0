@@ -12,7 +12,6 @@ import Footer from "@/components/Footer";
 import GlobalRibbon from "@/components/GlobalRibbon";
 import { useAuth } from "@/contexts/AuthContext";
 
-
 interface ProfileFormState {
   full_name: string;
   display_name: string;
@@ -31,29 +30,32 @@ const emptyState: ProfileFormState = {
   city: "", state: "", country: "", github_url: "", bio: "",
 };
 
-// --- MOVED OUTSIDE TO PREVENT RE-RENDERING FOCUS LOSS ---
+// --- HIGH GLASSMORPHISM SECTION CARD ---
 const SectionCard = ({ title, description, children }: { title: string, description: string, children: React.ReactNode }) => (
-  <div className="bg-[#0a0a0f] border border-white/[0.06] rounded-2xl p-6 sm:p-8 shadow-xl mb-6">
-    <div className="mb-6 pb-6 border-b border-white/[0.04]">
-      <h2 className="text-xl font-semibold text-white tracking-tight">{title}</h2>
-      <p className="text-sm text-zinc-400 mt-1">{description}</p>
+  <div className="relative bg-white/[0.02] backdrop-blur-3xl border border-white/[0.08] border-t-white/[0.2] border-l-white/[0.15] rounded-[2rem] p-6 sm:p-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] mb-8 overflow-hidden group">
+    {/* Subtle glossy overlay */}
+    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.03] to-white/[0.08] pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity duration-700 z-0" />
+    
+    <div className="relative z-10 mb-8 pb-6 border-b border-white/[0.08] shadow-[0_1px_0_rgba(0,0,0,0.3)]">
+      <h2 className="text-2xl font-bold text-white tracking-tight drop-shadow-md">{title}</h2>
+      <p className="text-sm text-zinc-400 mt-1.5 drop-shadow-sm">{description}</p>
     </div>
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">{children}</div>
+    <div className="relative z-10 grid grid-cols-1 gap-7 sm:grid-cols-2">{children}</div>
   </div>
 );
 
+// --- PREMIUM INPUT WRAPPER ---
 const InputWrapper = ({ label, icon: Icon, children, fullWidth = false }: any) => (
-  <div className={`flex flex-col gap-2 ${fullWidth ? 'sm:col-span-2' : ''}`}>
-    <label className="text-sm font-medium text-zinc-300 ml-1">{label}</label>
+  <div className={`flex flex-col gap-2.5 ${fullWidth ? 'sm:col-span-2' : ''}`}>
+    <label className="text-xs font-bold tracking-widest text-zinc-400 uppercase ml-1 drop-shadow-sm">{label}</label>
     <div className="relative group/input">
-      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within/input:text-cyan-400 transition-colors pointer-events-none z-10">
-        <Icon size={16} />
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within/input:text-sky-400 transition-colors pointer-events-none z-10">
+        <Icon size={18} />
       </div>
       {children}
     </div>
   </div>
 );
-// ---------------------------------------------------------
 
 const EditProfile = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -177,28 +179,45 @@ const EditProfile = () => {
     }
   };
 
+  // Shared input styling
+  const inputGlossyClasses = "h-12 w-full rounded-2xl border border-white/[0.1] border-t-white/[0.2] bg-black/40 backdrop-blur-md pl-12 pr-4 focus:border-sky-500/50 focus:ring-4 focus:ring-sky-500/10 focus:outline-none transition-all placeholder-zinc-600 text-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-black/60 relative z-0";
+
   return (
-    <div className="min-h-screen bg-[#030308] text-white flex flex-col relative pb-24">
-      <Navbar />
-      <GlobalRibbon />
+    <div className="min-h-screen bg-[#020202] text-white flex flex-col relative pb-28 selection:bg-sky-500/30">
       
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 pt-28 sm:px-6">
-        <div className="mb-8">
-          {/* Hide the Back button if they are trapped in onboarding */}
+      {/* Background Ambience */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)]" />
+      <div className="fixed top-[-10%] right-[5%] w-[50vw] h-[50vh] bg-sky-500 rounded-full blur-[200px] mix-blend-screen opacity-[0.08] pointer-events-none" />
+      <div className="fixed bottom-[-10%] left-[-10%] w-[60vw] h-[60vh] bg-indigo-600 rounded-full blur-[200px] mix-blend-screen opacity-[0.08] pointer-events-none" />
+
+      <div className="relative z-50">
+        <Navbar />
+        <GlobalRibbon />
+      </div>
+      
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4 pt-32 sm:px-6 relative z-10">
+        <div className="mb-10">
           {!isFirstTime && (
-            <Link to="/profile" className="inline-flex items-center gap-2 text-zinc-400 hover:text-cyan-400 transition-colors text-sm font-medium group">
+            <Link 
+              to="/profile" 
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/[0.03] border border-white/[0.1] border-t-white/[0.25] text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all duration-300 text-sm font-medium group shadow-lg backdrop-blur-xl hover:shadow-[0_8px_24px_rgba(255,255,255,0.05)] mb-6"
+            >
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
               Back to Profile
             </Link>
           )}
           
-          <h1 className="text-3xl font-bold tracking-tight mt-6">
-            {isFirstTime ? "Welcome to AlgoLib!" : "Settings"}
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tighter mt-2 leading-tight">
+            {isFirstTime ? (
+              <>Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-500 drop-shadow-[0_0_40px_rgba(56,189,248,0.2)]">AlgoLib!</span></>
+            ) : (
+              <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-zinc-500">System Settings</span>
+            )}
           </h1>
-          <p className="mt-2 text-zinc-400">
+          <p className="mt-3 text-lg text-zinc-400 font-light max-w-2xl">
             {isFirstTime 
               ? "Please complete your developer profile to initialize your matrix and access global features." 
-              : "Manage your system parameters and personal data."}
+              : "Manage your system parameters and personal telemetry data."}
           </p>
         </div>        
         
@@ -209,7 +228,7 @@ const EditProfile = () => {
             <InputWrapper label="Legal Name" icon={User}>
               <input 
                 value={form.full_name} onChange={(e) => handleChange("full_name", e.target.value)} 
-                className="h-11 w-full rounded-xl border border-white/10 bg-[#111426] pl-10 pr-3 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10 focus:outline-none transition-all placeholder-zinc-600 text-white relative z-0" 
+                className={inputGlossyClasses} 
                 placeholder="John Doe"
               />
             </InputWrapper>
@@ -217,7 +236,7 @@ const EditProfile = () => {
             <InputWrapper label="Display Name" icon={AtSign}>
               <input 
                 value={form.display_name} onChange={(e) => handleChange("display_name", e.target.value)} 
-                className="h-11 w-full rounded-xl border border-white/10 bg-[#111426] pl-10 pr-3 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10 focus:outline-none transition-all placeholder-zinc-600 text-white relative z-0" 
+                className={inputGlossyClasses} 
                 placeholder="johndoe99"
               />
             </InputWrapper>
@@ -225,7 +244,7 @@ const EditProfile = () => {
             <InputWrapper label="Age" icon={Calendar}>
               <input 
                 type="number" min={0} value={form.age} onChange={(e) => handleChange("age", e.target.value)} 
-                className="h-11 w-full rounded-xl border border-white/10 bg-[#111426] pl-10 pr-3 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10 focus:outline-none transition-all placeholder-zinc-600 text-white relative z-0" 
+                className={inputGlossyClasses} 
                 placeholder="21"
               />
             </InputWrapper>
@@ -233,7 +252,7 @@ const EditProfile = () => {
             <InputWrapper label="Gender" icon={Hash}>
               <select 
                 value={form.gender} onChange={(e) => handleChange("gender", e.target.value)}
-                className="h-11 w-full appearance-none rounded-xl border border-white/10 bg-[#111426] pl-10 pr-10 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10 focus:outline-none transition-all text-white relative z-0"
+                className={`${inputGlossyClasses} appearance-none pr-10 cursor-pointer`}
               >
                 <option value="" disabled className="text-zinc-500">Select Gender</option>
                 <option value="Male">Male</option>
@@ -249,11 +268,11 @@ const EditProfile = () => {
           <SectionCard title="Education & Links" description="Your academic background and professional profiles.">
             
             {/* COLLEGE RECOMMENDER */}
-            <div className="sm:col-span-2 flex flex-col gap-2" ref={wrapperRef}>
-              <label className="text-sm font-medium text-zinc-300 ml-1">College / Institute</label>
+            <div className="sm:col-span-2 flex flex-col gap-2.5" ref={wrapperRef}>
+              <label className="text-xs font-bold tracking-widest text-zinc-400 uppercase ml-1 drop-shadow-sm">College / Institute</label>
               <div className="relative group/input">
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within/input:text-cyan-400 transition-colors pointer-events-none z-10">
-                  <GraduationCap size={16} />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within/input:text-sky-400 transition-colors pointer-events-none z-10">
+                  <GraduationCap size={18} />
                 </div>
                 <input 
                   value={form.college} 
@@ -262,27 +281,27 @@ const EditProfile = () => {
                     setShowCollegeDropdown(true);
                   }} 
                   onFocus={() => setShowCollegeDropdown(true)}
-                  className="h-11 w-full rounded-xl border border-white/10 bg-[#111426] pl-10 pr-10 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10 focus:outline-none transition-all placeholder-zinc-600 text-white relative z-0" 
+                  className={`${inputGlossyClasses} pr-10`} 
                   placeholder="Search globally or type your specific institute..."
                   autoComplete="off"
                 />
-                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none z-10">
-                  {isSearchingColleges ? <Loader2 size={16} className="animate-spin text-cyan-400" /> : <Search size={16} />}
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none z-10">
+                  {isSearchingColleges ? <Loader2 size={16} className="animate-spin text-sky-400" /> : <Search size={16} />}
                 </div>
 
-                {/* Dropdown Menu */}
+                {/* Glassy Dropdown Menu */}
                 {showCollegeDropdown && form.college.trim().length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 py-2 bg-[#111426] border border-white/10 rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto">
+                  <div className="absolute top-[calc(100%+8px)] left-0 right-0 py-2 bg-black/60 backdrop-blur-3xl border border-white/[0.15] border-t-white/[0.3] rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.6)] z-50 max-h-60 overflow-y-auto ring-1 ring-black">
                     {isSearchingColleges ? (
-                      <div className="px-4 py-3 text-sm text-zinc-500 flex items-center justify-center gap-2">
-                        <Loader2 size={14} className="animate-spin text-zinc-500" />
-                        Searching university databases...
+                      <div className="px-4 py-4 text-sm text-zinc-400 flex items-center justify-center gap-2">
+                        <Loader2 size={16} className="animate-spin text-sky-400" />
+                        Scanning databases...
                       </div>
                     ) : (
                       <>
                         {collegeSuggestions.length > 0 ? (
                           <>
-                            <div className="px-4 py-1 text-[10px] font-mono tracking-wider text-zinc-500 uppercase">Suggestions</div>
+                            <div className="px-4 py-1.5 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Suggestions</div>
                             {collegeSuggestions.map((college, idx) => (
                               <button
                                 key={idx}
@@ -291,7 +310,7 @@ const EditProfile = () => {
                                   handleChange("college", college);
                                   setShowCollegeDropdown(false);
                                 }}
-                                className="w-full text-left px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors"
+                                className="w-full text-left px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
                               >
                                 {college}
                               </button>
@@ -303,12 +322,11 @@ const EditProfile = () => {
                           </div>
                         )}
                         
-                        {/* The Custom Fallback Option (Always available) */}
-                        <div className="mt-1 border-t border-white/5 pt-1">
+                        <div className="mt-1 border-t border-white/[0.08] pt-1">
                           <button
                             type="button"
                             onClick={() => setShowCollegeDropdown(false)}
-                            className="w-full text-left px-4 py-2.5 text-sm text-cyan-400 hover:bg-cyan-400/10 transition-colors flex items-center gap-2"
+                            className="w-full text-left px-4 py-3 text-sm font-medium text-sky-400 hover:bg-sky-400/10 transition-colors flex items-center gap-2"
                           >
                             <CheckCircle2 size={16} />
                             Set as "{form.college}"
@@ -324,16 +342,16 @@ const EditProfile = () => {
             <InputWrapper label="GitHub URL" icon={Github} fullWidth>
               <input 
                 type="url" value={form.github_url} onChange={(e) => handleChange("github_url", e.target.value)} 
-                className="h-11 w-full rounded-xl border border-white/10 bg-[#111426] pl-10 pr-3 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10 focus:outline-none transition-all placeholder-zinc-600 text-white relative z-0" 
+                className={inputGlossyClasses} 
                 placeholder="https://github.com/username"
               />
             </InputWrapper>
 
-            <div className="sm:col-span-2 flex flex-col gap-2">
-              <label className="text-sm font-medium text-zinc-300 ml-1">Terminal Bio</label>
+            <div className="sm:col-span-2 flex flex-col gap-2.5">
+              <label className="text-xs font-bold tracking-widest text-zinc-400 uppercase ml-1 drop-shadow-sm">Terminal Bio</label>
               <textarea 
                 rows={4} value={form.bio} onChange={(e) => handleChange("bio", e.target.value)} 
-                className="w-full rounded-xl border border-white/10 bg-[#111426] p-3 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10 focus:outline-none transition-all placeholder-zinc-600 text-white resize-y min-h-[100px] relative z-0" 
+                className="w-full rounded-2xl border border-white/[0.1] border-t-white/[0.2] bg-black/40 backdrop-blur-md p-4 focus:border-sky-500/50 focus:ring-4 focus:ring-sky-500/10 focus:outline-none transition-all placeholder-zinc-600 text-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-black/60 resize-y min-h-[120px] relative z-0" 
                 placeholder="Tell us about your stack and current projects..."
               />
             </div>
@@ -344,7 +362,7 @@ const EditProfile = () => {
             <InputWrapper label="Country" icon={Globe2}>
               <select 
                 value={form.country} onChange={(e) => { handleChange("country", e.target.value); handleChange("state", ""); handleChange("city", ""); }}
-                className="h-11 w-full appearance-none rounded-xl border border-white/10 bg-[#111426] pl-10 pr-10 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10 focus:outline-none transition-all text-white relative z-0"
+                className={`${inputGlossyClasses} appearance-none pr-10 cursor-pointer`}
               >
                 <option value="" disabled className="text-zinc-500">Select Country</option>
                 {countries.map((country) => <option key={country.isoCode} value={country.name}>{country.name}</option>)}
@@ -355,7 +373,7 @@ const EditProfile = () => {
             <InputWrapper label="State / Province" icon={Map}>
               <select 
                 value={form.state} onChange={(e) => { handleChange("state", e.target.value); handleChange("city", ""); }} disabled={!form.country}
-                className="h-11 w-full appearance-none rounded-xl border border-white/10 bg-[#111426] pl-10 pr-10 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10 focus:outline-none transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed relative z-0"
+                className={`${inputGlossyClasses} appearance-none pr-10 disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <option value="" disabled className="text-zinc-500">{form.country ? "Select State" : "Select Country first"}</option>
                 {states.map((state) => <option key={state.isoCode} value={state.name}>{state.name}</option>)}
@@ -366,7 +384,7 @@ const EditProfile = () => {
             <InputWrapper label="City" icon={MapPin}>
               <select 
                 value={form.city} onChange={(e) => handleChange("city", e.target.value)} disabled={!form.state}
-                className="h-11 w-full appearance-none rounded-xl border border-white/10 bg-[#111426] pl-10 pr-10 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10 focus:outline-none transition-all text-white disabled:opacity-50 disabled:cursor-not-allowed relative z-0"
+                className={`${inputGlossyClasses} appearance-none pr-10 disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <option value="" disabled className="text-zinc-500">{form.state ? "Select City" : "Select State first"}</option>
                 {cities.map((city) => <option key={city.name} value={city.name}>{city.name}</option>)}
@@ -378,23 +396,28 @@ const EditProfile = () => {
         </form>
       </main>
 
-      {/* --- STICKY ACTION BAR --- */}
-      <div className="fixed bottom-0 left-0 w-full bg-[#030308]/80 backdrop-blur-xl border-t border-white/10 z-50 py-4 px-6">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* --- PREMIUM STICKY ACTION BAR --- */}
+      <div className="fixed bottom-0 left-0 w-full bg-black/40 backdrop-blur-3xl border-t border-white/[0.15] shadow-[0_-8px_32px_rgba(0,0,0,0.5)] z-50 py-4 px-6 before:absolute before:inset-0 before:bg-gradient-to-t before:from-black/40 before:to-transparent before:-z-10">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
           
           {/* Status Indicators */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {user ? (
-              <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                UID: {user.email}
+              <span className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/40 border border-white/[0.1] border-t-white/[0.2] shadow-inner text-zinc-300 text-xs font-mono backdrop-blur-md">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_#10b981]"></span>
+                </span>
+                UID: <span className="text-white">{user.email}</span>
               </span>
             ) : (
-              <span className="text-xs text-rose-400 font-mono">Unauthorized access</span>
+              <span className="text-xs text-rose-400 font-mono flex items-center gap-2 px-4 py-2 rounded-full bg-rose-500/10 border border-rose-500/20">
+                <ShieldAlert size={14} /> Unauthorized access
+              </span>
             )}
             
             {message.text && (
-              <span className={`flex items-center gap-1.5 text-sm font-medium ${message.type === 'success' ? 'text-cyan-400' : 'text-rose-400'}`}>
+              <span className={`flex items-center gap-1.5 text-sm font-medium animate-in slide-in-from-bottom-2 opacity-100 ${message.type === 'success' ? 'text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]' : 'text-rose-400 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]'}`}>
                 {message.type === 'success' ? <CheckCircle2 size={16} /> : <ShieldAlert size={16} />}
                 {message.text}
               </span>
@@ -404,16 +427,14 @@ const EditProfile = () => {
           <button 
             onClick={handleSubmit}
             disabled={!user || saving} 
-            className="w-full sm:w-auto h-11 px-8 rounded-full bg-cyan-400 text-[#030308] text-sm font-bold hover:bg-cyan-300 hover:shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-none transition-all flex items-center justify-center gap-2"
+            className="w-full sm:w-auto h-12 px-8 rounded-full bg-gradient-to-b from-sky-400 to-sky-600 border border-sky-300/50 border-t-sky-200 text-white shadow-[0_0_20px_rgba(14,165,233,0.3)] text-sm font-bold hover:shadow-[0_0_30px_rgba(14,165,233,0.5)] hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-[0_0_20px_rgba(14,165,233,0.3)] transition-all flex items-center justify-center gap-2"
           >
-            {saving && <Loader2 size={16} className="animate-spin" />}
+            {saving && <Loader2 size={18} className="animate-spin" />}
             {saving ? "Syncing Config..." : (isFirstTime ? "Complete Setup" : "Save Changes")}
           </button>
         </div>
       </div>
       
-      {/* Invisible footer spacer so content isn't hidden behind sticky bar */}
-      <div className="h-10"></div> 
     </div>
   );
 };

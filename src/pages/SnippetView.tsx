@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, Clock, HardDrive, Copy, Check, 
-  TerminalSquare, Hash, BookOpen
+  TerminalSquare, Hash, BookOpen, Cpu, Sparkles
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -19,13 +19,24 @@ import { fetchAlgorithms, type Algorithm } from "@/lib/algorithms";
 import Navbar from "@/components/Navbar";
 import GlobalRibbon from "@/components/GlobalRibbon";
 
-// --- AMBIENT BACKGROUND ---
+// --- PREMIUM AMBIENT BACKGROUND ---
 const AmbientBackground = () => (
-  <div className="fixed inset-0 z-0 bg-[#09090B] pointer-events-none overflow-hidden">
-    <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:32px_32px]" />
-    <div className="absolute top-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-blue-600/10 blur-[150px]" />
-    <div className="absolute bottom-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-purple-600/10 blur-[120px]" />
+  <div className="fixed inset-0 z-0 pointer-events-none bg-[#020202] flex items-center justify-center overflow-hidden">
+    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_30%,transparent_100%)]" />
+    <div className="absolute top-[0%] right-[10%] w-[50vw] h-[50vh] bg-sky-500 rounded-full blur-[200px] mix-blend-screen opacity-[0.1]" />
+    <div className="absolute bottom-[-10%] left-[-10%] w-[60vw] h-[60vh] bg-indigo-600 rounded-full blur-[200px] mix-blend-screen opacity-[0.1]" />
   </div>
+);
+
+// Reusable Glass Card Wrapper
+const GlassCard = ({ children, className = "", delay = 0 }: { children: React.ReactNode, className?: string, delay?: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay, type: "spring", stiffness: 90 }}
+    className={`relative rounded-[2rem] bg-white/[0.02] backdrop-blur-3xl border border-white/[0.08] border-t-white/[0.2] border-l-white/[0.15] shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] overflow-hidden group ${className}`}
+  >
+    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.03] to-white/[0.08] pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity duration-700 z-0" />
+    <div className="relative z-10">{children}</div>
+  </motion.div>
 );
 
 const SnippetView = () => {
@@ -111,33 +122,34 @@ const SnippetView = () => {
     .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #f472b6; }
     .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #34d399; }
     .token.operator, .token.entity, .token.url, .language-css .token.string, .style .token.string { color: #38bdf8; }
-    .token.atrule, .token.attr-value, .token.keyword { color: #c084fc; }
-    .token.function { color: #60a5fa; font-weight: 500; }
-    .token.class-name { color: #fbbf24; font-weight: 500; }
+    .token.atrule, .token.attr-value, .token.keyword { color: #c084fc; font-weight: 500; }
+    .token.function { color: #60a5fa; font-weight: 600; }
+    .token.class-name { color: #fbbf24; font-weight: 600; }
     .token.regex, .token.important, .token.variable { color: #f59e0b; }
 
-    .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+    .custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(255,255,255,0.2); }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 
-    .markdown-body h3 { color: #f8fafc; font-size: 1.125rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; letter-spacing: 0.025em; }
+    /* Glassy Markdown Styles */
+    .markdown-body h3 { color: #f8fafc; font-size: 1.25rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem; letter-spacing: 0.025em; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
     .markdown-body h3:first-child { margin-top: 0; }
-    .markdown-body p { margin-bottom: 1.25rem; line-height: 1.7; color: #a1a1aa; }
-    .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1.25rem; color: #a1a1aa; }
+    .markdown-body p { margin-bottom: 1.25rem; line-height: 1.7; color: #d4d4d8; }
+    .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1.25rem; color: #d4d4d8; }
     .markdown-body li { margin-bottom: 0.5rem; line-height: 1.6; }
-    .markdown-body li::marker { color: #52525b; }
-    .markdown-body strong { color: #e4e4e7; font-weight: 600; }
-    .markdown-body code { background-color: #27272a; color: #38bdf8; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.875em; }
+    .markdown-body li::marker { color: #38bdf8; }
+    .markdown-body strong { color: #ffffff; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+    .markdown-body code { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #38bdf8; padding: 0.2rem 0.5rem; border-radius: 0.5rem; font-family: monospace; font-size: 0.875em; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
   `;
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#09090B]">
+      <div className="min-h-screen flex items-center justify-center bg-[#020202]">
         <AmbientBackground />
-        <div className="flex items-center gap-3 text-zinc-400 font-mono">
-           <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-           Loading Data...
+        <div className="flex items-center gap-3 text-zinc-300 font-mono font-bold tracking-widest uppercase">
+           <div className="w-5 h-5 border-2 border-sky-400 border-t-transparent rounded-full animate-spin drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+           Initializing Module...
         </div>
       </div>
     );
@@ -146,72 +158,84 @@ const SnippetView = () => {
   if (!algorithm) return null;
 
   return (
-    <div className="min-h-screen text-zinc-100 font-sans relative selection:bg-blue-500/30">
+    <div className="min-h-screen text-zinc-100 font-sans relative selection:bg-sky-500/30 flex flex-col">
       <style>{ideStyles}</style>
       <AmbientBackground />
-      <Navbar />
-      <GlobalRibbon />
+      
+      <div className="fixed top-0 left-0 w-full z-[100] bg-black/20 backdrop-blur-2xl border-b border-white/[0.05] shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+        <GlobalRibbon />
+        <Navbar />
+      </div>
 
-      <main className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+      <main className="relative flex-1 pt-40 pb-20 px-4 sm:px-6 lg:px-8 z-10">
         <div className="max-w-[1300px] mx-auto">
           
           <motion.div 
-            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
             className="flex items-center justify-between mb-8"
           >
             <button 
               onClick={handleBack} 
-              className="flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0 outline-none"
+              className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/[0.03] border border-white/[0.1] border-t-white/[0.25] text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all duration-300 text-sm font-medium shadow-lg backdrop-blur-xl hover:shadow-[0_8px_24px_rgba(255,255,255,0.05)] cursor-pointer"
             >
-               <ArrowLeft className="w-4 h-4" /> Back
+               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+               <span>Back to Directory</span>
             </button>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8 lg:gap-10 items-start">
             
             {/* --- LEFT COLUMN: DETAILS & CODE TERMINAL --- */}
-            <div className="flex flex-col gap-8 w-full">
+            <div className="flex flex-col gap-8 lg:gap-10 w-full">
               
               {/* DETAILS MARKDOWN SECTION */}
               {/* @ts-ignore */}
               {algorithm.details && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-                  className="w-full bg-[#121214] border border-zinc-800 rounded-2xl shadow-xl p-6 sm:p-8"
-                >
-                  <div className="flex items-center gap-2 mb-6 border-b border-zinc-800/50 pb-4">
-                    <BookOpen className="w-5 h-5 text-blue-400" />
-                    <h2 className="text-lg font-semibold text-zinc-100">Deep Dive & Explanation</h2>
+                <GlassCard delay={0.1} className="p-6 sm:p-10">
+                  <div className="flex items-center gap-3 mb-6 pb-6 border-b border-white/[0.08] shadow-[0_1px_0_rgba(0,0,0,0.3)]">
+                    <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-400/20 flex items-center justify-center shadow-inner">
+                      <BookOpen className="w-5 h-5 text-sky-400 drop-shadow-md" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white tracking-tight drop-shadow-sm">Deep Dive & Explanation</h2>
+                      <p className="text-xs text-zinc-400 mt-1 font-mono uppercase tracking-widest">Documentation</p>
+                    </div>
                   </div>
                   
                   <div className="markdown-body">
                      {/* @ts-ignore */}
                     <ReactMarkdown>{algorithm.details}</ReactMarkdown>
                   </div>
-                </motion.div>
+                </GlassCard>
               )}
 
               {/* CODE TERMINAL */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}
-                className="w-full flex flex-col bg-[#121214] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden"
-              >
-                 <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 bg-[#0A0A0A]">
-                     <div className="flex items-center gap-2 text-zinc-400">
-                        <TerminalSquare className="w-4 h-4" />
-                        <span className="text-xs font-mono lowercase">{algorithm.title.replace(/\s+/g, '_')}.{activeTab === 'python' ? 'py' : activeTab}</span>
+              <GlassCard delay={0.2} className="flex flex-col overflow-hidden !p-0">
+                 {/* Mac-like Header */}
+                 <div className="flex items-center justify-between px-6 py-4 bg-black/60 border-b border-white/[0.1] shadow-[0_2px_10px_rgba(0,0,0,0.3)] backdrop-blur-xl relative z-20">
+                     <div className="flex items-center gap-4">
+                        <div className="flex gap-2">
+                          <div className="w-3 h-3 rounded-full bg-rose-500 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)]" />
+                          <div className="w-3 h-3 rounded-full bg-amber-500 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)]" />
+                          <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)]" />
+                        </div>
+                        <div className="flex items-center gap-2 text-zinc-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 shadow-inner">
+                           <TerminalSquare className="w-4 h-4 text-sky-400" />
+                           <span className="text-xs font-mono font-bold tracking-wide">{algorithm.title.replace(/\s+/g, '_')}.{activeTab === 'python' ? 'py' : activeTab}</span>
+                        </div>
                      </div>
 
-                     <div className="flex items-center gap-3">
-                        <div className="flex bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+                     <div className="flex items-center gap-4">
+                        {/* Glassy Language Tabs */}
+                        <div className="flex bg-black/40 p-1 rounded-xl border border-white/[0.1] shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] backdrop-blur-md">
                            {(['java', 'cpp', 'python'] as const).map((lang) => (
                               <button
                                  key={lang}
                                  onClick={() => setActiveTab(lang)}
-                                 className={`px-4 py-1.5 text-xs font-semibold uppercase rounded-md transition-colors ${
+                                 className={`px-4 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all duration-300 ${
                                     activeTab === lang 
-                                        ? "bg-zinc-800 text-white shadow-sm" 
-                                        : "text-zinc-500 hover:text-zinc-300"
+                                        ? "bg-white/10 text-white shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-white/[0.15]" 
+                                        : "text-zinc-500 hover:text-zinc-300 border border-transparent hover:bg-white/5"
                                  }`}
                               >
                                  {lang}
@@ -219,9 +243,14 @@ const SnippetView = () => {
                            ))}
                         </div>
                         
+                        {/* Copy Button */}
                         <button 
                             onClick={handleCopy} 
-                            className={`p-2 rounded-lg transition-colors ${copied ? 'bg-green-500/10 text-green-500 border border-green-500/50' : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                            className={`p-2.5 rounded-xl transition-all duration-300 shadow-lg border ${
+                              copied 
+                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-400/50 shadow-[0_0_15px_rgba(52,211,153,0.3)]' 
+                                : 'bg-white/5 border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 hover:border-white/20'
+                            }`}
                             title="Copy Code"
                         >
                            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -229,12 +258,17 @@ const SnippetView = () => {
                      </div>
                  </div>
 
-                 <div className="relative bg-[#0A0A0A] w-full p-6 overflow-auto custom-scrollbar max-h-[70vh]">
+                 {/* Code Area */}
+                 <div className="relative bg-[#050505]/80 w-full p-6 md:p-8 overflow-auto custom-scrollbar max-h-[60vh] shadow-[inset_0_4px_20px_rgba(0,0,0,0.8)]">
+                    {/* Subtle inner grid for terminal feel */}
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
+                    
                     <AnimatePresence mode="wait">
                        <motion.div
                           key={activeTab}
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          transition={{ duration: 0.15 }}
+                          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.2 }}
+                          className="relative z-10"
                        >
                           <pre className={`language-${activeTab}`}>
                              <code 
@@ -245,82 +279,85 @@ const SnippetView = () => {
                        </motion.div>
                     </AnimatePresence>
                  </div>
-              </motion.div>
+              </GlassCard>
 
             </div>
 
             {/* --- RIGHT: INFORMATION PANEL --- */}
-            <div className="space-y-6 lg:sticky lg:top-32">
+            <div className="space-y-6 lg:sticky lg:top-36">
                
                {/* 1. Header Card */}
-               <motion.div 
-                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} 
-                 className="bg-[#121214] p-6 border border-zinc-800 rounded-2xl shadow-xl"
-               >
-                  <div className="flex items-center gap-2 mb-3">
-                     <span className="px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
+               <GlassCard delay={0.1} className="p-8 text-center sm:text-left">
+                  <div className="inline-flex items-center gap-2 mb-6">
+                     <span className="px-3 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase bg-sky-500/10 text-sky-300 border border-sky-400/30 border-t-sky-300/50 shadow-[inset_0_1px_4px_rgba(255,255,255,0.3)] flex items-center gap-1.5">
+                        <Sparkles size={12} className="text-sky-400" />
                         {algorithm.category}
                      </span>
                   </div>
                   
-                  <h1 className="text-2xl font-bold text-white mb-4 leading-tight">
+                  <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white via-zinc-100 to-zinc-400 mb-4 leading-tight drop-shadow-md">
                       {algorithm.title}
                   </h1>
                   
-                  <p className="text-zinc-400 text-sm leading-relaxed">
+                  <p className="text-zinc-300 text-sm leading-relaxed drop-shadow-sm font-medium">
                       {algorithm.description}
                   </p>
-               </motion.div>
+               </GlassCard>
 
+               {/* 2. Complexity Card */}
+               <div className="grid grid-cols-2 gap-4">
+                  <GlassCard delay={0.2} className="!p-0 group hover:-translate-y-1 transition-all duration-500">
+                    <div className="p-6 h-full flex flex-col justify-between bg-black/20 hover:bg-black/40 transition-colors">
+                       <div className="flex items-center gap-2 text-zinc-400 mb-4">
+                          <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
+                            <Clock size={16} className="text-sky-400" />
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest">Time</span>
+                       </div>
+                       <div className="text-xl font-mono font-extrabold text-white group-hover:text-sky-400 transition-colors drop-shadow-md truncate">
+                          {algorithm.timeComplexity}
+                       </div>
+                    </div>
+                  </GlassCard>
 
-               {/* 3. Complexity Card */}
-               <motion.div 
-                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} 
-                 className="grid grid-cols-2 gap-4"
-                 >
-                  <div className="bg-[#121214] border border-zinc-800 p-5 rounded-2xl shadow-sm flex flex-col justify-between group hover:border-zinc-600 transition-colors">
-                     <div className="flex items-center gap-2 text-zinc-500 mb-3">
-                        <Clock size={16} />
-                        <span className="text-xs font-semibold uppercase tracking-wider">Time</span>
-                     </div>
-                     <div className="text-lg font-mono font-bold text-white group-hover:text-blue-400 transition-colors">
-                        {algorithm.timeComplexity}
-                     </div>
-                  </div>
+                  <GlassCard delay={0.3} className="!p-0 group hover:-translate-y-1 transition-all duration-500">
+                    <div className="p-6 h-full flex flex-col justify-between bg-black/20 hover:bg-black/40 transition-colors">
+                       <div className="flex items-center gap-2 text-zinc-400 mb-4">
+                          <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                            <HardDrive size={16} className="text-purple-400" />
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest">Space</span>
+                       </div>
+                       <div className="text-xl font-mono font-extrabold text-white group-hover:text-purple-400 transition-colors drop-shadow-md truncate">
+                          {algorithm.spaceComplexity}
+                       </div>
+                    </div>
+                  </GlassCard>
+                </div>
 
-                  <div className="bg-[#121214] border border-zinc-800 p-5 rounded-2xl shadow-sm flex flex-col justify-between group hover:border-zinc-600 transition-colors">
-                     <div className="flex items-center gap-2 text-zinc-500 mb-3">
-                        <HardDrive size={16} />
-                        <span className="text-xs font-semibold uppercase tracking-wider">Space</span>
-                     </div>
-                     <div className="text-lg font-mono font-bold text-white group-hover:text-purple-400 transition-colors">
-                        {algorithm.spaceComplexity}
-                     </div>
-                  </div>
-                </motion.div>
-
-                 {/* 2. Topic Tags Card (NEW ENHANCED VISIBILITY) */}
+                 {/* 3. Topic Tags Card */}
                  {algorithm.tags && algorithm.tags.length > 0 && (
-                   <motion.div 
-                     initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-                     className="bg-[#121214] p-5 border border-zinc-800 rounded-2xl shadow-xl"
-                   >
-                      <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
-                        Topics & Tags
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
+                   <GlassCard delay={0.4} className="p-6 sm:p-8">
+                      <div className="flex items-center gap-2 mb-5">
+                        <Cpu size={16} className="text-zinc-500" />
+                        <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest drop-shadow-sm">
+                          Topics & Tags
+                        </h3>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2.5">
                          {algorithm.tags.map((tag) => (
                             <Link 
                                key={tag} 
-                               to={`/?search=${tag}`}
-                               className="px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 hover:border-blue-500/40 hover:bg-blue-500/20 transition-all rounded-lg text-xs font-medium text-blue-400 flex items-center gap-1.5"
+                               to={`/`}
+                               className="px-3.5 py-2 bg-black/40 border border-white/[0.1] border-t-white/[0.2] hover:border-sky-400/50 hover:bg-sky-500/10 transition-all rounded-xl text-xs font-bold text-zinc-300 hover:text-sky-300 flex items-center gap-1.5 shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] group/tag"
                             >
-                               <Hash size={12} className="opacity-70" />
+                               <Hash size={14} className="opacity-50 group-hover/tag:text-sky-400 group-hover/tag:opacity-100 transition-colors" />
                                {tag}
                             </Link>
                          ))}
                       </div>
-                   </motion.div>
+                   </GlassCard>
                  )}
 
             </div>
