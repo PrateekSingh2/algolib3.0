@@ -15,11 +15,11 @@ export const handler = async (event: any, context: any) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // Fetch top 4 items from discover_content
-    // We select id, type, title, and slug as seen in your table structure
+    // Fetch top 4 latest items, including image_url and ordered by created_date
     const { data, error } = await supabase
       .from('discover_content')
-      .select('id, type, title, slug')
+      .select('id, type, title, slug, image_url')
+      .order('created_date', { ascending: false })
       .limit(4);
 
     if (error) throw error;

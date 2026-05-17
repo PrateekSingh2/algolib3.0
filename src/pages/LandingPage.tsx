@@ -385,13 +385,9 @@ export default function LandingPage() {
               <h2 className="text-3xl font-medium tracking-tight mb-2">Research & News</h2>
               <p className="text-zinc-500 font-light text-sm">Latest updates from the Supabase Data matrix.</p>
             </div>
-            <Link 
-              to="https://discover-algolib.netlify.app/discover" 
-              className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group"
-            >
-              View all 
-              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
+            <a href="https://discover-algolib.netlify.app" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group">
+              View all <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            </a>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -414,15 +410,24 @@ export default function LandingPage() {
             ) : discoverContent.length > 0 ? (
               <>
                 {/* Featured Article (First Item) */}
-                <Link to={`/research/${discoverContent[0].slug}`} className="lg:col-span-2 group relative overflow-hidden rounded-[32px] block">
+                <a 
+                  href={`https://discover-algolib.netlify.app/discover/${discoverContent[0].slug}`}
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="lg:col-span-2 group relative overflow-hidden rounded-[32px] block"
+                >
                   <div className="aspect-[16/9] lg:h-[400px] overflow-hidden bg-[#0A0A0A] border border-white/[0.05] relative rounded-[32px]">
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10" />
-                    {/* Placeholder image for the featured item since DB only has text */}
-                    <img src="https://ik.imagekit.io/g7e4hyclo/graph.png" alt="Featured Research" className="w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-1000" />
+                    {/* Uses dynamic image_url from Supabase, with a fallback if empty */}
+                    <img 
+                      src={discoverContent[0].image_url || "https://ik.imagekit.io/g7e4hyclo/graph.png"} 
+                      alt="Featured Content" 
+                      className="w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-1000" 
+                    />
                     <div className="absolute bottom-0 left-0 right-0 p-8 z-20">
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-[10px] font-mono tracking-widest text-sky-400 bg-sky-500/10 px-2 py-1 rounded-md backdrop-blur-md uppercase">
-                          {discoverContent[0].type || 'ARTICLE'}
+                          {discoverContent[0].type}
                         </span>
                       </div>
                       <h3 className="text-3xl md:text-4xl font-medium text-white group-hover:text-sky-300 transition-colors drop-shadow-lg">
@@ -430,21 +435,29 @@ export default function LandingPage() {
                       </h3>
                     </div>
                   </div>
-                </Link>
+                </a>
 
                 {/* Side Articles (Next 3 Items) */}
                 <div className="flex flex-col gap-4">
                   {discoverContent.slice(1, 4).map((item) => (
-                    <Link key={item.id} to={`/research/${item.slug}`} className="block h-full">
+                    <a 
+                      key={item.id} 
+                      href={`https://discover-algolib.netlify.app/discover/${item.slug}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="block h-full"
+                    >
                       <SpotlightCard className="p-6 h-full flex flex-col justify-center">
                         <div className="flex items-center gap-3 mb-3">
-                          <span className="text-[10px] font-mono tracking-widest text-sky-400 uppercase">{item.type || 'NEWS'}</span>
+                          <span className="text-[10px] font-mono tracking-widest text-sky-400 uppercase">
+                            {item.type}
+                          </span>
                         </div>
                         <h3 className="text-lg font-medium text-zinc-200 group-hover:text-white transition-colors line-clamp-2">
                           {item.title}
                         </h3>
                       </SpotlightCard>
-                    </Link>
+                    </a>
                   ))}
                 </div>
               </>
