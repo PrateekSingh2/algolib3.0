@@ -4,12 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowRight, Zap, ChevronDown, 
   ListFilter, Code, Users, Trophy, Cpu, Network, Focus, Target, Shield, Activity, Workflow, Terminal, Braces,
-  Sparkles
+  Sparkles, X, Github 
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import AppFooter from "@/components/AppFooter";
 import { executeGoogleSignIn, executeGithubSignIn } from "@/contexts/AuthContext";
-import { X, Github } from "lucide-react";
 
 // ─── SPOTLIGHT COMPONENT ─────────────────────────────────────────────────────
 const SpotlightCard = ({ children, className = "", onClick, span = "" }: { children: React.ReactNode, className?: string, onClick?: () => void, span?: string }) => {
@@ -71,7 +70,6 @@ const AmbientBackground = () => (
 );
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
-// Updated spans to prioritize horizontal length (col-span-2) over vertical height to prevent empty space.
 const bento_matrix_items = [
   { icon: Zap, title: "Visualizer Engine", description: "Real-time, interactive 60FPS visualizations for complex data structures and algorithms.", span: "md:col-span-1 md:row-span-1" },
   { icon: Code, title: "Online Compiler", description: "Multi-language execution environment with immediate feedback.", span: "md:col-span-1 md:row-span-1" },
@@ -181,6 +179,12 @@ export default function LandingPage() {
                     Continue with GitHub
                   </button>
                 </div>
+                <p className="text-[11px] text-zinc-500 text-center mt-6 leading-relaxed">
+                  By continuing, you agree to our{" "}
+                  <Link to="/terms" onClick={() => setIsAuthModalOpen(false)} className="text-zinc-300 hover:text-white underline underline-offset-2">Terms</Link>{" "}
+                  and{" "}
+                  <Link to="/privacy" onClick={() => setIsAuthModalOpen(false)} className="text-zinc-300 hover:text-white underline underline-offset-2">Privacy Policy</Link>.
+                </p>
               </div>
             </motion.div>
           </motion.div>
@@ -189,19 +193,19 @@ export default function LandingPage() {
 
       <main className="relative z-10 w-full flex-1 flex flex-col items-center">
         {/* ── HERO SECTION ────────────────────────────────────────────── */}
-        <section className="w-full max-w-[1400px] mx-auto px-6 pt-32 pb-24 md:pt-40 md:pb-32 flex flex-col lg:flex-row items-center gap-16">
+        <section className="w-full max-w-[1400px] mx-auto px-6 pt-28 pb-16 md:pt-36 md:pb-24 flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
           <div className="w-full lg:w-[55%] flex flex-col items-start z-20">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.02] backdrop-blur-md mb-8 shadow-[0_0_20px_rgba(255,255,255,0.03)]">
               <Sparkles className="w-3.5 h-3.5 text-white/70" />
-              <span className="text-[12px] text-zinc-300 font-medium tracking-wide">Engine V2 Architecture Live</span>
+              <span className="text-[12px] text-zinc-300 font-medium tracking-wide">Best platform ever</span>
             </motion.div>
             <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-6xl md:text-8xl font-bold tracking-tighter mb-8 leading-[1.05]">
-              <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-white/70 animate-gradient-x">Visualize Logic.</span><br /><span className="text-zinc-500">Master Systems.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-br from-purple-700 via-white to-yellow-300 animate-gradient-x">Visualize Logic.</span><br /><span className="text-white/50">Master Systems.</span>
             </motion.h1>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="text-xl text-zinc-400 mb-10 max-w-xl leading-relaxed font-light">
               The definitive ecosystem for software engineers. Map out complex data structures in real-time, execute compiler snippets, and build your technical profile.
             </motion.p>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mb-16">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mb-12 md:mb-16">
               <button onClick={() => setIsAuthModalOpen(true)} className="group relative w-full sm:w-auto px-8 h-12 rounded-full bg-white text-black font-medium text-sm flex items-center justify-center gap-2 overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.15)] hover:shadow-[0_0_60px_rgba(255,255,255,0.3)] transition-all">
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/10 to-transparent -translate-x-[150%] group-hover:animate-[shimmer_1.5s_infinite]" />
                 Get Started
@@ -216,9 +220,7 @@ export default function LandingPage() {
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4, duration: 1, ease: "easeOut" }} className="w-full lg:w-[45%] relative z-10 perspective-1000">
             <div className="absolute -inset-0.5 bg-gradient-to-br from-blue-500/30 via-transparent to-violet-500/30 rounded-[38px] blur-sm animate-pulse" />
             
-            {/* Changed: aspect-square and lg:aspect-square replaced with aspect-[4/3] and lg:aspect-[16/10] */}
             <div className="relative w-full aspect-[6/3] lg:aspect-[16/12] bg-[#0A0A0A] rounded-[36px] border border-white/[0.1] p-6 shadow-2xl overflow-hidden group">
-              
               <div className="absolute inset-0 bg-gradient-to-br from-white/[0.04] to-transparent pointer-events-none" />
               
               <div className="h-full flex flex-col gap-4">
@@ -241,18 +243,17 @@ export default function LandingPage() {
         </section>
 
         {/* ── FEATURES BENTO ──────────────────────────────────────── */}
-        <section className="w-full max-w-[1200px] mx-auto px-6 py-24 md:py-32">
+        <section className="w-full max-w-[1200px] mx-auto px-6 py-16 md:py-24">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
-            className="text-center mb-16"
+            className="text-center mb-10 md:mb-16"
           >
             <h2 className="text-3xl md:text-5xl font-medium tracking-tight mb-4 text-white">A unified matrix.</h2>
             <p className="text-zinc-400 text-lg font-light max-w-2xl mx-auto">Everything you need to master algorithms, prepare for interviews, and design distributed systems, seamlessly integrated.</p>
           </motion.div>
           
-          {/* Adjusted auto-rows to 160px for tighter fit */}
           <motion.div 
             initial="hidden"
             whileInView="visible"
@@ -260,7 +261,7 @@ export default function LandingPage() {
             variants={{
               visible: { transition: { staggerChildren: 0.1 } }
             }}
-            className="grid grid-cols-1 md:grid-cols-4 gap-4 auto-rows-[160px]"
+            className="grid grid-cols-1 md:grid-cols-4 gap-4 md:auto-rows-[160px]"
           >
             {bento_matrix_items.map((item, i) => (
               <motion.div
@@ -278,12 +279,11 @@ export default function LandingPage() {
                     else triggerLoginAlert();
                   }}
                 >
-                  {/* Reduced padding to p-5 for a tighter feel */}
                   <div className="p-5 md:p-6 h-full flex flex-col justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center group-hover:scale-110 transition-transform duration-500 group-hover:bg-white/[0.06]">
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center group-hover:scale-110 transition-transform duration-500 group-hover:bg-white/[0.06] mb-4 md:mb-0">
                       <item.icon className="w-5 h-5 text-zinc-300 group-hover:text-white transition-colors" strokeWidth={1.5} />
                     </div>
-                    <div className="mt-4">
+                    <div className="mt-auto">
                       <h3 className="text-lg font-medium text-white mb-1.5">{item.title}</h3>
                       <p className="text-zinc-400 text-[13px] leading-relaxed line-clamp-2">{item.description}</p>
                     </div>
@@ -295,21 +295,21 @@ export default function LandingPage() {
         </section>
 
         {/* ── PRODUCT SHOWCASE ──────────────────────────────────────── */}
-        <section className="w-full max-w-[1200px] mx-auto px-6 py-24 md:py-32 flex flex-col gap-40">
+        <section className="w-full max-w-[1200px] mx-auto px-6 py-16 md:py-24 flex flex-col gap-24 md:gap-32">
   
           {/* Showcase 1: Text Left, Image Right */}
           <motion.div 
             initial={{ opacity: 0, y: 40 }} 
             whileInView={{ opacity: 1, y: 0 }} 
             viewport={{ once: true, margin: "-200px" }} 
-            className="flex flex-col lg:flex-row items-center gap-16"
+            className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16"
           >
             <div className="w-full lg:w-1/2 flex flex-col items-start">
               <div className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center mb-6">
                 <Workflow className="text-zinc-300 w-5 h-5" />
               </div>
-              <h3 className="text-4xl md:text-5xl font-medium text-white mb-6 tracking-tight">Interactive Data Structure Visualizer.</h3>
-              <p className="text-zinc-400 text-lg leading-relaxed mb-8 font-light">Watch complex data structures compile and execute step-by-step in a completely distraction-free environment.</p>
+              <h3 className="text-3xl md:text-4xl lg:text-5xl font-medium text-white mb-4 md:mb-6 tracking-tight">Interactive Data Structure Visualizer.</h3>
+              <p className="text-zinc-400 text-base md:text-lg leading-relaxed mb-8 font-light">Watch complex data structures compile and execute step-by-step in a completely distraction-free environment.</p>
               <Link 
                 to="/visualizer" 
                 className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group"
@@ -318,25 +318,24 @@ export default function LandingPage() {
                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
-            <div className="w-full lg:w-1/2 aspect-[7/4] bg-[#0A0A0A] rounded-[48px] border border-white/[0.08] overflow-hidden relative shadow-2xl group">
+            <div className="w-full lg:w-1/2 aspect-[7/4] bg-[#0A0A0A] rounded-[32px] md:rounded-[48px] border border-white/[0.08] overflow-hidden relative shadow-2xl group">
               <img src="https://ik.imagekit.io/g7e4hyclo/graph.png" alt="60FPS Engine" className="w-full h-full object-cover opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-1000" />
             </div>
           </motion.div>
 
-          {/* Showcase 2: Text Right, Image Left (Notice the lg:flex-row-reverse) */}
+          {/* Showcase 2: Text Right, Image Left */}
           <motion.div 
             initial={{ opacity: 0, y: 40 }} 
             whileInView={{ opacity: 1, y: 0 }} 
             viewport={{ once: true, margin: "-200px" }} 
-            className="flex flex-col lg:flex-row-reverse items-center gap-16"
+            className="flex flex-col lg:flex-row-reverse items-center gap-10 lg:gap-16"
           >
             <div className="w-full lg:w-1/2 flex flex-col items-start">
               <div className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center mb-6">
-                <Workflow className="text-zinc-300 w-5 h-5" />
+                <Code className="text-zinc-300 w-5 h-5" />
               </div>
-              {/* Updated text just to distinguish it from the first one */}
-              <h3 className="text-4xl md:text-5xl font-medium text-white mb-6 tracking-tight">Online Compiler.</h3>
-              <p className="text-zinc-400 text-lg leading-relaxed mb-8 font-light">Compile and run code in real-time with our powerful online compiler with low latency and seamless integration of various integrations.</p>
+              <h3 className="text-3xl md:text-4xl lg:text-5xl font-medium text-white mb-4 md:mb-6 tracking-tight">Online Compiler.</h3>
+              <p className="text-zinc-400 text-base md:text-lg leading-relaxed mb-8 font-light">Compile and run code in real-time with our powerful online compiler with low latency and seamless integration of various integrations.</p>
               <Link 
                 to="/compiler" 
                 className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group"
@@ -345,7 +344,7 @@ export default function LandingPage() {
                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
-            <div className="w-full lg:w-1/2 aspect-[7/4] bg-[#0A0A0A] rounded-[48px] border border-white/[0.08] overflow-hidden relative shadow-2xl group">
+            <div className="w-full lg:w-1/2 aspect-[7/4] bg-[#0A0A0A] rounded-[32px] md:rounded-[48px] border border-white/[0.08] overflow-hidden relative shadow-2xl group">
               <img src="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-04-11%20230622.png" alt="Online Compiler" className="w-full h-full object-cover opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-1000" />
             </div>
           </motion.div>
@@ -355,14 +354,14 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 40 }} 
             whileInView={{ opacity: 1, y: 0 }} 
             viewport={{ once: true, margin: "-200px" }} 
-            className="flex flex-col lg:flex-row items-center gap-16"
+            className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16"
           >
             <div className="w-full lg:w-1/2 flex flex-col items-start">
               <div className="w-12 h-12 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center mb-6">
-                <Workflow className="text-zinc-300 w-5 h-5" />
+                <Activity className="text-zinc-300 w-5 h-5" />
               </div>
-              <h3 className="text-4xl md:text-5xl font-medium text-white mb-6 tracking-tight">Latest News & Research Articles.</h3>
-              <p className="text-zinc-400 text-lg leading-relaxed mb-8 font-light">Stay up-to-date with the latest developments in AI/ML or Tech. All you get is simple and intuitive with key takeaways and concise summaries.</p>
+              <h3 className="text-3xl md:text-4xl lg:text-5xl font-medium text-white mb-4 md:mb-6 tracking-tight">Latest News & Research Articles.</h3>
+              <p className="text-zinc-400 text-base md:text-lg leading-relaxed mb-8 font-light">Stay up-to-date with the latest developments in AI/ML or Tech. All you get is simple and intuitive with key takeaways and concise summaries.</p>
               <Link 
                 to="https://discover-algolib.netlify.app/discover" 
                 className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group"
@@ -371,7 +370,7 @@ export default function LandingPage() {
                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
-            <div className="w-full lg:w-1/2 aspect-[7/4] bg-[#0A0A0A] rounded-[48px] border border-white/[0.08] overflow-hidden relative shadow-2xl group">
+            <div className="w-full lg:w-1/2 aspect-[7/4] bg-[#0A0A0A] rounded-[32px] md:rounded-[48px] border border-white/[0.08] overflow-hidden relative shadow-2xl group">
               <img src="https://ik.imagekit.io/g7e4hyclo/Screenshot%202026-05-17%20223728.png" alt="News & Research" className="w-full h-full object-cover opacity-80 group-hover:scale-105 group-hover:opacity-100 transition-all duration-1000" />
             </div>
             
@@ -379,20 +378,19 @@ export default function LandingPage() {
         </section>
 
         {/* ── RESEARCH & NEWS (Dynamically Fetched via Supabase) ────────────── */}
-        <section className="w-full max-w-[1200px] mx-auto px-6 py-24 border-t border-white/[0.05]">
-          <div className="flex items-center justify-between mb-12">
+        <section className="w-full max-w-[1200px] mx-auto px-6 py-16 md:py-24 border-t border-white/[0.05]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 md:mb-12 gap-4">
             <div>
-              <h2 className="text-3xl font-medium tracking-tight mb-2">Research & News</h2>
+              <h2 className="text-2xl md:text-3xl font-medium tracking-tight mb-2">Research & News</h2>
               <p className="text-zinc-500 font-light text-sm">Latest updates from the Supabase Data matrix.</p>
             </div>
-            <a href="https://discover-algolib.netlify.app" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group">
+            <a href="https://discover-algolib.netlify.app" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group w-fit">
               View all <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </a>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {isLoadingContent ? (
-              // Skeleton Loaders
               <>
                 <div className="lg:col-span-2 h-[400px] bg-white/[0.02] border border-white/[0.05] rounded-[32px] animate-pulse flex flex-col justify-end p-8">
                   <div className="h-4 w-24 bg-white/[0.05] rounded mb-4" />
@@ -409,7 +407,6 @@ export default function LandingPage() {
               </>
             ) : discoverContent.length > 0 ? (
               <>
-                {/* Featured Article (First Item) */}
                 <a 
                   href={`https://discover-algolib.netlify.app/discover/${discoverContent[0].slug}`}
                   target="_blank" 
@@ -418,26 +415,24 @@ export default function LandingPage() {
                 >
                   <div className="aspect-[16/9] lg:h-[400px] overflow-hidden bg-[#0A0A0A] border border-white/[0.05] relative rounded-[32px]">
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10" />
-                    {/* Uses dynamic image_url from Supabase, with a fallback if empty */}
                     <img 
                       src={discoverContent[0].image_url || "https://ik.imagekit.io/g7e4hyclo/graph.png"} 
                       alt="Featured Content" 
                       className="w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-1000" 
                     />
-                    <div className="absolute bottom-0 left-0 right-0 p-8 z-20">
+                    <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 z-20">
                       <div className="flex items-center gap-3 mb-3">
                         <span className="text-[10px] font-mono tracking-widest text-sky-400 bg-sky-500/10 px-2 py-1 rounded-md backdrop-blur-md uppercase">
                           {discoverContent[0].type}
                         </span>
                       </div>
-                      <h3 className="text-3xl md:text-4xl font-medium text-white group-hover:text-sky-300 transition-colors drop-shadow-lg">
+                      <h3 className="text-2xl md:text-3xl lg:text-4xl font-medium text-white group-hover:text-sky-300 transition-colors drop-shadow-lg">
                         {discoverContent[0].title}
                       </h3>
                     </div>
                   </div>
                 </a>
 
-                {/* Side Articles (Next 3 Items) */}
                 <div className="flex flex-col gap-4">
                   {discoverContent.slice(1, 4).map((item) => (
                     <a 
@@ -453,7 +448,7 @@ export default function LandingPage() {
                             {item.type}
                           </span>
                         </div>
-                        <h3 className="text-lg font-medium text-zinc-200 group-hover:text-white transition-colors line-clamp-2">
+                        <h3 className="text-base md:text-lg font-medium text-zinc-200 group-hover:text-white transition-colors line-clamp-2">
                           {item.title}
                         </h3>
                       </SpotlightCard>
@@ -468,17 +463,17 @@ export default function LandingPage() {
         </section>
 
         {/* ── FAQ SECTION ───────────────────────────────────────────── */}
-        <section className="w-full max-w-[800px] mx-auto px-6 py-32">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-medium tracking-tight mb-4">Frequently Asked Questions</h2>
+        <section className="w-full max-w-[800px] mx-auto px-6 py-16 md:py-24">
+          <div className="text-center mb-10 md:mb-16">
+            <h2 className="text-2xl md:text-3xl font-medium tracking-tight mb-4">Frequently Asked Questions</h2>
           </div>
           <div className="flex flex-col gap-4">
             {faqs.map((faq, idx) => (
               <SpotlightCard key={idx} onClick={() => setOpenFaq(openFaq === idx ? null : idx)}>
-                <div className="p-6">
+                <div className="p-5 md:p-6">
                   <div className="flex items-center justify-between gap-4">
-                    <h3 className={`font-medium ${openFaq === idx ? 'text-white' : 'text-zinc-300'}`}>{faq.q}</h3>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-white/[0.03] transition-colors ${openFaq === idx ? 'bg-sky-500/10 text-sky-400' : 'text-zinc-500'}`}>
+                    <h3 className={`font-medium text-sm md:text-base ${openFaq === idx ? 'text-white' : 'text-zinc-300'}`}>{faq.q}</h3>
+                    <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-white/[0.03] transition-colors ${openFaq === idx ? 'bg-sky-500/10 text-sky-400' : 'text-zinc-500'}`}>
                       <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openFaq === idx ? 'rotate-180' : ''}`} />
                     </div>
                   </div>

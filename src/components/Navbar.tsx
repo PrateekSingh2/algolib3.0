@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
-const DEVELOPER_EXTERNAL_URL = "https://algolib.netlify.app/developer";
+const DEVELOPER_EXTERNAL_URL = "/developer";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const timeAgo = (ts: number) => {
@@ -373,9 +373,8 @@ const Navbar = () => {
           <div className="flex items-center gap-1 pr-1.5">
             <a 
               href={DEVELOPER_EXTERNAL_URL} 
-              target="_blank" 
               rel="noopener noreferrer"
-              title="External Developer Site"
+              title="Developer"
               className={`p-2 rounded-full font-mono font-bold text-[13px] leading-none flex items-center justify-center transition-colors ${isDevActive ? "text-white bg-white/[0.08]" : "text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]"}`}
             >
               {"</>"}

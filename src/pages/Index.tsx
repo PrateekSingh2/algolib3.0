@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, useMotionTemplate } from "framer-motion";
-
+import { motion, AnimatePresence, useMotionTemplate, useMotionValue } from "framer-motion";
 import Fuse from "fuse.js";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GlobalRibbon from "@/components/GlobalRibbon";
-import { Search, ListFilter, Code, BookOpen, Users, CornerDownRight, Zap, TerminalSquare, Plus, Minus, Layers } from "lucide-react";
+import { 
+  Search, SlidersHorizontal, ChevronRight, Zap, 
+  TerminalSquare, Layers, FolderDot, Code2, 
+  Activity, Database, Plus, Minus, Command, CornerDownLeft
+} from "lucide-react";
 import { fetchAlgorithms, type Algorithm } from "@/lib/algorithms";
 
-// --- INTERACTIVE ANTIGRAVITY PARTICLE CANVAS ---
+// --- OPTIMIZED ANTIGRAVITY PARTICLES (FASTER LOAD) ---
 const InteractiveParticleBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -21,60 +24,38 @@ const InteractiveParticleBackground = () => {
 
     let animationFrameId: number;
     let particlesArray: Particle[] = [];
-
-    // Virtual mouse to track coordinates globally
     const mouse = { x: -1000, y: -1000, radius: 150 };
 
     class Particle {
-      x: number;
-      y: number;
-      size: number;
-      speedX: number;
-      speedY: number;
-      color: string;
-
+      x: number; y: number; size: number; speedX: number; speedY: number; color: string;
       constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-        this.size = Math.random() * 2 + 0.5; // Tiny dots
-        this.speedX = (Math.random() - 0.5) * 0.5; // Slow natural drift
-        this.speedY = (Math.random() - 0.5) * 0.5;
-
-        // Deep blue/cyan aesthetic
-        const colors = ['#1d4ed8', '#2563eb', '#3b82f6', '#00d2ff', '#00ff87'];
+        this.x = x; this.y = y;
+        this.size = Math.random() * 1.5 + 0.5;
+        this.speedX = (Math.random() - 0.5) * 0.3;
+        this.speedY = (Math.random() - 0.5) * 0.3;
+        const colors = ['#3b82f6', '#06b6d4', '#0ea5e9', '#ffffff'];
         this.color = colors[Math.floor(Math.random() * colors.length)];
       }
-
       update() {
         if (!canvas) return;
-
-        // Apply natural drift
-        this.x += this.speedX;
-        this.y += this.speedY;
-
-        // Bounce off edges to keep them on screen
+        this.x += this.speedX; this.y += this.speedY;
         if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
         if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
 
-        // --- ANTIGRAVITY (MOUSE REPEL) MATH ---
         const dx = mouse.x - this.x;
         const dy = mouse.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance < mouse.radius) {
-          const forceDirectionX = dx / distance;
-          const forceDirectionY = dy / distance;
           const force = (mouse.radius - distance) / mouse.radius;
-          const repelStrength = 4; // Adjust for harder/softer push
-
-          this.x -= forceDirectionX * force * repelStrength;
-          this.y -= forceDirectionY * force * repelStrength;
+          this.x -= (dx / distance) * force * 2.5;
+          this.y -= (dy / distance) * force * 2.5;
         }
       }
-
       draw() {
         if (!ctx) return;
         ctx.fillStyle = this.color;
+        ctx.globalAlpha = 0.5;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
@@ -83,44 +64,24 @@ const InteractiveParticleBackground = () => {
 
     const init = () => {
       particlesArray = [];
-      // Dynamic density based on screen size
-      const numberOfParticles = (canvas.width * canvas.height) / 7000;
+      // SPEED FIX: Capped the maximum particles to 120 so it never lags mobile devices
+      const numberOfParticles = Math.min((canvas.width * canvas.height) / 10000, 120); 
       for (let i = 0; i < numberOfParticles; i++) {
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height;
-        particlesArray.push(new Particle(x, y));
+        particlesArray.push(new Particle(Math.random() * canvas.width, Math.random() * canvas.height));
       }
     };
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let i = 0; i < particlesArray.length; i++) {
-        particlesArray[i].update();
-        particlesArray[i].draw();
-      }
+      particlesArray.forEach(p => { p.update(); p.draw(); });
       animationFrameId = requestAnimationFrame(animate);
     };
 
-    const handleResize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      init();
-    };
+    const handleResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; init(); };
+    const handleMouseMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
+    const handleMouseLeave = () => { mouse.x = -1000; mouse.y = -1000; };
 
-    // Track mouse on the entire window since canvas is pointer-events-none
-    const handleMouseMove = (e: MouseEvent) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    };
-
-    const handleMouseLeave = () => {
-      mouse.x = -1000;
-      mouse.y = -1000;
-    };
-
-    handleResize(); // Init sizes
-    animate();      // Start loop
-
+    handleResize(); animate();
     window.addEventListener("resize", handleResize);
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseout", handleMouseLeave);
@@ -133,127 +94,97 @@ const InteractiveParticleBackground = () => {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-80" />;
+  return <canvas ref={canvasRef} className="fixed inset-0 w-full h-full pointer-events-none z-0 mix-blend-screen" />;
 };
 
-const AlgorithmTiltCard = ({ algo, onClick, index }: { algo: Algorithm, onClick: () => void, index: number }) => {
-  const boundingRef = useRef<HTMLDivElement>(null);
+// --- HYPER-GLASS BENTO ALGO CARD ---
+const AlgoDataCard = ({ algo, onClick, index }: { algo: Algorithm, onClick: () => void, index: number }) => {
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
 
-  // Mouse coordinates (0 to 1 mapping)
-  const mouseX = useMotionValue(0.5);
-  const mouseY = useMotionValue(0.5);
-
-  // Smooth springs for heavy, physical feeling
-  const springConfig = { damping: 25, stiffness: 300, mass: 0.5 };
-  const smoothX = useSpring(mouseX, springConfig);
-  const smoothY = useSpring(mouseY, springConfig);
-
-  // Map mouse position to rotation (-12deg to +12deg for dramatic effect)
-  const rotateX = useTransform(smoothY, [0, 1], [12, -12]);
-  const rotateY = useTransform(smoothX, [0, 1], [-12, 12]);
-
-  // Dynamic glare mapped to mouse position
-  const glareX = useTransform(smoothX, [0, 1], [0, 100]);
-  const glareY = useTransform(smoothY, [0, 1], [0, 100]);
-  const backgroundGlare = useMotionTemplate`radial-gradient(circle 250px at ${glareX}% ${glareY}%, rgba(255, 255, 255, 0.1), transparent 80%)`;
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!boundingRef.current) return;
-    const rect = boundingRef.current.getBoundingClientRect();
-
-    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-
-    mouseX.set(x);
-    mouseY.set(y);
-  };
-
-  const handleMouseLeave = () => {
-    // Reset to center on leave
-    mouseX.set(0.5);
-    mouseY.set(0.5);
+  const handleMouseMove = ({ currentTarget, clientX, clientY }: React.MouseEvent) => {
+    const { left, top } = currentTarget.getBoundingClientRect();
+    mouseX.set(clientX - left);
+    mouseY.set(clientY - top);
   };
 
   return (
     <motion.div
-      layout // Handles grid reflow
-      initial={{ opacity: 0, y: 30, scale: 0.9 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.5, delay: (index % 4) * 0.08, ease: "easeOut" }}
-      style={{ perspective: "1200px" }} // The critical perspective wrapper
-      className="w-full h-full"
+      layout="position"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.4, delay: (index % 12) * 0.04, ease: "easeOut" }}
+      onClick={onClick}
+      onMouseMove={handleMouseMove}
+      className="group relative flex flex-col p-5 rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-br from-white/[0.02] to-transparent backdrop-blur-3xl hover:bg-white/[0.05] transition-all duration-300 cursor-pointer overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]"
     >
       <motion.div
-        ref={boundingRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        onClick={onClick}
+        className="pointer-events-none absolute -inset-px rounded-[1.5rem] opacity-0 transition duration-300 group-hover:opacity-100 hidden sm:block"
         style={{
-          rotateX,
-          rotateY,
-          transformStyle: "preserve-3d" // Allows children to pop out
+          background: useMotionTemplate`
+            radial-gradient(300px circle at ${mouseX}px ${mouseY}px, rgba(59, 130, 246, 0.15), transparent 80%)
+          `,
         }}
-        className="group relative flex flex-col justify-between h-full min-h-[240px] rounded-[1.25rem] border border-white/[0.05] bg-[#0c0e14]/80 backdrop-blur-md p-6 cursor-pointer shadow-[0_10px_30px_-15px_rgba(0,0,0,0.8)] transition-colors duration-300 hover:border-blue-500/30"
-      >
-        {/* Dynamic Glare Overlay */}
-        <motion.div
-          className="absolute inset-0 rounded-[1.25rem] pointer-events-none z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-          style={{ background: backgroundGlare }}
-        />
+      />
+      
+      <div className="relative z-10 flex justify-between items-start mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.1] flex items-center justify-center shadow-inner group-hover:border-blue-500/40 group-hover:bg-blue-500/20 transition-all duration-300">
+            <Layers size={16} className="text-zinc-400 group-hover:text-blue-300 transition-colors" />
+          </div>
+          <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-300 uppercase bg-black/50 border border-white/[0.08] px-2.5 py-1 rounded-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] group-hover:text-white group-hover:border-white/[0.2] transition-colors">
+            {algo.category}
+          </span>
+        </div>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/[0.05] opacity-0 group-hover:opacity-100 transition-all duration-300 sm:-translate-x-2 sm:group-hover:translate-x-0">
+          <ChevronRight size={16} className="text-white" />
+        </div>
+      </div>
 
-        {/* 3D Popping Content Wrapper */}
-        <div
-          className="relative z-10 flex flex-col h-full gap-5 transition-transform duration-300 group-hover:translate-z-10"
-          style={{ transform: "translateZ(40px)" }} // The magic parallax pop
-        >
-          <div className="flex items-center justify-between">
-            <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-black/50 border border-white/[0.08] shadow-inner transition-transform duration-300 group-hover:scale-110">
-              <Layers className="w-5 h-5 text-blue-400 group-hover:text-cyan-300 transition-colors" strokeWidth={1.5} />
-            </div>
-            <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase bg-blue-900/10 border border-blue-500/20 px-3 py-1.5 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-              {algo.category}
+      <div className="relative z-10 flex-1">
+        <h3 className="text-lg font-bold text-zinc-100 group-hover:text-white mb-2 transition-colors tracking-tight drop-shadow-md">
+          {algo.title}
+        </h3>
+        <p className="text-[13px] text-zinc-400 line-clamp-2 leading-relaxed font-light group-hover:text-zinc-300 transition-colors">
+          {algo.description}
+        </p>
+      </div>
+
+      {algo.tags && algo.tags.length > 0 && (
+        <div className="relative z-10 flex flex-wrap gap-2 mt-5 pt-4 border-t border-white/[0.05]">
+          {algo.tags.slice(0, 3).map((tag, idx) => (
+            <span key={idx} className="text-[10px] px-2.5 py-1 rounded-md text-zinc-300 bg-white/[0.04] border border-white/[0.05] font-medium tracking-wide shadow-sm">
+              {tag}
             </span>
-          </div>
-
-          <div className="flex-1 flex flex-col gap-3">
-            <h3 className="text-xl font-semibold tracking-tight text-zinc-100 group-hover:text-white transition-colors">{algo.title}</h3>
-            <p className="text-sm text-zinc-400 font-light leading-relaxed line-clamp-2">{algo.description}</p>
-          </div>
-
-          {algo.tags && algo.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              {algo.tags.slice(0, 3).map((tag, idx) => (
-                <span key={idx} className="text-[10px] px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05] text-zinc-300 font-medium tracking-wide">
-                  {tag}
-                </span>
-              ))}
-              {algo.tags.length > 3 && (
-                <span className="text-[10px] px-2 py-1 rounded-md bg-transparent border border-dashed border-white/[0.1] text-zinc-500 font-medium">
-                  +{algo.tags.length - 3}
-                </span>
-              )}
-            </div>
+          ))}
+          {algo.tags.length > 3 && (
+            <span className="text-[10px] px-2 py-1 rounded-md text-zinc-500 font-medium border border-transparent">
+              +{algo.tags.length - 3}
+            </span>
           )}
         </div>
-      </motion.div>
+      )}
     </motion.div>
   );
 };
 
+// --- MAIN DASHBOARD VIEW ---
 const Index = () => {
   const navigate = useNavigate();
+  const searchModalInputRef = useRef<HTMLInputElement>(null);
+  
   const [algorithms, setAlgorithms] = useState<Algorithm[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
-
-  // Pagination limit to prevent browser freezing
-  const [visibleCount, setVisibleCount] = useState(8);
-
-  // State for expanding/collapsing the filter pills
+  const [visibleCount, setVisibleCount] = useState(12);
+  
   const [showAllFilters, setShowAllFilters] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  
+  const [userName, setUserName] = useState("User");
+  const [isFetchingUser, setIsFetchingUser] = useState(true);
 
   useEffect(() => {
     const loadAlgos = async () => {
@@ -261,78 +192,84 @@ const Index = () => {
       setAlgorithms(data);
     };
     loadAlgos();
-
-    const savedQuery = sessionStorage.getItem("algoSearchQuery");
-    if (savedQuery) {
-      setSearchQuery(savedQuery);
-      setDebouncedSearch(savedQuery);
-    }
-    const savedFilter = sessionStorage.getItem("algoFilter");
-    if (savedFilter) setActiveFilter(savedFilter);
   }, []);
 
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 150);
+    const fetchUserProfile = async () => {
+      try {
+        const response = await fetch('/.netlify/functions/get-user-profile');
+        if (!response.ok) throw new Error("Failed to fetch profile");
+        const data = await response.json();
+        setUserName(data.name || data.full_name || "User"); 
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        setUserName("User"); 
+      } finally {
+        setIsFetchingUser(false);
+      }
+    };
+    fetchUserProfile();
+  }, []);
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearch(searchQuery), 150);
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Reset visible card count when user searches or filters
-  useEffect(() => {
-    setVisibleCount(8);
+  useEffect(() => { 
+    setVisibleCount(12); 
   }, [debouncedSearch, activeFilter]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    sessionStorage.setItem("algoSearchQuery", query);
-  };
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault(); 
+        setIsSearchModalOpen(true);
+      }
+      if (e.key === 'Escape' && isSearchModalOpen) {
+        setIsSearchModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSearchModalOpen]);
 
-  const handleFilterChange = (filter: string) => {
-    setActiveFilter(filter);
-    sessionStorage.setItem("algoFilter", filter);
-  };
+  useEffect(() => {
+    if (isSearchModalOpen) {
+      setTimeout(() => searchModalInputRef.current?.focus(), 100);
+      document.body.style.overflow = 'hidden'; 
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => { document.body.style.overflow = 'auto'; };
+  }, [isSearchModalOpen]);
 
-  // Expanded list of all tags/categories
-  const filter_pills = [
-    "All Systems", "SEARCHING", "SORTING", "ARRAYS", "GRAPH", "MATH", "STACK", "DEQUE", "LINKED LIST", "DP", "GREEDY", "STRING", "QUEUE", "BINARY TREE"
+  const ALL_CATEGORIES = [
+    "All", "Searching", "Sorting", "Graphs", "DP", "Trees", "Math", 
+    "Arrays", "Linked Lists", "Stacks", "Queues", "Greedy", "Strings"
   ];
-
-  // Logic to determine which pills to show
-  const INITIAL_PILLS_COUNT = 6;
-  const visible_pills = showAllFilters ? filter_pills : filter_pills.slice(0, INITIAL_PILLS_COUNT);
+  const INITIAL_PILLS_COUNT = 7;
+  const visible_pills = showAllFilters ? ALL_CATEGORIES : ALL_CATEGORIES.slice(0, INITIAL_PILLS_COUNT);
 
   const filteredAlgorithms = useMemo(() => {
     let results = algorithms;
 
-    if (activeFilter !== "All" && activeFilter !== "All Systems") {
+    if (activeFilter !== "All") {
       const normalizedFilter = activeFilter.toLowerCase().replace(/\s+/g, "");
       results = results.filter((algo) => {
         const category = algo.category?.toLowerCase().replace(/\s+/g, "") || "";
         const tags = (algo.tags || []).map((t) => t.toLowerCase().replace(/\s+/g, ""));
-
-        if (category === normalizedFilter) return true;
-        if (category.includes(normalizedFilter)) return true;
-        if (tags.some((tag) => tag === normalizedFilter || tag.includes(normalizedFilter))) return true;
-
-        // Accept common synonyms
-        if (normalizedFilter === "graph" && ["graph", "graphs", "graph theory"].includes(category)) return true;
-        if (normalizedFilter === "dp" && category.includes("dynamic")) return true;
-        if (normalizedFilter === "linkedlist" && category.includes("linked")) return true;
-        if (normalizedFilter === "binarytree" && category.includes("tree")) return true;
-
+        
+        if (category.includes(normalizedFilter) || tags.some((tag) => tag.includes(normalizedFilter))) return true;
+        if (normalizedFilter === "graphs" && category.includes("graph")) return true;
+        if (normalizedFilter === "trees" && category.includes("tree")) return true;
+        if (normalizedFilter === "linkedlists" && category.includes("linked")) return true;
         return false;
       });
     }
 
     if (debouncedSearch.trim()) {
-      const fuse = new Fuse(results, {
-        keys: ["title", "description", "category", "tags"],
-        threshold: 0.35,
-        distance: 100,
-        minMatchCharLength: 2,
-      });
+      const fuse = new Fuse(results, { keys: ["title", "category", "tags"], threshold: 0.3 });
       results = fuse.search(debouncedSearch).map((r) => r.item);
     }
 
@@ -340,140 +277,231 @@ const Index = () => {
   }, [algorithms, debouncedSearch, activeFilter]);
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-white/20">
+    <div className="min-h-screen bg-[#020203] text-zinc-200 font-sans selection:bg-blue-500/30 selection:text-white overflow-x-hidden">
+      
+      {/* --- COMMAND PALETTE MODAL --- */}
+      <AnimatePresence>
+        {isSearchModalOpen && (
+          <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[10vh] sm:pt-[15vh] px-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setIsSearchModalOpen(false)}
+              className="absolute inset-0 bg-[#020203]/80 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="relative w-full max-w-2xl bg-[#0A0C14]/95 backdrop-blur-3xl border border-white/[0.1] rounded-2xl shadow-[0_20px_80px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center px-4 sm:px-5 py-4 border-b border-white/[0.08]">
+                <Search size={20} className="text-blue-500 mr-3 shrink-0" />
+                <input
+                  ref={searchModalInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search algorithms..."
+                  className="w-full bg-transparent text-lg sm:text-xl text-white placeholder-zinc-500 outline-none font-medium tracking-wide"
+                />
+                <button 
+                  onClick={() => setIsSearchModalOpen(false)}
+                  className="ml-3 text-[10px] font-mono text-zinc-400 bg-white/[0.05] border border-white/[0.1] px-2 py-1 rounded hover:text-white hover:bg-white/[0.1] transition-colors shrink-0"
+                >
+                  ESC
+                </button>
+              </div>
 
-      {/* THE APEX BACKGROUND */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-black overflow-hidden flex items-center justify-center">
-        {/* Antigravity canvas added here */}
-        <InteractiveParticleBackground />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_100%_100%_at_50%_0%,#000_40%,transparent_100%)]" />
-        <div className="absolute top-[-10%] right-[-5%] w-[40vw] h-[40vh] bg-[#00d2ff] rounded-[100%] blur-[150px] mix-blend-screen opacity-[0.12]" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[40vw] h-[40vh] bg-[#7000ff] rounded-[100%] blur-[150px] mix-blend-screen opacity-[0.12]" />
+              <div className="max-h-[60vh] sm:max-h-[50vh] overflow-y-auto hide-scrollbar p-3">
+                {searchQuery.trim() === "" ? (
+                  <div className="p-8 text-center text-zinc-500 font-medium text-sm flex flex-col items-center gap-3">
+                    <Command size={24} className="text-zinc-600" />
+                    Start typing to search the matrix.
+                  </div>
+                ) : filteredAlgorithms.length > 0 ? (
+                  <div className="flex flex-col gap-1">
+                    {filteredAlgorithms.slice(0, 6).map(algo => (
+                      <div 
+                        key={algo.id}
+                        onClick={() => { navigate(`/view/${algo.id}`); setIsSearchModalOpen(false); }}
+                        className="group flex items-center justify-between p-3 rounded-xl hover:bg-blue-500/10 hover:border-blue-500/20 border border-transparent cursor-pointer transition-all duration-200"
+                      >
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="w-10 h-10 shrink-0 rounded-lg bg-white/[0.03] border border-white/[0.05] flex items-center justify-center group-hover:bg-blue-500/20 group-hover:border-blue-500/40 transition-colors">
+                            <Code2 size={16} className="text-zinc-400 group-hover:text-blue-400" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm sm:text-base text-zinc-200 font-semibold group-hover:text-white line-clamp-1">{algo.title}</h4>
+                            <span className="text-xs text-zinc-500 font-medium">{algo.category}</span>
+                          </div>
+                        </div>
+                        <CornerDownLeft size={16} className="text-zinc-600 group-hover:text-blue-400 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0 shrink-0 hidden sm:block" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-zinc-500 text-sm">No results found for "{searchQuery}".</div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <InteractiveParticleBackground />
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1000px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.1),transparent_50%)] mix-blend-screen" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
+        
+        {/* STRUCTURAL FIX: Unified Sticky Header Container */}
+        <header className="sticky top-0 left-0 w-full z-50 flex flex-col pointer-events-none">
+          {/* Ribbon Wrapper */}
+          <div className="pointer-events-auto w-full">
+            <GlobalRibbon />
+          </div>
+          {/* Navbar Wrapper */}
+          <div className="pointer-events-auto w-full mt-2 mb-2 px-2 sm:px-4 flex justify-center">
+             <div className="w-full max-w-[1400px]">
+               <Navbar />
+             </div>
+          </div>
+        </header>
 
-        <div className="fixed top-0 left-0 w-full z-[100]">
-          <GlobalRibbon />
-          <Navbar />
-        </div>
+        {/* Added standard top padding (pt-6 sm:pt-10) so the content respects the sticky header */}
+        <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:px-10">
+          
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 mb-8 sm:mb-12 mt-2">
+            
+            <div className="lg:col-span-8 rounded-[1.5rem] sm:rounded-[2rem] border border-white/[0.08] bg-gradient-to-br from-[#07080D]/90 to-[#0A0C14]/90 backdrop-blur-3xl p-6 sm:p-8 md:p-10 flex flex-col justify-between relative overflow-hidden group shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]">
+              <div className="absolute right-[-10%] top-[-20%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[80px] pointer-events-none group-hover:bg-blue-600/20 transition-colors duration-700 hidden sm:block" />
+              
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 mb-4 sm:mb-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+                  <Activity size={14} className="text-blue-400" />
+                  <span className="text-[10px] sm:text-[11px] font-mono font-bold text-blue-300 uppercase tracking-widest">Active Workspace</span>
+                </div>
+                
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight mb-3 sm:mb-4 leading-[1.15] drop-shadow-md">
+                  Welcome back,{" "}
+                  <span className={`${isFetchingUser ? 'animate-pulse text-zinc-500' : 'text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70'}`}>
+                    {userName}
+                  </span>.
+                </h1>
+                
+                <p className="text-zinc-400 font-light text-sm sm:text-lg max-w-xl leading-relaxed">
+                   Dive into the library of algorithms.
+                   {" "} We have a growing collection of algorithms and world's best data structures visualizer. Explore, search, and filter to find the perfect one for your needs.
+                </p>
+              </div>
 
-        <main className="flex-1 w-full max-w-[1400px] mx-auto px-6 pt-40 pb-24 md:px-10 lg:px-16">
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="text-center mb-20 max-w-3xl mx-auto"
-          >
-            <div className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.02] mb-8 backdrop-blur-md">
-              <Zap className="w-3.5 h-3.5 text-zinc-300" />
-              <span className="text-[11px] font-mono font-medium tracking-widest text-zinc-300 uppercase">
-                AlgoLib Ecosystem
-              </span>
+              <div className="relative z-10 mt-8 sm:mt-10 flex gap-4 w-full sm:w-auto">
+                <button 
+                  onClick={() => setIsSearchModalOpen(true)}
+                  className="w-full sm:w-auto justify-center px-6 py-3.5 bg-white text-black text-sm font-bold rounded-xl hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center gap-2 shadow-[0_4px_20px_rgba(255,255,255,0.2)]"
+                >
+                  <Search size={18} /> Search Matrix
+                </button>
+              </div>
             </div>
 
-            <h1 className="text-6xl md:text-8xl lg:text-[6.25rem] font-bold tracking-tighter mb-8 leading-[0.95]">
-              Visualize. Execute. <span className="text-transparent bg-clip-text bg-gradient-to-b from-white/60 to-white/10">Collaborate.</span>
-            </h1>
+            <div className="lg:col-span-4 rounded-[1.5rem] sm:rounded-[2rem] border border-white/[0.08] bg-gradient-to-br from-[#07080D]/90 to-[#0A0C14]/90 backdrop-blur-3xl p-6 sm:p-8 flex flex-col justify-center relative overflow-hidden group shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite] pointer-events-none hidden sm:block" />
+              
+              <div className="relative z-10 flex items-center justify-between mb-4 sm:mb-6">
+                <span className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
+                  <Database size={16} className="text-cyan-400" /> We have
+                </span>
+                <span className="text-[10px] font-mono font-bold tracking-wider text-green-400 bg-green-400/10 px-2.5 py-1 rounded shadow-sm border border-green-500/20">
+                  LIVE
+                </span>
+              </div>
+              
+              <div className="relative z-10">
+                <span className="text-6xl sm:text-7xl font-bold text-white tracking-tighter drop-shadow-xl">
+                  {algorithms.length > 0 ? algorithms.length : "0"}
+                </span>
+              </div>
+              
+              <p className="relative z-10 mt-4 sm:mt-6 text-xs sm:text-sm text-zinc-400 font-light leading-relaxed border-t border-white/[0.05] pt-4">
+                Available algorithms which are ready to explore, understand, learn and use.
+              </p>
+            </div>
+          </section>
 
-            <p className="text-zinc-400 font-light text-lg md:text-xl leading-relaxed">
-              AlgoLib is your centralized workspace to discover, simulate, document, and discuss the world's algorithmic complexity. Master computer science fundamentals through the complete developmental matrix.
-            </p>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8, duration: 1 }}
-            className="mt-16 flex justify-center"
-          >
-            <button
-              onClick={() => document.getElementById('registry')?.scrollIntoView({ behavior: 'smooth' })}
-              className="group flex flex-col items-center gap-3 outline-none"
+          {/* STICKY GLASS SEARCH COMMAND TRIGGER & VERTICAL FILTERS */}
+          <section className="mb-6 sm:mb-8 flex flex-col md:flex-row gap-4 sm:gap-5 items-start md:items-center justify-between sticky top-[90px] sm:top-[100px] z-30 bg-[#020203]/90 backdrop-blur-3xl py-3 sm:py-4 border-b border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.5)] -mx-4 px-4 sm:mx-0 sm:px-0">
+            
+            <button 
+              onClick={() => setIsSearchModalOpen(true)}
+              className="relative w-full md:w-[400px] flex items-center text-left bg-white/[0.03] border border-white/[0.08] rounded-xl pl-4 pr-3 py-3 hover:border-blue-500/50 hover:bg-white/[0.06] transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] group"
             >
-              <span className="text-[10px] font-mono tracking-[0.2em] text-zinc-500 group-hover:text-zinc-300 transition-colors">
-                View Algorithms
+              <Search size={18} className="text-zinc-400 group-hover:text-blue-400 transition-colors shrink-0" />
+              <span className="text-sm text-zinc-400 ml-3 font-medium flex-1 truncate group-hover:text-zinc-200 transition-colors">
+                {searchQuery || "Command palette..."}
               </span>
-              <div className="w-6 h-10 rounded-full border border-white/[0.3] flex justify-center p-1.5 bg-[#050505] group-hover:border-white/[0.25] transition-colors shadow-sm">
-                <motion.div
-                  animate={{ y: [0, 12, 0], opacity: [1, 0.3, 1] }}
-                  transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                  className="w-1 h-2 rounded-full bg-zinc-300 group-hover:bg-white transition-colors"
-                />
-              </div>
+              <kbd className="hidden sm:inline-flex items-center gap-1 border border-white/[0.1] rounded-md px-2 py-1 text-[10px] font-mono text-zinc-400 bg-black/60 group-hover:border-blue-500/40 transition-colors shrink-0">
+                <Command size={10} /> K
+              </kbd>
             </button>
-          </motion.div>
 
-          <motion.section
-            id="registry"
-            layout
-            className="mt-10 pt-20 pb-24 relative px-6 md:px-12 overflow-hidden rounded-[3rem] border border-white/[0.05] bg-[#05070e]/80 backdrop-blur-2xl shadow-[0_0_100px_rgba(0,0,0,0.8)] flex flex-col"
-          >
-            {/* Inner Section Glare */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-px bg-gradient-to-r from-transparent via-blue-500/50 to-transparent" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[600px] bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.12),transparent_70%)] -z-10 pointer-events-none mix-blend-screen" />
-
-            <motion.div layout className="text-center mb-16 relative z-10">
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-5">Explore the Library</h2>
-              <p className="text-zinc-400 font-light max-w-xl mx-auto text-sm md:text-base">100+ implementations with Complexity Telemetry and real-time visualization.</p>
-            </motion.div>
-
-            {/* SEARCH & FILTER */}
-            <motion.div layout className="mb-16 relative z-20 space-y-8">
-              <div className="relative max-w-xl mx-auto flex items-center bg-[#0a0c12] border border-white/[0.08] rounded-full px-6 py-4 shadow-2xl transition-all hover:border-white/[0.2] focus-within:border-blue-500/60 focus-within:shadow-[0_0_30px_rgba(59,130,246,0.2)]">
-                <Search className="text-blue-400 mr-4" size={20} />
-                <input
-                  type="text"
-                  placeholder="Query by algorithm name (e.g. Quick Sort)..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  className="w-full bg-transparent text-base focus:outline-none text-white placeholder:text-zinc-600 font-mono"
-                />
+            {/* RESPONSIVE FILTER PILLS */}
+            <motion.div layout className="flex-1 w-full flex items-start gap-2 sm:gap-3 border-l-0 md:border-l border-white/[0.05] md:pl-5">
+              <div className="mt-2 text-zinc-500 shrink-0 hidden sm:block">
+                <SlidersHorizontal size={16} />
               </div>
-
-              {/* Collapsible Filter Pills */}
-              <motion.div layout className="flex flex-wrap items-center justify-center gap-3 max-w-4xl mx-auto">
-                <AnimatePresence>
-                  {visible_pills.map(pill => (
+              
+              <motion.div 
+                layout 
+                className={`flex gap-2 w-full pb-1 sm:pb-0 ${showAllFilters ? 'flex-wrap' : 'overflow-x-auto hide-scrollbar snap-x snap-mandatory'}`}
+              >
+                <AnimatePresence mode="popLayout">
+                  {visible_pills.map((pill) => (
                     <motion.button
                       layout
-                      initial={{ opacity: 0, scale: 0.8 }}
+                      initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
                       key={pill}
-                      onClick={() => handleFilterChange(pill)}
-                      className={`px-5 py-2 rounded-full border text-xs font-semibold tracking-wide transition-all duration-300 ${activeFilter === pill
-                          ? 'bg-blue-500 text-white border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.4)]'
-                          : 'border-white/[0.06] text-zinc-400 hover:border-white/[0.2] hover:text-white bg-[#0a0c12]'
-                        }`}
+                      onClick={() => setActiveFilter(pill)}
+                      className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 shrink-0 snap-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] ${
+                        activeFilter === pill
+                          ? "bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)] border border-transparent"
+                          : "text-zinc-300 bg-white/[0.03] border border-white/[0.08] hover:text-white hover:bg-white/[0.08]"
+                      }`}
                     >
-                      {pill}
+                      {pill === "All" ? "View All" : pill}
                     </motion.button>
                   ))}
                 </AnimatePresence>
 
-                {filter_pills.length > INITIAL_PILLS_COUNT && (
+                {ALL_CATEGORIES.length > INITIAL_PILLS_COUNT && (
                   <motion.button
                     layout
                     onClick={() => setShowAllFilters(!showAllFilters)}
-                    className="px-5 py-2 rounded-full border border-dashed border-white/[0.15] text-xs font-semibold tracking-wide text-zinc-400 hover:text-white hover:border-white/[0.4] hover:bg-white/[0.05] transition-all flex items-center gap-2"
+                    className="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 border border-dashed border-white/[0.15] text-zinc-400 hover:text-white hover:border-white/[0.4] flex items-center gap-1.5 bg-white/[0.02] hover:bg-white/[0.08] shrink-0 snap-center"
                   >
                     {showAllFilters ? (
-                      <>Collapse <Minus size={14} /></>
+                      <>Collapse <Minus size={12} strokeWidth={2.5} /></>
                     ) : (
-                      <>+{filter_pills.length - INITIAL_PILLS_COUNT} More <Plus size={14} /></>
+                      <>+{ALL_CATEGORIES.length - INITIAL_PILLS_COUNT} More <Plus size={12} strokeWidth={2.5} /></>
                     )}
                   </motion.button>
                 )}
               </motion.div>
             </motion.div>
+          </section>
 
-            {/* 3D ALGO GRID */}
-            <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full relative z-20">
-              <AnimatePresence>
+          <section className="min-h-[400px]">
+            <motion.div layout="position" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+              <AnimatePresence mode="popLayout">
                 {filteredAlgorithms.length > 0 ? (
                   filteredAlgorithms.slice(0, visibleCount).map((algo, index) => (
-                    <AlgorithmTiltCard
+                    <AlgoDataCard
                       key={algo.id}
                       algo={algo}
                       index={index}
@@ -482,46 +510,42 @@ const Index = () => {
                   ))
                 ) : (
                   <motion.div
-                    layout
-                    key="empty-state"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="col-span-full py-20 text-center"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="col-span-full py-20 sm:py-32 flex flex-col items-center justify-center border border-dashed border-white/[0.08] rounded-[1.5rem] sm:rounded-[2rem] bg-white/[0.02] backdrop-blur-xl px-4 text-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]"
                   >
-                    <h3 className="text-xl text-zinc-300 mb-2 font-medium">No algorithms found</h3>
-                    <p className="text-zinc-500">Try adjusting your filters or search query.</p>
+                    <FolderDot size={48} className="text-zinc-600 mb-4 sm:mb-6 drop-shadow-md" />
+                    <h3 className="text-xl font-bold text-zinc-200 mb-2">No Matrices Aligned</h3>
+                    <p className="text-zinc-400 text-sm">Adjust your parameters or clear the command palette.</p>
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
-            {/* Load More Button */}
+
             <AnimatePresence>
               {filteredAlgorithms.length > visibleCount && (
                 <motion.div
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="mt-20 flex justify-center w-full relative z-20"
+                  exit={{ opacity: 0, y: 20 }}
+                  className="mt-12 sm:mt-16 flex justify-center w-full relative z-20"
                 >
                   <button
-                    onClick={() => setVisibleCount((prev) => prev + 8)}
-                    className="group relative px-8 py-4 rounded-full border border-white/[0.1] bg-[#0a0c12] text-zinc-200 text-sm font-semibold tracking-wide transition-all duration-300 hover:bg-white hover:text-black shadow-[0_0_30px_rgba(0,0,0,0.5)] hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] overflow-hidden"
+                    onClick={() => setVisibleCount((prev) => prev + 12)}
+                    className="group relative px-6 sm:px-8 py-3.5 rounded-xl border border-white/[0.1] bg-[#0A0C14]/80 backdrop-blur-xl text-zinc-200 text-sm font-semibold tracking-wide transition-all duration-300 hover:bg-white hover:text-black hover:border-transparent shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden w-full sm:w-auto"
                   >
-                    <span className="relative z-10 flex items-center gap-2">
-                      Load More Matrix <Zap className="w-4 h-4 text-blue-500 group-hover:text-black transition-colors" />
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      Expand Matrix <Zap className="w-4 h-4 text-blue-500 group-hover:text-black transition-colors" />
                     </span>
-                    {/* Hover light sweep effect */}
-                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
                   </button>
                 </motion.div>
               )}
             </AnimatePresence>
-
-          </motion.section>
+          </section>
 
         </main>
-
         <Footer />
       </div>
     </div>
