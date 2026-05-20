@@ -20,46 +20,47 @@ export default function MarkdownRenderer({ content, copiedId, onCopy, messageInd
         remarkPlugins={[remarkMath, remarkGfm]}
         rehypePlugins={[rehypeKatex]}
         components={{
-          p: ({ node, ...props }) => <p className="mb-4 leading-relaxed text-[15px] text-zinc-200" {...props} />,
+          p: ({ node, ...props }) => <p className="mb-4 leading-relaxed" {...props} />,
           
           code({ node, inline, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
-            // Default to 'text' if the AI forgets to specify the language
             const language = match ? match[1] : 'text'; 
             const codeString = String(children).replace(/\n$/, '');
-            // Generate a truly unique ID for the copy state
             const uniqueCodeId = `code-${messageIndex}-${language}-${codeString.substring(0, 5)}`;
 
-            // --- BLOCK CODE (Gemini/Mac Style) ---
-            // We now ONLY check !inline. It doesn't matter if 'match' exists.
-            if (!inline) {
+            // --- BLOCK CODE (MacOS Style Restored) ---
+            // We check if it's NOT inline, OR if the string contains line breaks (fallback for AI formatting errors)
+            if (!inline || codeString.includes('\n')) {
               return (
-                <div className="rounded-2xl overflow-hidden my-6 border border-white/10 bg-[#1e1e20] shadow-lg w-full">
-                  <div className="flex items-center justify-between px-4 py-2.5 bg-[#252528] border-b border-white/5">
-                    <span className="text-[11px] text-zinc-400 font-mono tracking-wider uppercase">
-                      {language}
-                    </span>
+                <div className="mac-code-block shadow-2xl w-full">
+                  <div className="mac-code-header">
+                    <div className="mac-traffic-lights">
+                      <div className="dot red"></div>
+                      <div className="dot yellow"></div>
+                      <div className="dot green"></div>
+                    </div>
+                    <span className="lang-label">{language === 'text' ? 'code' : language}</span>
                     <button 
                       onClick={() => onCopy(codeString, uniqueCodeId)} 
-                      className="flex items-center gap-1.5 text-[11px] font-medium text-zinc-400 hover:text-zinc-100 transition-colors uppercase tracking-wider"
+                      className="mac-action-btn"
                     >
-                      {copiedId === uniqueCodeId ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />} 
-                      {copiedId === uniqueCodeId ? 'Copied' : 'Copy code'}
+                      {copiedId === uniqueCodeId ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />} 
+                      <span className="hidden sm:inline">
+                        {copiedId === uniqueCodeId ? 'Copied' : 'Copy'}
+                      </span>
                     </button>
                   </div>
-                  {/* overflow-x-auto ensures horizontal scrolling, white-space: pre prevents ugly line wrapping */}
-                  <div className="p-4 overflow-x-auto bg-[#131314]">
-                    <pre className="text-[13px] md:text-sm text-zinc-200 font-mono custom-scrollbar m-0" style={{ whiteSpace: 'pre' }}>
-                      <code {...props}>{codeString}</code>
-                    </pre>
-                  </div>
+                  {/* custom-scrollbar class ensures horizontal scrolling works flawlessly */}
+                  <pre className="custom-scrollbar" style={{ margin: 0 }}>
+                    <code {...props}>{codeString}</code>
+                  </pre>
                 </div>
               );
             }
             
             // --- INLINE CODE (e.g., `let x = 5`) ---
             return (
-              <code className="bg-white/10 border border-white/10 px-1.5 py-0.5 rounded-md text-[13px] font-mono text-blue-200 shadow-sm" {...props}>
+              <code className="chat-inline-code" {...props}>
                 {children}
               </code>
             );
