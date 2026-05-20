@@ -1,3 +1,5 @@
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useMotionTemplate, useMotionValue } from "framer-motion";
@@ -195,20 +197,34 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const response = await fetch('/.netlify/functions/get-user-profile');
-        if (!response.ok) throw new Error("Failed to fetch profile");
-        const data = await response.json();
-        setUserName(data.name || data.full_name || "User"); 
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        setUserName("User"); 
-      } finally {
-        setIsFetchingUser(false);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          
+          const response = await fetch('/.netlify/functions/get-user-profile', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) throw new Error(`Server returned ${response.status}`);
+          
+          const data = await response.json();
+          setUserName(data.full_name || "User"); 
+          
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          setUserName("User");
+        }
+      } else {
+        setUserName("User");
       }
-    };
-    fetchUserProfile();
+      setIsFetchingUser(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {

@@ -314,7 +314,7 @@ export default function LandingPage() {
                 to="/visualizer" 
                 className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group"
               >
-                Explore now with login.
+                Explore now (No login required).
                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
@@ -340,7 +340,7 @@ export default function LandingPage() {
                 to="/compiler" 
                 className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group"
               >
-                Explore now with login.
+                Explore now (No login required).
                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
@@ -366,7 +366,7 @@ export default function LandingPage() {
                 to="https://discover-algolib.netlify.app/discover" 
                 className="text-sm font-medium text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group"
               >
-                Explore now with login.
+                Explore now (No login required).
                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
