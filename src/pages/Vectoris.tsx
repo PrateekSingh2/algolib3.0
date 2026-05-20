@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { 
   Zap, AlertCircle, Send, Loader2, Sparkles, Copy, 
   Check, Edit2, Trash2, Menu, Code2, ArrowRightLeft, 
-  Plus, MessageSquare, Maximize2, X, Activity, ChevronLeft, Search
+  Plus, MessageSquare, Maximize2, X, Activity, ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -299,7 +299,7 @@ export default function Analyzer() {
 
   return (
     <div className="flex h-[100dvh] bg-[#131314] text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30">
-      <Helmet><title>Vectoris | AlgoLib AI</title></Helmet>
+      <Helmet><title>Vectoris | AlgoLib</title></Helmet>
 
       {/* ─── FULL-SCREEN MAXIMIZED GRAPH MODAL ─── */}
       <AnimatePresence>
@@ -394,9 +394,6 @@ export default function Analyzer() {
           <button onClick={handleNewAnalysis} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 rounded-full text-sm font-medium transition-colors text-zinc-200">
             <Edit2 size={18} className="text-zinc-400" /> New chat
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 rounded-full text-sm font-medium transition-colors text-zinc-200">
-            <Search size={18} className="text-zinc-400" /> Search chats
-          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1 min-w-[280px] custom-scrollbar">
@@ -468,9 +465,6 @@ export default function Analyzer() {
             
             {isHomeState && (
               <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex flex-col items-center justify-center flex-1 py-10">
-                <motion.div variants={itemVariants} className="w-16 h-16 rounded-full bg-gradient-to-br from-[#4facfe]/20 to-[#00f2fe]/20 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(79,172,254,0.2)]">
-                  <Sparkles size={32} className="text-[#4facfe]" />
-                </motion.div>
                 <motion.h1 variants={itemVariants} className="text-3xl md:text-5xl font-medium text-white tracking-tight text-center mb-10 drop-shadow-sm">
                   Hello, <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4facfe] to-[#00f2fe] font-semibold">{userName}</span>
                 </motion.h1>
@@ -505,7 +499,7 @@ export default function Analyzer() {
                       ) : (
                         <div className="flex gap-3 md:gap-4 w-full">
                           <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center bg-transparent mt-1">
-                             <Sparkles size={24} className="text-[#4facfe]" />
+                             <Zap size={16} className="text-white fill-white" />
                           </div>
                           <div className="flex-1 min-w-0 text-[15px] leading-relaxed text-zinc-200">
                             
@@ -584,7 +578,7 @@ export default function Analyzer() {
                                   <div className="mt-4">
                                     <Suspense fallback={<Loader2 className="animate-spin text-zinc-500" />}>
                                       <LazyMarkdown 
-                                        content={`\`\`\`${msg.result.type === 'optimization' ? 'optimized' : 'translation'}\n${safeStringify(msg.result.code)}\n\`\`\``} 
+                                        content={`\`\`\`plaintext\n${safeStringify(msg.result.code)}\n\`\`\``} 
                                         copiedId={copiedId} 
                                         onCopy={handleCopy} 
                                         messageIndex={idx} 
@@ -633,7 +627,7 @@ export default function Analyzer() {
                   onChange={handleInput}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask Vectoris"
-                  className="flex-1 max-h-[200px] bg-transparent text-white resize-none outline-none py-3.5 px-3 sm:px-2 text-[15px] md:text-base custom-scrollbar placeholder:text-zinc-500 leading-relaxed"
+                  className="flex-1 max-h-[200px] bg-transparent text-white resize-none outline-none py-3.5 px-3 sm:px-2 text-[15px] md:text-base custom-scrollbar placeholder:text-zinc-400 leading-relaxed"
                   rows={1}
                   disabled={isAnalyzing}
                 />
@@ -666,6 +660,18 @@ export default function Analyzer() {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(255,255,255,0.2); }
+
+        /* ─── MAC WINDOW CODE BLOCKS (GLOBAL STYLES) ─── */
+        .mac-code-block { background: #1e1e1e; border-radius: 14px; overflow: hidden; margin: 24px 0; border: 1px solid rgba(255,255,255,0.1); }
+        .mac-code-header { padding: 12px 16px; background: #2d2d2d; border-bottom: 1px solid rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: space-between; position: relative; }
+        .mac-traffic-lights { display: flex; gap: 8px; }
+        .mac-traffic-lights .dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 1px 1px rgba(0,0,0,0.2), 0 1px 1px rgba(255,255,255,0.1); }
+        .mac-traffic-lights .dot.red { background: #FF5F56; border: 1px solid #E0443E; }
+        .mac-traffic-lights .dot.yellow { background: #FFBD2E; border: 1px solid #DEA123; }
+        .mac-traffic-lights .dot.green { background: #27C93F; border: 1px solid #1AAB29; }
+        .lang-label { position: absolute; left: 50%; transform: translateX(-50%); font-size: 12px; color: #9ca3af; font-family: -apple-system, sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;}
+        .mac-action-btn { background: transparent; border: none; color: #9ca3af; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;}
+        .mac-action-btn:hover { background: rgba(255,255,255,0.1); color: #fff;}
 
         /* ─── KATEX/MARKDOWN TYPOGRAPHY FIXES ─── */
         .chat-prose h1, .chat-prose h2, .chat-prose h3 { color: #fff; font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; line-height: 1.3;}
