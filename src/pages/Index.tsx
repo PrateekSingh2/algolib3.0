@@ -1,5 +1,3 @@
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../lib/firebase';
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useMotionTemplate, useMotionValue } from "framer-motion";
@@ -7,6 +5,7 @@ import Fuse from "fuse.js";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GlobalRibbon from "@/components/GlobalRibbon";
+import { useAuth } from "@/contexts/AuthContext"; // <-- IMPORTED YOUR AUTH CONTEXT
 import { 
   Search, SlidersHorizontal, ChevronRight, Zap, 
   TerminalSquare, Layers, FolderDot, Code2, 
@@ -14,7 +13,7 @@ import {
 } from "lucide-react";
 import { fetchAlgorithms, type Algorithm } from "@/lib/algorithms";
 
-// --- OPTIMIZED ANTIGRAVITY PARTICLES (FASTER LOAD) ---
+// --- OPTIMIZED ANTIGRAVITY PARTICLES ---
 const InteractiveParticleBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -66,7 +65,6 @@ const InteractiveParticleBackground = () => {
 
     const init = () => {
       particlesArray = [];
-      // SPEED FIX: Capped the maximum particles to 120 so it never lags mobile devices
       const numberOfParticles = Math.min((canvas.width * canvas.height) / 10000, 120); 
       for (let i = 0; i < numberOfParticles; i++) {
         particlesArray.push(new Particle(Math.random() * canvas.width, Math.random() * canvas.height));
@@ -176,6 +174,11 @@ const Index = () => {
   const navigate = useNavigate();
   const searchModalInputRef = useRef<HTMLInputElement>(null);
   
+  // TAP INTO AUTH CONTEXT EXACTLY LIKE NAVBAR
+  const { user, profile } = useAuth(); 
+  // Determine the display name instantly
+  const userName = profile?.display_name || user?.displayName || "User";
+
   const [algorithms, setAlgorithms] = useState<Algorithm[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -184,9 +187,6 @@ const Index = () => {
   
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  
-  const [userName, setUserName] = useState("User");
-  const [isFetchingUser, setIsFetchingUser] = useState(true);
 
   useEffect(() => {
     const loadAlgos = async () => {
@@ -194,37 +194,6 @@ const Index = () => {
       setAlgorithms(data);
     };
     loadAlgos();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const token = await user.getIdToken();
-          
-          const response = await fetch('/.netlify/functions/get-user-profile', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-
-          if (!response.ok) throw new Error(`Server returned ${response.status}`);
-          
-          const data = await response.json();
-          setUserName(data.full_name || "User"); 
-          
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
-          setUserName("User");
-        }
-      } else {
-        setUserName("User");
-      }
-      setIsFetchingUser(false);
-    });
-    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -376,11 +345,9 @@ const Index = () => {
         
         {/* STRUCTURAL FIX: Unified Sticky Header Container */}
         <header className="sticky top-0 left-0 w-full z-50 flex flex-col pointer-events-none">
-          {/* Ribbon Wrapper */}
           <div className="pointer-events-auto w-full">
             <GlobalRibbon />
           </div>
-          {/* Navbar Wrapper */}
           <div className="pointer-events-auto w-full mt-2 mb-2 px-2 sm:px-4 flex justify-center">
              <div className="w-full max-w-[1400px]">
                <Navbar />
@@ -388,7 +355,6 @@ const Index = () => {
           </div>
         </header>
 
-        {/* Added standard top padding (pt-6 sm:pt-10) so the content respects the sticky header */}
         <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:px-10">
           
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 mb-8 sm:mb-12 mt-2">
@@ -402,16 +368,16 @@ const Index = () => {
                   <span className="text-[10px] sm:text-[11px] font-mono font-bold text-blue-300 uppercase tracking-widest">Active Workspace</span>
                 </div>
                 
+                {/* Instant Name Rendering using Context */}
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight mb-3 sm:mb-4 leading-[1.15] drop-shadow-md">
                   Welcome back,{" "}
-                  <span className={`${isFetchingUser ? 'animate-pulse text-zinc-500' : 'text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70'}`}>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">
                     {userName}
                   </span>.
                 </h1>
                 
                 <p className="text-zinc-400 font-light text-sm sm:text-lg max-w-xl leading-relaxed">
-                   Dive into the library of algorithms.
-                   {" "} We have a growing collection of algorithms and world's best data structures visualizer. Explore, search, and filter to find the perfect one for your needs.
+                  The AlgoLib ecosystem is fully synchronized. Your development matrix is currently tracking <span className="text-zinc-200 font-medium">{algorithms.length}</span> optimized algorithm implementations.
                 </p>
               </div>
 
@@ -430,7 +396,7 @@ const Index = () => {
               
               <div className="relative z-10 flex items-center justify-between mb-4 sm:mb-6">
                 <span className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
-                  <Database size={16} className="text-cyan-400" /> We have
+                  <Database size={16} className="text-cyan-400" /> Total Matrices
                 </span>
                 <span className="text-[10px] font-mono font-bold tracking-wider text-green-400 bg-green-400/10 px-2.5 py-1 rounded shadow-sm border border-green-500/20">
                   LIVE
@@ -443,8 +409,8 @@ const Index = () => {
                 </span>
               </div>
               
-              <p className="relative z-10 mt-4 sm:mt-6 text-xs sm:text-sm text-zinc-400 font-light leading-relaxed border-t border-white/[0.05] pt-4">
-                Available algorithms which are ready to explore, understand, learn and use.
+              <p className="relative z-10 mt-4 sm:mt-6 text-xs sm:text-sm text-zinc-500 font-light leading-relaxed border-t border-white/[0.05] pt-4">
+                Available algorithms parsed and ready for visualization across the platform.
               </p>
             </div>
           </section>
