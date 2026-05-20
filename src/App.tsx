@@ -38,7 +38,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAuth, executeGoogleSignIn, executeGithubSignIn } from "@/contexts/AuthContext";
 import { useCookieConsent } from "./contexts/CookieContext";
 import Navbar from "./components/Navbar";
-import Analyzer from "./pages/Analyzer";
+import Vectoris from "./pages/Vectoris";
 import Quiz from "./pages/Quiz";
 import QuizPanel from "./pages/QuizPanel";
 import QuizForge from "./pages/QuizForge";
@@ -78,7 +78,7 @@ const ModuleLoader = () => <OrbitalLoader />;
 // --- GLOBAL MAINTENANCE GUARD ---
 const SYSTEM_MODULES = [
   { id: '/', name: 'Home' }, { id: '/compiler', name: 'Compiler' }, { id: '/visualizer', name: 'Visualizer Dashboard' },
-  { id: '/analyzer', name: 'AI Analyzer' }, { id: '/view-profile', name: 'View Profile' }, { id: '/edit-profile', name: 'Edit Profile' },
+  { id: '/vectoris', name: 'Vectoris' }, { id: '/view-profile', name: 'View Profile' }, { id: '/edit-profile', name: 'Edit Profile' },
   { id: '/contests', name: 'Contest' }, { id: '/quiz-panel', name: 'Quiz' }, { id: '/discussion', name: 'Community' },
   { id: '/docs', name: 'Documentation' }, { id: '/notes', name: 'AlgoLib Notes' }, { id: '/sheets', name: 'Practice Sheets' }
 ];
@@ -332,7 +332,7 @@ const AppRoutes = () => {
         <Route path="/contests" element={<Contests />} />
         <Route path="/contest/:contestId" element={<ContestPanel user={user} onLoginRequest={handleLoginRequest} />} />
         <Route path="/compiler" element={<Compiler />} />
-        <Route path="/analyzer" element={<Analyzer />} />
+        <Route path="/vectoris" element={<Vectoris />} />
         <Route path="/quiz/:id" element={<Quiz />} />
         <Route path="/quiz-forge" element={<QuizForge />} />
         <Route path="/quiz-panel" element={<QuizPanel />} />

@@ -5,97 +5,13 @@ import Fuse from "fuse.js";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GlobalRibbon from "@/components/GlobalRibbon";
-import { useAuth } from "@/contexts/AuthContext"; // <-- IMPORTED YOUR AUTH CONTEXT
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   Search, SlidersHorizontal, ChevronRight, Zap, 
-  TerminalSquare, Layers, FolderDot, Code2, 
-  Activity, Database, Plus, Minus, Command, CornerDownLeft
+  Layers, FolderDot, Code2, Activity, Database, 
+  Plus, Minus, Command, CornerDownLeft
 } from "lucide-react";
 import { fetchAlgorithms, type Algorithm } from "@/lib/algorithms";
-
-// --- OPTIMIZED ANTIGRAVITY PARTICLES ---
-const InteractiveParticleBackground = () => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let animationFrameId: number;
-    let particlesArray: Particle[] = [];
-    const mouse = { x: -1000, y: -1000, radius: 150 };
-
-    class Particle {
-      x: number; y: number; size: number; speedX: number; speedY: number; color: string;
-      constructor(x: number, y: number) {
-        this.x = x; this.y = y;
-        this.size = Math.random() * 1.5 + 0.5;
-        this.speedX = (Math.random() - 0.5) * 0.3;
-        this.speedY = (Math.random() - 0.5) * 0.3;
-        const colors = ['#3b82f6', '#06b6d4', '#0ea5e9', '#ffffff'];
-        this.color = colors[Math.floor(Math.random() * colors.length)];
-      }
-      update() {
-        if (!canvas) return;
-        this.x += this.speedX; this.y += this.speedY;
-        if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
-        if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
-
-        const dx = mouse.x - this.x;
-        const dy = mouse.y - this.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < mouse.radius) {
-          const force = (mouse.radius - distance) / mouse.radius;
-          this.x -= (dx / distance) * force * 2.5;
-          this.y -= (dy / distance) * force * 2.5;
-        }
-      }
-      draw() {
-        if (!ctx) return;
-        ctx.fillStyle = this.color;
-        ctx.globalAlpha = 0.5;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    const init = () => {
-      particlesArray = [];
-      const numberOfParticles = Math.min((canvas.width * canvas.height) / 10000, 120); 
-      for (let i = 0; i < numberOfParticles; i++) {
-        particlesArray.push(new Particle(Math.random() * canvas.width, Math.random() * canvas.height));
-      }
-    };
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particlesArray.forEach(p => { p.update(); p.draw(); });
-      animationFrameId = requestAnimationFrame(animate);
-    };
-
-    const handleResize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; init(); };
-    const handleMouseMove = (e: MouseEvent) => { mouse.x = e.clientX; mouse.y = e.clientY; };
-    const handleMouseLeave = () => { mouse.x = -1000; mouse.y = -1000; };
-
-    handleResize(); animate();
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseout", handleMouseLeave);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseout", handleMouseLeave);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className="fixed inset-0 w-full h-full pointer-events-none z-0 mix-blend-screen" />;
-};
 
 // --- HYPER-GLASS BENTO ALGO CARD ---
 const AlgoDataCard = ({ algo, onClick, index }: { algo: Algorithm, onClick: () => void, index: number }) => {
@@ -117,23 +33,23 @@ const AlgoDataCard = ({ algo, onClick, index }: { algo: Algorithm, onClick: () =
       transition={{ duration: 0.4, delay: (index % 12) * 0.04, ease: "easeOut" }}
       onClick={onClick}
       onMouseMove={handleMouseMove}
-      className="group relative flex flex-col p-5 rounded-[1.5rem] border border-white/[0.08] bg-gradient-to-br from-white/[0.02] to-transparent backdrop-blur-3xl hover:bg-white/[0.05] transition-all duration-300 cursor-pointer overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]"
+      className="group relative flex flex-col p-5 rounded-[1.5rem] border border-white/[0.08] bg-white/[0.02] backdrop-blur-3xl hover:bg-white/[0.04] transition-all duration-300 cursor-pointer overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)]"
     >
       <motion.div
         className="pointer-events-none absolute -inset-px rounded-[1.5rem] opacity-0 transition duration-300 group-hover:opacity-100 hidden sm:block"
         style={{
           background: useMotionTemplate`
-            radial-gradient(300px circle at ${mouseX}px ${mouseY}px, rgba(59, 130, 246, 0.15), transparent 80%)
+            radial-gradient(300px circle at ${mouseX}px ${mouseY}px, rgba(59, 131, 246, 0.12), transparent 80%)
           `,
         }}
       />
       
       <div className="relative z-10 flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.1] flex items-center justify-center shadow-inner group-hover:border-blue-500/40 group-hover:bg-blue-500/20 transition-all duration-300">
-            <Layers size={16} className="text-zinc-400 group-hover:text-blue-300 transition-colors" />
+          <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shadow-inner group-hover:border-blue-500/40 group-hover:bg-blue-500/10 transition-all duration-300">
+            <Layers size={16} className="text-zinc-400 group-hover:text-blue-400 transition-colors" />
           </div>
-          <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-300 uppercase bg-black/50 border border-white/[0.08] px-2.5 py-1 rounded-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] group-hover:text-white group-hover:border-white/[0.2] transition-colors">
+          <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase bg-black/40 border border-white/[0.08] px-2.5 py-1 rounded-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] group-hover:text-zinc-200 group-hover:border-white/[0.15] transition-colors">
             {algo.category}
           </span>
         </div>
@@ -152,9 +68,9 @@ const AlgoDataCard = ({ algo, onClick, index }: { algo: Algorithm, onClick: () =
       </div>
 
       {algo.tags && algo.tags.length > 0 && (
-        <div className="relative z-10 flex flex-wrap gap-2 mt-5 pt-4 border-t border-white/[0.05]">
+        <div className="relative z-10 flex flex-wrap gap-2 mt-5 pt-4 border-t border-white/[0.04]">
           {algo.tags.slice(0, 3).map((tag, idx) => (
-            <span key={idx} className="text-[10px] px-2.5 py-1 rounded-md text-zinc-300 bg-white/[0.04] border border-white/[0.05] font-medium tracking-wide shadow-sm">
+            <span key={idx} className="text-[10px] px-2.5 py-1 rounded-md text-zinc-400 bg-white/[0.03] border border-white/[0.05] font-medium tracking-wide">
               {tag}
             </span>
           ))}
@@ -174,9 +90,7 @@ const Index = () => {
   const navigate = useNavigate();
   const searchModalInputRef = useRef<HTMLInputElement>(null);
   
-  // TAP INTO AUTH CONTEXT EXACTLY LIKE NAVBAR
   const { user, profile } = useAuth(); 
-  // Determine the display name instantly
   const userName = profile?.display_name || user?.displayName || "User";
 
   const [algorithms, setAlgorithms] = useState<Algorithm[]>([]);
@@ -187,6 +101,9 @@ const Index = () => {
   
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  
+  // Ribbon Session State
+  const [showRibbon, setShowRibbon] = useState(false);
 
   useEffect(() => {
     const loadAlgos = async () => {
@@ -194,7 +111,18 @@ const Index = () => {
       setAlgorithms(data);
     };
     loadAlgos();
+
+    // Check session storage on mount
+    const isRibbonDismissed = sessionStorage.getItem("ribbon_dismissed");
+    if (isRibbonDismissed !== "true") {
+      setShowRibbon(true);
+    }
   }, []);
+
+  const handleDismissRibbon = () => {
+    sessionStorage.setItem("ribbon_dismissed", "true");
+    setShowRibbon(false);
+  };
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearch(searchQuery), 150);
@@ -202,7 +130,7 @@ const Index = () => {
   }, [searchQuery]);
 
   useEffect(() => { 
-    setVisibleCount(12); 
+    setVisibleCount(8); 
   }, [debouncedSearch, activeFilter]);
 
   useEffect(() => {
@@ -262,7 +190,7 @@ const Index = () => {
   }, [algorithms, debouncedSearch, activeFilter]);
 
   return (
-    <div className="min-h-screen bg-[#020203] text-zinc-200 font-sans selection:bg-blue-500/30 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#09090B] text-zinc-200 font-sans selection:bg-blue-500/30 selection:text-white overflow-x-hidden">
       
       {/* --- COMMAND PALETTE MODAL --- */}
       <AnimatePresence>
@@ -271,7 +199,7 @@ const Index = () => {
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsSearchModalOpen(false)}
-              className="absolute inset-0 bg-[#020203]/80 backdrop-blur-md"
+              className="absolute inset-0 bg-[#09090B]/80 backdrop-blur-md"
             />
             
             <motion.div 
@@ -279,9 +207,9 @@ const Index = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="relative w-full max-w-2xl bg-[#0A0C14]/95 backdrop-blur-3xl border border-white/[0.1] rounded-2xl shadow-[0_20px_80px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden flex flex-col"
+              className="relative w-full max-w-2xl bg-[#121214]/95 backdrop-blur-3xl border border-white/[0.08] rounded-2xl shadow-[0_20px_80px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.05)] overflow-hidden flex flex-col"
             >
-              <div className="flex items-center px-4 sm:px-5 py-4 border-b border-white/[0.08]">
+              <div className="flex items-center px-4 sm:px-5 py-4 border-b border-white/[0.05]">
                 <Search size={20} className="text-blue-500 mr-3 shrink-0" />
                 <input
                   ref={searchModalInputRef}
@@ -335,19 +263,33 @@ const Index = () => {
         )}
       </AnimatePresence>
 
-      <InteractiveParticleBackground />
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1000px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.1),transparent_50%)] mix-blend-screen" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1000px] h-[500px] bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.06),transparent_50%)] mix-blend-screen" />
+        <div className="fixed inset-0 z-0 pointer-events-none opacity-[0.025] mix-blend-overlay"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          }}
+        />
       </div>
 
       <div className="relative z-10 flex flex-col min-h-screen">
         
         {/* STRUCTURAL FIX: Unified Sticky Header Container */}
         <header className="sticky top-0 left-0 w-full z-50 flex flex-col pointer-events-none">
-          <div className="pointer-events-auto w-full">
-            <GlobalRibbon />
-          </div>
+          {/* Render ribbon if not dismissed in session */}
+          <AnimatePresence>
+            {showRibbon && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="pointer-events-auto w-full overflow-hidden"
+              >
+                 <GlobalRibbon />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           <div className="pointer-events-auto w-full mt-2 mb-2 px-2 sm:px-4 flex justify-center">
              <div className="w-full max-w-[1400px]">
                <Navbar />
@@ -359,16 +301,15 @@ const Index = () => {
           
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 mb-8 sm:mb-12 mt-2">
             
-            <div className="lg:col-span-8 rounded-[1.5rem] sm:rounded-[2rem] border border-white/[0.08] bg-gradient-to-br from-[#07080D]/90 to-[#0A0C14]/90 backdrop-blur-3xl p-6 sm:p-8 md:p-10 flex flex-col justify-between relative overflow-hidden group shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]">
-              <div className="absolute right-[-10%] top-[-20%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[80px] pointer-events-none group-hover:bg-blue-600/20 transition-colors duration-700 hidden sm:block" />
+            <div className="lg:col-span-8 rounded-[1.5rem] sm:rounded-[2rem] border border-white/[0.08] bg-white/[0.02] backdrop-blur-3xl p-6 sm:p-8 md:p-10 flex flex-col justify-between relative overflow-hidden group shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)]">
+              <div className="absolute right-[-10%] top-[-20%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[80px] pointer-events-none group-hover:bg-blue-600/15 transition-colors duration-700 hidden sm:block" />
               
               <div className="relative z-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 mb-4 sm:mb-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 mb-4 sm:mb-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
                   <Activity size={14} className="text-blue-400" />
                   <span className="text-[10px] sm:text-[11px] font-mono font-bold text-blue-300 uppercase tracking-widest">Active Workspace</span>
                 </div>
                 
-                {/* Instant Name Rendering using Context */}
                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight mb-3 sm:mb-4 leading-[1.15] drop-shadow-md">
                   Welcome back,{" "}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70">
@@ -384,14 +325,14 @@ const Index = () => {
               <div className="relative z-10 mt-8 sm:mt-10 flex gap-4 w-full sm:w-auto">
                 <button 
                   onClick={() => setIsSearchModalOpen(true)}
-                  className="w-full sm:w-auto justify-center px-6 py-3.5 bg-white text-black text-sm font-bold rounded-xl hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center gap-2 shadow-[0_4px_20px_rgba(255,255,255,0.2)]"
+                  className="w-full sm:w-auto justify-center px-6 py-3.5 bg-white text-black text-sm font-bold rounded-xl hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center gap-2 shadow-[0_4px_20px_rgba(255,255,255,0.15)]"
                 >
                   <Search size={18} /> Search Matrix
                 </button>
               </div>
             </div>
 
-            <div className="lg:col-span-4 rounded-[1.5rem] sm:rounded-[2rem] border border-white/[0.08] bg-gradient-to-br from-[#07080D]/90 to-[#0A0C14]/90 backdrop-blur-3xl p-6 sm:p-8 flex flex-col justify-center relative overflow-hidden group shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)]">
+            <div className="lg:col-span-4 rounded-[1.5rem] sm:rounded-[2rem] border border-white/[0.08] bg-white/[0.02] backdrop-blur-3xl p-6 sm:p-8 flex flex-col justify-center relative overflow-hidden group shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)]">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite] pointer-events-none hidden sm:block" />
               
               <div className="relative z-10 flex items-center justify-between mb-4 sm:mb-6">
@@ -416,7 +357,7 @@ const Index = () => {
           </section>
 
           {/* STICKY GLASS SEARCH COMMAND TRIGGER & VERTICAL FILTERS */}
-          <section className="mb-6 sm:mb-8 flex flex-col md:flex-row gap-4 sm:gap-5 items-start md:items-center justify-between sticky top-[90px] sm:top-[100px] z-30 bg-[#020203]/90 backdrop-blur-3xl py-3 sm:py-4 border-b border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.5)] -mx-4 px-4 sm:mx-0 sm:px-0">
+          <section className="mb-6 sm:mb-8 flex flex-col md:flex-row gap-4 sm:gap-5 items-start md:items-center justify-between sticky top-[90px] sm:top-[100px] z-30 bg-[#09090B]/80 backdrop-blur-3xl py-3 sm:py-4 border-b border-white/[0.05] shadow-[0_10px_30px_rgba(0,0,0,0.4)] -mx-4 px-4 sm:mx-0 sm:px-0">
             
             <button 
               onClick={() => setIsSearchModalOpen(true)}
@@ -426,7 +367,7 @@ const Index = () => {
               <span className="text-sm text-zinc-400 ml-3 font-medium flex-1 truncate group-hover:text-zinc-200 transition-colors">
                 {searchQuery || "Command palette..."}
               </span>
-              <kbd className="hidden sm:inline-flex items-center gap-1 border border-white/[0.1] rounded-md px-2 py-1 text-[10px] font-mono text-zinc-400 bg-black/60 group-hover:border-blue-500/40 transition-colors shrink-0">
+              <kbd className="hidden sm:inline-flex items-center gap-1 border border-white/[0.08] rounded-md px-2 py-1 text-[10px] font-mono text-zinc-400 bg-black/40 group-hover:border-blue-500/40 transition-colors shrink-0">
                 <Command size={10} /> K
               </kbd>
             </button>
@@ -452,7 +393,7 @@ const Index = () => {
                       onClick={() => setActiveFilter(pill)}
                       className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 shrink-0 snap-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] ${
                         activeFilter === pill
-                          ? "bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.5)] border border-transparent"
+                          ? "bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-transparent"
                           : "text-zinc-300 bg-white/[0.03] border border-white/[0.08] hover:text-white hover:bg-white/[0.08]"
                       }`}
                     >
@@ -516,7 +457,7 @@ const Index = () => {
                 >
                   <button
                     onClick={() => setVisibleCount((prev) => prev + 12)}
-                    className="group relative px-6 sm:px-8 py-3.5 rounded-xl border border-white/[0.1] bg-[#0A0C14]/80 backdrop-blur-xl text-zinc-200 text-sm font-semibold tracking-wide transition-all duration-300 hover:bg-white hover:text-black hover:border-transparent shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_30px_rgba(0,0,0,0.5)] overflow-hidden w-full sm:w-auto"
+                    className="group relative px-6 sm:px-8 py-3.5 rounded-xl border border-white/[0.1] bg-white/[0.02] backdrop-blur-xl text-zinc-200 text-sm font-semibold tracking-wide transition-all duration-300 hover:bg-white hover:text-black hover:border-transparent shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)] overflow-hidden w-full sm:w-auto"
                   >
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       Expand Matrix <Zap className="w-4 h-4 text-blue-500 group-hover:text-black transition-colors" />

@@ -1,6 +1,7 @@
 const { admin, db } = require('./utils/firebase-admin');
 
 exports.handler = async (event, context) => {
+  // 1. CORS Headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type',
@@ -11,6 +12,7 @@ exports.handler = async (event, context) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
+    // 2. Authentication Verification
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized: Missing token' }) };
@@ -26,14 +28,15 @@ exports.handler = async (event, context) => {
 
     const uid = decodedToken.uid;
     
+    // 3. Payload Parsing
     let bodyData = {};
     try { bodyData = JSON.parse(event.body || '{}'); } 
     catch (e) { return { statusCode: 400, headers, body: JSON.stringify({ error: 'Malformed JSON payload' }) }; }
 
-    // NEW: Accept history array from the frontend
     const { code, history = [], action = 'analyze', targetLanguage = 'another language' } = bodyData;
     if (!code) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Input required' }) };
 
+    // 4. User Credit Management (Transaction)
     const isFreeAction = action === 'optimize';
     const userRef = db.collection('user_credits').doc(uid);
     const now = Date.now();
@@ -61,58 +64,89 @@ exports.handler = async (event, context) => {
       }
     });
 
-    // Format history for Groq
+    // 5. History Formatting
     const groqMessages = history.map(msg => ({
       role: msg.role === 'ai' ? 'assistant' : 'user',
       content: msg.content || JSON.stringify(msg.result)
     }));
 
+    // 6. Advanced Prompt Engineering (System Message)
+    // Base persona and formatting rules applied to ALL requests
+    const basePersona = `You are Vectoris, a world-class AI programming assistant.
+    
+    CRITICAL MATH FORMATTING RULE:
+    You MUST format ALL mathematical expressions and complexities using standard LaTeX.
+    - Use a single '$' for inline math (e.g., $O(n \\log n)$, $x = 5$).
+    - Use double '$$' for block/display math.
+    - Never use plain text for math formulas like O(n^2). Always use LaTeX.
+
+    CRITICAL CODE BLOCK RULE:
+    When providing code snippets, you MUST use standard markdown code blocks.
+    The triple backticks (\`\`\`) MUST be on their own separate lines. 
+    NEVER put code on the same line as the backticks.
+    
+    Correct Example:
+    \`\`\`cpp
+    int main() { return 0; }
+    \`\`\`
+
+    CRITICAL JSON RULE:
+    Respond ONLY with a valid JSON object. All values MUST be plain strings.`;
+
     let systemMessage = "";
     
-    // UPGRADED NLP ROUTER: Now supports conversational context
-    // THE SMART INTENT ROUTER (NLP Engine)
     if (action === 'analyze') {
-      systemMessage = `You are a highly intelligent polyglot programming assistant. 
-      Read the user's input and consider the conversation history.
-      Identify their primary intent: Analysis, Optimization, Translation, or Chat.
-      Respond ONLY with a valid JSON object matching the detected intent.
-
-      CRITICAL RULE: All values in the JSON MUST be plain strings. Never use nested objects or arrays as values. If providing multiple languages, combine them into a SINGLE string using markdown blocks.
+      systemMessage = `${basePersona}
+      Read the user's input and conversation history. Identify their primary intent: Analysis, Optimization, Translation, or Chat.
 
       INTENT 1: ANALYSIS (User pastes code to be analyzed, asks for complexity)
       Schema: {"type": "analysis", "timeComplexity": "...", "spaceComplexity": "...", "explanation": "..."}
+      Rule: Make the explanation exhaustive. Break down exactly why the time and space complexity are what they are.
 
       INTENT 2: OPTIMIZATION (User explicitly asks to make code faster/better)
-      Schema: {"type": "optimization", "code": "<A single string of optimized code>", "explanation": "..."}
+      Schema: {"type": "optimization", "code": "<Optimized code string>", "explanation": "..."}
+      Rule: Explain the bottleneck in the original code and how your new approach solves it mathematically.
 
       INTENT 3: TRANSLATION (User asks to convert code to another language)
-      Schema: {"type": "translation", "code": "<A single string containing the translated code. Use markdown if multiple languages>", "explanation": "..."}
+      Schema: {"type": "translation", "code": "<Translated code string>", "explanation": "..."}
 
-      INTENT 4: CHAT (User asks a general programming question, follows up on previous code, or wants to learn a concept)
-      Schema: {"type": "chat", "explanation": "<Your detailed response here. Use markdown for code blocks if needed.>"}
+      INTENT 4: CHAT (General programming question, math problem, or follow-up)
+      Schema: {"type": "chat", "explanation": "<Your highly detailed, step-by-step response here.>"}
+      Rule: For math or algorithmic problems, show your exact step-by-step mathematical reasoning using LaTeX before giving the final answer.
 
-      STRICT GUARDRAIL: If the user's input is NOT related to programming, computer science, or technology, you MUST return: 
-      {"error": "I am strictly a programming assistant. Please ask me a question related to coding or computer science."}`;
+      GUARDRAIL: If the user's input is completely unrelated to programming, math, or computer science, return: 
+      {"error": "I am Vectoris, a technical assistant. Please ask me a question related to coding, math, or computer science."}`;
     }
     else if (action === 'optimize') {
-      systemMessage = `You are an expert code optimizer. Respond ONLY with a valid JSON object. Schema: {"type": "optimization", "code": "...", "explanation": "..."}.`;
+      systemMessage = `${basePersona}
+      You are executing an explicit OPTIMIZATION request. Provide the most optimal, production-ready code.
+      Schema: {"type": "optimization", "code": "<Optimized code string>", "explanation": "<Detailed explanation of memory and speed improvements>"}`;
     }
     else if (action === 'translate') {
-      systemMessage = `You are an expert polyglot compiler. Respond ONLY with a valid JSON object. Schema: {"type": "translation", "code": "...", "explanation": "..."}. Translate entirely to ${targetLanguage}.`;
+      systemMessage = `${basePersona}
+      You are executing an explicit TRANSLATION request. Translate the provided code entirely to ${targetLanguage}.
+      Schema: {"type": "translation", "code": "<Translated code string>", "explanation": "<Explanation of language-specific idioms used>"}`;
     }
 
+    // 7. Payload Optimization
     const apiKey = process.env.GROQ_API_KEY;
     const apiPayload = {
         model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: systemMessage },
           ...groqMessages, // Inject conversational memory
-          { role: "user", content: `User Input:\n${code}\n\nReturn the output in the requested JSON format.` }
+          { 
+            role: "user", 
+            content: `User Input:\n${code}\n\nRemember: Deliver a highly detailed response. Format all math/complexities with LaTeX ($). Return ONLY the requested JSON format.` 
+          }
         ],
-        temperature: 0.2, // Slightly higher temp for better conversational flow
+        temperature: 0.3,    // 0.3 ensures logical accuracy while allowing natural, flowing explanations
+        top_p: 0.9,          // High top_p ensures vast vocabulary for deep explanations
+        max_tokens: 4096,    // INCREASED: Allows the AI to generate much longer, comprehensive responses without cutting off
         response_format: { type: "json_object" }
     };
 
+    // 8. API Execution
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
