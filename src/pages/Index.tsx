@@ -318,7 +318,7 @@ const Index = () => {
                 </h1>
                 
                 <p className="text-zinc-400 font-light text-sm sm:text-lg max-w-xl leading-relaxed">
-                  The AlgoLib ecosystem is fully synchronized. Your development matrix is currently tracking <span className="text-zinc-200 font-medium">{algorithms.length}</span> optimized algorithm implementations.
+                  The AlgoLib ecosystem is fully synchronized. Our algorithm database is currently tracking <span className="text-zinc-200 font-medium">{algorithms.length}</span> optimized algorithm implementations.
                 </p>
               </div>
 
@@ -327,7 +327,7 @@ const Index = () => {
                   onClick={() => setIsSearchModalOpen(true)}
                   className="w-full sm:w-auto justify-center px-6 py-3.5 bg-white text-black text-sm font-bold rounded-xl hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center gap-2 shadow-[0_4px_20px_rgba(255,255,255,0.15)]"
                 >
-                  <Search size={18} /> Search Matrix
+                  <Search size={18} /> Search Algorithms
                 </button>
               </div>
             </div>
@@ -337,7 +337,7 @@ const Index = () => {
               
               <div className="relative z-10 flex items-center justify-between mb-4 sm:mb-6">
                 <span className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
-                  <Database size={16} className="text-cyan-400" /> Total Matrices
+                  <Database size={16} className="text-cyan-400" /> Total Algorithms
                 </span>
                 <span className="text-[10px] font-mono font-bold tracking-wider text-green-400 bg-green-400/10 px-2.5 py-1 rounded shadow-sm border border-green-500/20">
                   LIVE
@@ -460,7 +460,7 @@ const Index = () => {
                     className="group relative px-6 sm:px-8 py-3.5 rounded-xl border border-white/[0.1] bg-white/[0.02] backdrop-blur-xl text-zinc-200 text-sm font-semibold tracking-wide transition-all duration-300 hover:bg-white hover:text-black hover:border-transparent shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)] overflow-hidden w-full sm:w-auto"
                   >
                     <span className="relative z-10 flex items-center justify-center gap-2">
-                      Expand Matrix <Zap className="w-4 h-4 text-blue-500 group-hover:text-black transition-colors" />
+                      Expand List <Zap className="w-4 h-4 text-blue-500 group-hover:text-black transition-colors" />
                     </span>
                   </button>
                 </motion.div>

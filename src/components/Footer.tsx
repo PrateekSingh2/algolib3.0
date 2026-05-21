@@ -17,6 +17,8 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
     e.preventDefault();
     if (isRestricted && !user) {
       if (onRestrictedClick) onRestrictedClick();
+    } else if (path.startsWith('http')) {
+      window.open(path, '_blank', 'noopener,noreferrer');
     } else if (path.startsWith('/')) {
       navigate(path);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -45,6 +47,14 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
             <p className="text-sm text-zinc-400 max-w-xs leading-relaxed">
               The elite ecosystem for algorithm visualization, code optimization, and architectural systems design. Build your technical intuition.
             </p>
+
+            {/* Address Block (Centered) */} 
+            <div className="w-full flex items-center justify-center lg:justify-start gap-1.5 order-2 text-zinc-500 mt-4">
+              <MapPin size={13} className="text-cyan-500 shrink-0" />
+              <span className="text-[12px] font-medium tracking-wide text-center lg:text-left">
+                DD Nagar, Gwalior, Madhya Pradesh, India 474004
+              </span>
+            </div>
           </div>
 
           {/* ─── Links Grid (5 Columns - Centered on Mobile, Left on Desktop) ─── */}
@@ -55,8 +65,8 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
               <h4 className="text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90">Ecosystem</h4>
               <ul className="space-y-3.5 flex flex-col items-center md:items-start">
                 <FooterLink name="Visualizer" path="/visualizer" isRestricted={true} onClick={handleLinkClick} />
-                <FooterLink name="Code Compiler" path="/compiler" isRestricted={true} onClick={handleLinkClick} />
-                <FooterLink name="AlgoLib AI" path="/analyzer" isRestricted={true} onClick={handleLinkClick} />
+                <FooterLink name="Online Compiler" path="/compiler" isRestricted={true} onClick={handleLinkClick} />
+                <FooterLink name="Vectoris AI" path="/vectoris" isRestricted={true} onClick={handleLinkClick} />
                 <FooterLink name="Developer API" path="/developer" isRestricted={false} onClick={handleLinkClick} />
               </ul>
             </div>
@@ -66,7 +76,8 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
               <h4 className="text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90">Platform</h4>
               <ul className="space-y-3.5 flex flex-col items-center md:items-start">
                 <FooterLink name="Community" path="/discussion" isRestricted={true} onClick={handleLinkClick} />
-                <FooterLink name="News & Research" path="https://discover-algolib.netlify.app/discover" isRestricted={false} onClick={handleLinkClick} />
+                {/* Updated URL for News & Research */}
+                <FooterLink name="News & Research" path="https://discover-algolib.netlify.app/" isRestricted={false} onClick={handleLinkClick} />
                 <FooterLink name="Documentation" path="/docs" isRestricted={false} onClick={handleLinkClick} />
                 <FooterLink name="Support" path="/support" isRestricted={false} onClick={handleLinkClick} />
               </ul>
@@ -120,14 +131,6 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
             <p className="text-zinc-600 text-[11px] md:text-xs font-medium">
               &copy; {new Date().getFullYear()} AlgoLib. All rights reserved.
             </p>
-          </div>
-
-          {/* Address Block (Centered) */}
-          <div className="w-full md:w-1/3 flex items-center justify-center gap-1.5 order-2 text-zinc-500">
-            <MapPin size={13} className="text-cyan-500 shrink-0" />
-            <span className="text-[11px] font-medium tracking-wide text-center">
-              DD Nagar, Gwalior, Madhya Pradesh, India
-            </span>
           </div>
           
           {/* Elite SaaS Status Indicator */}
