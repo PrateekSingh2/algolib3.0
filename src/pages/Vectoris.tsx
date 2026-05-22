@@ -47,38 +47,73 @@ interface HistoryItem {
   updatedAt?: any;
 }
 
-// ─── Dynamic Graph Parsing Logic ─────────────────────────────────────────────
+// ─── Dynamic Graph Parsing Logic (Strict Mathematical Plotter) ──────────────────────
 const parseComplexity = (str?: string) => {
   const s = (str || '').toLowerCase();
   
-  // Categorize based on common complexity substrings to generate a dynamic curve
-  if (s.includes('!') || s.includes('2^') || s.includes('e^'))
-    return { name: 'Exponential', fn: (n: number) => Math.min(Math.pow(2, n) * 0.1, 300), color: '#c084fc' };
+  // 1. Strip visual LaTeX formatting but KEEP the math content inside the braces
+  let cleanStr = s.replace(/\\(?:mathrm|text|operatorname|mathit|mathbf|mathcal|mathsf)\{([^}]+)\}/g, '$1');
   
-  if (s.includes('n^3') || s.includes('m*n*p'))
-    return { name: 'Cubic', fn: (n: number) => Math.pow(n, 3) * 0.1, color: '#f43f5e' };
-  
-  if (s.includes('n^2') || s.includes('m*n') || (s.includes('m') && s.includes('n') && s.includes('*')))
-    return { name: 'Quadratic', fn: (n: number) => Math.pow(n, 2) * 0.5, color: '#f87171' };
-  
-  if (s.includes('log') && (s.includes('n') || s.includes('m'))) {
-    // Check if it's N log N vs just log N
-    if (s.indexOf('n') < s.indexOf('log') || s.indexOf('m') < s.indexOf('log')) 
-      return { name: 'Linearithmic', fn: (n: number) => n * Math.log2(n + 1) * 3, color: '#fb923c' };
-    return { name: 'Logarithmic', fn: (n: number) => Math.log2(n + 1) * 15, color: '#38bdf8' };
+  // 2. Remove other stray LaTeX commands, but preserve essential math operators
+  cleanStr = cleanStr.replace(/\\[a-zA-Z]+/g, (match) => {
+    if (match === '\\sqrt' || match === '\\log' || match === '\\ln') return match;
+    return ''; 
+  });
+
+  // 3. Extract the core expression inside O(...)
+  const oMatch = cleanStr.match(/o\s*\((.*)\)/);
+  const coreExpr = oMatch ? oMatch[1] : cleanStr;
+
+  // 4. Pure Mathematical Mapping (NO scaling modifiers)
+  if (coreExpr.includes('!')) {
+    // True Factorial calculation
+    return { name: 'Factorial', fn: (n: number) => { let r=1; for(let i=1;i<=n;i++)r*=i; return r; }, color: '#f43f5e' }; 
   }
   
-  // O(max(m,n)), O(N), O(M), etc.
-  if (s.includes('n') || s.includes('m') || s.includes('v') || s.includes('e'))
-    return { name: 'Linear', fn: (n: number) => n * 5, color: '#facc15' };
+  if (coreExpr.includes('2^') || coreExpr.includes('e^') || coreExpr.includes('3^') || coreExpr.includes('c^')) {
+    return { name: 'Exponential', fn: (n: number) => Math.pow(2, n), color: '#c084fc' };
+  }
+  
+  if (coreExpr.includes('^3') || (coreExpr.match(/n/g) || []).length >= 3) {
+    return { name: 'Cubic', fn: (n: number) => Math.pow(n, 3), color: '#e11d48' };
+  }
+  
+  if (coreExpr.includes('^2') || ((coreExpr.match(/n/g) || []).length === 2 && coreExpr.includes('*'))) {
+    return { name: 'Quadratic', fn: (n: number) => Math.pow(n, 2), color: '#f87171' };
+  }
+  
+  const hasN = coreExpr.includes('n') || coreExpr.includes('m') || coreExpr.includes('v') || coreExpr.includes('e');
+  const hasLog = coreExpr.includes('log') || coreExpr.includes('ln');
+  const hasRoot = coreExpr.includes('sqrt') || coreExpr.includes('1/2');
 
-  return { name: 'Constant', fn: (n: number) => 10, color: '#4ade80' };
+  if (hasN && hasLog) {
+    const nIdx = Math.max(coreExpr.indexOf('n'), coreExpr.indexOf('m'));
+    const logIdx = coreExpr.indexOf('log') !== -1 ? coreExpr.indexOf('log') : coreExpr.indexOf('ln');
+    
+    if (nIdx < logIdx || coreExpr.includes('*')) {
+       // +1 prevents log2(1) from being 0, improving the visual start of the curve
+       return { name: 'Linearithmic', fn: (n: number) => n * Math.log2(n + 1), color: '#fb923c' };
+    }
+  }
+  
+  if (hasRoot) {
+    return { name: 'Square Root', fn: (n: number) => Math.sqrt(n), color: '#a3e635' };
+  }
+  
+  if (hasLog) {
+    return { name: 'Logarithmic', fn: (n: number) => Math.log2(n + 1), color: '#38bdf8' };
+  }
+  
+  if (hasN) {
+    return { name: 'Linear', fn: (n: number) => n, color: '#facc15' };
+  }
+
+  return { name: 'Constant', fn: (n: number) => 1, color: '#4ade80' };
 };
 
 // ─── Inline Math Component ───────────────────────────────────────────────────
 const FormattedComplexity = ({ text, color, className }: { text?: string, color?: string, className?: string }) => {
   if (!text) return null;
-  // Ensure the text has LaTeX delimiters so rehype-katex picks it up
   const content = text.includes('$') ? text : `$${text}$`;
   
   return (
@@ -248,7 +283,6 @@ export default function Analyzer() {
         body: JSON.stringify({ code, action, targetLanguage, history: recentHistory })
       });
 
-      // ✨ CHANGED: Intercept 403 (Forbidden) or 429 (Too Many Requests) for the custom message
       if (!response.ok) {
         if (response.status === 403 || response.status === 429) {
           throw new Error("Credits finished. Credits renews after 3hr.");
@@ -314,7 +348,6 @@ export default function Analyzer() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAnalyze(); }
   };
 
-  // ─── Custom UI Toast ───
   const handleAttachmentClick = () => {
     setToastMessage("File attachments are not available in this version.");
     setTimeout(() => setToastMessage(null), 3500);
@@ -322,11 +355,23 @@ export default function Analyzer() {
 
   const isHomeState = messages.length === 0;
 
-  // Compute dynamic chart data only when analysis modal is open
+  // ─── DYNAMIC GRAPH DATA COMPUTATION ───
   const activeParsedComplexity = activeAnalysis ? parseComplexity(activeAnalysis.timeComplexity) : null;
+  
+  // Adjusted domains based on pure math growth to prevent axis breaking
+  let maxN = 20;
+  if (activeParsedComplexity) {
+    if (activeParsedComplexity.name === 'Factorial') maxN = 8; // 8! = 40,320
+    else if (activeParsedComplexity.name === 'Exponential') maxN = 15; // 2^15 = 32,768
+  }
+
   const dynamicChartData = activeParsedComplexity 
-    ? Array.from({ length: 20 }, (_, i) => ({ n: i + 1, value: activeParsedComplexity.fn(i + 1) }))
+    ? Array.from({ length: maxN }, (_, i) => ({ n: i + 1, value: activeParsedComplexity.fn(i + 1) }))
     : [];
+
+  const formatYAxis = (num: number) => {
+    return Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
+  };
 
   return (
     <div className="flex h-[100dvh] bg-[#0c0c0e] text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30">
@@ -397,20 +442,34 @@ export default function Analyzer() {
                 </div>
                 
                 <div className="h-[300px] md:h-[400px] w-full p-6 rounded-3xl bg-black/20 border border-white/5 shadow-inner relative">
-                  {/* Dynamic Category Tag */}
                   <div className="absolute top-8 left-8 text-[11px] font-bold text-zinc-500 uppercase tracking-widest z-10">
                     Behavior: <span style={{ color: activeParsedComplexity.color }}>{activeParsedComplexity.name}</span>
                   </div>
 
+                  {/* FIX: Formatted Y-Axis and explicit margins */}
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={dynamicChartData} margin={{ top: 40, right: 10, left: -25, bottom: 0 }}>
+                    <LineChart data={dynamicChartData} margin={{ top: 40, right: 20, left: 10, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="4 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                      <XAxis dataKey="n" stroke="#52525b" tick={{fill: '#71717a', fontSize: 11}} axisLine={false} tickLine={false} />
-                      <YAxis stroke="#52525b" tick={{fill: '#71717a', fontSize: 11}} axisLine={false} tickLine={false} />
+                      <XAxis 
+                        dataKey="n" 
+                        stroke="#52525b" 
+                        tick={{fill: '#71717a', fontSize: 11}} 
+                        axisLine={false} 
+                        tickLine={false} 
+                        minTickGap={15}
+                      />
+                      <YAxis 
+                        stroke="#52525b" 
+                        tick={{fill: '#71717a', fontSize: 11}} 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tickFormatter={formatYAxis}
+                        width={40}
+                      />
                       <Tooltip 
                         contentStyle={{ backgroundColor: 'rgba(20,20,22,0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
                         labelFormatter={(label) => `Input Size (N): ${label}`}
-                        formatter={(val: number) => [val.toFixed(1), 'Operations']} 
+                        formatter={(val: number) => [formatYAxis(val), 'Operations']} 
                       />
                       <Line 
                         type="monotone" 

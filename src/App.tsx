@@ -54,7 +54,6 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Docs = lazy(() => import("./pages/Docs"));
 const Notes = lazy(() => import("./pages/Notes"));
 const Support = lazy(() => import("./pages/Support"));
-const Admin = lazy(() => import("./pages/Admin"));
 const Community = lazy(() => import("./components/Community"));
 const EditProfile = lazy(() => import("./pages/EditProfile"));
 const Profile = lazy(() => import("./pages/Profile"));
@@ -319,7 +318,6 @@ const AppRoutes = () => {
     <Suspense fallback={<ModuleLoader />}>
       <Routes>
         <Route path="/" element={<Index />} />
-        <Route path="/hq" element={<Admin />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/notes" element={<Notes />} />
         <Route path="/support" element={<Support />} />
