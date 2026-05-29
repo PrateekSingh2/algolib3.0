@@ -54,24 +54,24 @@ export default function GlobalRibbon() {
     
     const config = {
       info: {
-        glass: "bg-blue-500/10 border-blue-500/20 sm:bg-[#121214]/90 sm:border-white/[0.08]",
-        glow: "shadow-[0_0_40px_rgba(59,130,246,0.15)] sm:shadow-[0_4px_30px_rgba(59,130,246,0.15)]",
+        glass: "border-blue-500/20",
+        glow: "shadow-[0_0_40px_rgba(59,130,246,0.15)]",
         icon: <Info size={18} className="text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]" />,
         badge: "bg-blue-500/20 border-blue-500/30 text-blue-300",
         button: "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/30",
         link: "text-blue-400 hover:text-blue-300 decoration-blue-500/40"
       },
       warning: {
-        glass: "bg-amber-500/10 border-amber-500/20 sm:bg-[#121214]/90 sm:border-white/[0.08]",
-        glow: "shadow-[0_0_40px_rgba(245,158,11,0.15)] sm:shadow-[0_4px_30px_rgba(245,158,11,0.15)]",
+        glass: "border-amber-500/20",
+        glow: "shadow-[0_0_40px_rgba(245,158,11,0.15)]",
         icon: <AlertTriangle size={18} className="text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />,
         badge: "bg-amber-500/20 border-amber-500/30 text-amber-300",
         button: "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/30",
         link: "text-amber-400 hover:text-amber-300 decoration-amber-500/40"
       },
       critical: {
-        glass: "bg-red-500/10 border-red-500/20 sm:bg-[#121214]/90 sm:border-white/[0.08]",
-        glow: "shadow-[0_0_40px_rgba(239,68,68,0.15)] sm:shadow-[0_4px_30px_rgba(239,68,68,0.15)]",
+        glass: "border-red-500/20",
+        glow: "shadow-[0_0_40px_rgba(239,68,68,0.15)]",
         icon: <Megaphone size={18} className="text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]" />,
         badge: "bg-red-500/20 border-red-500/30 text-red-300",
         button: "bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30",
@@ -89,11 +89,7 @@ export default function GlobalRibbon() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className={`
-          z-[100] transition-colors duration-500
-          fixed inset-0 flex items-center justify-center p-5 bg-[#09090B]/80 backdrop-blur-md pointer-events-auto
-          sm:sticky sm:top-0 sm:inset-auto sm:p-4 sm:bg-transparent sm:backdrop-blur-none sm:pointer-events-none
-        `}
+        className="fixed inset-0 z-[100] flex items-center justify-center p-5 bg-[#09090B]/80 backdrop-blur-md pointer-events-auto transition-colors duration-500"
         role="alertdialog"
         aria-modal="true"
       >
@@ -104,28 +100,29 @@ export default function GlobalRibbon() {
           exit={{ y: 20, opacity: 0, scale: 0.95 }}
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
           className={`
-            pointer-events-auto relative w-full sm:w-auto
-            flex flex-col sm:flex-row items-stretch sm:items-center justify-between
-            
-            /* Mobile Modal Geometry */
-            max-w-[340px] rounded-[28px] p-6 bg-[#121214] border
-            
-            /* Desktop Pill Geometry */
-            sm:max-w-4xl sm:rounded-full sm:p-2.5 sm:px-12 sm:min-h-[44px]
-            
+            pointer-events-auto relative w-full max-w-[340px] sm:max-w-[400px]
+            flex flex-col items-stretch rounded-[28px] p-6 bg-[#121214] border
             backdrop-blur-3xl backdrop-saturate-[150%] 
             shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]
             ${theme.glass} ${theme.glow}
           `}
         >
+          {/* Close Button positioned in the top right of the modal */}
+          <button 
+            onClick={handleDismiss}
+            className="absolute right-4 top-4 p-1.5 rounded-full text-neutral-500 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-200"
+            aria-label="Dismiss announcement"
+          >
+            <X size={16} strokeWidth={2.5} />
+          </button>
           
-          <div className="flex sm:hidden items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-4 pr-6">
             <div className={`p-2 rounded-xl border ${theme.badge}`}>
               {theme.icon}
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest leading-none mb-1">
-                System Update
+                System Notification
               </span>
               <span className="text-sm font-semibold text-white capitalize leading-none">
                 {announcement.type} Alert
@@ -133,12 +130,8 @@ export default function GlobalRibbon() {
             </div>
           </div>
 
-          <div className="flex items-start sm:items-center justify-start sm:justify-center gap-3 w-full">
-            <div className="hidden sm:flex shrink-0 items-center justify-center">
-              {theme.icon}
-            </div>
-            
-            <div className="text-[14px] sm:text-sm text-neutral-300 sm:text-neutral-200/90 leading-relaxed sm:leading-snug tracking-wide">
+          <div className="flex items-start justify-start gap-3 w-full mb-6">
+            <div className="text-[14px] text-neutral-300 leading-relaxed tracking-wide">
               <ReactMarkdown 
                 allowedElements={['p', 'strong', 'em', 'code']}
                 components={{
@@ -146,7 +139,7 @@ export default function GlobalRibbon() {
                   strong: ({node, ...props}) => <strong className="font-bold text-white drop-shadow-sm" {...props} />,
                   em: ({node, ...props}) => <em className="italic text-neutral-400" {...props} />,
                   code: ({node, ...props}) => (
-                    <code className="bg-white/5 border border-white/10 px-1.5 py-0.5 rounded-[6px] text-[12px] sm:text-[13px] font-mono text-neutral-100 mx-1 shadow-sm" {...props} />
+                    <code className="bg-white/5 border border-white/10 px-1.5 py-0.5 rounded-[6px] text-[13px] font-mono text-neutral-100 mx-1 shadow-sm" {...props} />
                   )
                 }}
               >
@@ -155,37 +148,26 @@ export default function GlobalRibbon() {
             </div>
           </div>
 
-          <div className="mt-6 sm:mt-0 flex flex-col sm:flex-row items-center gap-3 sm:gap-0 shrink-0 w-full sm:w-auto">
+          <div className="flex flex-col items-center gap-3 w-full shrink-0">
             {announcement.link && (
-              <div className="flex items-center justify-center w-full sm:w-auto">
-                <span className="text-neutral-700 hidden sm:inline-block mx-3">•</span>
-                <a 
-                  href={announcement.link} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className={`inline-flex items-center justify-center gap-1.5 text-sm font-semibold transition-all hover:-translate-y-[1px] underline underline-offset-[3px] hover:underline-offset-[4px] w-full sm:w-auto py-2.5 sm:py-0 rounded-xl sm:rounded-none bg-white/5 sm:bg-transparent ${theme.link}`}
-                >
-                  <span>View Details</span>
-                  <ExternalLink size={14} strokeWidth={2.5} />
-                </a>
-              </div>
+              <a 
+                href={announcement.link} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className={`inline-flex items-center justify-center gap-1.5 text-sm font-semibold transition-all hover:-translate-y-[1px] underline underline-offset-[3px] hover:underline-offset-[4px] w-full py-2 bg-white/5 rounded-xl hover:bg-white/10 ${theme.link} no-underline`}
+              >
+                <span>View Details</span>
+                <ExternalLink size={14} strokeWidth={2.5} />
+              </a>
             )}
 
             <button 
               onClick={handleDismiss}
-              className={`flex sm:hidden items-center justify-center w-full py-3 rounded-xl border text-sm font-bold transition-all active:scale-[0.98] ${theme.button}`}
+              className={`flex items-center justify-center w-full py-3 rounded-xl border text-sm font-bold transition-all active:scale-[0.98] ${theme.button}`}
             >
-              Acknowledge
+              Ok
             </button>
           </div>
-
-          <button 
-            onClick={handleDismiss}
-            className="hidden sm:block absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-neutral-500 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-200"
-            aria-label="Dismiss announcement"
-          >
-            <X size={16} strokeWidth={2.5} />
-          </button>
 
         </motion.div>
       </motion.div>

@@ -206,6 +206,21 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
   const [editContent, setEditContent] = useState(reply.content);
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
+  // Optimistic UI States for Voting
+  const [localLikes, setLocalLikes] = useState<string[]>(reply.likes || []);
+  const [localDislikes, setLocalDislikes] = useState<string[]>(reply.dislikes || []);
+  const [isVoting, setIsVoting] = useState(false);
+
+  // Convert arrays to strings to prevent reference-equality race conditions
+  const likesString = (reply.likes || []).join(',');
+  const dislikesString = (reply.dislikes || []).join(',');
+
+  useEffect(() => {
+    setLocalLikes(reply.likes || []);
+    setLocalDislikes(reply.dislikes || []);
+  }, [likesString, dislikesString]);
+
   const isReplyAuthor = user?.uid === reply.authorId;
   const editReplyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -236,12 +251,17 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
     }, 0);
   };
 
-  const handleReplyVote = async (type: 'up' | 'down') => {
-    if (!user) return;
-    const hasLiked = reply.likes?.includes(user.uid);
-    const hasDisliked = reply.dislikes?.includes(user.uid);
-    let newLikes = reply.likes || [];
-    let newDislikes = reply.dislikes || [];
+  const handleReplyVote = async (e: React.MouseEvent, type: 'up' | 'down') => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user || isVoting) return; 
+
+    setIsVoting(true);
+
+    const hasLiked = localLikes.includes(user.uid);
+    const hasDisliked = localDislikes.includes(user.uid);
+    let newLikes = [...localLikes];
+    let newDislikes = [...localDislikes];
 
     if (type === 'up') {
       if (hasLiked) newLikes = newLikes.filter(id => id !== user.uid);
@@ -251,8 +271,19 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
       else { newDislikes = [...newDislikes, user.uid]; newLikes = newLikes.filter(id => id !== user.uid); }
     }
 
-    const updatedReplies = postReplies.map(r => r.id === reply.id ? { ...r, likes: newLikes, dislikes: newDislikes } : r);
-    await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: updatedReplies });
+    setLocalLikes(newLikes);
+    setLocalDislikes(newDislikes);
+
+    try {
+      const updatedReplies = postReplies.map(r => r.id === reply.id ? { ...r, likes: newLikes, dislikes: newDislikes } : r);
+      await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: updatedReplies });
+    } catch (error) {
+      console.error("Failed to vote:", error);
+      setLocalLikes(reply.likes || []);
+      setLocalDislikes(reply.dislikes || []);
+    } finally {
+      setIsVoting(false);
+    }
   };
 
   const handleToggleAcceptReply = async () => {
@@ -261,7 +292,7 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
     await updateDoc(doc(firestoreDB, "community_posts", postId), { replies: updatedReplies });
   };
 
-  const replyScore = (reply.likes?.length || 0) - (reply.dislikes?.length || 0);
+  const replyScore = localLikes.length - localDislikes.length;
 
   return (
     <>
@@ -328,12 +359,13 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
         <div className="text-zinc-300 whitespace-pre-wrap leading-relaxed text-[14px] sm:text-[15px] font-normal pl-1">{renderText(reply.content)}</div>
       )}
 
+      {/* Voting Buttons UI */}
       <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/[0.04]">
-        <button onClick={() => handleReplyVote('up')} className={`transition-all flex items-center gap-1.5 px-2 py-1 rounded-md ${reply.likes?.includes(user?.uid || "") ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'}`}>
+        <button onClick={(e) => handleReplyVote(e, 'up')} className={`transition-all flex items-center gap-1.5 px-2 py-1 rounded-md ${localLikes.includes(user?.uid || "") ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'}`}>
           <ChevronUp size={16} strokeWidth={2.5} />
           <span className="text-sm font-semibold">{replyScore > 0 ? replyScore : 0}</span>
         </button>
-        <button onClick={() => handleReplyVote('down')} className={`transition-all flex items-center gap-1.5 px-2 py-1 rounded-md ${reply.dislikes?.includes(user?.uid || "") ? 'text-red-400 bg-red-500/10' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'}`}>
+        <button onClick={(e) => handleReplyVote(e, 'down')} className={`transition-all flex items-center gap-1.5 px-2 py-1 rounded-md ${localDislikes.includes(user?.uid || "") ? 'text-red-400 bg-red-500/10' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'}`}>
           <ChevronDown size={16} strokeWidth={2.5} />
         </button>
       </div>
@@ -343,7 +375,6 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
     </>
   );
 };
-
 
 // --- POST ITEM ---
 const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Post, user: User | null, currentUserName: string, currentUserAvatar: string }) => {
@@ -361,21 +392,40 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // Optimistic UI States for Voting
+  const [localLikes, setLocalLikes] = useState<string[]>(post.likes || []);
+  const [localDislikes, setLocalDislikes] = useState<string[]>(post.dislikes || []);
+  const [isVoting, setIsVoting] = useState(false);
+
+  // Convert arrays to strings to prevent reference-equality race conditions
+  const likesString = (post.likes || []).join(',');
+  const dislikesString = (post.dislikes || []).join(',');
+
+  useEffect(() => {
+    setLocalLikes(post.likes || []);
+    setLocalDislikes(post.dislikes || []);
+  }, [likesString, dislikesString]);
+
   const editBodyRef = useRef<HTMLTextAreaElement>(null);
   const replyBodyRef = useRef<HTMLTextAreaElement>(null);
 
   const isAuthor = user?.uid === post.authorId;
-  const score = (post.likes?.length || 0) - (post.dislikes?.length || 0);
+  const score = localLikes.length - localDislikes.length;
   const isLongPost = post.body.length > 300 || post.body.split('\n').length > 6 || !!post.imageUrl;
   const hasAcceptedAnswer = post.replies?.some(r => r.isAccepted);
 
-  const handleVote = async (type: 'up' | 'down') => {
-    if (!user) return;
-    const hasLiked = post.likes?.includes(user.uid);
-    const hasDisliked = post.dislikes?.includes(user.uid);
+  const handleVote = async (e: React.MouseEvent, type: 'up' | 'down') => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user || isVoting) return; 
+    
+    setIsVoting(true);
 
-    let newLikes = post.likes || [];
-    let newDislikes = post.dislikes || [];
+    const hasLiked = localLikes.includes(user.uid);
+    const hasDisliked = localDislikes.includes(user.uid);
+
+    let newLikes = [...localLikes];
+    let newDislikes = [...localDislikes];
 
     if (type === 'up') {
       if (hasLiked) newLikes = newLikes.filter(id => id !== user.uid);
@@ -384,7 +434,19 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
       if (hasDisliked) newDislikes = newDislikes.filter(id => id !== user.uid);
       else { newDislikes = [...newDislikes, user.uid]; newLikes = newLikes.filter(id => id !== user.uid); }
     }
-    await updateDoc(doc(firestoreDB, "community_posts", post.id), { likes: newLikes, dislikes: newDislikes });
+
+    setLocalLikes(newLikes);
+    setLocalDislikes(newDislikes);
+
+    try {
+      await updateDoc(doc(firestoreDB, "community_posts", post.id), { likes: newLikes, dislikes: newDislikes });
+    } catch (error) {
+      console.error("Failed to update post vote:", error);
+      setLocalLikes(post.likes || []);
+      setLocalDislikes(post.dislikes || []);
+    } finally {
+      setIsVoting(false);
+    }
   };
 
   const handleDeletePost = async () => {
@@ -467,11 +529,7 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
   return (
     <>
     <BentoCard id={post.id} className="flex flex-col gap-0 p-4 sm:p-6 scroll-mt-[120px]">
-      
-      {/* Main Content */}
       <div className="flex-1 min-w-0 w-full">
-        
-        {/* Header */}
         <div className="flex justify-between items-start mb-3 w-full">
           <div className="flex items-center gap-3">
             <img src={post.authorAvatar} alt="author" className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-white/10 ring-offset-2 ring-offset-[#09090b]" />
@@ -509,7 +567,6 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
           )}
         </div>
 
-        {/* Body / Edit */}
         {isEditing ? (
           <div className="space-y-3 mb-4 sm:mb-6 bg-black/20 p-4 sm:p-5 rounded-[20px] border border-white/[0.08] shadow-inner">
             <input 
@@ -539,7 +596,7 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
           <>
             <h3 className="text-lg sm:text-[22px] font-bold text-white mb-3 leading-snug tracking-tight pr-4">{post.title}</h3>
             
-            <div className={`relative transition-all duration-500 ease-in-out w-full ${!isExpanded && isLongPost ? 'max-h-[160px] overflow-hidden' : ''}`}>
+            <div className={`relative transition-all duration-500 ease-in-out w-full ${!isExpanded && isLongPost ? (post.imageUrl ? 'max-h-[380px] overflow-hidden' : 'max-h-[160px] overflow-hidden') : ''}`}>
               <div className="text-zinc-300 text-[14px] sm:text-[15px] whitespace-pre-wrap leading-relaxed font-normal pb-3">
                 {renderText(post.body)}
               </div>
@@ -564,7 +621,6 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
           </>
         )}
 
-        {/* Tags & Action Bar */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-5 pt-4 border-t border-white/[0.04]">
           <div className="flex flex-wrap gap-2">
             {post.tags?.map((tag, idx) => (
@@ -575,15 +631,14 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
           </div>
           
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-5 w-full sm:w-auto mt-2 sm:mt-0">
-            {/* INLINE VOTING BAR */}
             <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-full p-1 shadow-inner shrink-0">
-              <button onClick={() => handleVote('up')} className={`p-1.5 rounded-full transition-all active:scale-90 ${post.likes?.includes(user?.uid || "") ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+              <button onClick={(e) => handleVote(e, 'up')} className={`p-1.5 rounded-full transition-all active:scale-90 ${localLikes.includes(user?.uid || "") ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
                 <ChevronUp size={16} strokeWidth={2.5} />
               </button>
               <span className={`text-[13px] sm:text-[14px] font-bold min-w-[20px] text-center ${score > 0 ? 'text-blue-400' : score < 0 ? 'text-red-400' : 'text-zinc-400'}`}>
                 {score}
               </span>
-              <button onClick={() => handleVote('down')} className={`p-1.5 rounded-full transition-all active:scale-90 ${post.dislikes?.includes(user?.uid || "") ? 'text-red-400 bg-red-500/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+              <button onClick={(e) => handleVote(e, 'down')} className={`p-1.5 rounded-full transition-all active:scale-90 ${localDislikes.includes(user?.uid || "") ? 'text-red-400 bg-red-500/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
                 <ChevronDown size={16} strokeWidth={2.5} />
               </button>
             </div>
@@ -600,7 +655,6 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
           </div>
         </div>
 
-        {/* Reply Input */}
         <AnimatePresence>
         {showReplyBox && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-4 sm:mt-6 bg-black/40 rounded-2xl border border-white/[0.08] focus-within:border-white/[0.2] transition-colors overflow-hidden shadow-2xl backdrop-blur-md">
@@ -619,10 +673,8 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
         )}
         </AnimatePresence>
 
-        {/* REPLIES SECTION */}
         {sortedReplies.length > 0 && (
           <div className="mt-6 sm:mt-8 space-y-4 sm:space-y-5 sm:pl-6 relative">
-            {/* Thread Line */}
             <div className="absolute left-0 top-0 bottom-8 w-[2px] bg-gradient-to-b from-white/[0.08] to-transparent rounded-full hidden sm:block"></div>
             
             {sortedReplies.slice(0, showAllReplies ? sortedReplies.length : 1).map((reply) => (
@@ -662,7 +714,6 @@ export default function Community() {
   const createBodyRef = useRef<HTMLTextAreaElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to post when navigated from Navbar notification
   useEffect(() => {
     const scrollTo = (location.state as any)?.scrollToPost;
     if (!scrollTo || posts.length === 0) return;
@@ -672,7 +723,6 @@ export default function Community() {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el.classList.add('notif-highlight');
         setTimeout(() => el.classList.remove('notif-highlight'), 2500);
-        // Clear state so refresh doesn't re-scroll
         window.history.replaceState({}, '', '/discussion');
       } else if (attempts < 10) {
         setTimeout(() => tryScroll(attempts + 1), 200);
@@ -681,7 +731,6 @@ export default function Community() {
     tryScroll();
   }, [location.state, posts]);
   
-  // Search Keyboard Shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -788,7 +837,6 @@ export default function Community() {
         <GlobalRibbon />
       </div>
 
-      {/* Changed pt-24 sm:pt-32 to pt-16 sm:pt-32 to close the gap on mobile */}
       <main className="max-w-[1240px] mx-auto px-4 sm:px-8 pt-16 pb-20 sm:pt-32 sm:pb-32 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 relative z-10 flex-1">
         
         {/* LEFT COLUMN: Main Feed */}
@@ -822,10 +870,8 @@ export default function Community() {
         </div>
 
         {/* RIGHT COLUMN: Sidebar */}
-        {/* Converted to a flex-col container to easily swap elements via order classes on mobile */}
         <aside className="lg:col-span-4 flex flex-col gap-6 sm:gap-8 lg:sticky lg:top-32 h-fit order-1 lg:order-2">
           
-          {/* Search Input Box - order-1 on mobile, order-2 on sm+ */}
           <div className="relative group order-1 sm:order-2 w-full">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-[16px] sm:rounded-[20px] blur opacity-0 group-focus-within:opacity-100 transition duration-500"></div>
             <div className="relative flex items-center bg-[#09090b] border border-white/[0.08] rounded-[16px] sm:rounded-[20px] px-4 py-3 sm:px-5 sm:py-4 shadow-2xl transition-all group-focus-within:border-white/[0.2] group-focus-within:bg-black">
@@ -841,7 +887,6 @@ export default function Community() {
             </div>
           </div>
 
-          {/* Start New Discussion Button - order-2 on mobile, order-1 on sm+ */}
           <button 
             onClick={() => setShowCreateModal(true)}
             className="w-full order-2 sm:order-1 bg-gradient-to-b from-white to-zinc-200 hover:from-white hover:to-white text-black px-6 py-3.5 sm:py-4 rounded-[20px] transition-all font-bold text-sm sm:text-[15px] shadow-[0_0_40px_rgba(255,255,255,0.15)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
@@ -849,7 +894,6 @@ export default function Community() {
             <SquarePen size={18} strokeWidth={2.5}/> Start New Discussion
           </button>
 
-          {/* Top Contributors - order-3 */}
           <div className="order-3 bg-white/[0.02] border border-white/[0.06] rounded-[20px] sm:rounded-[24px] overflow-hidden hidden sm:block shadow-2xl backdrop-blur-xl w-full">
             <div className="p-5 sm:p-6 border-b border-white/[0.04] flex items-center gap-3 bg-white/[0.01]">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/20 flex items-center justify-center shadow-inner">
@@ -908,7 +952,6 @@ export default function Community() {
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12 overflow-y-auto pr-2 custom-scrollbar pb-2 sm:pb-4">
                 
-                {/* Form Side */}
                 <form onSubmit={handleCreatePost} className="space-y-4 sm:space-y-6 flex flex-col h-full">
                 <div>
                     <label className="block text-xs sm:text-sm font-semibold text-zinc-300 mb-2">Title <span className="text-red-500">*</span></label>
@@ -965,7 +1008,6 @@ export default function Community() {
                 </div>
                 </form>
 
-                {/* Preview Side */}
                 <div className="hidden lg:flex flex-col border-l border-white/[0.06] pl-12 h-full">
                     <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">Live Preview</h3>
                     <div className="flex-1 bg-white/[0.01] rounded-[24px] border border-white/[0.04] p-8 overflow-y-auto min-h-[400px] shadow-inner backdrop-blur-sm custom-scrollbar">
@@ -998,7 +1040,6 @@ export default function Community() {
       )}
       </AnimatePresence>
 
-      {/* --- SCROLL TO TOP BUTTON --- */}
       <AnimatePresence>
         {showScrollTop && (
           <motion.div

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import Editor from '@monaco-editor/react';
-import { Play, Send, Lock, Clock, CheckCircle2, Terminal as TerminalIcon, ArrowLeft, Loader2, X, AlertTriangle, Settings, RotateCcw, Wand2, Cpu, Database, Award, Activity, Code2, AlertCircle, Sparkles } from 'lucide-react';
+import { Play, Send, Lock, Clock, CheckCircle2, Terminal as TerminalIcon, ArrowLeft, Loader2, X, AlertTriangle, Settings, RotateCcw, Wand2, Cpu, Database, Award, Activity, Code2, AlertCircle, Sparkles, ListOrdered } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 // --- PURE CODEFORCES TEMPLATES ---
@@ -116,7 +116,7 @@ const renderTerminalLog = (log: LogEntry, i: number) => {
       return <div key={i} className="text-zinc-400 font-mono text-[13px]">{log.content}</div>;
   }
 };
-// Premium Framer Motion Variants
+
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -145,7 +145,6 @@ const pulseRingVariants: Variants = {
   }
 };
 
-// Continuous background gradient shifting
 const bgShiftVariants: Variants = {
   animate: {
     backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'],
@@ -163,22 +162,17 @@ const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNe
       animate="show"
       className="flex flex-col w-full h-full p-3 md:p-5 overflow-y-auto custom-scrollbar font-sans gap-4 bg-[#0d0d0d] text-zinc-100"
     >
-      {/* Top Section: Hero Banner + Score */}
       <div className="flex flex-col md:flex-row gap-4">
-        
-        {/* Main Status Hero */}
         <motion.div 
            variants={itemVariants} 
            className={`flex-1 flex flex-col items-center justify-center p-6 rounded-2xl relative overflow-hidden shadow-2xl transition-all border ${isPass ? 'bg-gradient-to-br from-emerald-950/60 via-emerald-900/20 to-[#121212] border-emerald-500/20 shadow-emerald-900/20' : 'bg-gradient-to-br from-rose-950/60 via-rose-900/20 to-[#121212] border-rose-500/20 shadow-rose-900/20'}`}
         >
-           {/* Animated Background Mesh */}
            <motion.div 
              variants={bgShiftVariants}
              animate="animate"
              className={`absolute inset-0 opacity-30 ${isPass ? 'bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.15),transparent_60%)]' : 'bg-[radial-gradient(circle_at_50%_50%,rgba(244,63,94,0.15),transparent_60%)]'} bg-[length:200%_200%]`}
            />
 
-           {/* Glassmorphism Status Badge */}
            <div className="absolute top-4 left-4 px-2.5 py-1 rounded-md text-[9px] font-black tracking-widest bg-white/5 backdrop-blur-md border border-white/10 uppercase text-zinc-400">
               Evaluation
            </div>
@@ -204,10 +198,7 @@ const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNe
            </p>
         </motion.div>
 
-        {/* Score Card */}
         <motion.div variants={itemVariants} className="w-full md:w-64 bg-gradient-to-b from-[#1a1a1a] to-[#121212] border border-white/5 rounded-2xl p-5 flex flex-col relative overflow-hidden group shadow-xl">
-           
-           {/* Ambient floating award icon */}
            <motion.div 
              animate={{ y: [0, -8, 0], rotate: [0, 5, 0] }} 
              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
@@ -235,7 +226,6 @@ const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNe
               </div>
            </div>
 
-           {/* Animated Info Label */}
            <motion.div 
              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.7 }}
              className="mt-4 text-[10px] text-zinc-400 font-medium leading-tight flex gap-1.5 items-start bg-[#0a0a0a]/80 border border-white/5 p-2.5 rounded-lg relative z-10 backdrop-blur-md"
@@ -246,10 +236,7 @@ const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNe
         </motion.div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
-        {/* Test Cases */}
         <motion.div variants={itemVariants} whileHover={{ y: -4, scale: 1.02 }} className="bg-[#151515] border border-white/5 hover:border-sky-500/30 rounded-xl p-4 md:p-5 flex flex-col transition-all duration-300 shadow-md relative overflow-hidden group">
            <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
            <div className="flex items-center justify-between mb-3 relative z-10">
@@ -272,7 +259,6 @@ const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNe
            </div>
         </motion.div>
 
-        {/* Runtime */}
         <motion.div variants={itemVariants} whileHover={{ y: -4, scale: 1.02 }} className="bg-[#151515] border border-white/5 hover:border-amber-500/30 rounded-xl p-4 md:p-5 flex flex-col transition-all duration-300 shadow-md relative overflow-hidden group">
            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
            <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] font-black tracking-widest uppercase mb-3 relative z-10">
@@ -284,7 +270,6 @@ const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNe
            </div>
         </motion.div>
 
-        {/* Memory */}
         <motion.div variants={itemVariants} whileHover={{ y: -4, scale: 1.02 }} className="bg-[#151515] border border-white/5 hover:border-purple-500/30 rounded-xl p-4 md:p-5 flex flex-col transition-all duration-300 shadow-md relative overflow-hidden group">
            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
            <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] font-black tracking-widest uppercase mb-3 relative z-10">
@@ -297,7 +282,6 @@ const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNe
         </motion.div>
       </div>
 
-      {/* Actions */}
       <motion.div variants={itemVariants} className="mt-2 flex flex-col sm:flex-row gap-3">
          {isPass ? (
              <motion.button 
@@ -306,7 +290,6 @@ const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNe
                 onClick={onNextProblem} 
                 disabled={!hasNextProblem}
                 className={`relative flex-1 py-3.5 px-6 font-bold text-[13px] rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 overflow-hidden group ${hasNextProblem ? 'bg-zinc-100 text-black hover:bg-white shadow-white/10' : 'bg-zinc-900 text-zinc-600 cursor-not-allowed border border-white/5'}`}>
-                {/* Shimmer effect for SaaS feel */}
                 {hasNextProblem && <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 0 100%)" }}></div>}
                 <span className="relative z-10">{hasNextProblem ? 'Next Challenge' : 'Contest Completed'}</span>
              </motion.button>
@@ -316,7 +299,6 @@ const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNe
                 whileTap={{ scale: 0.98 }}
                 onClick={onReset} 
                 className="relative flex-1 py-3.5 px-6 bg-zinc-100 text-black hover:bg-white font-bold text-[13px] rounded-xl transition-all shadow-lg overflow-hidden group">
-                {/* Shimmer effect */}
                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
                 <span className="relative z-10">Try Again</span>
              </motion.button>
@@ -330,7 +312,6 @@ const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNe
          </motion.button>
       </motion.div>
 
-      {/* Add Shimmer Keyframes to standard style injected in component or globally */}
       <style>{`
         @keyframes shimmer {
           100% { transform: translateX(100%); }
@@ -377,9 +358,19 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     suggestions: true
   });
 
-  // --- NEW STATE MACHINE ---
   const [submissionPhase, setSubmissionPhase] = useState<'idle' | 'evaluating' | 'complete'>('idle');
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
+
+  // --- NEW MULTI-TAB & SUBMISSIONS TRACKING ---
+  const [activeLeftTab, setActiveLeftTab] = useState<'description' | 'submissions'>('description');
+  const [userSubmissions, setUserSubmissions] = useState<any[]>([]);
+
+  // FREE TIER ROUND-ROBIN BALANCER: Spreading the load across multiple public spaces
+  const HIGH_AVAILABILITY_ENGINES = [
+    "https://rajawatprateek-algolib-engine-1.hf.space",
+    "https://rajawatprateek-algolib-engine-2.hf.space",
+    "https://rajawatprateek-algolib-engine-3.hf.space"
+  ];
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -392,14 +383,11 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     const handleVisibilityChange = async () => {
       if (document.hidden && contestStatus === 'active') {
         setShowCheatWarning(true);
-        if (user && contestId) {
-            console.warn("User navigated away from active contest.");
-        }
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [contestStatus, user, contestId]);
+  }, [contestStatus]);
 
   useEffect(() => {
     const fetchMatrix = async () => {
@@ -420,7 +408,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
           setProblems([FALLBACK_PROBLEM]);
         }
       } catch (err) {
-        console.error("Failed to fetch contest details:", err);
         setProblems([FALLBACK_PROBLEM]);
       }
       setLoading(false);
@@ -436,7 +423,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       return; 
     }
     
-    // Filter test cases locally from allTestCases instead of fetching
     if (allTestCases.length > 0) {
       const problemTestCases = allTestCases.filter(tc => tc.problem_id === currentProblem.id);
       if (problemTestCases.length > 0) {
@@ -445,7 +431,6 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       }
     }
     
-    // If no test cases found locally, attempt to fetch them
     const fetchTestCases = async () => {
       try {
         const response = await fetch(`/.netlify/functions/get-test-cases?problemId=${currentProblem.id}&t=${Date.now()}`);
@@ -457,12 +442,31 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
           setTestCases(FALLBACK_TEST_CASES);
         }
       } catch (err) {
-        console.error("Failed to fetch test cases:", err);
         setTestCases(FALLBACK_TEST_CASES);
       }
     };
     fetchTestCases();
   }, [activeProblemIndex, problems, allTestCases]);
+
+  // Fetch historic submissions when user shifts problem context or log tabs
+  useEffect(() => {
+    if (!user || !contestId || problems.length === 0) return;
+    const currentProblem = problems[activeProblemIndex];
+    
+    const fetchHistoricSubmissions = async () => {
+      try {
+        const uid = user.uid || user.id;
+        const response = await fetch(`/.netlify/functions/get-user-submissions?userId=${uid}&problemId=${currentProblem.id}&contestId=${contestId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setUserSubmissions(data || []);
+        }
+      } catch (e) {
+        console.error("Could not fetch historic data", e);
+      }
+    };
+    fetchHistoricSubmissions();
+  }, [activeProblemIndex, problems, contestId, user, submissionPhase]);
 
   useEffect(() => {
     if (problems.length === 0 || !contestId) return;
@@ -567,41 +571,49 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     setShowResetModal(false);
   };
 
-  const executeCodeCustom = async (lang: string, source: string, stdin: string) => {
-    const ENGINE_API_URL = "https://rajawatprateek-algolib-engine.hf.space/execute";
-    const STATUS_API_URL = "https://rajawatprateek-algolib-engine.hf.space/status";
-    
+  // --- COMPACT BATCH CODE EXECUTION VIA ROUND-ROBIN LOAD BALANCER ---
+  const executeBatchExecutionEngine = async (lang: string, source: string, targetCases: any[]) => {
+    // Round Robin: Pick a random container instance out of the available spaces to distribute 500-user traffic bursts
+    const selectedEngineBase = HIGH_AVAILABILITY_ENGINES[Math.floor(Math.random() * HIGH_AVAILABILITY_ENGINES.length)];
+    const BATCH_URL = `${selectedEngineBase}/execute/batch`;
+    const STATUS_URL = `${selectedEngineBase}/status`;
+
+    const mappedPayloadCases = targetCases.map((tc, idx) => ({
+      id: tc.id || `case_${idx}`,
+      input: String(tc.raw_input || tc.rawInput || '').replace(/\\n/g, '\n')
+    }));
+
     try {
-        const res = await fetch(ENGINE_API_URL, {
-            method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ language: lang, code: source, input: stdin })
-        });
-        
-        if (!res.ok) throw new Error(`Engine Offline or Overloaded: HTTP ${res.status}`);
-        const { jobId } = await res.json();
+      const res = await fetch(BATCH_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang, code: source, testCases: mappedPayloadCases })
+      });
 
-        while (true) {
-            await new Promise(resolve => setTimeout(resolve, 800)); 
-            const statusRes = await fetch(`${STATUS_API_URL}/${jobId}`);
-            if (!statusRes.ok) continue; 
-            const statusData = await statusRes.json();
+      if (!res.ok) throw new Error(`Engine Cluster Instance Offline [HTTP ${res.status}]`);
+      const { jobId } = await res.json();
 
-            if (statusData.status === 'success' || statusData.status === 'error') {
-                let cleanOutput = (statusData.output || '').trim();
-                if (lang === 'java') {
-                    cleanOutput = cleanOutput.replace(/Main_[a-fA-F0-9]+/g, 'Main');
-                }
-                return { output: cleanOutput, statusCode: statusData.statusCode };
-            }
+      // Poll matching execution space cluster for batch job resolution
+      while (true) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        const statusRes = await fetch(`${STATUS_URL}/${jobId}`);
+        if (!statusRes.ok) continue;
+        const statusData = await statusRes.json();
+
+        if (statusData.status === 'success') {
+          return statusData.results; 
         }
-    } catch (e: any) { 
-        throw new Error(`Connection failed: ${e.message}`); 
+        if (statusData.status === 'error') {
+          throw new Error(statusData.output || 'Batch execution failure runtime constraint encountered');
+        }
+      }
+    } catch (e: any) {
+      throw new Error(`Execution pipeline failure: ${e.message}`);
     }
   };
 
-  // --- BATCH EVALUATION ENGINE ---
+  // --- CENTRALIZED BATCH GRADER ---
   const handleEvaluation = async (isSubmit = false) => {
     const now = Date.now();
     if (now - lastRunTime < 3000) return;
@@ -620,11 +632,31 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     
     setLogs([]); 
     
+    const currentProblem = problems[activeProblemIndex];
+    const pId = currentProblem.id;
+    const tempSubId = `temp_${Date.now()}`;
+    let casesToRun = isSubmit ? testCases : testCases.filter(tc => tc.is_public === true || tc.is_public === 'true' || tc.isPublic === true || tc.isPublic === 'true');
+    if (casesToRun.length === 0 && testCases.length > 0) casesToRun = [testCases[0]];
+
     if (isSubmit) {
       setSubmissionPhase('evaluating');
+      // INSTANT UI FEEDBACK: Push a pending submission record to the UI immediately
+      const pendingSub = {
+          id: tempSubId,
+          time: new Date().toISOString(),
+          problem_id: pId,
+          language,
+          verdict: 'Evaluating...',
+          passed: 0,
+          total: casesToRun.length,
+          points: 0,
+          isPending: true
+      };
+      setUserSubmissions(prev => [pendingSub, ...prev]);
+      setActiveLeftTab('submissions'); // Auto-switch tab to show processing
     } else {
       setSubmissionPhase('idle');
-      setLogs([{ type: 'system', content: 'Running public test cases...' }]);
+      setLogs([{ type: 'system', content: 'Submitting all public configurations to balanced cluster framework...' }]);
     }
     
     let currentLogs: LogEntry[] = [];
@@ -633,163 +665,153 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         setLogs(currentLogs);
     };
 
-    const currentProblem = problems[activeProblemIndex];
-    const pId = currentProblem.id;
-
     if (!problemStats[pId]) {
       setProblemStats(prev => ({ ...prev, [pId]: { correct: 0, total: 0 } }));
     }
 
-    let casesToRun = isSubmit ? testCases : testCases.filter(tc => tc.is_public === true || tc.is_public === 'true' || tc.isPublic === true || tc.isPublic === 'true');
-    if (casesToRun.length === 0 && testCases.length > 0) casesToRun = [testCases[0]];
-    
-    let passedCount = 0;
     const startTimeExecute = performance.now();
-    
-    const BATCH_SIZE = 3;
-    const batches = [];
-    for (let i = 0; i < casesToRun.length; i += BATCH_SIZE) {
-        batches.push(casesToRun.slice(i, i + BATCH_SIZE));
-    }
 
-    for (let b = 0; b < batches.length; b++) {
-        const currentBatch = batches[b];
-        const startIdx = b * BATCH_SIZE;
-
-        const batchPromises = currentBatch.map(async (tc) => {
-            const rawIn = String(tc.raw_input || tc.rawInput || '').replace(/\\n/g, '\n');
-            const expOut = String(tc.expected_output || tc.expected || '').trim();
-            const hasMultiple = tc.has_multiple_answers === true || tc.has_multiple_answers === 'true';
-            
-            try {
-                const { output, statusCode } = await executeCodeCustom(language, code, rawIn);
-                const normalizedActual = output.replace(/\s+/g, '');
-                let isCorrect = false;
-                
-                if (hasMultiple) {
-                    const expectedLines = expOut.split('\n').map(l => l.trim()).filter(Boolean);
-                    const actualLines = output.split('\n').map(l => l.trim()).filter(Boolean);
-                    if (expectedLines.length === actualLines.length && actualLines.length > 0) {
-                        isCorrect = expectedLines.every((expLine, index) => {
-                            const actLine = actualLines[index].replace(/\s+/g, ''); 
-                            const possibleAnswers = expLine.split('|||').map(ans => ans.replace(/\s+/g, ''));
-                            return possibleAnswers.includes(actLine);
-                        });
-                    }
-                } else {
-                    const normalizedExpected = expOut.replace(/\s+/g, '');
-                    isCorrect = normalizedActual === normalizedExpected && normalizedExpected !== '';
-                }
-
-                return { success: statusCode === 200 || statusCode === undefined, isCorrect, output, expOut, rawIn, tc };
-            } catch (err: any) {
-                return { success: false, isCorrect: false, output: err.message, tc };
-            }
-        });
-
-        const results = await Promise.all(batchPromises);
-
-        for (let i = 0; i < results.length; i++) {
-            const res = results[i];
-            const caseNum = startIdx + i + 1;
-            const isPub = res.tc.is_public === true || res.tc.is_public === 'true';
-
-            if (!isSubmit || !res.isCorrect || !res.success) {
-                if (!isSubmit) addLog('case_header', `${caseNum}`);
-                if (!res.success) {
-                    if (isSubmit) addLog('case_header', `${caseNum} (Hidden)`);
-                    addLog('error', `Runtime Error:\n${res.output}`);
-                } else if (res.isCorrect) {
-                    if (!isSubmit) {
-                       addLog('success', 'Accepted');
-                       if (isPub) addLog('actual_pass', res.output);
-                    }
-                } else {
-                    if (isSubmit) addLog('case_header', `${caseNum} (Hidden)`);
-                    addLog('error', 'Wrong Answer');
-                    if (isPub) {
-                        addLog('expected', res.expOut);
-                        addLog('actual_fail', res.output);
-                    } else if (isSubmit) {
-                        addLog('system', 'Output hidden for private test cases.');
-                    }
-                }
-            }
-            if (res.isCorrect) passedCount++;
-        }
-    }
-    
-    const endTimeExecute = performance.now();
-    const timeTakenMs = Math.round(endTimeExecute - startTimeExecute);
-    const allPassed = passedCount === casesToRun.length;
-
-    if (isSubmit) {
-      const diffStr = (currentProblem?.difficulty || 'easy').toLowerCase();
-      const defaultPts = diffStr === 'hard' ? 300 : diffStr === 'medium' ? 200 : 100;
-      const defaultPenalty = diffStr === 'hard' ? 20 : diffStr === 'medium' ? 10 : 5;
+    try {
+      // Single payload transaction execution avoids process spawning overhead bottlenecks completely
+      const batchResults = await executeBatchExecutionEngine(language, code, casesToRun);
       
-      const currentStats = problemStats[pId] || { correct: 0, total: 0 };
-      const newTotal = currentStats.total + 1;
-      const newCorrect = allPassed ? currentStats.correct + 1 : currentStats.correct;
-      const accuracy = Math.round((newCorrect / newTotal) * 100);
-      
-      setProblemStats(prev => ({
-          ...prev,
-          [pId]: { correct: newCorrect, total: newTotal }
-      }));
+      let passedCount = 0;
+      let runtimeCapMaxMs = 0;
 
-      const wrongAttemptsCount = newTotal - newCorrect - (allPassed ? 0 : 1);
-      const pointsEarned = Math.max(0, defaultPts - (wrongAttemptsCount * defaultPenalty));
+      for (let i = 0; i < casesToRun.length; i++) {
+        const tc = casesToRun[i];
+        const res = batchResults[i];
+        const caseNum = i + 1;
+        const isPub = tc.is_public === true || tc.is_public === 'true' || tc.isPublic;
+        
+        const expOut = String(tc.expected_output || tc.expected || '').trim();
+        const hasMultiple = tc.has_multiple_answers === true || tc.has_multiple_answers === 'true';
 
-      let dbTimeTakenSeconds = 0;
-      if (contest?.start_time) {
-          const startTimeMs = new Date(contest.start_time).getTime();
-          if (Date.now() > startTimeMs) {
-              dbTimeTakenSeconds = Math.floor((Date.now() - startTimeMs) / 1000);
+        let isCorrect = false;
+        if (res && res.status === 'success') {
+          const normalizedActual = (res.output || '').replace(/\s+/g, '');
+          runtimeCapMaxMs = Math.max(runtimeCapMaxMs, (res.time || 0) * 1000);
+
+          if (hasMultiple) {
+            const expectedLines = expOut.split('\n').map(l => l.trim()).filter(Boolean);
+            const actualLines = (res.output || '').split('\n').map(l => l.trim()).filter(Boolean);
+            if (expectedLines.length === actualLines.length && actualLines.length > 0) {
+                isCorrect = expectedLines.every((expLine, index) => {
+                    const actLine = actualLines[index].replace(/\s+/g, ''); 
+                    const possibleAnswers = expLine.split('|||').map(ans => ans.replace(/\s+/g, ''));
+                    return possibleAnswers.includes(actLine);
+                });
+            }
+          } else {
+            const normalizedExpected = expOut.replace(/\s+/g, '');
+            isCorrect = normalizedActual === normalizedExpected && normalizedExpected !== '';
           }
-      }
-
-      if (user && user.getIdToken) {
-        try {
-            const token = await user.getIdToken();
-            await fetch('/.netlify/functions/submit-code', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    problem_id: currentProblem.id,
-                    contest_id: contestId,
-                    language: language,
-                    code: code,
-                    passed: allPassed,
-                    score_awarded: pointsEarned,
-                    time_taken_seconds: dbTimeTakenSeconds
-                })
-            });
-        } catch (e) { console.error("Database sync failed:", e); }
-      }
-
-      setSubmissionResult({
-         passed: passedCount,
-         total: casesToRun.length,
-         allPassed,
-         timeTakenMs,
-         language,
-         accuracy,
-         attemptsCorrect: newCorrect,
-         attemptsTotal: newTotal,
-         pointsEarned: allPassed ? pointsEarned : 0,
-         estimatedMemoryKB: 1024 + Math.random() * 4096, 
-         estimatedComplexity: 'O(N)' 
-      });
-      setSubmissionPhase('complete');
-
-    } else {
-        if (allPassed) {
-             addLog('system', `All ${passedCount}/${casesToRun.length} public test cases passed successfully.`);
         }
+
+        if (isCorrect) passedCount++;
+
+        // Render detailed feedback stream to user terminal pane logs
+        if (!isSubmit || !isCorrect) {
+          if (!isSubmit) addLog('case_header', `${caseNum}`);
+          if (res && res.status === 'error') {
+            if (isSubmit) addLog('case_header', `${caseNum} (Hidden runtime context boundary condition failed)`);
+            addLog('error', `Execution Error:\n${res.output}`);
+          } else if (isCorrect) {
+            if (!isSubmit) {
+               addLog('success', 'Accepted');
+               if (isPub) addLog('actual_pass', res.output);
+            }
+          } else {
+            if (isSubmit) addLog('case_header', `${caseNum} (Hidden case verification step variance)`);
+            addLog('error', 'Wrong Answer');
+            if (isPub) {
+                addLog('expected', expOut);
+                addLog('actual_fail', res ? res.output : 'No production value derived');
+            } else if (isSubmit) {
+                addLog('system', 'Private context metadata masked out from direct output streaming.');
+            }
+          }
+        }
+      }
+
+      const endTimeExecute = performance.now();
+      const totalBatchDurationMs = Math.round(endTimeExecute - startTimeExecute);
+      const allPassed = passedCount === casesToRun.length;
+
+      if (isSubmit) {
+        const diffStr = (currentProblem?.difficulty || 'easy').toLowerCase();
+        const defaultPts = diffStr === 'hard' ? 300 : diffStr === 'medium' ? 200 : 100;
+        const defaultPenalty = diffStr === 'hard' ? 20 : diffStr === 'medium' ? 10 : 5;
+        
+        const currentStats = problemStats[pId] || { correct: 0, total: 0 };
+        const newTotal = currentStats.total + 1;
+        const newCorrect = allPassed ? currentStats.correct + 1 : currentStats.correct;
+        const accuracy = Math.round((newCorrect / newTotal) * 100);
+        
+        setProblemStats(prev => ({ ...prev, [pId]: { correct: newCorrect, total: newTotal } }));
+
+        const wrongAttemptsCount = newTotal - newCorrect - (allPassed ? 0 : 1);
+        const pointsEarned = Math.max(0, defaultPts - (wrongAttemptsCount * defaultPenalty));
+
+        let dbTimeTakenSeconds = 0;
+        if (contest?.start_time) {
+            const startTimeMs = new Date(contest.start_time).getTime();
+            if (Date.now() > startTimeMs) {
+                dbTimeTakenSeconds = Math.floor((Date.now() - startTimeMs) / 1000);
+            }
+        }
+
+        // Database-First state execution tracking push strategy safely prevents page tab manipulation loss
+        if (user && user.getIdToken) {
+          try {
+              const token = await user.getIdToken();
+              await fetch('/.netlify/functions/submit-code', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                  body: JSON.stringify({
+                      problem_id: currentProblem.id, contest_id: contestId,
+                      language: language, code: code, passed: allPassed,
+                      score_awarded: allPassed ? pointsEarned : 0, time_taken_seconds: dbTimeTakenSeconds
+                  })
+              });
+          } catch (e) { console.error("Database connection fault during remote persistent write:", e); }
+        }
+
+        // UPDATE THE PENDING SUBMISSION RECORD IN UI
+        setUserSubmissions(prev => prev.map(sub => 
+            sub.id === tempSubId ? {
+                ...sub,
+                verdict: allPassed ? 'Accepted' : 'Wrong Answer',
+                passed: passedCount,
+                points: allPassed ? pointsEarned : 0,
+                isPending: false,
+                time_taken_seconds: dbTimeTakenSeconds
+            } : sub
+        ));
+
+        // Generate immediate view presentation context configuration
+        setSubmissionResult({
+           passed: passedCount, total: casesToRun.length, allPassed,
+           timeTakenMs: runtimeCapMaxMs > 0 ? Math.round(runtimeCapMaxMs) : totalBatchDurationMs,
+           language, accuracy, attemptsCorrect: newCorrect, attemptsTotal: newTotal,
+           pointsEarned: allPassed ? pointsEarned : 0,
+           estimatedMemoryKB: 1024 + Math.random() * 2048, estimatedComplexity: 'O(N)' 
+        });
+        setSubmissionPhase('complete');
+      } else {
+          if (allPassed) addLog('system', `All ${passedCount}/${casesToRun.length} public criteria verified successfully.`);
+      }
+
+    } catch (error: any) {
+      addLog('error', `Cluster transaction pipeline timed out or dropped package execution thread: ${error.message}`);
+      setSubmissionPhase('idle');
+      
+      // Update pending submission to show failure if crashed
+      if (isSubmit) {
+          setUserSubmissions(prev => prev.map(sub => 
+              sub.id === tempSubId ? { ...sub, verdict: 'System Error', isPending: false } : sub
+          ));
+      }
     }
   };
 
@@ -929,99 +951,174 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         <div className="bg-[#1a1a1a] border-b border-white/5 px-4 py-1.5 flex items-center justify-center gap-2 shrink-0">
           <Lock size={12} className="text-amber-500" />
           <span className="text-zinc-400 text-[11px] font-medium tracking-wide">
-            Contest environment active. Do not try to navigate away from this page. Penalty will be applied by our systems before final result published.
+            Anti-cheat systems are in place, if suspicious activity is detected, actions will be taken. Your activity is being monitored and logged and further will be analyzed.
           </span>
         </div>
 
         <div className="flex-1 min-h-0">
           <PanelGroup direction={isMobile ? "vertical" : "horizontal"}>
             <Panel defaultSize={isMobile ? 40 : 45} minSize={20} maxSize={80} className="flex flex-col bg-[#121212] border-r border-white/5 relative z-10">
-               <div className="flex border-b border-white/5 px-4 bg-[#1a1a1a] shrink-0 items-center h-10">
-                  <div className="text-[12px] font-semibold text-zinc-200 tracking-wide">Description</div>
+               
+               {/* PURE CODEFORCES STYLE LEFT ARENA NAVIGATION CONTAINER */}
+               <div className="flex border-b border-white/5 px-4 bg-[#1a1a1a] shrink-0 items-center h-10 gap-4">
+                  <button 
+                    onClick={() => setActiveLeftTab('description')}
+                    className={`text-[12px] h-full px-2 font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 border-b-2 ${activeLeftTab === 'description' ? 'text-sky-400 border-sky-500' : 'text-zinc-500 border-transparent hover:text-zinc-300'}`}
+                  >
+                     <Code2 size={13} /> Description
+                  </button>
+                  <button 
+                    onClick={() => setActiveLeftTab('submissions')}
+                    className={`text-[12px] h-full px-2 font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 border-b-2 ${activeLeftTab === 'submissions' ? 'text-sky-400 border-sky-500' : 'text-zinc-500 border-transparent hover:text-zinc-300'}`}
+                  >
+                     <ListOrdered size={13} /> Submissions Log
+                  </button>
                </div>
                
                <div 
-                 className="flex-1 overflow-y-auto custom-scrollbar p-5 md:p-6 pb-20 select-none bg-[#121212]"
+                 className="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-8 py-6 pb-20 select-none bg-[#121212]"
                  onContextMenu={(e) => e.preventDefault()}
                >
-                  <div className="w-full max-w-3xl mx-auto">
-                     <h1 className="text-2xl md:text-3xl font-extrabold text-zinc-100 mb-4 leading-tight tracking-tight">{activeProblem?.title}</h1>
-                     <div className="flex flex-wrap items-center gap-3 mb-8">
-                        <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase ${activeDifficultyStr === 'easy' ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/20' : activeDifficultyStr === 'medium' ? 'text-amber-400 bg-amber-400/10 border border-amber-400/20' : 'text-rose-400 bg-rose-400/10 border border-rose-400/20'}`}>
-                          {activeProblem?.difficulty || 'Easy'}
-                        </span>
-                        
-                        <span className="px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase text-sky-400 bg-sky-400/10 border border-sky-400/20 flex items-center gap-1.5">
-                          <Award size={12} /> {availablePoints} Pts
-                        </span>
+                 <AnimatePresence mode="wait">
+                  {activeLeftTab === 'description' ? (
+                    <motion.div 
+                      key="desc-tab" initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -5 }} transition={{ duration: 0.15 }}
+                      className="w-full"
+                    >
+                       <h1 className="text-2xl md:text-3xl font-extrabold text-zinc-100 mb-4 leading-tight tracking-tight">{activeProblem?.title}</h1>
+                       <div className="flex flex-wrap items-center gap-3 mb-8">
+                          <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase ${activeDifficultyStr === 'easy' ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/20' : activeDifficultyStr === 'medium' ? 'text-amber-400 bg-amber-400/10 border border-amber-400/20' : 'text-rose-400 bg-rose-400/10 border border-rose-400/20'}`}>
+                            {activeProblem?.difficulty || 'Easy'}
+                          </span>
+                          
+                          <span className="px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase text-sky-400 bg-sky-400/10 border border-sky-400/20 flex items-center gap-1.5">
+                            <Award size={12} /> {availablePoints} Pts
+                          </span>
 
-                        <span className="px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase text-rose-400 bg-rose-400/10 border border-rose-400/20">
-                          -{displayPenalty} Pts / Wrong
-                        </span>
+                          <span className="px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase text-rose-400 bg-rose-400/10 border border-rose-400/20">
+                            -{displayPenalty} Pts / Wrong
+                          </span>
 
-                        {activeProblem?.tags?.map((t: string) => <span key={t} className="px-3 py-1 bg-white/5 border border-white/10 text-zinc-400 rounded-full text-[11px] font-medium tracking-wide">{t}</span>)}
-                     </div>
-                     
-                     <div className="markdown-body text-[15px] md:text-base leading-relaxed text-zinc-300">{renderMarkdown(problemDesc)}</div>
+                          {activeProblem?.tags?.map((t: string) => <span key={t} className="px-3 py-1 bg-white/5 border border-white/10 text-zinc-400 rounded-full text-[11px] font-medium tracking-wide">{t}</span>)}
+                       </div>
+                       
+                       <div className="markdown-body text-[15px] md:text-base leading-relaxed text-zinc-300">{renderMarkdown(problemDesc)}</div>
 
-                     {inputFmt && (
-                        <div className="mt-8">
-                           <h2 className="text-lg font-semibold text-zinc-100 mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-sky-500 rounded-full"></div>Input Format</h2>
-                           <div className="text-zinc-300 text-[14px] leading-relaxed bg-white/[0.02] p-4 rounded-xl border border-white/5">{renderMarkdown(inputFmt)}</div>
-                        </div>
-                     )}
-                     {outputFmt && (
-                        <div className="mt-8">
-                           <h2 className="text-lg font-semibold text-zinc-100 mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-sky-500 rounded-full"></div>Output Format</h2>
-                           <div className="text-zinc-300 text-[14px] leading-relaxed bg-white/[0.02] p-4 rounded-xl border border-white/5">{renderMarkdown(outputFmt)}</div>
-                        </div>
-                     )}
-                     {constr && (
-                        <div className="mt-8">
-                           <h2 className="text-lg font-semibold text-zinc-100 mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-amber-500 rounded-full"></div>Constraints</h2>
-                           <div className="text-zinc-300 text-[14px] leading-relaxed bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">{renderMarkdown(constr)}</div>
-                        </div>
-                     )}
-
-                     <div className="mt-12 space-y-6">
-                        <h2 className="text-xl font-bold text-zinc-100 border-b border-white/10 pb-3">Examples</h2>
-                        {testCases.filter(tc => tc.is_public === true || tc.is_public === 'true' || tc.isPublic).map((tc, i) => (
-                          <div key={i} className="flex flex-col gap-3">
-                             <div className="font-bold text-zinc-200 text-[15px]">Example {i + 1}:</div>
-                             <div className="bg-[#1a1a1a] rounded-xl p-5 font-mono text-[13px] border border-white/10 shadow-lg leading-relaxed relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-1 h-full bg-zinc-800"></div>
-                                
-                                {(tc.image_url || tc.imageUrl) && (
-                                   <div className="mb-5 flex flex-col">
-                                      <img 
-                                        src={tc.image_url || tc.imageUrl} 
-                                        alt={`Example ${i + 1} Visual Reference`} 
-                                        className="max-w-full md:max-w-[80%] rounded-lg border border-white/10 object-contain bg-black/50" 
-                                      />
-                                   </div>
-                                )}
-
-                                <div className="mb-5 flex flex-col">
-                                   <span className="text-zinc-500 select-none font-sans text-[11px] font-bold uppercase tracking-wider mb-2">Input</span>
-                                   <pre className="text-zinc-200 whitespace-pre-wrap font-mono leading-normal bg-white/5 p-3 rounded-lg border border-white/5">{tc.display_input}</pre>
-                                </div>
-                                
-                                <div className="mb-3 flex flex-col">
-                                   <span className="text-zinc-500 select-none font-sans text-[11px] font-bold uppercase tracking-wider mb-2">Output</span>
-                                   <pre className="text-zinc-200 whitespace-pre-wrap font-mono leading-normal bg-white/5 p-3 rounded-lg border border-white/5">{tc.expected_output}</pre>
-                                </div>
-                                
-                                {tc.explanation && (
-                                   <div className="flex flex-col gap-2 mt-5 pt-5 border-t border-white/5 font-sans">
-                                      <span className="text-zinc-500 select-none text-[11px] font-bold uppercase tracking-wider">Explanation</span>
-                                      <div className="text-zinc-400 text-[14px] leading-relaxed">{renderMarkdown(tc.explanation, true)}</div>
-                                   </div>
-                                )}
-                             </div>
+                       {inputFmt && (
+                          <div className="mt-8">
+                             <h2 className="text-lg font-semibold text-zinc-100 mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-sky-500 rounded-full"></div>Input Format</h2>
+                             <div className="text-zinc-300 text-[14px] leading-relaxed bg-white/[0.02] p-4 rounded-xl border border-white/5">{renderMarkdown(inputFmt)}</div>
                           </div>
-                        ))}
-                     </div>
-                  </div>
+                       )}
+                       {outputFmt && (
+                          <div className="mt-8">
+                             <h2 className="text-lg font-semibold text-zinc-100 mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-sky-500 rounded-full"></div>Output Format</h2>
+                             <div className="text-zinc-300 text-[14px] leading-relaxed bg-white/[0.02] p-4 rounded-xl border border-white/5">{renderMarkdown(outputFmt)}</div>
+                          </div>
+                       )}
+                       {constr && (
+                          <div className="mt-8">
+                             <h2 className="text-lg font-semibold text-zinc-100 mb-3 flex items-center gap-2"><div className="w-1 h-4 bg-amber-500 rounded-full"></div>Constraints</h2>
+                             <div className="text-zinc-300 text-[14px] leading-relaxed bg-amber-500/5 p-4 rounded-xl border border-amber-500/10">{renderMarkdown(constr)}</div>
+                          </div>
+                       )}
+
+                       <div className="mt-12 space-y-6">
+                          <h2 className="text-xl font-bold text-zinc-100 border-b border-white/10 pb-3">Examples</h2>
+                          {testCases.filter(tc => tc.is_public === true || tc.is_public === 'true' || tc.isPublic).map((tc, i) => (
+                            <div key={i} className="flex flex-col gap-3">
+                               <div className="font-bold text-zinc-200 text-[15px]">Example {i + 1}:</div>
+                               <div className="bg-[#1a1a1a] rounded-xl p-5 font-mono text-[13px] border border-white/10 shadow-lg leading-relaxed relative overflow-hidden">
+                                  <div className="absolute top-0 left-0 w-1 h-full bg-zinc-800"></div>
+                                  
+                                  {(tc.image_url || tc.imageUrl) && (
+                                     <div className="mb-5 flex flex-col">
+                                        <img 
+                                          src={tc.image_url || tc.imageUrl} 
+                                          alt={`Example ${i + 1} Visual Reference`} 
+                                          className="max-w-full md:max-w-[80%] rounded-lg border border-white/10 object-contain bg-black/50" 
+                                        />
+                                     </div>
+                                  )}
+
+                                  <div className="mb-5 flex flex-col">
+                                     <span className="text-zinc-500 select-none font-sans text-[11px] font-bold uppercase tracking-wider mb-2">Input</span>
+                                     <pre className="text-zinc-200 whitespace-pre-wrap font-mono leading-normal bg-white/5 p-3 rounded-lg border border-white/5">{tc.display_input}</pre>
+                                  </div>
+                                  
+                                  <div className="mb-3 flex flex-col">
+                                     <span className="text-zinc-500 select-none font-sans text-[11px] font-bold uppercase tracking-wider mb-2">Output</span>
+                                     <pre className="text-zinc-200 whitespace-pre-wrap font-mono leading-normal bg-white/5 p-3 rounded-lg border border-white/5">{tc.expected_output}</pre>
+                                  </div>
+                                  
+                                  {tc.explanation && (
+                                     <div className="flex flex-col gap-2 mt-5 pt-5 border-t border-white/5 font-sans">
+                                        <span className="text-zinc-500 select-none text-[11px] font-bold uppercase tracking-wider">Explanation</span>
+                                        <div className="text-zinc-400 text-[14px] leading-relaxed">{renderMarkdown(tc.explanation, true)}</div>
+                                     </div>
+                                  )}
+                               </div>
+                            </div>
+                          ))}
+                       </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      key="sub-tab" initial={{ opacity: 0, x: 5 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 5 }} transition={{ duration: 0.15 }}
+                      className="w-full space-y-4"
+                    >
+                      <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                         <h2 className="text-xl font-bold text-zinc-100">Historical Submissions</h2>
+                         <span className="text-xs bg-white/5 px-2.5 py-1 border border-white/10 text-zinc-400 rounded-md font-mono">{userSubmissions.length} Total</span>
+                      </div>
+
+                      {userSubmissions.length === 0 ? (
+                         <div className="py-16 text-center text-zinc-500 font-medium bg-white/[0.01] border border-dashed border-white/5 rounded-xl">
+                            No processing records discovered for current account context.
+                         </div>
+                      ) : (
+                         <div className="flex flex-col gap-2.5">
+                            {userSubmissions.map((sub, idx) => {
+                              const isPending = sub.isPending || sub.verdict === 'Evaluating...';
+                              const isAccepted = sub.passed === true || sub.verdict === 'Accepted' || (sub.score_awarded && sub.score_awarded > 0);
+                              
+                              return (
+                                 <div key={sub.id || idx} className={`bg-[#151515] border ${isPending ? 'border-sky-500/30 shadow-[0_0_15px_rgba(14,165,233,0.1)]' : 'border-white/5 hover:border-white/10'} rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all`}>
+                                    <div className="flex items-center gap-3">
+                                       {isPending ? (
+                                           <Loader2 size={16} className="text-sky-500 animate-spin" />
+                                       ) : (
+                                           <div className={`w-2.5 h-2.5 rounded-full ${isAccepted ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]'}`} />
+                                       )}
+                                       <div className="flex flex-col">
+                                          <span className={`font-bold font-mono text-sm ${isPending ? 'text-sky-400' : isAccepted ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                             {sub.verdict}
+                                          </span>
+                                          <span className="text-xs text-zinc-500 font-medium">
+                                             {isPending ? 'Processing in execution environment...' : (sub.time_taken_seconds ? `Solved in ${Math.floor(sub.time_taken_seconds / 60)}m` : 'Practiced runtime environment')} • {sub.language_used || sub.language || 'C++'}
+                                          </span>
+                                       </div>
+                                    </div>
+                                    <div className="flex gap-4 sm:gap-6 self-stretch sm:self-auto justify-between border-t sm:border-transparent border-white/5 pt-2 sm:pt-0">
+                                       <div className="text-right">
+                                          <span className="block text-[10px] uppercase font-bold tracking-wider text-zinc-600">Points</span>
+                                          <span className={`font-mono font-black text-sm ${isPending ? 'text-sky-400/50' : isAccepted ? 'text-amber-400' : 'text-zinc-500'}`}>
+                                             {isPending ? '---' : `+${sub.score_awarded || sub.points || 0}`}
+                                          </span>
+                                       </div>
+                                       <div className="text-right">
+                                          <span className="block text-[10px] uppercase font-bold tracking-wider text-zinc-600">Timestamp</span>
+                                          <span className="text-zinc-400 text-xs font-mono">{sub.created_at ? new Date(sub.created_at).toLocaleTimeString() : new Date(sub.time).toLocaleTimeString()}</span>
+                                       </div>
+                                    </div>
+                                 </div>
+                              );
+                            })}
+                         </div>
+                      )}
+                    </motion.div>
+                  )}
+                 </AnimatePresence>
                </div>
             </Panel>
 
@@ -1171,7 +1268,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                                <div className="w-16 h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
                              </div>
                              <h3 className="mt-6 text-lg font-bold text-zinc-100">Evaluating Solution...</h3>
-                             <p className="mt-2 text-sm text-zinc-400">Running against hidden test cases</p>
+                             <p className="mt-2 text-sm text-zinc-400">Running complete test suite on balanced core engine matrix</p>
                           </div>
                        ) : submissionPhase === 'complete' && submissionResult ? (
                           <SubmissionDashboard 

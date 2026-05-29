@@ -470,36 +470,53 @@ export default function Compiler() {
     }
   };
 
+  // ─── UPGRADED: HIGH AVAILABILITY CLUSTER BATCH RUNNER ───
   const handleRunCode = async () => {
     if (isRunning) return;
     if (terminalPanelRef.current?.isCollapsed()) terminalPanelRef.current.expand();
     
     setIsRunning(true);
     setExecutionStatus('running');
-    setOutput('Initiating connection to execution engine...');
+    setOutput('Initiating connection to balanced compute cluster...');
     setExecutionMetrics(null);
     highlightErrorIfAny('');
 
     abortRef.current = false;
     abortControllerRef.current = new AbortController();
 
-    const ENGINE_API_URL = 'https://rajawatprateek-algolib-engine.hf.space/execute';
-    const STATUS_API_URL = 'https://rajawatprateek-algolib-engine.hf.space/status';
+    // The identical 3-node Round-Robin cluster used by the Contest Arena
+    const HIGH_AVAILABILITY_ENGINES = [
+      "https://rajawatprateek-algolib-engine-1.hf.space",
+      "https://rajawatprateek-algolib-engine-2.hf.space",
+      "https://rajawatprateek-algolib-engine-3.hf.space"
+    ];
+    
+    const selectedEngineBase = HIGH_AVAILABILITY_ENGINES[Math.floor(Math.random() * HIGH_AVAILABILITY_ENGINES.length)];
+    
+    // We target the /execute/batch endpoint, treating the IDE input as a "batch of 1" testcase
+    const ENGINE_API_URL = `${selectedEngineBase}/execute/batch`;
+    const STATUS_API_URL = `${selectedEngineBase}/status`;
 
     try {
+      const langToSend = API_LANG_MAP[activeLang.id] || activeLang.id;
+      
       const res = await fetch(ENGINE_API_URL, {
         method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: API_LANG_MAP[activeLang.id] || activeLang.id, code, input }),
+        body: JSON.stringify({ 
+            language: langToSend, 
+            code, 
+            testCases: [{ id: 'ide_run', input: input }] 
+        }),
         signal: abortControllerRef.current.signal
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Execution Engine Offline.`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}: Engine Node Offline.`);
       const { jobId } = await res.json();
       
       let isFinished = false;
       while (!isFinished) {
         if (abortRef.current) throw new Error("Process killed by user (SIGINT)");
-        await new Promise(resolve => setTimeout(resolve, 1000)); 
+        await new Promise(resolve => setTimeout(resolve, 800)); 
         if (abortRef.current) throw new Error("Process killed by user (SIGINT)");
 
         const statusRes = await fetch(`${STATUS_API_URL}/${jobId}`, { signal: abortControllerRef.current.signal });
@@ -507,23 +524,42 @@ export default function Compiler() {
         
         const statusData = await statusRes.json();
 
-        if (statusData.status === 'queued') setOutput(`[Queue] Waiting for compute resources... Position: ${statusData.position}`);
-        else if (statusData.status === 'running') setOutput(`Executing payload in secure sandbox...`);
-        else if (statusData.status === 'success' || statusData.status === 'error') {
+        if (statusData.status === 'queued') {
+            setOutput(`[Queue] Waiting for compute resources... Position: ${statusData.position || 1}`);
+        }
+        else if (statusData.status === 'running') {
+            setOutput(`Executing payload on node ${selectedEngineBase.split('engine-')[1].charAt(0)}...`);
+        }
+        else if (statusData.status === 'success') {
             isFinished = true;
-            let cleanOutput = (statusData.output || '').trim();
+            
+            // Extract the single test case result from the batch response architecture
+            const result = statusData.results[0];
+            
+            let cleanOutput = (result.output || '').trim();
             if (activeLang.id === 'java') cleanOutput = cleanOutput.replace(/Main_[a-fA-F0-9]+/g, 'Main');
             
-            if (statusData.status === 'error' || statusData.statusCode === 500) {
+            if (result.status === 'error') {
                 setExecutionStatus('error');
                 setOutput(cleanOutput || "Execution Error");
                 highlightErrorIfAny(cleanOutput);
             } else {
                 setOutput(cleanOutput || '');
                 setExecutionStatus('success');
-                setExecutionMetrics({ time: statusData.time ?? statusData.executionTime, memory: statusData.memory ?? statusData.memoryUsage });
+                setExecutionMetrics({ time: result.time, memory: result.memory });
                 highlightErrorIfAny('');
             }
+        } 
+        else if (statusData.status === 'error') {
+            // Global job error (e.g., compilation failed before reaching test cases)
+            isFinished = true;
+            setExecutionStatus('error');
+            
+            let cleanOutput = (statusData.output || '').trim();
+            if (activeLang.id === 'java') cleanOutput = cleanOutput.replace(/Main_[a-fA-F0-9]+/g, 'Main');
+            
+            setOutput(cleanOutput || "System Error");
+            highlightErrorIfAny(cleanOutput);
         }
       }
     } catch (e: any) {

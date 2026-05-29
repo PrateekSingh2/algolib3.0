@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
-import { Trophy, Clock, Calendar, ChevronRight, Activity, Code2, Sparkles, ArrowRight, Loader2, BarChart2, X, Medal, HeartHandshake, Lock } from 'lucide-react';
+import { Trophy, Clock, Calendar, ChevronRight, Activity, Code2, Sparkles, ArrowRight, Loader2, BarChart2, X, Medal, HeartHandshake, Lock, Info, ShieldAlert, AlertOctagon, ListOrdered, UserCheck, TrendingDown, Eye, Layers } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, firestoreDB } from '../lib/firebase';
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const VIDEO_URL = "https://ik.imagekit.io/g7e4hyclo/contest-bg.mp4";
@@ -34,6 +35,7 @@ export default function Contests() {
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
 
   const [currentUser, setCurrentUser] = useState<any>(null); 
+  const [contestGuidelines, setContestGuidelines] = useState<any>(null);
   
   // Leaderboard State
   const [selectedLeaderboard, setSelectedLeaderboard] = useState<any | null>(null);
@@ -46,6 +48,22 @@ export default function Contests() {
       setCurrentUser(user);
     });
     return () => unsubscribe();
+  }, []);
+
+  // Fetch Dynamic Guidelines from Firestore
+  useEffect(() => {
+    const fetchGuidelines = async () => {
+        try {
+            const docRef = doc(firestoreDB, "contest_settings", "current_contest");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                setContestGuidelines(docSnap.data());
+            }
+        } catch (e) {
+            console.error("Error fetching dynamic guidelines:", e);
+        }
+    };
+    fetchGuidelines();
   }, []);
 
   // Video Caching Logic
@@ -81,6 +99,7 @@ export default function Contests() {
     };
   }, []);
 
+  // Fetch Active Contests
   useEffect(() => {
     const fetchContests = async () => {
       try {
@@ -99,7 +118,7 @@ export default function Contests() {
     return () => { clearInterval(timer); clearInterval(pollTimer); };
   }, []);
 
-  // --- UPDATED LEADERBOARD FETCH ---
+  // Leaderboard Fetch
   useEffect(() => {
     if (!selectedLeaderboard) return;
     const fetchLeaderboard = async () => {
@@ -188,14 +207,19 @@ export default function Contests() {
     name: user.name,
     score: user.score,
     rank: idx + 1,
-    fill: idx === 0 ? '#fbbf24' : idx === 1 ? '#e4e4e7d3' : '#d97706de' // gold, silver, bronze
+    fill: idx === 0 ? '#fbbf24' : idx === 1 ? '#e4e4e7d3' : '#d97706de' 
   }));
 
-  // Reorder for visual podium: [Silver, Gold, Bronze]
   const podiumData = [];
   if (top3Data[1]) podiumData.push(top3Data[1]);
   if (top3Data[0]) podiumData.push(top3Data[0]);
   if (top3Data[2]) podiumData.push(top3Data[2]);
+
+  // Helper for dynamic dates
+  const getDynamicDate = (dateVal: any) => {
+    if (!dateVal) return new Date();
+    return dateVal.toDate ? dateVal.toDate() : new Date(dateVal);
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] text-zinc-200 font-sans selection:bg-sky-500/30 overflow-hidden relative">
@@ -242,7 +266,6 @@ export default function Contests() {
                   <div className="h-64 flex flex-col items-center justify-center gap-3 text-zinc-500"><BarChart2 size={32} className="opacity-20" /><span className="text-sm font-medium">No successful submissions yet.</span></div>
                 ) : (
                   <>
-                    {/* PODIUM CHART */}
                     {podiumData.length > 0 && (
                       <div className="h-48 w-full max-w-md mx-auto mb-8 relative border-b border-white/10">
                         <ResponsiveContainer width="100%" height="100%">
@@ -329,7 +352,7 @@ export default function Contests() {
           >
             Competitive <br className="hidden md:block"/> Programming.
           </motion.h1>
-          
+
           <motion.p 
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed mb-8"
@@ -358,6 +381,72 @@ export default function Contests() {
         ) : (
           <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-20">
             
+            {/* --- DYNAMIC MEGA CONTEST / ARENA GUIDELINES --- */}
+            {contestGuidelines && (
+              <motion.section variants={itemVariants} className="mb-16">
+                <div className="rounded-3xl border border-sky-500/30 bg-gradient-to-br from-sky-500/10 via-[#050505] to-[#050505] p-1 overflow-hidden relative shadow-[0_0_40px_rgba(14,165,233,0.1)]">
+                  {/* Background elements */}
+                  <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
+                    <ShieldAlert size={120} className="text-sky-500" />
+                  </div>
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-sky-500 to-transparent opacity-50" />
+                  
+                  <div className="bg-[#0a0a0a] rounded-[22px] p-6 md:p-10 border border-white/5 relative z-10">
+                    <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-8 pb-6 border-b border-white/10">
+                      <div>
+                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold uppercase tracking-widest mb-3">
+                           <AlertOctagon size={14} /> Upcoming Contest Guidelines
+                         </div>
+                         <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">{contestGuidelines.title}</h2>
+                         <p className="text-zinc-400 mt-2 text-sm">Please read the following instructions carefully before the contest begins.</p>
+                      </div>
+                      <div className="flex flex-col items-start md:items-end text-left md:text-right bg-white/[0.03] p-4 rounded-xl border border-white/5">
+                         <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-1">Scheduled For</span>
+                         <span className="text-lg font-mono font-bold text-sky-400">
+                           {getDynamicDate(contestGuidelines.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                         </span>
+                         <span className="text-sm font-mono text-zinc-300">
+                           {getDynamicDate(contestGuidelines.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {getDynamicDate(contestGuidelines.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                         </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                       {/* Info Column */}
+                       <div>
+                          <h3 className="text-lg font-bold text-zinc-100 flex items-center gap-2 mb-5">
+                            <Info className="text-sky-400" size={20} /> Event Information
+                          </h3>
+                          <ul className="space-y-4">
+                             {contestGuidelines.info && contestGuidelines.info.map((item: string, i: number) => (
+                               <li key={i} className="flex gap-3 text-sm text-zinc-300">
+                                  <div className="mt-0.5 w-5 h-5 rounded bg-sky-500/10 flex items-center justify-center shrink-0 border border-sky-500/20 text-sky-400"><ListOrdered size={12} /></div>
+                                  <span className="leading-relaxed" dangerouslySetInnerHTML={{ __html: item.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                               </li>
+                             ))}
+                          </ul>
+                       </div>
+
+                       {/* Rules Column */}
+                       <div>
+                          <h3 className="text-lg font-bold text-rose-400 flex items-center gap-2 mb-5">
+                            <ShieldAlert size={20} /> Strict Arena Rules
+                          </h3>
+                          <ul className="space-y-4">
+                             {contestGuidelines.rules && contestGuidelines.rules.map((rule: string, i: number) => (
+                               <li key={i} className="flex gap-3 text-sm text-zinc-300">
+                                  <div className="mt-0.5 w-5 h-5 rounded bg-rose-500/10 flex items-center justify-center shrink-0 border border-rose-500/20 text-rose-400"><TrendingDown size={12} /></div>
+                                  <span className="leading-relaxed" dangerouslySetInnerHTML={{ __html: rule.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                               </li>
+                             ))}
+                          </ul>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.section>
+            )}
+
             {/* --- LIVE NOW SECTION --- */}
             {liveContests.length > 0 && (
               <motion.section variants={itemVariants}>
