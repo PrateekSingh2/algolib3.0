@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence, useMotionTemplate, useMotionValue } from "framer-motion";
 import Navbar from "./Navbar"; 
-import GlobalRibbon from "./GlobalRibbon";
 import Footer from "./Footer";
 
 // --- Types ---
@@ -834,7 +833,6 @@ export default function Community() {
 
       <div className="relative z-50">
         <Navbar />
-        <GlobalRibbon />
       </div>
 
       <main className="max-w-[1240px] mx-auto px-4 sm:px-8 pt-16 pb-20 sm:pt-32 sm:pb-32 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 relative z-10 flex-1">

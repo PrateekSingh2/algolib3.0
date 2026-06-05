@@ -1,7 +1,27 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { User, onAuthStateChanged, GoogleAuthProvider, GithubAuthProvider, signInWithPopup } from "firebase/auth";
+import { User, onAuthStateChanged, GoogleAuthProvider, GithubAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { toast } from "sonner";
 import { auth } from "@/lib/firebase";
+
+// ─── Session Configuration ────────────────────────────────────────────────────
+const SESSION_KEY = "algolib_session_login_ts";
+const SESSION_MAX_DAYS = 15;
+const SESSION_MAX_MS = SESSION_MAX_DAYS * 24 * 60 * 60 * 1000;
+
+const stampSession = () => {
+  localStorage.setItem(SESSION_KEY, Date.now().toString());
+};
+
+const isSessionExpired = (): boolean => {
+  const ts = localStorage.getItem(SESSION_KEY);
+  if (!ts) return false; // No stamp means fresh session — don't boot them
+  const age = Date.now() - parseInt(ts, 10);
+  return age > SESSION_MAX_MS;
+};
+
+const clearSession = () => {
+  localStorage.removeItem(SESSION_KEY);
+};
 
 export interface AppUserProfile {
   id: string;
@@ -38,6 +58,7 @@ export const executeGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     await signInWithPopup(auth, provider);
+    stampSession(); // Mark session start time
   } catch (error) {
     console.error("Google Sign-In failed:", error);
     toast.error("Sign-in cancelled or failed.");
@@ -48,6 +69,7 @@ export const executeGithubSignIn = async () => {
   try {
     const provider = new GithubAuthProvider();
     await signInWithPopup(auth, provider);
+    stampSession(); // Mark session start time
   } catch (error) {
     console.error("GitHub Sign-In failed:", error);
     toast.error("GitHub Sign-in cancelled or failed.");
@@ -93,6 +115,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+
+      // ─── 15-Day Session Expiry Check ────────────────────────────────────────
+      if (firebaseUser && isSessionExpired()) {
+        clearSession();
+        await signOut(auth);
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        toast.info("Your session has expired. Please sign in again.", {
+          description: "Sessions expire after 15 days of inactivity for security.",
+          duration: 6000,
+        });
+        return;
+      }
+
+      // If user is logging in fresh (no stamp yet), stamp now
+      if (firebaseUser && !localStorage.getItem(SESSION_KEY)) {
+        stampSession();
+      }
+
       setUser(firebaseUser);
 
       if (!firebaseUser) {

@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => ({
     })] : []),
 
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       devOptions: {
         enabled: false,

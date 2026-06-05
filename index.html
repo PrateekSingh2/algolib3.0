@@ -84,8 +84,49 @@
 <!-- Removed window.deferredPWAInstallPrompt script to fix global scope pollution -->
   </head>
 
+<!-- ═══ VERSION SENTINEL ═══════════════════════════════════════════════════════
+     This script executes SYNCHRONOUSLY before React boots.
+     It forces an immediate cache-purge + hard-reload for stale users who
+     never interact long enough to see the PWA update toast.
+     Bump ALGOLIB_VERSION with every deployment that requires a forced refresh.
+  ════════════════════════════════════════════════════════════════════════════ -->
+  <script>
+    (function() {
+      var CURRENT_VERSION = '3.2.0'; // ← bump this on every major deploy
+      var STORED_KEY = 'algolib_app_version';
+      var stored = localStorage.getItem(STORED_KEY);
+      if (stored && stored !== CURRENT_VERSION) {
+        // Version mismatch — purge all caches and hard reload
+        localStorage.setItem(STORED_KEY, CURRENT_VERSION);
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            return Promise.all(names.map(function(name) { return caches.delete(name); }));
+          }).then(function() {
+            // Unregister all service workers so they re-install clean
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                regs.forEach(function(r) { r.unregister(); });
+                window.location.reload(true);
+              });
+            } else {
+              window.location.reload(true);
+            }
+          });
+        } else {
+          window.location.reload(true);
+        }
+        return; // Don't execute anything else in this load cycle
+      }
+      // First-time visitor or already up-to-date: stamp version
+      if (!stored) {
+        localStorage.setItem(STORED_KEY, CURRENT_VERSION);
+      }
+    })();
+  </script>
+
   <body>
     <noscript>You need to enable JavaScript to run AlgoLib - The Interactive Algorithm Visualizer and Contest Arena.</noscript>
+
     
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
