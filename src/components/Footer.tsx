@@ -190,6 +190,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
             <div className="flex flex-col items-center md:items-start text-center md:text-left">
               <h4 className="text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90 drop-shadow-sm">Legal</h4>
               <ul className="space-y-3.5 flex flex-col items-center md:items-start">
+                <FooterLink name="Testimonials" path="/testimonials" isRestricted={false} onClick={handleLinkClick} />
                 <FooterLink name="Terms of Service" path="/terms" isRestricted={false} onClick={handleLinkClick} />
                 <FooterLink name="Privacy Policy" path="/privacy" isRestricted={false} onClick={handleLinkClick} />
                 <FooterLink name="Cookie Policy" path="/cookies" isRestricted={false} onClick={handleLinkClick} />

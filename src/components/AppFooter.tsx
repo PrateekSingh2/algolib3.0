@@ -11,6 +11,7 @@ const AppFooter = () => {
         © 2026 AlgoLib | All rights reserved.
       </div>
       <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6">
+        <Link to="/testimonials" className="hover:text-zinc-300 transition-colors">Testimonials</Link>
         <Link to="/terms" className="hover:text-zinc-300 transition-colors">Terms</Link>
         <Link to="/privacy" className="hover:text-zinc-300 transition-colors">Privacy</Link>
         

@@ -64,6 +64,7 @@ const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Cookies = lazy(() => import("./pages/Cookies"));
 const Sheets = lazy(() => import("./pages/Sheets"));
+const Testimonials = lazy(() => import("./pages/Testimonials"));
 const DSASheet = lazy(() => import("./pages/DSASheet"));
 const CPSheet = lazy(() => import("./pages/CPSheet"));
 const TopicDetail = lazy(() => import("./pages/TopicDetail"));
@@ -266,7 +267,7 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, profile, loading } = useAuth();
   const location = useLocation();
 
-  const publicRoutes = ['/terms', '/privacy', '/cookies', '/developer', '/support', '/docs', '/compiler', '/visualizer', '/discover'];
+  const publicRoutes = ['/terms', '/privacy', '/cookies', '/developer', '/support', '/docs', '/compiler', '/visualizer', '/discover', '/testimonials'];
   const isPublicRoute = publicRoutes.includes(location.pathname.replace(/\/$/, '')) || location.pathname.startsWith('/blog/');
 
   const getCleanPath = (path: string) => {
@@ -342,6 +343,7 @@ const AppRoutes = () => {
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/cookies" element={<Cookies />} />
+        <Route path="/testimonials" element={<Testimonials />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
