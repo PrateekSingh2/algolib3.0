@@ -123,20 +123,46 @@ const MarqueeRow: React.FC<{ items: Testimonial[]; reverse?: boolean; startIdx: 
   );
 };
 
+// ── Skeleton card while loading ─────────────────────────────────────────────
+const SkeletonCard = () => (
+  <div className="mx-3 w-[320px] flex-shrink-0 p-5 rounded-[20px] bg-white/[0.03] border border-white/[0.06] animate-pulse">
+    <div className="flex gap-0.5 mb-3">{[...Array(5)].map((_,i) => <div key={i} className="w-3 h-3 rounded-full bg-white/10" />)}</div>
+    <div className="space-y-2 mb-4"><div className="h-2.5 bg-white/10 rounded-full w-full" /><div className="h-2.5 bg-white/10 rounded-full w-5/6" /><div className="h-2.5 bg-white/10 rounded-full w-4/6" /></div>
+    <div className="flex items-center gap-3 pt-3 border-t border-white/[0.04]">
+      <div className="w-9 h-9 rounded-full bg-white/10 flex-shrink-0" />
+      <div className="space-y-1.5"><div className="h-2.5 bg-white/10 rounded-full w-24" /><div className="h-2 bg-white/10 rounded-full w-16" /></div>
+    </div>
+  </div>
+);
+
+const SkeletonRow = () => (
+  <div className="flex overflow-hidden" style={{ maskImage: "linear-gradient(to right,transparent 0%,black 8%,black 92%,transparent 100%)" }}>
+    {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+  </div>
+);
+
 // ── Main component ──────────────────────────────────────────────────────────
 const FooterCTA: React.FC<FooterCTAProps> = ({ onGetStarted }) => {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
-  const [testimonials, setTestimonials] = useState<Testimonial[]>(FALLBACK);
+  // Start empty — DB is the source of truth; FALLBACK only if fetch fails
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchFailed, setFetchFailed] = useState(false);
 
   useEffect(() => {
     fetch("/.netlify/functions/get-testimonials?landing=true")
-      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(r => { if (!r.ok) throw new Error("non-ok"); return r.json(); })
       .then((data: Testimonial[]) => {
-        if (data.length >= 2) setTestimonials(data);
+        // Use DB data if it has anything; else fall back to static
+        setTestimonials(data.length > 0 ? data : FALLBACK);
+        if (data.length === 0) setFetchFailed(true);
       })
-      .catch(() => { /* keep fallback */ })
+      .catch(() => {
+        // Network/server error → show fallback
+        setTestimonials(FALLBACK);
+        setFetchFailed(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -175,9 +201,21 @@ const FooterCTA: React.FC<FooterCTAProps> = ({ onGetStarted }) => {
           transition={{ delay: 0.3, duration: 0.6 }}
           className="flex flex-col gap-4"
         >
-          {row1.length > 0 && <MarqueeRow items={row1} startIdx={0} />}
-          {row2.length > 0 && <MarqueeRow items={row2} reverse startIdx={half} />}
+          {loading ? (
+            // Show skeleton rows while fetching from DB
+            <>
+              <SkeletonRow />
+              <SkeletonRow />
+            </>
+          ) : (
+            // Render DB data (or fallback if DB failed)
+            <>
+              {row1.length > 0 && <MarqueeRow items={row1} startIdx={0} />}
+              {row2.length > 0 && <MarqueeRow items={row2} reverse startIdx={half} />}
+            </>
+          )}
         </motion.div>
+
       </section>
 
       {/* ── CTA Section ──────────────────────────────────── */}
