@@ -10,6 +10,10 @@
 # ─────────────────────────────────────────────────────────────────────────────
 [functions]
   directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[functions.realTimeVisualizer]
+  timeout = 60
 
 # ─────────────────────────────────────────────────────────────────────────────
 # LOCAL DEV  (used by `netlify dev`)

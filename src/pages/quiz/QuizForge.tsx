@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { onAuthStateChanged, User } from "firebase/auth";
-import { auth, loginWithGoogle } from "../lib/firebase"; 
+import { auth, loginWithGoogle } from "../../lib/firebase"; 
 import ReactMarkdown from 'react-markdown';
 import { 
   ShieldAlert, CheckCircle2, LayoutGrid, Trophy, Loader2, SearchX, 

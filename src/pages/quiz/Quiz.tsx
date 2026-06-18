@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { onAuthStateChanged, User } from "firebase/auth";
-import { auth, loginWithGoogle } from "../lib/firebase"; 
+import { auth, loginWithGoogle } from "../../lib/firebase"; 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { 

@@ -16,7 +16,7 @@ import { motion } from "framer-motion";
 import type { Variants } from "framer-motion"; // <-- Explicit Variants import
 import { Link } from "react-router-dom";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { firestoreDB } from "../lib/firebase";
+import { firestoreDB } from "../../lib/firebase";
 import { toast } from "sonner";
 import AppFooter from '@/components/AppFooter';
 import Navbar from '@/components/Navbar';

@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import Navbar from "@/components/Navbar";
 import AppFooter from "@/components/AppFooter";
 import AuthModal from "@/components/AuthModal";
-import HeroSection from "./landing/HeroSection";
-import FeaturesGrid from "./landing/FeaturesGrid";
-import PlaygroundSection from "./landing/PlaygroundSection";
-import DiscoverSection from "./landing/DiscoverSection";
-import FAQSection from "./landing/FAQSection";
-import FooterCTA from "./landing/FooterCTA";
+import HeroSection from "./HeroSection";
+import FeaturesGrid from "./FeaturesGrid";
+import PlaygroundSection from "./PlaygroundSection";
+import DiscoverSection from "./DiscoverSection";
+import FAQSection from "./FAQSection";
+import FooterCTA from "./FooterCTA";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function LandingPage() {

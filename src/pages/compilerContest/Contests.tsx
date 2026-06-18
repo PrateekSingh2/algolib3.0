@@ -7,7 +7,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { auth, firestoreDB } from '../lib/firebase';
+import { auth, firestoreDB } from '../../lib/firebase';
 import { BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const VIDEO_URL = "https://ik.imagekit.io/g7e4hyclo/contest-bg.mp4";

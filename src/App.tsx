@@ -38,36 +38,39 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAuth, executeGoogleSignIn, executeGithubSignIn } from "@/contexts/AuthContext";
 import { useCookieConsent } from "./contexts/CookieContext";
 import Navbar from "./components/Navbar";
-import Vectoris from "./pages/Vectoris";
-import Quiz from "./pages/Quiz";
-import QuizPanel from "./pages/QuizPanel";
-import QuizForge from "./pages/QuizForge";
+import Vectoris from "./pages/vectoris/Vectoris";
+import Quiz from "./pages/quiz/Quiz";
+import QuizPanel from "./pages/quiz/QuizPanel";
+import QuizForge from "./pages/quiz/QuizForge";
 import Maintenance from "./pages/Maintenance";
 
 // --- LAZY LOADED ROUTES ---
 import Index from "./pages/Index";
-import LandingPage from "./pages/LandingPage";
+import LandingPage from "./pages/landing/LandingPage";
 const SnippetView = lazy(() => import("./pages/SnippetView"));
-const Visualizer = lazy(() => import("./pages/Visualizer"));
+const Visualizer = lazy(() => import("./pages/visualizer/Visualizer"));
+const SnippetVisualizer = lazy(() => import("./pages/visualizer/SnippetVisualizer"));
+const DynamicVisualizerEngine = lazy(() => import("./pages/visualizer-dynamic/DynamicVisualizerEngine"));
 const Developer = lazy(() => import("./pages/Developer"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Status = lazy(() => import("./pages/Status/status"));
 const Docs = lazy(() => import("./pages/Docs"));
-const Notes = lazy(() => import("./pages/Notes"));
-const Support = lazy(() => import("./pages/Support"));
+const Notes = lazy(() => import("./pages/notes/Notes"));
+const Support = lazy(() => import("./pages/legals/Support"));
 const Community = lazy(() => import("./components/Community"));
-const EditProfile = lazy(() => import("./pages/EditProfile"));
-const Profile = lazy(() => import("./pages/Profile"));
-const ContestPanel = lazy(() => import("./pages/ContestPanel"));
-const Contests = lazy(() => import("./pages/Contests"));
-const Compiler = lazy(() => import("./pages/Compiler"));
-const Terms = lazy(() => import("./pages/Terms"));
-const Privacy = lazy(() => import("./pages/Privacy"));
-const Cookies = lazy(() => import("./pages/Cookies"));
-const Sheets = lazy(() => import("./pages/Sheets"));
+const EditProfile = lazy(() => import("./pages/userprofile/EditProfile"));
+const Profile = lazy(() => import("./pages/userprofile/Profile"));
+const ContestPanel = lazy(() => import("./pages/compilerContest/ContestPanel"));
+const Contests = lazy(() => import("./pages/compilerContest/Contests"));
+const Compiler = lazy(() => import("./pages/compilerContest/Compiler"));
+const Terms = lazy(() => import("./pages/legals/Terms"));
+const Privacy = lazy(() => import("./pages/legals/Privacy"));
+const Cookies = lazy(() => import("./pages/legals/Cookies"));
+const Sheets = lazy(() => import("./pages/sheets/Sheets"));
 const Testimonials = lazy(() => import("./pages/Testimonials"));
-const DSASheet = lazy(() => import("./pages/DSASheet"));
-const CPSheet = lazy(() => import("./pages/CPSheet"));
-const TopicDetail = lazy(() => import("./pages/TopicDetail"));
+const DSASheet = lazy(() => import("./pages/sheets/DSASheet"));
+const CPSheet = lazy(() => import("./pages/sheets/CPSheet"));
+const TopicDetail = lazy(() => import("./pages/sheets/TopicDetail"));
 const queryClient = new QueryClient();
 
 // Removed sign in handlers to AuthContext to fix Fast Refresh issues
@@ -324,6 +327,8 @@ const AppRoutes = () => {
         <Route path="/support" element={<Support />} />
         <Route path="/view/:id" element={<SnippetView />} />
         <Route path="/visualizer" element={<Visualizer />} />
+        <Route path="/snippet-visualizer" element={<SnippetVisualizer />} />
+        <Route path="/ai-visualizer" element={<DynamicVisualizerEngine />} />
         <Route path="/developer" element={<Developer />} />
         <Route path="/discussion" element={<Community />} />
         <Route path="/profile" element={<Profile />} />
@@ -344,6 +349,7 @@ const AppRoutes = () => {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/cookies" element={<Cookies />} />
         <Route path="/testimonials" element={<Testimonials />} />
+        <Route path="/status" element={<Status />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

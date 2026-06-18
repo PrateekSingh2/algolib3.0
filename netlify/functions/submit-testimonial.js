@@ -28,7 +28,7 @@ exports.handler = async (event) => {
         text: text.trim(),
         rating: Math.min(5, Math.max(1, Number(rating) || 5)),
         image_url: image_url?.trim() || null,
-        approved: false,        // admin must approve
+        approved: true,        // admin must approve
         show_on_landing: false, // admin controls this
       }])
       .select()

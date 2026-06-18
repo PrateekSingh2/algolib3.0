@@ -109,7 +109,6 @@ const SubmitModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.07]">
           <div>
             <h2 className="font-bold text-white text-base">Share Your Experience</h2>
-            <p className="text-xs text-white/40 mt-0.5">Reviews go live after admin approval</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.05] hover:bg-white/10 text-white/50 hover:text-white transition-all"><X size={15} /></button>
         </div>
@@ -121,7 +120,7 @@ const SubmitModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <CheckCircle className="w-8 h-8 text-[#00e676]" />
               </div>
               <h3 className="font-bold text-white text-lg mb-2">Review Submitted!</h3>
-              <p className="text-white/40 text-sm">Thank you! Your review will appear once approved by our team.</p>
+              <p className="text-white/40 text-sm">Thank you! Your review has been successfully submitted.</p>
               <button onClick={onClose} className="mt-6 px-6 py-2.5 rounded-2xl bg-[#00e676]/15 border border-[#00e676]/30 text-[#00e676] text-sm font-semibold hover:bg-[#00e676]/25 transition-all">Close</button>
             </motion.div>
           ) : (
@@ -188,7 +187,7 @@ const SubmitModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 const SkeletonCard = () => (
-  <div className="p-6 rounded-[20px] bg-white/[0.03] border border-white/[0.06] animate-pulse">
+  <div className="p-6 rounded-[20px] bg-white/[0.03] border border-white/[0.06] animate-pulse break-inside-avoid inline-block w-full mb-5">
     <div className="flex gap-0.5 mb-4">{[...Array(5)].map((_, i) => <div key={i} className="w-3 h-3 rounded-full bg-white/10" />)}</div>
     <div className="space-y-2 mb-5"><div className="h-3 bg-white/10 rounded-full w-full" /><div className="h-3 bg-white/10 rounded-full w-4/5" /><div className="h-3 bg-white/10 rounded-full w-3/5" /></div>
     <div className="flex items-center gap-3 pt-3 border-t border-white/[0.04]"><div className="w-10 h-10 rounded-full bg-white/10" /><div className="space-y-1.5"><div className="h-2.5 bg-white/10 rounded-full w-24" /><div className="h-2 bg-white/10 rounded-full w-16" /></div></div>
@@ -244,12 +243,6 @@ const TestimonialsPage: React.FC = () => {
           </h1>
           <p className="text-white/40 text-lg max-w-lg mx-auto mb-8">Real reviews from real programmers who use AlgoLib to learn, practice and compete.</p>
 
-          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl font-bold text-sm text-black transition-all"
-            style={{ background: "linear-gradient(135deg,#00e676,#00bcd4)", boxShadow: "0 0 32px rgba(0,230,118,0.3)" }}>
-            <Plus className="w-4 h-4" /> Write a Review
-          </motion.button>
-
           {/* Stats */}
           <div className="flex flex-wrap items-center justify-center gap-5 mt-10">
             {[[`⭐ ${avg}`, "Average Rating"], [`🏆 ${fiveStar}`, "5-Star Reviews"], [`💬 ${all.length}+`, "Total Reviews"]].map(([v, l]) => (
@@ -283,28 +276,33 @@ const TestimonialsPage: React.FC = () => {
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
           </div>
+          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setShowModal(true)}
+            className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl font-bold text-sm text-black transition-all"
+            style={{ background: "linear-gradient(135deg,#00e676,#00bcd4)", boxShadow: "0 0 32px rgba(0,230,118,0.3)" }}>
+            <Plus className="w-4 h-4" /> Write a Review
+          </motion.button>
         </div>
 
         {/* ── Grid ── */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-5">
             {[...Array(9)].map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-24">
+          <div className="text-center py-24 block">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-xl font-bold text-white/70 mb-2">No reviews found</h3>
             <p className="text-white/35 text-sm">Try adjusting your search or filters.</p>
           </div>
         ) : (
-          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <motion.div layout className="columns-1 sm:columns-2 lg:columns-3 gap-5">
             <AnimatePresence>
               {filtered.map((t, i) => {
                 const c = COLORS[i % COLORS.length];
                 return (
                   <motion.div key={t.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }} transition={{ delay: i * 0.03, duration: 0.4 }}
-                    className="group p-6 rounded-[20px] bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] flex flex-col gap-4 relative overflow-hidden hover:border-white/[0.15] transition-all duration-300"
+                    className="break-inside-avoid inline-block w-full mb-5 group p-6 rounded-[20px] bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] flex flex-col gap-4 relative overflow-hidden hover:border-white/[0.15] transition-all duration-300"
                     style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.05)" }}>
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                       style={{ background: `radial-gradient(circle at 15% 15%,${c.from}12,transparent 55%)` }} />
@@ -320,7 +318,7 @@ const TestimonialsPage: React.FC = () => {
                       <Avatar name={t.name} image_url={t.image_url} idx={i} />
                       <div>
                         <p className="text-[13px] font-semibold text-white/90">{t.name}</p>
-                        <p className="text-[11px] text-white/40 mt-0.5">{t.role}</p>
+                        <p className="text-[11px] text-white/60 mt-0.5">{t.role}</p>
                       </div>
                     </div>
                   </motion.div>

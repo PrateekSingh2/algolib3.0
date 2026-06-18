@@ -8,27 +8,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── FIREBASE & CONTEXT IMPORTS ──────────────────────────────────────────────
 import { firestoreDB as db } from "@/lib/firebase";
-import { doc, onSnapshot, collection, addDoc, updateDoc, serverTimestamp, query, orderBy, deleteDoc } from "firebase/firestore";
+import { doc, onSnapshot, collection, addDoc, updateDoc, serverTimestamp, query, orderBy, deleteDoc, getDoc } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Navbar from "@/components/Navbar"; 
+import TerminalCode from "./TerminalCode";
 
 // ─── MATH RENDERING IMPORTS ──────────────────────────────────────────────────
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
+import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-
-// ─── LAZY LOADED MARKDOWN RENDERER ───────────────────────────────────────────
-const LazyMarkdown = React.lazy(() => import('@/components/MarkdownRenderer'));
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface AnalysisResult {
   type: 'analysis' | 'optimization' | 'translation' | 'chat'; 
   timeComplexity?: string; 
   spaceComplexity?: string;
-  explanation: string;
+  explanation?: string;
   code?: string;
 }
 
@@ -47,37 +46,78 @@ interface HistoryItem {
   updatedAt?: any;
 }
 
+// ─── Math & String Sanitizer ────────────────────────────────────────────────
+const sanitizeLatex = (text: string) => {
+  if (!text) return "";
+  
+  // 1. Recover JSON-mangled escape sequences to stop KaTeX ParseErrors (Red Text)
+  let clean = text
+    .replace(/\x0C/g, '\\f') // Form feed -> \f (\frac)
+    .replace(/\x08/g, '\\b') // Backspace -> \b (\boxed)
+    .replace(/\x09/g, '\\t') // Tab -> \t (\tan)
+    .replace(/\x0D/g, '\\r') // Carriage return -> \r (\right)
+    .replace(/\x0B/g, '\\v'); // Vertical tab -> \v (\vec)
+
+  // 2. Fix commonly hallucinated missing backslashes
+  clean = clean
+    .replace(/\bint\b/g, '\\int')
+    .replace(/\bleft\b/g, '\\left')
+    .replace(/\bight\b/g, '\\right')
+    .replace(/\bcdot\b/g, '\\cdot')
+    .replace(/an\^\{-1\}/g, '\\tan^{-1}')
+    .replace(/cot\^\{-1\}/g, '\\cot^{-1}');
+
+  // 3. Convert backtick-wrapped math into proper inline Katex ($...$)
+  clean = clean.replace(/`([^`]*?(?:\\[a-zA-Z]+|\^\{|_\{)[^`]*?)`/g, (match, p1) => {
+    return `$ ${p1.trim()} $`;
+  });
+
+  // 4. Auto-wrap raw equations that LLM forgot to wrap
+  const lines = clean.split('\n');
+  const processedLines = lines.map(line => {
+    if (line.includes('$') || line.includes('\\[') || line.includes('\\(')) return line;
+    
+    const trimmed = line.trim();
+    // If the line is purely an equation
+    if (
+      trimmed.startsWith('\\int') || 
+      trimmed.startsWith('-\\int') || 
+      trimmed.startsWith('\\frac') || 
+      trimmed.startsWith('-\\frac') || 
+      trimmed.startsWith('\\cot') || 
+      trimmed.startsWith('-\\cot') ||
+      trimmed.startsWith('\\tan')
+    ) {
+      return `$$${trimmed}$$`;
+    }
+    return line;
+  });
+
+  return processedLines.join('\n');
+};
+
 // ─── Dynamic Graph Parsing Logic (Strict Mathematical Plotter) ──────────────────────
 const parseComplexity = (str?: string) => {
   const s = (str || '').toLowerCase();
   
-  // 1. Strip visual LaTeX formatting but KEEP the math content inside the braces
   let cleanStr = s.replace(/\\(?:mathrm|text|operatorname|mathit|mathbf|mathcal|mathsf)\{([^}]+)\}/g, '$1');
-  
-  // 2. Remove other stray LaTeX commands, but preserve essential math operators
   cleanStr = cleanStr.replace(/\\[a-zA-Z]+/g, (match) => {
     if (match === '\\sqrt' || match === '\\log' || match === '\\ln') return match;
     return ''; 
   });
 
-  // 3. Extract the core expression inside O(...)
   const oMatch = cleanStr.match(/o\s*\((.*)\)/);
   const coreExpr = oMatch ? oMatch[1] : cleanStr;
 
-  // 4. Pure Mathematical Mapping (NO scaling modifiers)
   if (coreExpr.includes('!')) {
-    // True Factorial calculation
     return { name: 'Factorial', fn: (n: number) => { let r=1; for(let i=1;i<=n;i++)r*=i; return r; }, color: '#f43f5e' }; 
   }
-  
   if (coreExpr.includes('2^') || coreExpr.includes('e^') || coreExpr.includes('3^') || coreExpr.includes('c^')) {
     return { name: 'Exponential', fn: (n: number) => Math.pow(2, n), color: '#c084fc' };
   }
-  
   if (coreExpr.includes('^3') || (coreExpr.match(/n/g) || []).length >= 3) {
     return { name: 'Cubic', fn: (n: number) => Math.pow(n, 3), color: '#e11d48' };
   }
-  
   if (coreExpr.includes('^2') || ((coreExpr.match(/n/g) || []).length === 2 && coreExpr.includes('*'))) {
     return { name: 'Quadratic', fn: (n: number) => Math.pow(n, 2), color: '#f87171' };
   }
@@ -89,24 +129,13 @@ const parseComplexity = (str?: string) => {
   if (hasN && hasLog) {
     const nIdx = Math.max(coreExpr.indexOf('n'), coreExpr.indexOf('m'));
     const logIdx = coreExpr.indexOf('log') !== -1 ? coreExpr.indexOf('log') : coreExpr.indexOf('ln');
-    
     if (nIdx < logIdx || coreExpr.includes('*')) {
-       // +1 prevents log2(1) from being 0, improving the visual start of the curve
        return { name: 'Linearithmic', fn: (n: number) => n * Math.log2(n + 1), color: '#fb923c' };
     }
   }
-  
-  if (hasRoot) {
-    return { name: 'Square Root', fn: (n: number) => Math.sqrt(n), color: '#a3e635' };
-  }
-  
-  if (hasLog) {
-    return { name: 'Logarithmic', fn: (n: number) => Math.log2(n + 1), color: '#38bdf8' };
-  }
-  
-  if (hasN) {
-    return { name: 'Linear', fn: (n: number) => n, color: '#facc15' };
-  }
+  if (hasRoot) return { name: 'Square Root', fn: (n: number) => Math.sqrt(n), color: '#a3e635' };
+  if (hasLog) return { name: 'Logarithmic', fn: (n: number) => Math.log2(n + 1), color: '#38bdf8' };
+  if (hasN) return { name: 'Linear', fn: (n: number) => n, color: '#facc15' };
 
   return { name: 'Constant', fn: (n: number) => 1, color: '#4ade80' };
 };
@@ -120,7 +149,7 @@ const FormattedComplexity = ({ text, color, className }: { text?: string, color?
     <div style={{ color }} className={`inline-block ${className || ''}`}>
       <ReactMarkdown 
         remarkPlugins={[remarkMath]} 
-        rehypePlugins={[rehypeKatex]} 
+        rehypePlugins={[[rehypeKatex, { strict: false }]]} 
         components={{ p: React.Fragment }}
       >
         {content}
@@ -138,22 +167,14 @@ const SUGGESTIONS = [
   { icon: <AlertCircle size={18}/>, text: "Find memory leaks" },
 ];
 
+const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+const itemVariants = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } } };
+
 const safeStringify = (data: any): string => {
   if (!data) return '';
   if (typeof data === 'string') return data;
-  if (typeof data === 'object') {
-    try {
-      return Object.entries(data).map(([key, value]) => `/* --- ${key} --- */\n${value}`).join('\n\n');
-    } catch (e) {
-      return JSON.stringify(data, null, 2);
-    }
-  }
-  return String(data);
+  try { return JSON.stringify(data, null, 2); } catch (e) { return String(data); }
 };
-
-// --- Framer Motion Variants ---
-const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
-const itemVariants = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } } };
 
 export default function Analyzer() {
   const { user, profile } = useAuth(); 
@@ -165,7 +186,6 @@ export default function Analyzer() {
   const [inputCode, setInputCode] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -204,12 +224,6 @@ export default function Analyzer() {
     e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
   };
 
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
   const handleNewAnalysis = () => {
     setMessages([]);
     setInputCode('');
@@ -225,12 +239,27 @@ export default function Analyzer() {
     }
   };
 
-  // ─── Firebase Listeners ────────────────────────────────
+  // ─── Firebase Listeners & Credit Check ────────────────────────────────
   useEffect(() => {
     let unsubscribeCredits: () => void;
     let unsubscribeHistory: () => void;
 
+    const refreshCreditsIfNeeded = async (uid: string) => {
+      const docRef = doc(db, 'user_credits', uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const lastUpdated = data.lastUpdated?.toMillis() || 0;
+        const now = Date.now();
+        if (now - lastUpdated > 10800000 && data.credits < 7) {
+          await updateDoc(docRef, { credits: 7, lastUpdated: serverTimestamp() });
+        }
+      }
+    };
+
     if (user) {
+      refreshCreditsIfNeeded(user.uid).catch(console.error);
+
       unsubscribeCredits = onSnapshot(doc(db, 'user_credits', user.uid), (docSnap) => {
         if (docSnap.exists()) setCredits(docSnap.data().credits);
         else setCredits(7); 
@@ -274,7 +303,7 @@ export default function Analyzer() {
 
       const recentHistory = currentMessages.slice(-6).map(m => ({
         role: m.role,
-        content: m.role === 'user' ? m.content : (m.result?.type === 'chat' ? m.result.explanation : JSON.stringify(m.result))
+        content: m.role === 'user' ? m.content : (m.result?.explanation || '')
       }));
 
       const response = await fetch('/.netlify/functions/ask-groq', {
@@ -284,9 +313,7 @@ export default function Analyzer() {
       });
 
       if (!response.ok) {
-        if (response.status === 403 || response.status === 429) {
-          throw new Error("Credits finished. Credits renews after 3hr.");
-        }
+        if (response.status === 403 || response.status === 429) throw new Error("Credits finished. Credits renews after 3hr.");
         throw new Error(`Something went wrong (Error ${response.status}). Please try again.`);
       }
 
@@ -355,29 +382,23 @@ export default function Analyzer() {
 
   const isHomeState = messages.length === 0;
 
-  // ─── DYNAMIC GRAPH DATA COMPUTATION ───
   const activeParsedComplexity = activeAnalysis ? parseComplexity(activeAnalysis.timeComplexity) : null;
-  
-  // Adjusted domains based on pure math growth to prevent axis breaking
   let maxN = 20;
   if (activeParsedComplexity) {
-    if (activeParsedComplexity.name === 'Factorial') maxN = 8; // 8! = 40,320
-    else if (activeParsedComplexity.name === 'Exponential') maxN = 15; // 2^15 = 32,768
+    if (activeParsedComplexity.name === 'Factorial') maxN = 8;
+    else if (activeParsedComplexity.name === 'Exponential') maxN = 15;
   }
 
   const dynamicChartData = activeParsedComplexity 
     ? Array.from({ length: maxN }, (_, i) => ({ n: i + 1, value: activeParsedComplexity.fn(i + 1) }))
     : [];
 
-  const formatYAxis = (num: number) => {
-    return Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
-  };
+  const formatYAxis = (num: number) => Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
 
   return (
     <div className="flex h-[100dvh] bg-[#0c0c0e] text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30">
-      <Helmet><title>Vectoris | AlgoLib</title></Helmet>
+      <Helmet><title>Vectoris | AlgoLib's AI</title></Helmet>
 
-      {/* ─── CUSTOM TOAST ALERTS ─── */}
       <AnimatePresence>
         {toastMessage && (
           <motion.div 
@@ -392,7 +413,6 @@ export default function Analyzer() {
         )}
       </AnimatePresence>
 
-      {/* ─── FULL-SCREEN MAXIMIZED GRAPH MODAL ─── */}
       <AnimatePresence>
         {activeAnalysis && activeParsedComplexity && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8">
@@ -425,19 +445,11 @@ export default function Analyzer() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   <div className="p-6 rounded-3xl bg-white/5 border border-white/10 shadow-inner">
                     <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Time Complexity</span>
-                    <FormattedComplexity 
-                      text={activeAnalysis.timeComplexity} 
-                      color={activeParsedComplexity.color}
-                      className="text-4xl md:text-5xl font-extrabold drop-shadow-md" 
-                    />
+                    <FormattedComplexity text={activeAnalysis.timeComplexity} color={activeParsedComplexity.color} className="text-4xl md:text-5xl font-extrabold drop-shadow-md" />
                   </div>
                   <div className="p-6 rounded-3xl bg-white/5 border border-white/10 shadow-inner">
                     <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 block">Space Complexity</span>
-                    <FormattedComplexity 
-                      text={activeAnalysis.spaceComplexity} 
-                      color={parseComplexity(activeAnalysis.spaceComplexity).color}
-                      className="text-4xl md:text-5xl font-extrabold drop-shadow-md" 
-                    />
+                    <FormattedComplexity text={activeAnalysis.spaceComplexity} color={parseComplexity(activeAnalysis.spaceComplexity).color} className="text-4xl md:text-5xl font-extrabold drop-shadow-md" />
                   </div>
                 </div>
                 
@@ -446,39 +458,13 @@ export default function Analyzer() {
                     Behavior: <span style={{ color: activeParsedComplexity.color }}>{activeParsedComplexity.name}</span>
                   </div>
 
-                  {/* FIX: Formatted Y-Axis and explicit margins */}
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={dynamicChartData} margin={{ top: 40, right: 20, left: 10, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="4 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                      <XAxis 
-                        dataKey="n" 
-                        stroke="#52525b" 
-                        tick={{fill: '#71717a', fontSize: 11}} 
-                        axisLine={false} 
-                        tickLine={false} 
-                        minTickGap={15}
-                      />
-                      <YAxis 
-                        stroke="#52525b" 
-                        tick={{fill: '#71717a', fontSize: 11}} 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tickFormatter={formatYAxis}
-                        width={40}
-                      />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: 'rgba(20,20,22,0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
-                        labelFormatter={(label) => `Input Size (N): ${label}`}
-                        formatter={(val: number) => [formatYAxis(val), 'Operations']} 
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="value" 
-                        stroke={activeParsedComplexity.color} 
-                        strokeWidth={3} 
-                        dot={false} 
-                        style={{ filter: `drop-shadow(0 0 10px ${activeParsedComplexity.color}80)` }}
-                      />
+                      <XAxis dataKey="n" stroke="#52525b" tick={{fill: '#71717a', fontSize: 11}} axisLine={false} tickLine={false} minTickGap={15} />
+                      <YAxis stroke="#52525b" tick={{fill: '#71717a', fontSize: 11}} axisLine={false} tickLine={false} tickFormatter={formatYAxis} width={40} />
+                      <Tooltip contentStyle={{ backgroundColor: 'rgba(20,20,22,0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }} labelFormatter={(label) => `Input Size (N): ${label}`} formatter={(val: number) => [formatYAxis(val), 'Operations']} />
+                      <Line type="monotone" dataKey="value" stroke={activeParsedComplexity.color} strokeWidth={3} dot={false} style={{ filter: `drop-shadow(0 0 10px ${activeParsedComplexity.color}80)` }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -488,7 +474,6 @@ export default function Analyzer() {
         )}
       </AnimatePresence>
 
-      {/* ─── SIDEBAR ─── */}
       <aside 
         className={`absolute md:relative z-[60] h-full flex flex-col bg-white/5 backdrop-blur-2xl transition-all duration-300 ease-in-out shrink-0 border-r border-white/10
         ${isSidebarOpen ? 'w-[280px] translate-x-0' : 'w-[280px] -translate-x-full md:translate-x-0 md:w-0'} overflow-hidden shadow-[4px_0_24px_rgba(0,0,0,0.5)] md:shadow-none`}
@@ -559,7 +544,6 @@ export default function Analyzer() {
 
       {isSidebarOpen && <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm md:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
-      {/* ─── MAIN CONTENT ─── */}
       <main className="flex-1 flex flex-col h-full relative min-w-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1a1a24] via-[#0c0c0e] to-[#0c0c0e]">
         
         <header className="flex items-center justify-between p-4 absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-[#0c0c0e] via-[#0c0c0e]/80 to-transparent pointer-events-none">
@@ -600,41 +584,84 @@ export default function Analyzer() {
             )}
 
             {!isHomeState && (
-              <div className="flex flex-col gap-8 mt-4 pb-4">
+              <div className="flex flex-col gap-8 mt-4 pb-4 w-full max-w-full">
                 {messages.map((msg, idx) => {
                   const originalCodeMsg = messages.slice(0, idx).reverse().find(m => m.role === 'user');
+                  
+                  // Run Sanitization Layer BEFORE ReactMarkdown encounters it
+                  let displayContent = msg.result?.explanation || "";
+                  if (msg.result?.code) {
+                    if (displayContent === "") {
+                      displayContent = /```|\*\*|###|\$\w+/.test(msg.result.code) 
+                        ? msg.result.code 
+                        : `\`\`\`code\n${msg.result.code}\n\`\`\``;
+                    } else if (!displayContent.includes(msg.result.code)) {
+                      displayContent += `\n\n\`\`\`code\n${msg.result.code}\n\`\`\``;
+                    }
+                  }
+                  
+                  // Inject the strict sanitization to rescue mangled LaTeX here
+                  displayContent = sanitizeLatex(displayContent);
+
                   return (
                     <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="w-full">
                       {msg.role === 'user' ? (
                         <div className="flex justify-end w-full mb-2">
-                          <div className="bg-white/10 backdrop-blur-md px-5 py-4 rounded-3xl max-w-[90%] md:max-w-[80%] text-zinc-100 text-[15px] leading-relaxed font-sans shadow-lg border border-white/10">
-                            <pre className="whitespace-pre-wrap font-sans font-medium">{msg.content}</pre>
+                          <div className="bg-white/10 backdrop-blur-md px-5 py-4 rounded-3xl max-w-[90%] md:max-w-[80%] text-zinc-100 text-[15px] leading-relaxed font-sans shadow-lg border border-white/10 overflow-hidden break-words">
+                            <pre className="whitespace-pre-wrap font-sans font-medium break-words">{msg.content}</pre>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex gap-4 w-full">
+                        <div className="flex gap-4 w-full max-w-full overflow-hidden">
                           <div className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#4facfe] to-[#00f2fe] mt-1 shadow-lg shadow-blue-500/20 border border-white/10">
                              <Zap size={18} className="text-white fill-white" />
                           </div>
-                          <div className="flex-1 min-w-0 text-[15px] leading-relaxed text-zinc-200 pt-1">
+                          
+                          <div className="flex-1 min-w-0 text-[15px] leading-relaxed text-zinc-200 pt-1 overflow-hidden">
                             
                             {msg.isError ? (
                                <div className="p-4 rounded-2xl border border-red-500/30 bg-red-500/10 backdrop-blur-md text-red-200 flex items-center gap-3">
                                  <AlertCircle size={18} className="text-red-400" /> {msg.content}
                                </div>
                             ) : msg.result ? (
-                              <div className="space-y-6">
+                              <div className="space-y-6 w-full max-w-full">
                                 
-                                <Suspense fallback={<div className="flex items-center gap-2 text-zinc-500 text-sm animate-pulse"><Loader2 size={16} className="animate-spin" /> Rendering response...</div>}>
-                                  <LazyMarkdown 
-                                    content={safeStringify(msg.result.explanation)} 
-                                    copiedId={copiedId} 
-                                    onCopy={handleCopy} 
-                                    messageIndex={idx} 
-                                  />
-                                </Suspense>
+                                {displayContent && (
+                                  <div className="w-full max-w-full break-words">
+                                    <ReactMarkdown 
+                                      remarkPlugins={[remarkMath, remarkGfm]} 
+                                      // Tell KaTeX NOT to crash on mild errors anymore, just in case
+                                      rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                                      components={{
+                                        p: ({node, ...props}) => <p className="mb-4 leading-relaxed whitespace-pre-wrap break-words text-zinc-200" {...props} />,
+                                        strong: ({node, ...props}) => <strong className="font-semibold text-white bg-white/5 px-1 rounded-sm" {...props} />,
+                                        em: ({node, ...props}) => <em className="italic text-zinc-300" {...props} />,
+                                        ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-2 text-zinc-200 marker:text-zinc-500" {...props} />,
+                                        ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-2 text-zinc-200 marker:text-zinc-500" {...props} />,
+                                        li: ({node, ...props}) => <li className="break-words pl-1" {...props} />,
+                                        h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-white mb-4 mt-6 break-words" {...props} />,
+                                        h2: ({node, ...props}) => <h2 className="text-xl font-bold text-white mb-3 mt-5 break-words" {...props} />,
+                                        h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-white mb-3 mt-4 break-words" {...props} />,
+                                        a: ({node, ...props}) => <a className="text-[#4facfe] hover:text-[#00f2fe] underline underline-offset-2 break-words" {...props} />,
+                                        code(props) {
+                                          const {children, className, node, ...rest} = props;
+                                          const match = /language-(\w+)/.exec(className || '');
+                                          const contentString = String(children).replace(/\n$/, '');
+                                          const isBlock = match || contentString.includes('\n');
+                                          
+                                          if (isBlock) {
+                                            return <TerminalCode code={contentString} language={match ? match[1].toUpperCase() : 'CODE'} />;
+                                          }
+                                          return <code className="bg-white/10 px-1.5 py-0.5 rounded text-[#4facfe] font-mono text-[13px] break-words" {...rest}>{children}</code>;
+                                        }
+                                      }}
+                                    >
+                                      {displayContent}
+                                    </ReactMarkdown>
+                                  </div>
+                                )}
 
-                                {/* ─── INLINE GRAPH PREVIEW (WITH MATH RENDERING) ─── */}
+                                {/* ─── INLINE GRAPH PREVIEW ─── */}
                                 {msg.result.type === 'analysis' && (
                                   <div 
                                     onClick={() => setActiveAnalysis(msg.result as AnalysisResult)}
@@ -653,20 +680,12 @@ export default function Analyzer() {
                                     <div className="p-5 flex items-center justify-between bg-gradient-to-br from-transparent to-[#ffffff03]">
                                        <div className="flex flex-col gap-2">
                                          <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Time Complexity</div>
-                                         <FormattedComplexity 
-                                            text={msg.result.timeComplexity}
-                                            color={parseComplexity(msg.result.timeComplexity).color}
-                                            className="text-2xl font-black drop-shadow-md"
-                                         />
+                                         <FormattedComplexity text={msg.result.timeComplexity} color={parseComplexity(msg.result.timeComplexity).color} className="text-2xl font-black drop-shadow-md" />
                                        </div>
                                        <div className="h-12 w-[1px] bg-white/10 mx-4"></div>
                                        <div className="flex flex-col gap-2 text-right">
                                          <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Space Complexity</div>
-                                         <FormattedComplexity 
-                                            text={msg.result.spaceComplexity}
-                                            color={parseComplexity(msg.result.spaceComplexity).color}
-                                            className="text-2xl font-black drop-shadow-md"
-                                         />
+                                         <FormattedComplexity text={msg.result.spaceComplexity} color={parseComplexity(msg.result.spaceComplexity).color} className="text-2xl font-black drop-shadow-md" />
                                        </div>
                                     </div>
                                   </div>
@@ -699,19 +718,6 @@ export default function Analyzer() {
                                     </div>
                                   </div>
                                 )}
-
-                                {(msg.result.type === 'optimization' || msg.result.type === 'translation') && (
-                                  <div className="mt-4">
-                                    <Suspense fallback={<Loader2 className="animate-spin text-zinc-500" />}>
-                                      <LazyMarkdown 
-                                        content={`\`\`\`plaintext\n${safeStringify(msg.result.code)}\n\`\`\``} 
-                                        copiedId={copiedId} 
-                                        onCopy={handleCopy} 
-                                        messageIndex={idx} 
-                                      />
-                                    </Suspense>
-                                  </div>
-                                )}
                               </div>
                             ) : null}
                           </div>
@@ -740,7 +746,6 @@ export default function Analyzer() {
           </div>
         </div>
 
-        {/* ─── BOTTOM INPUT AREA ─── */}
         <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#0c0c0e] via-[#0c0c0e]/90 to-transparent pt-12 pb-6 md:pb-8 pointer-events-none">
           <div className="max-w-4xl mx-auto w-full px-4 md:px-8 pointer-events-auto">
             <div className="relative flex flex-col bg-white/5 backdrop-blur-xl rounded-[32px] p-2 pr-3 border border-white/20 focus-within:bg-white/10 focus-within:border-white/30 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.4)]">

@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
-import GlobalRibbon from '@/components/GlobalRibbon';
 import { setTrackedActivity } from '@/hooks/useActivityTracker';
 
 const LinkedListVisualizer = lazy(() => import('./LinkedListVisualizer'));
@@ -270,9 +269,6 @@ const Visualizer = () => {
             className="fixed top-0 left-0 right-0 z-[200]"
           >
             <Navbar />
-            <div className="hidden sm:block">
-              <GlobalRibbon />
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
