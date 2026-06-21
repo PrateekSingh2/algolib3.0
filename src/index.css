@@ -71,7 +71,7 @@ body, html, * {
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Nunito', sans-serif;
   }
 
   code, pre, .font-mono {
@@ -233,24 +233,6 @@ pre[class*="language-"] {
 
 /* Add to the bottom of index.css */
 
-/* Global Light Mode via Inversion */
-html.light-theme {
-  filter: invert(1) hue-rotate(180deg);
-  background-color: white; /* Ensures the base background flips correctly */
-}
-
-/* Re-invert images, videos, and specific elements so they look normal */
-html.light-theme img,
-html.light-theme video,
-html.light-theme [data-exclude-theme="true"] {
-  filter: invert(1) hue-rotate(180deg);
-}
-
-/* Optional: Smooth transition for the theme switch */
-html {
-  transition: filter 0.5s ease, background-color 0.5s ease;
-}
-
 /* Notification highlight flash for Community post autoscroll */
 @keyframes notif-pulse {
   0%   { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.6); background: rgba(99,102,241,0.08); }
@@ -268,3 +250,12 @@ html {
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* Hide scrollbar completely utility */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

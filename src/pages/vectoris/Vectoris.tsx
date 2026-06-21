@@ -396,7 +396,7 @@ export default function Analyzer() {
   const formatYAxis = (num: number) => Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
 
   return (
-    <div className="flex h-[100dvh] bg-[#0c0c0e] text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30">
+    <div className="flex h-[100dvh] bg-slate-50 dark:bg-[#0c0c0e] text-slate-800 dark:text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30">
       <Helmet><title>Vectoris | AlgoLib's AI</title></Helmet>
 
       <AnimatePresence>
@@ -475,46 +475,46 @@ export default function Analyzer() {
       </AnimatePresence>
 
       <aside 
-        className={`absolute md:relative z-[60] h-full flex flex-col bg-white/5 backdrop-blur-2xl transition-all duration-300 ease-in-out shrink-0 border-r border-white/10
-        ${isSidebarOpen ? 'w-[280px] translate-x-0' : 'w-[280px] -translate-x-full md:translate-x-0 md:w-0'} overflow-hidden shadow-[4px_0_24px_rgba(0,0,0,0.5)] md:shadow-none`}
+        className={`absolute md:relative z-[60] h-full flex flex-col bg-white/80 dark:bg-white/5 backdrop-blur-2xl transition-all duration-300 ease-in-out shrink-0 border-r border-slate-200 dark:border-white/10
+        ${isSidebarOpen ? 'w-[280px] translate-x-0' : 'w-[280px] -translate-x-full md:translate-x-0 md:w-0'} overflow-hidden shadow-[4px_0_24px_rgba(0,0,0,0.05)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.5)] md:shadow-none`}
       >
         <div className="p-4 flex items-center justify-between min-w-[280px] h-[72px]">
           <div className="flex items-center gap-2 cursor-pointer transition-transform hover:scale-[1.02]">
             <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-[#4facfe] to-[#00f2fe] flex items-center justify-center shadow-[0_2px_10px_rgba(79,172,254,0.4)]">
                <Zap size={16} className="text-white fill-white" />
             </div>
-            <span className="text-[20px] font-medium text-white tracking-tight leading-none">Vectoris</span>
+            <span className="text-[20px] font-medium text-slate-900 dark:text-white tracking-tight leading-none">Vectoris</span>
           </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-zinc-400 transition-colors shrink-0">
+          <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-white/10 rounded-full text-slate-500 dark:text-zinc-400 transition-colors shrink-0">
             <ChevronLeft size={20} />
           </button>
         </div>
         
         <div className="px-3 pb-4 pt-2 min-w-[280px] flex flex-col gap-1">
-          <button onClick={handleNewAnalysis} className="w-full flex items-center gap-3 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-sm font-medium transition-all text-zinc-200">
+          <button onClick={handleNewAnalysis} className="w-full flex items-center gap-3 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/5 rounded-xl text-sm font-medium transition-all text-slate-700 dark:text-zinc-200">
             <Plus size={18} className="text-zinc-400" /> New analysis
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1 min-w-[280px] custom-scrollbar">
-          <div className="text-[12px] font-medium text-zinc-500 px-2 mb-2 mt-2 tracking-wide uppercase">Recent</div>
+          <div className="text-[12px] font-medium text-slate-500 dark:text-zinc-500 px-2 mb-2 mt-2 tracking-wide uppercase">Recent</div>
           {history.length === 0 ? (
-            <p className="text-sm text-zinc-600 px-2 italic">No recent history.</p>
+            <p className="text-sm text-slate-500 dark:text-zinc-600 px-2 italic">No recent history.</p>
           ) : (
             history.map(item => (
               <div 
                 key={item.id} 
                 onClick={() => loadHistoryItem(item)} 
                 className={`group flex items-center justify-between px-3 py-2.5 text-sm rounded-xl cursor-pointer transition-colors
-                  ${currentChatId === item.id ? 'bg-white/15 text-white font-medium border border-white/10' : 'text-zinc-400 hover:text-white hover:bg-white/10 border border-transparent'}`}
+                  ${currentChatId === item.id ? 'bg-blue-50 text-blue-600 border border-blue-200 dark:bg-white/15 dark:text-white font-medium dark:border-white/10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/10 border border-transparent'}`}
               >
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <MessageSquare size={14} className="shrink-0 text-zinc-500 group-hover:text-zinc-400" />
+                  <MessageSquare size={14} className="shrink-0 text-slate-400 group-hover:text-slate-500 dark:text-zinc-500 dark:group-hover:text-zinc-400" />
                   <span className="truncate">{item.title}</span>
                 </div>
                 <button 
                   onClick={(e) => handleDeleteHistory(e, item.id)} 
-                  className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 p-1 shrink-0 transition-opacity"
+                  className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400 p-1 shrink-0 transition-opacity"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -523,8 +523,8 @@ export default function Analyzer() {
           )}
         </div>
 
-        <div className="mt-auto p-4 border-t border-white/10 min-w-[280px] bg-black/20">
-           <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer group">
+        <div className="mt-auto p-4 border-t border-slate-200 dark:border-white/10 min-w-[280px] bg-slate-50/50 dark:bg-black/20">
+           <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer group">
               {currentUser?.photoURL ? (
                  <img src={currentUser.photoURL} alt="Profile" className="w-10 h-10 rounded-full object-cover shadow-inner border border-white/20 group-hover:border-white/40 transition-colors" />
               ) : (
@@ -533,7 +533,7 @@ export default function Analyzer() {
                  </div>
               )}
               <div className="flex flex-col flex-1 overflow-hidden">
-                 <span className="text-sm font-semibold text-zinc-200 truncate">{userName}</span>
+                 <span className="text-sm font-semibold text-slate-800 dark:text-zinc-200 truncate">{userName}</span>
                  <span className="text-xs font-medium text-zinc-500 flex items-center gap-1.5 mt-0.5">
                     <Zap size={12} className="text-yellow-500 fill-yellow-500" /> {credits !== null ? credits : '-'} Credits left
                  </span>
@@ -544,12 +544,12 @@ export default function Analyzer() {
 
       {isSidebarOpen && <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm md:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
-      <main className="flex-1 flex flex-col h-full relative min-w-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1a1a24] via-[#0c0c0e] to-[#0c0c0e]">
+      <main className="flex-1 flex flex-col h-full relative min-w-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-100 via-slate-50 to-slate-50 dark:from-[#1a1a24] dark:via-[#0c0c0e] dark:to-[#0c0c0e]">
         
-        <header className="flex items-center justify-between p-4 absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-[#0c0c0e] via-[#0c0c0e]/80 to-transparent pointer-events-none">
+        <header className="flex items-center justify-between p-4 absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-slate-50 via-slate-50/80 to-transparent dark:from-[#0c0c0e] dark:via-[#0c0c0e]/80 pointer-events-none">
           <div className="flex items-center gap-3 pointer-events-auto">
             {!isSidebarOpen && (
-              <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-white/10 rounded-full text-zinc-400 transition-colors">
+              <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-slate-200 dark:hover:bg-white/10 rounded-full text-slate-500 dark:text-zinc-400 transition-colors">
                 <Menu size={20} />
               </button>
             )}
@@ -564,16 +564,16 @@ export default function Analyzer() {
             
             {isHomeState && (
               <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex flex-col items-center justify-center flex-1 py-10">
-                <motion.h1 variants={itemVariants} className="text-4xl md:text-6xl font-semibold text-white tracking-tight text-center mb-12 drop-shadow-lg">
+                <motion.h1 variants={itemVariants} className="text-4xl md:text-6xl font-semibold text-slate-900 dark:text-white tracking-tight text-center mb-12 drop-shadow-lg">
                   Hello, <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4facfe] to-[#00f2fe]">{userName}</span>
                 </motion.h1>
                 <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl">
                   {SUGGESTIONS.map((sug, idx) => (
                     <motion.button 
                       variants={itemVariants} key={idx} onClick={() => handleSuggestionClick(sug.text)}
-                      className="group flex flex-col gap-4 p-5 rounded-3xl bg-white/5 backdrop-blur-md hover:bg-white/10 text-zinc-300 transition-all duration-300 border border-white/10 hover:border-white/20 text-left h-[120px] shadow-lg hover:-translate-y-1"
+                      className="group flex flex-col gap-4 p-5 rounded-3xl bg-white/60 dark:bg-white/5 backdrop-blur-md hover:bg-white dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 transition-all duration-300 border border-slate-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-white/20 text-left h-[120px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-lg hover:-translate-y-1"
                     >
-                      <div className="p-2 bg-white/10 w-fit rounded-xl group-hover:bg-[#4facfe]/20 transition-colors border border-white/5">
+                      <div className="p-2 bg-blue-50 dark:bg-white/10 w-fit rounded-xl group-hover:bg-blue-100 dark:group-hover:bg-[#4facfe]/20 transition-colors border border-slate-200 dark:border-white/5">
                         <span className="text-[#4facfe] group-hover:text-[#00f2fe] drop-shadow-md">{sug.icon}</span> 
                       </div>
                       <span className="text-sm font-medium leading-snug">{sug.text}</span>
@@ -607,17 +607,17 @@ export default function Analyzer() {
                     <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="w-full">
                       {msg.role === 'user' ? (
                         <div className="flex justify-end w-full mb-2">
-                          <div className="bg-white/10 backdrop-blur-md px-5 py-4 rounded-3xl max-w-[90%] md:max-w-[80%] text-zinc-100 text-[15px] leading-relaxed font-sans shadow-lg border border-white/10 overflow-hidden break-words">
+                          <div className="bg-white dark:bg-white/10 backdrop-blur-md px-5 py-4 rounded-3xl max-w-[90%] md:max-w-[80%] text-slate-800 dark:text-zinc-100 text-[15px] leading-relaxed font-sans shadow-sm dark:shadow-lg border border-slate-200 dark:border-white/10 overflow-hidden break-words">
                             <pre className="whitespace-pre-wrap font-sans font-medium break-words">{msg.content}</pre>
                           </div>
                         </div>
                       ) : (
                         <div className="flex gap-4 w-full max-w-full overflow-hidden">
-                          <div className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-[#4facfe] to-[#00f2fe] mt-1 shadow-lg shadow-blue-500/20 border border-white/10">
+                          <div className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-[#00f2fe] mt-1 shadow-md dark:shadow-blue-500/20 border border-slate-200 dark:border-white/10">
                              <Zap size={18} className="text-white fill-white" />
                           </div>
                           
-                          <div className="flex-1 min-w-0 text-[15px] leading-relaxed text-zinc-200 pt-1 overflow-hidden">
+                          <div className="flex-1 min-w-0 text-[15px] leading-relaxed text-slate-800 dark:text-zinc-200 pt-1 overflow-hidden">
                             
                             {msg.isError ? (
                                <div className="p-4 rounded-2xl border border-red-500/30 bg-red-500/10 backdrop-blur-md text-red-200 flex items-center gap-3">
@@ -633,16 +633,16 @@ export default function Analyzer() {
                                       // Tell KaTeX NOT to crash on mild errors anymore, just in case
                                       rehypePlugins={[[rehypeKatex, { strict: false }]]}
                                       components={{
-                                        p: ({node, ...props}) => <p className="mb-4 leading-relaxed whitespace-pre-wrap break-words text-zinc-200" {...props} />,
-                                        strong: ({node, ...props}) => <strong className="font-semibold text-white bg-white/5 px-1 rounded-sm" {...props} />,
-                                        em: ({node, ...props}) => <em className="italic text-zinc-300" {...props} />,
-                                        ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-2 text-zinc-200 marker:text-zinc-500" {...props} />,
-                                        ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-2 text-zinc-200 marker:text-zinc-500" {...props} />,
+                                        p: ({node, ...props}) => <p className="mb-4 leading-relaxed whitespace-pre-wrap break-words text-slate-700 dark:text-zinc-200" {...props} />,
+                                        strong: ({node, ...props}) => <strong className="font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-white/5 px-1 rounded-sm" {...props} />,
+                                        em: ({node, ...props}) => <em className="italic text-slate-600 dark:text-zinc-300" {...props} />,
+                                        ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-2 text-slate-700 dark:text-zinc-200 marker:text-slate-400 dark:marker:text-zinc-500" {...props} />,
+                                        ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-2 text-slate-700 dark:text-zinc-200 marker:text-slate-400 dark:marker:text-zinc-500" {...props} />,
                                         li: ({node, ...props}) => <li className="break-words pl-1" {...props} />,
-                                        h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-white mb-4 mt-6 break-words" {...props} />,
-                                        h2: ({node, ...props}) => <h2 className="text-xl font-bold text-white mb-3 mt-5 break-words" {...props} />,
-                                        h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-white mb-3 mt-4 break-words" {...props} />,
-                                        a: ({node, ...props}) => <a className="text-[#4facfe] hover:text-[#00f2fe] underline underline-offset-2 break-words" {...props} />,
+                                        h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-6 break-words" {...props} />,
+                                        h2: ({node, ...props}) => <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-3 mt-5 break-words" {...props} />,
+                                        h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3 mt-4 break-words" {...props} />,
+                                        a: ({node, ...props}) => <a className="text-blue-600 dark:text-[#4facfe] hover:text-blue-500 dark:hover:text-[#00f2fe] underline underline-offset-2 break-words" {...props} />,
                                         code(props) {
                                           const {children, className, node, ...rest} = props;
                                           const match = /language-(\w+)/.exec(className || '');
@@ -652,7 +652,7 @@ export default function Analyzer() {
                                           if (isBlock) {
                                             return <TerminalCode code={contentString} language={match ? match[1].toUpperCase() : 'CODE'} />;
                                           }
-                                          return <code className="bg-white/10 px-1.5 py-0.5 rounded text-[#4facfe] font-mono text-[13px] break-words" {...rest}>{children}</code>;
+                                          return <code className="bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 rounded text-blue-600 dark:text-[#4facfe] font-mono text-[13px] break-words" {...rest}>{children}</code>;
                                         }
                                       }}
                                     >
@@ -665,24 +665,24 @@ export default function Analyzer() {
                                 {msg.result.type === 'analysis' && (
                                   <div 
                                     onClick={() => setActiveAnalysis(msg.result as AnalysisResult)}
-                                    className="mt-6 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 cursor-pointer hover:border-[#4facfe]/50 transition-all shadow-lg overflow-hidden group"
+                                    className="mt-6 rounded-2xl bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 cursor-pointer hover:border-blue-400 dark:hover:border-[#4facfe]/50 transition-all shadow-sm dark:shadow-lg overflow-hidden group"
                                   >
-                                    <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5">
+                                    <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/5">
                                        <div className="flex items-center gap-3">
                                           <Activity size={18} className="text-[#4facfe]" />
-                                          <h4 className="text-[14px] font-bold text-white tracking-wide">Execution Matrix</h4>
+                                          <h4 className="text-[14px] font-bold text-slate-900 dark:text-white tracking-wide">Execution Matrix</h4>
                                        </div>
                                        <div className="flex items-center gap-2 text-xs font-semibold text-[#4facfe] bg-[#4facfe]/10 px-3 py-1 rounded-full group-hover:bg-[#4facfe]/20 transition-colors border border-[#4facfe]/20">
                                          Tap to expand <Maximize2 size={12} />
                                        </div>
                                     </div>
                                     
-                                    <div className="p-5 flex items-center justify-between bg-gradient-to-br from-transparent to-[#ffffff03]">
+                                    <div className="p-5 flex items-center justify-between bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-transparent dark:to-[#ffffff03]">
                                        <div className="flex flex-col gap-2">
                                          <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Time Complexity</div>
                                          <FormattedComplexity text={msg.result.timeComplexity} color={parseComplexity(msg.result.timeComplexity).color} className="text-2xl font-black drop-shadow-md" />
                                        </div>
-                                       <div className="h-12 w-[1px] bg-white/10 mx-4"></div>
+                                       <div className="h-12 w-[1px] bg-slate-200 dark:bg-white/10 mx-4"></div>
                                        <div className="flex flex-col gap-2 text-right">
                                          <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Space Complexity</div>
                                          <FormattedComplexity text={msg.result.spaceComplexity} color={parseComplexity(msg.result.spaceComplexity).color} className="text-2xl font-black drop-shadow-md" />
@@ -694,21 +694,21 @@ export default function Analyzer() {
                                 {/* ─── ACTION BUTTONS ─── */}
                                 {msg.result.type === 'analysis' && (
                                   <div className="flex flex-wrap gap-3 mt-2">
-                                    <button onClick={() => handleOptimize(originalCodeMsg?.content || '')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 backdrop-blur-md hover:bg-white/10 border border-white/10 text-sm font-semibold text-zinc-200 transition-all shadow-md">
+                                    <button onClick={() => handleOptimize(originalCodeMsg?.content || '')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white dark:bg-white/5 backdrop-blur-md hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-sm font-semibold text-slate-700 dark:text-zinc-200 transition-all shadow-sm dark:shadow-md">
                                       <Code2 size={16} className="text-emerald-400"/> Optimize Code
                                     </button>
                                     <div className="relative">
-                                      <button onClick={() => setShowLangMenuForIdx(showLangMenuForIdx === idx ? null : idx)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 backdrop-blur-md hover:bg-white/10 border border-white/10 text-sm font-semibold text-zinc-200 transition-all shadow-md">
+                                      <button onClick={() => setShowLangMenuForIdx(showLangMenuForIdx === idx ? null : idx)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white dark:bg-white/5 backdrop-blur-md hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-sm font-semibold text-slate-700 dark:text-zinc-200 transition-all shadow-sm dark:shadow-md">
                                         <ArrowRightLeft size={16} className="text-purple-400"/> Translate
                                       </button>
                                       <AnimatePresence>
                                         {showLangMenuForIdx === idx && (
                                           <motion.div 
                                             initial={{ opacity: 0, y: 5, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.95 }} transition={{ duration: 0.15 }}
-                                            className="absolute bottom-full left-0 mb-3 w-[160px] bg-[#1a1a24]/90 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl overflow-hidden py-2 z-50"
+                                            className="absolute bottom-full left-0 mb-3 w-[160px] bg-white/95 dark:bg-[#1a1a24]/90 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/20 shadow-xl overflow-hidden py-2 z-50"
                                           >
                                             {TRANSLATE_LANGS.map(lang => (
-                                              <button key={lang} onClick={() => handleTranslate(originalCodeMsg?.content || '', lang)} className="w-full text-left px-5 py-2 text-sm text-zinc-300 hover:bg-white/10 hover:text-white transition-colors">
+                                              <button key={lang} onClick={() => handleTranslate(originalCodeMsg?.content || '', lang)} className="w-full text-left px-5 py-2 text-sm text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors">
                                                 {lang}
                                               </button>
                                             ))}
@@ -733,7 +733,7 @@ export default function Analyzer() {
                       <Loader2 className="animate-spin text-[#4facfe]" size={20} />
                     </div>
                     <div className="flex items-center h-9">
-                      <span className="text-zinc-400 font-medium animate-pulse text-[15px]">Vectoris is analyzing...</span>
+                      <span className="text-slate-500 dark:text-zinc-400 font-medium animate-pulse text-[15px]">Vectoris is analyzing...</span>
                     </div>
                   </motion.div>
                 )}
@@ -746,13 +746,13 @@ export default function Analyzer() {
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-[#0c0c0e] via-[#0c0c0e]/90 to-transparent pt-12 pb-6 md:pb-8 pointer-events-none">
+        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-slate-50 via-slate-50/90 dark:from-[#0c0c0e] dark:via-[#0c0c0e]/90 to-transparent pt-12 pb-6 md:pb-8 pointer-events-none">
           <div className="max-w-4xl mx-auto w-full px-4 md:px-8 pointer-events-auto">
-            <div className="relative flex flex-col bg-white/5 backdrop-blur-xl rounded-[32px] p-2 pr-3 border border-white/20 focus-within:bg-white/10 focus-within:border-white/30 transition-all shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+            <div className="relative flex flex-col bg-white dark:bg-white/5 backdrop-blur-xl rounded-[32px] p-2 pr-3 border border-slate-300 dark:border-white/20 focus-within:bg-white focus-within:border-blue-400 dark:focus-within:bg-white/10 dark:focus-within:border-white/30 transition-all shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
               <div className="flex items-end">
                 <button 
                   onClick={handleAttachmentClick}
-                  className="p-3.5 mb-[2px] text-zinc-400 hover:text-white hover:bg-white/10 rounded-full transition-colors shrink-0 hidden sm:block"
+                  className="p-3.5 mb-[2px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/10 rounded-full transition-colors shrink-0 hidden sm:block"
                   title="Add attachment"
                 >
                   <Plus size={22} />
@@ -763,7 +763,7 @@ export default function Analyzer() {
                   onChange={handleInput}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask Vectoris..."
-                  className="flex-1 max-h-[200px] bg-transparent text-white resize-none outline-none py-4 px-3 sm:px-2 text-[15px] md:text-base custom-scrollbar placeholder:text-zinc-500 leading-relaxed font-medium"
+                  className="flex-1 max-h-[200px] bg-transparent text-slate-900 dark:text-white resize-none outline-none py-4 px-3 sm:px-2 text-[15px] md:text-base custom-scrollbar placeholder:text-slate-400 dark:placeholder:text-zinc-500 leading-relaxed font-medium"
                   rows={1}
                   disabled={isAnalyzing}
                 />
@@ -772,8 +772,8 @@ export default function Analyzer() {
                   disabled={!inputCode.trim() || isAnalyzing}
                   className={`p-3.5 mb-[2px] rounded-full transition-all shrink-0 ${
                     inputCode.trim() && !isAnalyzing
-                      ? 'text-black bg-white hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)]'
-                      : 'text-zinc-600 bg-transparent cursor-not-allowed'
+                      ? 'text-white bg-blue-600 dark:text-black dark:bg-white hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(37,99,235,0.3)] dark:shadow-[0_0_20px_rgba(255,255,255,0.3)]'
+                      : 'text-slate-400 bg-slate-100 dark:text-zinc-600 dark:bg-transparent cursor-not-allowed'
                   }`}
                 >
                   {isAnalyzing ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="ml-0.5" />}
@@ -781,7 +781,7 @@ export default function Analyzer() {
               </div>
             </div>
             
-            <div className="text-center text-xs font-medium text-zinc-500 mt-4 flex flex-col sm:flex-row items-center justify-center gap-2 drop-shadow-sm">
+            <div className="text-center text-xs font-medium text-slate-500 dark:text-zinc-500 mt-4 flex flex-col sm:flex-row items-center justify-center gap-2 drop-shadow-sm">
                <span>Vectoris is an AI built for AlgoLib and can make mistakes.</span>
             </div>
           </div>

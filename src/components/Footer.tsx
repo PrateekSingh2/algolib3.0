@@ -27,7 +27,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
   };
 
   return (
-    <footer className="w-full relative pt-16 md:pt-20 pb-8 z-20 overflow-hidden font-sans selection:bg-cyan-500/30 bg-[#02040A]">
+    <footer className="w-full relative pt-16 md:pt-20 pb-8 z-20 overflow-hidden font-sans selection:bg-cyan-500/30 bg-white/40 backdrop-blur-md dark:bg-[#02040A]">
       
       {/* ─── Premium Cinematic Noise Texture ─── */}
       <div 
@@ -36,7 +36,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
       />
 
       {/* ─── Premium Animated Top Border ─── */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/[0.05] z-0" />
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-slate-200 dark:bg-white/[0.05] z-0" />
       <motion.div 
         animate={{ x: ['-100%', '300%'] }}
         transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
@@ -80,13 +80,13 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
       <motion.div 
         animate={{ rotate: 360, y: [0, 25, 0] }} 
         transition={{ rotate: { duration: 60, repeat: Infinity, ease: "linear" }, y: { duration: 12, repeat: Infinity, ease: "easeInOut" } }}
-        className="absolute top-[10%] right-[15%] w-[400px] h-[400px] border border-white/[0.03] rounded-full pointer-events-none z-0"
+        className="absolute top-[10%] right-[15%] w-[400px] h-[400px] border border-slate-200 dark:border-white/[0.03] rounded-full pointer-events-none z-0"
       />
       {/* Floating Square */}
       <motion.div 
         animate={{ rotate: -360, y: [0, -30, 0] }} 
         transition={{ rotate: { duration: 80, repeat: Infinity, ease: "linear" }, y: { duration: 14, repeat: Infinity, ease: "easeInOut", delay: 2 } }}
-        className="absolute bottom-[10%] left-[12%] w-[300px] h-[300px] border border-white/[0.03] rounded-[40px] pointer-events-none z-0"
+        className="absolute bottom-[10%] left-[12%] w-[300px] h-[300px] border border-slate-200 dark:border-white/[0.03] rounded-[40px] pointer-events-none z-0"
       />
       {/* Floating Hexagon (SVG) */}
       <motion.div 
@@ -129,22 +129,22 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
           {/* ─── Brand Column ─── */}
           <div className="w-full lg:w-[28%] flex flex-col items-center lg:items-start text-center lg:text-left pr-0 lg:pr-6">
             <div className="flex items-center gap-3 mb-5 md:mb-6 group cursor-default">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 flex items-center justify-center shadow-[0_0_25px_rgba(6,182,212,0.2)] backdrop-blur-md group-hover:shadow-[0_0_35px_rgba(6,182,212,0.4)] transition-all duration-500">
-                <Zap className="text-cyan-400 w-5 h-5 group-hover:scale-110 transition-transform duration-500" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 dark:from-white/10 to-white dark:to-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-[0_0_25px_rgba(6,182,212,0.2)] backdrop-blur-md group-hover:shadow-[0_0_35px_rgba(6,182,212,0.4)] transition-all duration-500">
+                <Zap className="text-cyan-500 dark:text-cyan-400 w-5 h-5 group-hover:scale-110 transition-transform duration-500" />
               </div>
-              <span className="font-extrabold text-2xl text-white tracking-tight drop-shadow-md">ALGO<span className="text-zinc-500 font-semibold transition-colors duration-500 group-hover:text-cyan-500/70">LIB</span></span>
+              <span className="font-extrabold text-2xl text-slate-800 dark:text-white tracking-tight drop-shadow-md">ALGO<span className="text-slate-500 dark:text-zinc-500 font-semibold transition-colors duration-500 group-hover:text-cyan-500/70">LIB</span></span>
             </div>
             
-            <p className="text-sm text-zinc-400 max-w-xs leading-relaxed">
+            <p className="text-sm text-slate-600 dark:text-zinc-400 max-w-xs leading-relaxed">
               The elite ecosystem for algorithm visualization, code optimization, and architectural systems design. Build your technical intuition.
             </p>
 
             {/* Address Block */} 
-            <div className="w-full flex items-center justify-center lg:justify-start gap-2.5 order-2 text-zinc-400 mt-7 bg-white/[0.02] border border-white/[0.05] p-3 rounded-xl backdrop-blur-sm w-fit hover:bg-white/[0.04] transition-colors shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)]">
+            <div className="w-full flex items-center justify-center lg:justify-start gap-2.5 order-2 mt-7 bg-white/60 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] p-3 rounded-xl backdrop-blur-sm w-fit hover:bg-white/80 dark:hover:bg-white/[0.04] transition-colors shadow-[0_2px_10px_rgba(0,0,0,0.02)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)]">
               <div className="p-1.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
-                <MapPin size={14} className="text-cyan-400 shrink-0" />
+                <MapPin size={14} className="text-cyan-600 dark:text-cyan-400 shrink-0" />
               </div>
-              <span className="text-[12px] font-medium tracking-wide text-zinc-300">
+              <span className="text-[12px] font-medium tracking-wide text-slate-700 dark:text-zinc-300">
                 DD Nagar, Gwalior, Madhya Pradesh, India 474004
               </span>
             </div>
@@ -155,7 +155,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
             
             {/* 1. Ecosystem */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left">
-              <h4 className="text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90 drop-shadow-sm">Ecosystem</h4>
+              <h4 className="text-slate-900 dark:text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90 drop-shadow-sm">Ecosystem</h4>
               <ul className="space-y-3.5 flex flex-col items-center md:items-start">
                 <FooterLink name="Visualizer" path="/visualizer" isRestricted={true} onClick={handleLinkClick} />
                 <FooterLink name="Online Compiler" path="/compiler" isRestricted={true} onClick={handleLinkClick} />
@@ -166,7 +166,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
 
             {/* 2. Platform */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left">
-              <h4 className="text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90 drop-shadow-sm">Platform</h4>
+              <h4 className="text-slate-900 dark:text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90 drop-shadow-sm">Platform</h4>
               <ul className="space-y-3.5 flex flex-col items-center md:items-start">
                 <FooterLink name="Community" path="/discussion" isRestricted={true} onClick={handleLinkClick} />
                 <FooterLink name="News & Research" path="https://discover-algolib.netlify.app/" isRestricted={false} onClick={handleLinkClick} />
@@ -177,7 +177,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
 
             {/* 3. Curriculum */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left">
-              <h4 className="text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90 drop-shadow-sm">Curriculum</h4>
+              <h4 className="text-slate-900 dark:text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90 drop-shadow-sm">Curriculum</h4>
               <ul className="space-y-3.5 flex flex-col items-center md:items-start">
                 <FooterLink name="Master Notes" path="/notes" isRestricted={true} onClick={handleLinkClick} />
                 <FooterLink name="DSA Sheet" path="/dsa-sheet" isRestricted={true} onClick={handleLinkClick} />
@@ -188,15 +188,15 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
 
             {/* 4. Legal */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left">
-              <h4 className="text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90 drop-shadow-sm">Legal</h4>
+              <h4 className="text-slate-900 dark:text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90 drop-shadow-sm">Legal</h4>
               <ul className="space-y-3.5 flex flex-col items-center md:items-start">
                 <FooterLink name="Testimonials" path="/testimonials" isRestricted={false} onClick={handleLinkClick} />
                 <FooterLink name="Terms of Service" path="/terms" isRestricted={false} onClick={handleLinkClick} />
                 <FooterLink name="Privacy Policy" path="/privacy" isRestricted={false} onClick={handleLinkClick} />
                 <FooterLink name="Cookie Policy" path="/cookies" isRestricted={false} onClick={handleLinkClick} />
                 <li>
-                  <button onClick={openCookieConsent} className="group flex items-center justify-center md:justify-start text-[13.5px] text-zinc-400 hover:text-white transition-colors w-fit">
-                    <ChevronRight size={14} className="opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 text-cyan-400 transition-all duration-300 ease-out hidden md:block" />
+                  <button onClick={openCookieConsent} className="group flex items-center justify-center md:justify-start text-[13.5px] text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors w-fit">
+                    <ChevronRight size={14} className="opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 text-cyan-600 dark:text-cyan-400 transition-all duration-300 ease-out hidden md:block" />
                     <span className="transform transition-transform duration-300 ease-out md:group-hover:translate-x-1.5">Manage Cookies</span>
                   </button>
                 </li>
@@ -205,7 +205,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
 
             {/* 5. Socials */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left col-span-2 sm:col-span-1 md:col-span-1">
-              <h4 className="text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90 drop-shadow-sm">Socials</h4>
+              <h4 className="text-slate-900 dark:text-white text-[13px] font-bold tracking-wider uppercase mb-4 md:mb-5 opacity-90 drop-shadow-sm">Socials</h4>
               <ul className="space-y-3.5 flex flex-col items-center md:items-start">
                 <SocialTextLink href="https://www.linkedin.com/company/algolib-official/" icon={<Linkedin size={15} />} label="LinkedIn" />
                 <SocialTextLink href="https://www.instagram.com/algolib.official/" icon={<Instagram size={15} />} label="Instagram" />
@@ -217,23 +217,23 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
         </div>
         
         {/* ─── Bottom Bar ─── */}
-        <div className="pt-6 md:pt-8 border-t border-white/[0.08] flex flex-col md:flex-row items-center justify-between gap-5 relative z-10">
+        <div className="pt-6 md:pt-8 border-t border-slate-200 dark:border-white/[0.08] flex flex-col md:flex-row items-center justify-between gap-5 relative z-10">
           
           {/* Copyright */}
           <div className="w-full md:w-1/3 flex justify-center md:justify-start order-3 md:order-1">
-            <p className="text-zinc-500 text-[12px] font-medium tracking-wide">
+            <p className="text-slate-500 dark:text-zinc-500 text-[12px] font-medium tracking-wide">
               &copy; {new Date().getFullYear()} AlgoLib. All rights reserved.
             </p>
           </div>
           
           {/* Elite SaaS Status Indicator */}
           <div className="w-full md:w-1/3 flex justify-center md:justify-end order-1 md:order-3">
-            <div className="group flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-white/[0.02] border border-white/[0.08] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] backdrop-blur-xl hover:bg-white/[0.04] hover:border-white/[0.12] transition-all cursor-default w-fit">
+            <div className="group flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-white/60 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.08] shadow-[0_2px_10px_rgba(0,0,0,0.02)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] backdrop-blur-xl hover:bg-white/80 dark:hover:bg-white/[0.04] hover:border-slate-300 dark:hover:border-white/[0.12] transition-all cursor-default w-fit">
               <div className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></span>
               </div>
-              <span className="text-[11px] text-zinc-300 font-mono tracking-wide uppercase">All systems operational</span>
+              <span className="text-[11px] text-slate-700 dark:text-zinc-300 font-mono tracking-wide uppercase">All systems operational</span>
             </div>
           </div>
 
@@ -250,9 +250,9 @@ const FooterLink = ({ name, path, isRestricted, onClick }: { name: string; path:
     <a 
       href={path} 
       onClick={(e) => onClick(e, path, isRestricted)} 
-      className="group flex items-center justify-center md:justify-start text-[13.5px] text-zinc-400 hover:text-white transition-colors w-fit"
+      className="group flex items-center justify-center md:justify-start text-[13.5px] text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors w-fit"
     >
-      <ChevronRight size={14} className="opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 text-cyan-400 transition-all duration-300 ease-out hidden md:block" />
+      <ChevronRight size={14} className="opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 text-cyan-600 dark:text-cyan-400 transition-all duration-300 ease-out hidden md:block" />
       <span className="transform transition-transform duration-300 ease-out md:group-hover:translate-x-1.5">{name}</span>
     </a>
   </li>
@@ -264,9 +264,9 @@ const SocialTextLink = ({ href, icon, label }: { href: string; icon: React.React
       href={href} 
       target="_blank" 
       rel="noreferrer" 
-      className="group flex items-center justify-center md:justify-start gap-2.5 text-[13.5px] text-zinc-400 hover:text-white transition-colors w-fit"
+      className="group flex items-center justify-center md:justify-start gap-2.5 text-[13.5px] text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors w-fit"
     >
-      <span className="text-zinc-500 group-hover:text-cyan-400 transition-colors duration-300">
+      <span className="text-slate-500 dark:text-zinc-500 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors duration-300">
         {icon}
       </span>
       <span className="transform transition-transform duration-300 ease-out md:group-hover:translate-x-1">

@@ -62,9 +62,9 @@ const SNIPPETS: Record<string, { id: string, text: string, explanation: string, 
 
 const CyberGrid = () => (
   <div className="absolute inset-0 z-0 pointer-events-none">
-    <div className="absolute inset-0 bg-[#09090b]" />
-    <div className="absolute inset-0 bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,255,136,0.05),transparent_70%)]" />
+    <div className="absolute inset-0 bg-white/60 backdrop-blur-xl dark:bg-[#09090b]" />
+    <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.1),transparent_70%)] dark:bg-[radial-gradient(circle_at_center,rgba(0,255,136,0.05),transparent_70%)]" />
   </div>
 );
 
@@ -426,43 +426,43 @@ const HeapVisualizer = () => {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden">
+    <div className="absolute inset-0 flex flex-col bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-[#09090b] font-sans text-slate-900 dark:text-white overflow-hidden">
       <CyberGrid />
       
       <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
         
         {/* LEFT: COMMAND CENTER */}
-        <div className="w-full lg:w-[340px] bg-black/95 lg:bg-black/80 backdrop-blur-md border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
+        <div className="w-full lg:w-[340px] bg-white/40 backdrop-blur-2xl/95 lg:bg-white/40 backdrop-blur-2xl/80 dark:bg-black/95 dark:lg:bg-black/80 backdrop-blur-md border-slate-200 dark:border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
           
           <div className="overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6 flex flex-col">
             
             {/* Heap Mode Toggle */}
-            <div className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center justify-between shrink-0">
+            <div className="bg-white/60 backdrop-blur-xl dark:bg-white/5 p-3 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-between shrink-0">
                 <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1"><Settings2 size={12}/> Architecture</span>
-                    <span className={`text-xs font-black ${heapMode === 'max' ? 'text-emerald-400' : 'text-purple-400'}`}>
+                    <span className="text-[10px] font-bold text-slate-700 dark:text-gray-400 uppercase flex items-center gap-1"><Settings2 size={12}/> Architecture</span>
+                    <span className={`text-xs font-black ${heapMode === 'max' ? 'text-emerald-600 dark:text-emerald-400' : 'text-purple-600 dark:text-purple-400'}`}>
                         {heapMode === 'max' ? 'MAX HEAP' : 'MIN HEAP'}
                     </span>
                 </div>
                 <button 
                     onClick={() => { setHeapMode(heapMode === 'max' ? 'min' : 'max'); setHeap([]); setOutputLog([]); setTimeout(centerWorkspace, 100); }}
                     disabled={isAnimating}
-                    className="px-3 py-1.5 bg-black/50 border border-white/20 rounded hover:border-white/50 text-[9px] font-black uppercase transition-all disabled:opacity-30"
+                    className="px-3 py-1.5 bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-black/50 border border-slate-300 dark:border-white/20 rounded hover:border-slate-400 dark:hover:border-white/50 text-[9px] font-black text-slate-900 dark:text-white uppercase transition-all disabled:opacity-30 shadow-sm dark:shadow-none"
                 >
                     Switch
                 </button>
             </div>
 
             {/* Playback Controls */}
-            <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4 shrink-0">
+            <div className="bg-white/60 backdrop-blur-xl dark:bg-white/5 p-4 rounded-xl border border-slate-200 dark:border-white/10 space-y-4 shrink-0">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-400 uppercase">Step Engine</span>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${isPaused ? 'border-amber-500 text-amber-500' : 'border-cyan-500 text-cyan-500'}`}>
+                <span className="text-[10px] font-bold text-slate-700 dark:text-gray-400 uppercase">Step Engine</span>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${isPaused ? 'border-amber-500 text-amber-600 dark:text-amber-500' : 'border-cyan-500 text-cyan-600 dark:text-cyan-500'}`}>
                     {isPaused ? 'MANUAL' : 'AUTO'}
                 </span>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
+                <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-blue-400 dark:bg-blue-500/20 backdrop-blur-xl border border-blue-500 dark:border-blue-500/50 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-blue-500 dark:hover:bg-blue-500/30 transition-all text-black dark:text-blue-400">
                   {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
                 </button>
                 <div className="flex flex-1 gap-1">
@@ -488,40 +488,40 @@ const HeapVisualizer = () => {
             <div className="space-y-4 shrink-0">
                <div className="flex gap-2">
                   <div className="flex-1">
-                      <label className="text-[9px] text-gray-500 uppercase font-bold">Node Payload</label>
+                      <label className="text-[9px] text-slate-700 dark:text-gray-500 uppercase font-bold">Node Payload</label>
                       <div className="flex gap-1 mt-1">
-                          <input type="number" value={inputValue} onChange={(e) => setInputValue(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-cyan-400 outline-none font-mono text-sm" />
-                          <button onClick={generateRandom} className="px-3 bg-white/5 rounded border border-white/10 hover:bg-white/10"><RotateCcw size={14}/></button>
+                          <input type="number" value={inputValue} onChange={(e) => setInputValue(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-black/50 border border-slate-300 dark:border-white/10 rounded px-3 py-2 text-cyan-600 dark:text-cyan-400 outline-none font-mono text-sm dark:text-white" />
+                          <button onClick={generateRandom} className="px-3 bg-blue-400 dark:bg-blue-500/20 rounded border border-blue-500 dark:border-blue-500/50 hover:bg-blue-500 dark:hover:bg-blue-500/30 text-black dark:text-blue-400 font-bold transition-all"><RotateCcw size={14}/></button>
                       </div>
                   </div>
                </div>
                
                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <button onClick={handleInsert} disabled={isAnimating} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                  <button onClick={handleInsert} disabled={isAnimating} className="p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                      <Plus size={16}/> INSERT
                   </button>
-                  <button onClick={handleExtract} disabled={isAnimating || heap.length === 0} className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded hover:bg-amber-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                  <button onClick={handleExtract} disabled={isAnimating || heap.length === 0} className="p-3 bg-orange-400 dark:bg-orange-500/20 border border-orange-500 dark:border-orange-500/50 text-black dark:text-orange-400 rounded hover:bg-orange-500 dark:hover:bg-orange-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                      <ArrowDownToLine size={16}/> EXTRACT ROOT
                   </button>
                </div>
             </div>
 
-            <button onClick={() => { setHeap([]); setOutputLog([]); setTimeout(centerWorkspace, 50); }} disabled={isAnimating} className="w-full py-2 shrink-0 bg-white/5 hover:bg-red-500/20 hover:text-red-400 border border-white/5 hover:border-red-500/30 rounded text-[10px] font-bold text-gray-500 transition-all flex items-center justify-center gap-2">
+            <button onClick={() => { setHeap([]); setOutputLog([]); setTimeout(centerWorkspace, 50); }} disabled={isAnimating} className="w-full py-2 shrink-0 bg-orange-400 dark:bg-orange-500/20 hover:bg-orange-500 dark:hover:bg-orange-500/30 hover:text-black dark:hover:text-orange-400 border border-orange-500 dark:border-orange-500/50 rounded text-[10px] font-bold text-black dark:text-orange-400 transition-all flex items-center justify-center gap-2">
                   <Trash2 size={14}/> FLUSH HEAP MEMORY
             </button>
 
             {/* DEDICATED OUTPUT SCREEN */}
-            <div className="mt-4 flex-1 min-h-[120px] lg:min-h-[150px] bg-black/90 border border-cyan-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
-                <div className="px-3 py-2 border-b border-cyan-500/30 bg-cyan-900/20 flex items-center gap-2 shrink-0">
-                    <Terminal size={12} className="text-cyan-400" />
-                    <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">{outputTitle}</span>
+            <div className="mt-4 flex-1 min-h-[120px] lg:min-h-[150px] bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-black/90 border border-cyan-200 dark:border-cyan-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
+                 <div className="px-3 py-2 border-b border-cyan-200 dark:border-cyan-500/30 bg-white/60 backdrop-blur-xl dark:bg-cyan-900/20 flex items-center gap-2 shrink-0">
+                    <Terminal size={12} className="text-cyan-600 dark:text-cyan-400" />
+                    <span className="text-[9px] font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-widest">{outputTitle}</span>
                 </div>
-                <div ref={outputScrollRef} className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[11px] text-gray-300 flex flex-col gap-1">
+                <div ref={outputScrollRef} className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[11px] text-slate-800 dark:text-gray-300 flex flex-col gap-1">
                     {outputLog.length === 0 ? (
-                        <span className="text-gray-600 italic mt-1">Awaiting execution...</span>
+                        <span className="text-slate-400 dark:text-gray-600 italic mt-1">Awaiting execution...</span>
                     ) : (
                         outputLog.map((log, i) => (
-                           <div key={i} className={`flex items-start ${log.includes('SUCCESS') || log.includes('COMPLETE') ? 'text-emerald-400 font-bold' : log.includes('FAILED') || log.includes('Abort') ? 'text-red-400' : 'text-gray-400'}`}>
+                           <div key={i} className={`flex items-start ${log.includes('SUCCESS') || log.includes('COMPLETE') ? 'text-emerald-600 dark:text-emerald-400 font-bold' : log.includes('FAILED') || log.includes('Abort') ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-gray-400'}`}>
                                <span className="opacity-50 mr-2 shrink-0">{String(i).padStart(2, '0')}</span>
                                {log}
                            </div>
@@ -539,42 +539,42 @@ const HeapVisualizer = () => {
           <div className="flex justify-between items-center mb-2 lg:mb-3 shrink-0 gap-2">
              <button 
                 onClick={() => setShowHUD(!showHUD)}
-                className="h-7 lg:h-8 px-3 bg-[#050505] border border-cyan-500/80 rounded-lg lg:rounded-full text-cyan-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-cyan-500/10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)] uppercase z-40"
+                className="h-7 lg:h-8 px-3 bg-white dark:bg-[#050505] border border-cyan-400 dark:border-cyan-500/80 rounded-lg lg:rounded-full text-cyan-600 dark:text-cyan-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-cyan-50 dark:hover:bg-cyan-500/10 hover:shadow-sm dark:hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all shadow-sm dark:shadow-[0_0_10px_rgba(6,182,212,0.2)] uppercase z-40"
              >
                 {showHUD ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
                 {showHUD ? 'HIDE HUD' : 'SHOW HUD'}
              </button>
              
-             <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 bg-black/50 px-3 py-1.5 rounded-full border border-white/5">
+             <div className="flex items-center gap-2 text-[10px] font-mono text-slate-700 dark:text-gray-500 bg-slate-100 dark:bg-black/50 px-3 py-1.5 rounded-full border border-slate-200 dark:border-white/5">
                  <Database size={12}/> Size: {heap.length}
              </div>
           </div>
 
           {/* Central Arena: Tree & Array Canvas */}
-          <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
+          <div className="flex-1 min-h-0 border border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
              
              {/* ARRAY VISUALIZER BAR (TOP) */}
-             <div className="h-16 lg:h-20 shrink-0 border-b border-white/5 bg-black/40 flex items-center px-4 overflow-x-auto custom-scrollbar relative z-20">
+             <div className="h-16 lg:h-20 shrink-0 border-b border-slate-200 dark:border-white/5 bg-slate-200/50 dark:bg-black/40 flex items-center px-4 overflow-x-auto custom-scrollbar relative z-20">
                 <div className="flex gap-1.5 lg:gap-2 items-center min-w-max">
-                    <span className="text-[9px] lg:text-[10px] font-mono font-bold text-gray-500 mr-2 uppercase tracking-widest">Memory[ ]</span>
-                    {heap.length === 0 && <span className="text-xs text-gray-600 italic">Empty Array</span>}
+                    <span className="text-[9px] lg:text-[10px] font-mono font-bold text-slate-700 dark:text-gray-500 mr-2 uppercase tracking-widest">Memory[ ]</span>
+                    {heap.length === 0 && <span className="text-xs text-slate-400 dark:text-gray-600 italic">Empty Array</span>}
                     <AnimatePresence>
                         {heap.map((node, i) => {
-                            let bg = 'bg-[#09090b]';
-                            let border = 'border-white/10';
-                            let text = 'text-white';
-                            if (highlightIndices.includes(i)) { bg = 'bg-yellow-500/20'; border = 'border-yellow-500'; text = 'text-yellow-400'; }
-                            if (comparingIndices.includes(i)) { bg = 'bg-purple-500/20'; border = 'border-purple-500'; text = 'text-purple-400'; }
-                            if (swappingIndices.includes(i)) { bg = 'bg-rose-500/20'; border = 'border-rose-500'; text = 'text-rose-400'; }
+                            let bg = 'bg-white dark:bg-[#09090b]';
+                            let border = 'border-slate-300 dark:border-white/10';
+                            let text = 'text-slate-900 dark:text-white';
+                            if (highlightIndices.includes(i)) { bg = 'bg-yellow-100 dark:bg-yellow-500/20'; border = 'border-yellow-400 dark:border-yellow-500'; text = 'text-yellow-600 dark:text-yellow-400'; }
+                            if (comparingIndices.includes(i)) { bg = 'bg-purple-100 dark:bg-purple-500/20'; border = 'border-purple-400 dark:border-purple-500'; text = 'text-purple-600 dark:text-purple-400'; }
+                            if (swappingIndices.includes(i)) { bg = 'bg-rose-100 dark:bg-rose-500/20'; border = 'border-rose-400 dark:border-rose-500'; text = 'text-rose-600 dark:text-rose-400'; }
 
                             return (
                                 <motion.div 
                                     key={node.id} layout
                                     initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0 }}
-                                    className={`w-10 h-10 lg:w-12 lg:h-12 border flex flex-col items-center justify-center rounded shadow-lg relative ${bg} ${border}`}
+                                    className={`w-10 h-10 lg:w-12 lg:h-12 border flex flex-col items-center justify-center rounded shadow-sm relative ${bg} ${border}`}
                                 >
                                     <span className={`text-sm lg:text-base font-black ${text}`}>{node.value}</span>
-                                    <span className="absolute -bottom-4 text-[8px] font-mono text-gray-500">{i}</span>
+                                    <span className="absolute -bottom-4 text-[8px] font-mono text-slate-400 dark:text-gray-500">{i}</span>
                                 </motion.div>
                             )
                         })}
@@ -596,7 +596,10 @@ const HeapVisualizer = () => {
                                 const isComp = comparingIndices.includes(i);
                                 const isSwap = swappingIndices.includes(i);
 
-                                let borderColor = '#0ea5e9'; 
+                                // Use CSS variables or literal string based on theme, simplified here for class logic
+                                // But since border is inline, we must adapt it.
+                                const baseBorderColor = document.documentElement.classList.contains('dark') ? '#0ea5e9' : '#0284c7'; // cyan-500 or 600
+                                let borderColor = baseBorderColor; 
                                 let shadow = 'none';
                                 let label = '';
 
@@ -610,14 +613,14 @@ const HeapVisualizer = () => {
                                         animate={{ opacity: 1, scale: isHigh || isSwap ? 1.1 : 1, left: `calc(50% + ${coords.x}px)`, top: coords.y }}
                                         exit={{ opacity: 0, scale: 0 }}
                                         transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                                        className={`absolute w-12 h-12 lg:w-16 lg:h-16 -ml-6 -mt-6 lg:-ml-8 lg:-mt-8 rounded-full flex flex-col items-center justify-center border-4 shadow-xl z-20 bg-[#09090b]`}
+                                        className={`absolute w-12 h-12 lg:w-16 lg:h-16 -ml-6 -mt-6 lg:-ml-8 lg:-mt-8 rounded-full flex flex-col items-center justify-center border-[3px] dark:border-4 shadow-md dark:shadow-xl z-20 bg-white dark:bg-[#09090b]`}
                                         style={{ borderColor, boxShadow: shadow }}
                                     >
-                                        <span className="text-[7px] lg:text-[9px] text-gray-400 font-mono absolute top-1">i: {i}</span>
-                                        <span className="font-black text-lg lg:text-xl text-white mt-1">{node.value}</span>
-                                        {i === 0 && <div className="absolute -top-5 lg:-top-6 text-[9px] lg:text-[11px] font-black text-cyan-500">ROOT</div>}
+                                        <span className="text-[7px] lg:text-[9px] text-slate-400 dark:text-gray-400 font-mono absolute top-1">i: {i}</span>
+                                        <span className={`font-black text-lg lg:text-xl mt-1 ${isHigh || isComp || isSwap ? 'text-slate-900 dark:text-white' : 'text-slate-900 dark:text-white'}`}>{node.value}</span>
+                                        {i === 0 && <div className="absolute -top-5 lg:-top-6 text-[9px] lg:text-[11px] font-black text-cyan-600 dark:text-cyan-500">ROOT</div>}
                                         {label && (
-                                            <div className="absolute -bottom-5 lg:-bottom-6 bg-black/80 border border-white/20 text-white px-1.5 py-0.5 rounded text-[7px] lg:text-[8px] font-black shadow-lg">
+                                            <div className="absolute -bottom-5 lg:-bottom-6 bg-white/90 dark:bg-black/80 border border-slate-200 dark:border-white/20 text-slate-900 dark:text-white px-1.5 py-0.5 rounded text-[7px] lg:text-[8px] font-black shadow-lg">
                                                 {label}
                                             </div>
                                         )}
@@ -628,8 +631,8 @@ const HeapVisualizer = () => {
                     </div>
 
                     {heap.length === 0 && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600 font-mono opacity-50 pointer-events-none">
-                            <Database size={48} className="mb-4 text-gray-700" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-gray-600 font-mono opacity-50 pointer-events-none">
+                            <Database size={48} className="mb-4 text-slate-400 dark:text-gray-700" />
                             <p className="text-xs lg:text-sm">[ HEAP_EMPTY :: AWAITING_INSERTION ]</p>
                         </div>
                     )}
@@ -637,8 +640,8 @@ const HeapVisualizer = () => {
              </div>
           </div>
 
-          <div className="shrink-0 flex justify-between items-center text-[10px] lg:text-xs font-mono text-gray-500 px-2 lg:mb-2">
-             <div className="flex items-center gap-2"><Activity size={14} className={isAnimating ? "text-cyan-500 animate-spin lg:w-3.5 lg:h-3.5" : "lg:w-3.5 lg:h-3.5"}/> <span className="truncate max-w-[200px] lg:max-w-none">{message}</span></div>
+          <div className="shrink-0 flex justify-between items-center text-[10px] lg:text-xs font-mono text-slate-700 dark:text-gray-500 px-2 lg:mb-2">
+             <div className="flex items-center gap-2"><Activity size={14} className={isAnimating ? "text-cyan-600 dark:text-cyan-500 animate-spin lg:w-3.5 lg:h-3.5" : "lg:w-3.5 lg:h-3.5"}/> <span className="truncate max-w-[200px] lg:max-w-none">{message}</span></div>
           </div>
 
           {/* BOTTOM HUD TRACE & HEAP */}
@@ -651,9 +654,9 @@ const HeapVisualizer = () => {
                      transition={{ duration: 0.3, ease: "easeInOut" }}
                      className="flex gap-2 lg:gap-4 w-full shrink-0 overflow-hidden" 
                   >
-                     <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
-                         <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
-                            <div className="flex items-center gap-1.5 lg:gap-2 text-cyan-400">
+                     <div className="flex-1 shrink-0 bg-white/90 dark:bg-black/80 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
+                         <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-slate-200 dark:border-white/10 flex justify-between items-center bg-white/60 backdrop-blur-xl dark:bg-white/5 shrink-0">
+                            <div className="flex items-center gap-1.5 lg:gap-2 text-cyan-600 dark:text-cyan-400">
                                 <Terminal size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/>
                                 <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Execution_Trace</span>
                             </div>
@@ -661,15 +664,15 @@ const HeapVisualizer = () => {
                          <div ref={interpreterScrollRef} className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
                             {codeLines.length ? codeLines.map(line => (
                                <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
-                                  <div className={`font-mono ${line.active ? 'text-cyan-400' : 'text-gray-400'}`}>{line.text}</div>
-                                  {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
+                                  <div className={`font-mono ${line.active ? 'text-cyan-600 dark:text-cyan-400 font-bold' : 'text-slate-700 dark:text-gray-400'}`}>{line.text}</div>
+                                  {line.active && <div className="text-[9px] lg:text-xs text-amber-600 dark:text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
                                </div>
-                            )) : <div className="text-gray-600 text-[10px] lg:text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/> Awaiting Heap operation...</div>}
+                            )) : <div className="text-slate-400 dark:text-gray-600 text-[10px] lg:text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/> Awaiting Heap operation...</div>}
                          </div>
                      </div>
 
-                     <div className="w-[130px] lg:w-[350px] shrink-0 border border-cyan-500/30 bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner h-full overflow-hidden">
-                        <div className="absolute top-2 right-2 lg:top-3 lg:right-4 flex items-center gap-1.5 lg:gap-2 text-[8px] lg:text-[10px] font-mono text-cyan-500 uppercase tracking-widest">
+                     <div className="w-[130px] lg:w-[350px] shrink-0 border border-cyan-200 dark:border-cyan-500/30 bg-cyan-50 dark:bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner h-full overflow-hidden">
+                        <div className="absolute top-2 right-2 lg:top-3 lg:right-4 flex items-center gap-1.5 lg:gap-2 text-[8px] lg:text-[10px] font-mono text-cyan-600 dark:text-cyan-500 uppercase tracking-widest">
                             <Box size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Memory_Buffer</span><span className="lg:hidden">Buffer</span>
                         </div>
                         <AnimatePresence>
@@ -678,15 +681,15 @@ const HeapVisualizer = () => {
                                 initial={{ scale: 0, y: -20, opacity: 0 }}
                                 animate={{ scale: 1, y: 0, opacity: 1 }}
                                 exit={{ opacity: 0, scale: 0.5, y: 50 }}
-                                className={`w-14 h-14 lg:w-20 lg:h-20 rounded-full border-4 border-dashed flex flex-col items-center justify-center shadow-[0_0_30px_rgba(6,182,212,0.4)] z-50 relative mt-4 lg:mt-6 ${phantom.label ? 'border-amber-400 bg-amber-500/20' : 'border-cyan-400 bg-cyan-500/20'}`}
+                                className={`w-14 h-14 lg:w-20 lg:h-20 rounded-full border-[3px] dark:border-4 border-dashed flex flex-col items-center justify-center shadow-lg dark:shadow-[0_0_30px_rgba(6,182,212,0.4)] z-50 relative mt-4 lg:mt-6 ${phantom.label ? 'border-amber-400 bg-amber-50 dark:bg-amber-500/20' : 'border-cyan-400 bg-white dark:bg-cyan-500/20'}`}
                               >
-                                 <span className="text-xl lg:text-3xl font-black text-white">{phantom.val}</span>
-                                 {phantom.label && <span className="absolute -bottom-6 text-[8px] lg:text-[10px] font-black text-amber-400 uppercase tracking-wider">{phantom.label}</span>}
+                                 <span className="text-xl lg:text-3xl font-black text-slate-900 dark:text-white">{phantom.val}</span>
+                                 {phantom.label && <span className="absolute -bottom-6 text-[8px] lg:text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">{phantom.label}</span>}
                               </motion.div>
                            )}
                         </AnimatePresence>
                         {!phantom && (
-                            <div className="text-cyan-500/30 font-mono text-[9px] lg:text-xs flex items-center gap-1.5 lg:gap-2 mt-4">
+                            <div className="text-cyan-600/50 dark:text-cyan-500/30 font-mono text-[9px] lg:text-xs flex items-center gap-1.5 lg:gap-2 mt-4">
                                 <Zap size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Buffer Ready</span><span className="lg:hidden">Empty</span>
                             </div>
                         )}

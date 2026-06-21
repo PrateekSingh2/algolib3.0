@@ -64,9 +64,9 @@ const CODE_SNIPPETS = {
 
 const CyberGrid = () => (
   <div className="absolute inset-0 z-0 pointer-events-none">
-    <div className="absolute inset-0 bg-[#09090b]" />
-    <div className="absolute inset-0 bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,255,136,0.03),transparent_70%)]" />
+    <div className="absolute inset-0 bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-[#09090b]" />
+    <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.07),transparent_70%)] dark:bg-[radial-gradient(circle_at_center,rgba(0,255,136,0.03),transparent_70%)]" />
   </div>
 );
 
@@ -386,19 +386,19 @@ const SortingVisualizer = () => {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden">
+    <div className="absolute inset-0 flex flex-col bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-[#09090b] font-sans text-slate-900 dark:text-white overflow-hidden">
       <CyberGrid />
       
       <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
         
         {/* --- LEFT PANEL: COMMAND CENTER (Constrained to 42% on mobile) --- */}
-        <div className="w-full lg:w-[340px] bg-black/95 lg:bg-black/80 backdrop-blur-md border-white/10 flex flex-col h-[42%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
+        <div className="w-full lg:w-[340px] bg-[#aebcc8]/95 lg:bg-[#aebcc8]/80 dark:bg-black/95 dark:lg:bg-black/80 backdrop-blur-md border-slate-300 dark:border-white/10 flex flex-col h-[42%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
 
           <div className="overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6 flex flex-col">
             
             {/* Algorithm Selector */}
             <div className="space-y-2 shrink-0">
-               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1">
+               <label className="text-[10px] font-bold text-slate-900 dark:text-gray-500 uppercase tracking-widest flex items-center gap-1">
                   <Layers size={10} /> Architecture
                </label>
                <div className="grid grid-cols-2 gap-2">
@@ -406,8 +406,8 @@ const SortingVisualizer = () => {
                      <button key={key} onClick={() => { setAlgo(key); resetArray(); }} disabled={isSorting}
                          className={`py-2 px-1 rounded text-[10px] font-bold uppercase border transition-all disabled:opacity-50 ${
                              algo === key 
-                             ? 'bg-emerald-500 text-black border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
-                             : 'bg-black/40 text-gray-500 border-white/10 hover:border-white/30 hover:text-white'
+                             ? 'bg-blue-400 text-black border-blue-500 shadow-[0_0_15px_rgba(96,165,250,0.4)]' 
+                             : 'bg-slate-200 dark:bg-black/40 text-slate-900 dark:text-gray-500 border-slate-300 dark:border-white/10 hover:border-blue-400 dark:hover:border-blue-400/50 hover:text-black dark:hover:text-white'
                          }`}
                      >
                          {ALGO_INFO[key].name}
@@ -415,33 +415,33 @@ const SortingVisualizer = () => {
                   ))}
                </div>
                
-               <div className="bg-emerald-500/5 border border-emerald-500/20 p-3 rounded-lg mt-2">
+               <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/20 p-3 rounded-lg mt-2">
                   <div className="flex justify-between items-center mb-1">
-                     <span className="text-[10px] font-bold text-emerald-400">{ALGO_INFO[algo].name}</span>
-                     <span className="text-[9px] font-mono text-gray-400 bg-black/50 px-2 py-0.5 rounded">{ALGO_INFO[algo].complexity}</span>
+                     <span className="text-[10px] font-bold text-blue-800 dark:text-blue-400">{ALGO_INFO[algo].name}</span>
+                     <span className="text-[9px] font-mono text-slate-900 dark:text-gray-400 bg-slate-300 dark:bg-black/50 px-2 py-0.5 rounded">{ALGO_INFO[algo].complexity}</span>
                   </div>
-                  <p className="text-[9px] text-gray-400 leading-relaxed">{ALGO_INFO[algo].desc}</p>
+                  <p className="text-[9px] text-slate-900 dark:text-gray-400 leading-relaxed">{ALGO_INFO[algo].desc}</p>
                </div>
             </div>
 
             {/* Sliders */}
-            <div className="space-y-4 bg-white/5 p-4 rounded-xl border border-white/10 shrink-0">
+            <div className="space-y-4 bg-[#a1afbb] dark:bg-white/5 p-4 rounded-xl border border-slate-300 dark:border-white/10 shrink-0">
                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-bold text-gray-400">
+                  <div className="flex justify-between text-[10px] font-bold text-slate-900 dark:text-gray-400">
                      <span className="flex items-center gap-1"><Database size={10} /> ARRAY_CAPACITY</span>
-                     <span className="text-emerald-400">{arraySize} Blocks</span>
+                     <span className="text-blue-800 dark:text-blue-400">{arraySize} Blocks</span>
                   </div>
                   <input type="range" min="10" max="150" value={arraySize} onChange={(e) => setArraySize(Number(e.target.value))} disabled={isSorting}
-                     className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                     className="w-full h-1 bg-slate-400 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
                </div>
                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-bold text-gray-400">
+                  <div className="flex justify-between text-[10px] font-bold text-slate-900 dark:text-gray-400">
                      <span className="flex items-center gap-1"><Gauge size={10} /> ENGINE_SPEED</span>
-                     <span className="text-emerald-400">{speed}%</span>
+                     <span className="text-blue-800 dark:text-blue-400">{speed}%</span>
                   </div>
                   <input type="range" min="1" max="100" value={speed} onChange={(e) => setSpeed(Number(e.target.value))}
-                     className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                     className="w-full h-1 bg-slate-400 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
                </div>
             </div>
@@ -451,8 +451,8 @@ const SortingVisualizer = () => {
                <button onClick={startSort}
                   className={`py-3 rounded-xl font-black text-[10px] lg:text-xs flex items-center justify-center gap-2 transition-all ${
                      isSorting && !isPaused
-                     ? 'bg-amber-500 text-black shadow-[0_0_15px_#eab308]' 
-                     : 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.5)] hover:scale-[1.02]'
+                     ? 'bg-orange-400 text-black border border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]' 
+                     : 'bg-green-400 text-black border border-green-500 shadow-[0_0_15px_rgba(74,222,128,0.4)] hover:scale-[1.02]'
                   }`}
                >
                   {isSorting && !isPaused ? <Pause size={14} fill="currentColor"/> : <Play size={14} fill="currentColor"/>}
@@ -460,25 +460,25 @@ const SortingVisualizer = () => {
                </button>
                
                <button onClick={resolveStep} disabled={!isPaused || !isSorting}
-                  className="py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl font-bold text-[10px] lg:text-xs flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="py-3 bg-blue-400 dark:bg-blue-500/20 border border-blue-500 dark:border-blue-500/50 hover:bg-blue-500 dark:hover:bg-blue-500/30 text-black dark:text-blue-400 rounded-xl font-bold text-[10px] lg:text-xs flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                >
                   <StepForward size={14} /> STEP
                </button>
             </div>
             
-            <button onClick={resetArray} className="w-full py-2 flex items-center justify-center gap-2 text-[10px] font-bold text-gray-500 hover:text-white transition-colors shrink-0">
+            <button onClick={resetArray} className="w-full py-2 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-900 dark:text-gray-500 hover:text-orange-500 dark:hover:text-orange-400 transition-colors shrink-0">
                <RotateCcw size={12}/> REGENERATE ARRAY
             </button>
 
             {/* DEDICATED OUTPUT CONSOLE */}
-            <div className="mt-4 flex-1 min-h-[120px] lg:min-h-[150px] bg-black/90 border border-emerald-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
-                <div className="px-3 py-2 border-b border-emerald-500/30 bg-emerald-900/20 flex items-center gap-2 shrink-0">
-                    <Terminal size={12} className="text-emerald-400" />
-                    <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">SYSTEM_LOGS</span>
+            <div className="mt-4 flex-1 min-h-[120px] lg:min-h-[150px] bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-black/90 border border-blue-300 dark:border-blue-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
+                <div className="px-3 py-2 border-b border-blue-300 dark:border-blue-500/30 bg-blue-100 dark:bg-blue-900/20 flex items-center gap-2 shrink-0">
+                    <Terminal size={12} className="text-blue-700 dark:text-blue-400" />
+                    <span className="text-[9px] font-black text-blue-700 dark:text-blue-400 uppercase tracking-widest">SYSTEM_LOGS</span>
                 </div>
-                <div className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[10px] text-gray-300 flex flex-col gap-1">
+                <div className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[10px] text-slate-900 dark:text-gray-300 flex flex-col gap-1">
                     {outputLog.map((log, i) => (
-                        <div key={i} className={`flex items-start ${log.includes('Complete') || log.includes('SUCCESS') ? 'text-emerald-400 font-bold' : log.includes('Abort') ? 'text-amber-400' : 'text-gray-400'}`}>
+                        <div key={i} className={`flex items-start ${log.includes('Complete') || log.includes('SUCCESS') ? 'text-blue-700 dark:text-blue-400 font-bold' : log.includes('Abort') ? 'text-amber-700 dark:text-amber-400' : 'text-slate-900 dark:text-gray-400'}`}>
                             <span className="opacity-50 mr-2 shrink-0">{String(i).padStart(2, '0')}</span>
                             {log}
                         </div>
@@ -491,7 +491,7 @@ const SortingVisualizer = () => {
         </div>
 
         {/* VISIBLE GLOWING SEPARATOR LINE (Mobile Only) */}
-        <div className="lg:hidden h-[2px] w-full bg-gradient-to-r from-emerald-500/10 via-emerald-500/60 to-emerald-500/10 shrink-0 z-30 order-2" />
+        <div className="lg:hidden h-[2px] w-full bg-gradient-to-r from-blue-500/10 via-blue-500/60 to-blue-500/10 shrink-0 z-30 order-2" />
 
         {/* --- RIGHT PANEL: THE ARENA --- */}
         <div className="order-3 lg:order-2 flex-1 relative flex flex-col p-3 sm:p-4 lg:p-6 min-w-0 overflow-hidden lg:h-full w-full">
@@ -500,7 +500,7 @@ const SortingVisualizer = () => {
           <div className="flex justify-start lg:justify-start items-center mb-2 lg:mb-3 shrink-0 gap-2">
              <button 
                 onClick={() => setShowHUD(!showHUD)}
-                className="h-7 lg:h-8 px-3 bg-[#050505] border border-emerald-500/80 rounded-lg lg:rounded-full text-emerald-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all shadow-[0_0_10px_rgba(16,185,129,0.2)] uppercase z-40"
+                className="h-7 lg:h-8 px-3 bg-white/60 backdrop-blur-xl dark:bg-[#050505] border border-emerald-400 dark:border-emerald-500/80 rounded-lg lg:rounded-full text-emerald-600 dark:text-emerald-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:shadow-sm dark:hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all shadow-sm dark:shadow-[0_0_10px_rgba(16,185,129,0.2)] uppercase z-40"
              >
                 {showHUD ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
                 {showHUD ? 'HIDE HUD' : 'SHOW HUD'}
@@ -508,12 +508,12 @@ const SortingVisualizer = () => {
           </div>
 
           {/* Central Arena: Array Data Pillars */}
-          <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
+          <div className="flex-1 min-h-0 border border-slate-200 dark:border-white/5 bg-white/60 backdrop-blur-xl/50 dark:bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
              
              {/* Status Badge inside Canvas */}
-             <div className="absolute top-4 right-6 z-20 flex items-center gap-2 lg:gap-3 px-3 py-1.5 bg-[#0a0a14]/90 backdrop-blur-md border border-white/10 rounded-full shadow-lg">
-                <Activity size={12} className={isSorting ? 'text-emerald-500 animate-pulse' : 'text-gray-600'} />
-                <span className="text-[8px] lg:text-[10px] font-mono font-bold text-white uppercase tracking-widest">{message}</span>
+             <div className="absolute top-4 right-6 z-20 flex items-center gap-2 lg:gap-3 px-3 py-1.5 bg-white/40 backdrop-blur-2xl/90 dark:bg-[#0a0a14]/90 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-full shadow-lg">
+                <Activity size={12} className={isSorting ? 'text-emerald-500 animate-pulse' : 'text-slate-400 dark:text-gray-600'} />
+                <span className="text-[8px] lg:text-[10px] font-mono font-bold text-slate-900 dark:text-white uppercase tracking-widest">{message}</span>
              </div>
 
              {/* HORIZONTAL SCROLLABLE DATA BARS */}
@@ -527,14 +527,14 @@ const SortingVisualizer = () => {
                             const isSorted = sortedIndices.includes(i);
                             const isPivot = pivotIndex === i;
 
-                            let barColor = 'bg-[#1f2937]'; // Default gray
+                            let barColor = 'bg-slate-500 dark:bg-[#1f2937]'; // Default gray
                             let glow = '';
                             
-                            if (isSorted) { barColor = 'bg-[#10b981]'; glow = 'shadow-[0_0_15px_rgba(16,185,129,0.5)]'; } // Emerald
-                            else if (isPivot) { barColor = 'bg-[#d946ef]'; glow = 'shadow-[0_0_20px_rgba(217,70,239,0.8)] z-10'; } // Fuchsia/Magenta
-                            else if (isSwap) { barColor = 'bg-[#ef4444]'; glow = 'shadow-[0_0_20px_rgba(239,68,68,0.8)] z-10'; } // Red
-                            else if (isOverwrite) { barColor = 'bg-[#f59e0b]'; glow = 'shadow-[0_0_20px_rgba(245,158,11,0.8)] z-10'; } // Amber/Orange
-                            else if (isCompare) { barColor = 'bg-[#06b6d4]'; glow = 'shadow-[0_0_20px_rgba(6,182,212,0.8)] z-10'; } // Cyan
+                            if (isSorted) { barColor = 'bg-emerald-500 dark:bg-[#10b981]'; glow = 'shadow-[0_0_15px_rgba(16,185,129,0.5)]'; } // Emerald
+                            else if (isPivot) { barColor = 'bg-fuchsia-500 dark:bg-[#d946ef]'; glow = 'shadow-[0_0_20px_rgba(217,70,239,0.8)] z-10'; } // Fuchsia/Magenta
+                            else if (isSwap) { barColor = 'bg-red-500 dark:bg-[#ef4444]'; glow = 'shadow-[0_0_20px_rgba(239,68,68,0.8)] z-10'; } // Red
+                            else if (isOverwrite) { barColor = 'bg-amber-500 dark:bg-[#f59e0b]'; glow = 'shadow-[0_0_20px_rgba(245,158,11,0.8)] z-10'; } // Amber/Orange
+                            else if (isCompare) { barColor = 'bg-cyan-500 dark:bg-[#06b6d4]'; glow = 'shadow-[0_0_20px_rgba(6,182,212,0.8)] z-10'; } // Cyan
 
                             return (
                                 <motion.div
@@ -546,7 +546,7 @@ const SortingVisualizer = () => {
                                 >
                                     {/* Value Label (Only show if bars are thick enough) */}
                                     {arraySize <= 40 && (
-                                        <span className={`absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] lg:text-[9px] font-mono font-bold ${isSorted ? 'text-emerald-500' : 'text-gray-400'}`}>
+                                        <span className={`absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] lg:text-[9px] font-mono font-bold ${isSorted ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-700 dark:text-gray-400'}`}>
                                             {val}
                                         </span>
                                     )}
@@ -568,7 +568,7 @@ const SortingVisualizer = () => {
              </div>
              
              {/* Floor Line */}
-             <div className="w-full h-1 bg-white/5 rounded-b-2xl shrink-0" />
+             <div className="w-full h-1 bg-slate-200 dark:bg-white/5 rounded-b-2xl shrink-0" />
           </div>
 
           {/* BOTTOM HUD TRACE */}
@@ -581,9 +581,9 @@ const SortingVisualizer = () => {
                      transition={{ duration: 0.4, ease: "easeInOut" }}
                      className="w-full shrink-0 overflow-hidden" 
                   >
-                     <div className="w-full h-full bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
-                         <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
-                            <div className="flex items-center gap-1.5 lg:gap-2 text-emerald-400">
+                     <div className="w-full h-full bg-white/40 backdrop-blur-2xl/90 dark:bg-black/80 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
+                         <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-slate-200 dark:border-white/10 flex justify-between items-center bg-white/60 backdrop-blur-xl dark:bg-white/5 shrink-0">
+                            <div className="flex items-center gap-1.5 lg:gap-2 text-emerald-600 dark:text-emerald-400">
                                 <Terminal size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/>
                                 <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Hinglish_Logic_Trace</span>
                             </div>
@@ -591,8 +591,8 @@ const SortingVisualizer = () => {
                          <div className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
                             {codeLines.map(line => (
                                <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
-                                  <div className={`font-mono ${line.active ? 'text-emerald-400' : 'text-gray-400'}`}>{line.text}</div>
-                                  {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
+                                  <div className={`font-mono ${line.active ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-700 dark:text-gray-400'}`}>{line.text}</div>
+                                  {line.active && <div className="text-[9px] lg:text-xs text-amber-600 dark:text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
                                </div>
                             ))}
                             <div ref={interpreterEndRef} />

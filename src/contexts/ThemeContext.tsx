@@ -18,10 +18,10 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "light") {
-      root.classList.add("light-theme");
+    if (theme === "dark") {
+      root.classList.add("dark");
     } else {
-      root.classList.remove("light-theme");
+      root.classList.remove("dark");
     }
     localStorage.setItem("algolib_theme", theme);
   }, [theme]);

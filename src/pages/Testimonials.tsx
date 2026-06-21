@@ -226,29 +226,29 @@ const TestimonialsPage: React.FC = () => {
   const fiveStar  = all.filter(t => t.rating === 5).length;
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "linear-gradient(160deg,#06070a,#050507 50%,#07060d)", fontFamily: "'Inter',sans-serif" }}>
-      <div className="fixed inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 100% 50% at 50% 0%,rgba(0,230,118,0.055),transparent)" }} />
+    <div className="min-h-screen text-slate-800 dark:text-white bg-slate-50 dark:bg-[#06070a]" style={{ fontFamily: "'Inter',sans-serif" }}>
+      <div className="fixed inset-0 pointer-events-none opacity-50 dark:opacity-100" style={{ background: "radial-gradient(ellipse 100% 50% at 50% 0%,rgba(0,230,118,0.055),transparent)" }} />
       <Navbar />
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-24">
 
         {/* ── Hero ── */}
         <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] font-mono text-white/50 uppercase tracking-widest mb-5">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] text-[11px] font-mono text-slate-500 dark:text-white/50 uppercase tracking-widest mb-5">
             <Quote className="w-3 h-3 text-[#fbbf24]" /> Community Reviews
           </div>
-          <h1 className="text-5xl sm:text-6xl font-black tracking-tight mb-4" style={{ letterSpacing: "-0.025em" }}>
+          <h1 className="text-5xl sm:text-6xl font-black tracking-tight mb-4 text-slate-900 dark:text-white" style={{ letterSpacing: "-0.025em" }}>
             What developers<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#fbbf24] via-[#f97316] to-[#ef4444]">say about us</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#f59e0b] via-[#f97316] to-[#ef4444]">say about us</span>
           </h1>
-          <p className="text-white/40 text-lg max-w-lg mx-auto mb-8">Real reviews from real programmers who use AlgoLib to learn, practice and compete.</p>
+          <p className="text-slate-600 dark:text-white/40 text-lg max-w-lg mx-auto mb-8">Real reviews from real programmers who use AlgoLib to learn, practice and compete.</p>
 
           {/* Stats */}
           <div className="flex flex-wrap items-center justify-center gap-5 mt-10">
             {[[`⭐ ${avg}`, "Average Rating"], [`🏆 ${fiveStar}`, "5-Star Reviews"], [`💬 ${all.length}+`, "Total Reviews"]].map(([v, l]) => (
-              <div key={l} className="px-5 py-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] text-center">
-                <div className="text-xl font-black text-white">{v}</div>
-                <div className="text-[11px] text-white/35 mt-0.5">{l}</div>
+              <div key={l} className="px-5 py-3 rounded-2xl bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.07] text-center shadow-sm dark:shadow-none">
+                <div className="text-xl font-black text-slate-800 dark:text-white">{v}</div>
+                <div className="text-[11px] text-slate-500 dark:text-white/35 mt-0.5">{l}</div>
               </div>
             ))}
           </div>
@@ -257,24 +257,24 @@ const TestimonialsPage: React.FC = () => {
         {/* ── Filters ── */}
         <div className="flex flex-col sm:flex-row gap-3 mb-10">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search reviews…"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-all" />
+              className="w-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] rounded-2xl pl-11 pr-4 py-3 text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-slate-300 dark:focus:border-white/20 transition-all shadow-sm dark:shadow-none" />
           </div>
           <div className="flex gap-2">
             {RATINGS.map(r => (
               <button key={r} onClick={() => setRating(r)}
-                className={`px-4 py-3 rounded-2xl text-sm font-semibold transition-all border ${rating === r ? "bg-[#fbbf24]/15 border-[#fbbf24]/40 text-[#fbbf24]" : "bg-white/[0.03] border-white/[0.07] text-white/50 hover:text-white/70"}`}>
+                className={`px-4 py-3 rounded-2xl text-sm font-semibold transition-all border ${rating === r ? "bg-amber-50 dark:bg-[#fbbf24]/15 border-amber-200 dark:border-[#fbbf24]/40 text-amber-600 dark:text-[#fbbf24]" : "bg-white dark:bg-white/[0.03] border-slate-200 dark:border-white/[0.07] text-slate-500 dark:text-white/50 hover:text-slate-700 dark:hover:text-white/70 shadow-sm dark:shadow-none"}`}>
                 {r === "All" ? "All" : `${r}★`}
               </button>
             ))}
           </div>
           <div className="relative">
             <select value={sort} onChange={e => setSort(e.target.value)}
-              className="appearance-none bg-white/[0.04] border border-white/[0.08] rounded-2xl px-4 py-3 pr-9 text-sm text-white/70 focus:outline-none cursor-pointer">
-              {SORTS.map(s => <option key={s} value={s} className="bg-[#0c0c10]">{s}</option>)}
+              className="appearance-none bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] rounded-2xl px-4 py-3 pr-9 text-sm text-slate-700 dark:text-white/70 focus:outline-none cursor-pointer shadow-sm dark:shadow-none">
+              {SORTS.map(s => <option key={s} value={s} className="bg-white dark:bg-[#0c0c10]">{s}</option>)}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30 pointer-events-none" />
           </div>
           <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setShowModal(true)}
             className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl font-bold text-sm text-black transition-all"
@@ -302,23 +302,23 @@ const TestimonialsPage: React.FC = () => {
                 return (
                   <motion.div key={t.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }} transition={{ delay: i * 0.03, duration: 0.4 }}
-                    className="break-inside-avoid inline-block w-full mb-5 group p-6 rounded-[20px] bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] flex flex-col gap-4 relative overflow-hidden hover:border-white/[0.15] transition-all duration-300"
+                    className="break-inside-avoid inline-block w-full mb-5 group p-6 rounded-[20px] bg-white dark:bg-white/[0.04] backdrop-blur-xl border border-slate-200 dark:border-white/[0.08] flex flex-col gap-4 relative overflow-hidden hover:border-slate-300 dark:hover:border-white/[0.15] transition-all duration-300 shadow-sm dark:shadow-none"
                     style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.05)" }}>
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                       style={{ background: `radial-gradient(circle at 15% 15%,${c.from}12,transparent 55%)` }} />
-                    <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-white/10 to-transparent" />
                     <div className="flex items-start justify-between">
                       <div className="flex gap-0.5">
-                        {[1,2,3,4,5].map(s => <Star key={s} className="w-3.5 h-3.5" fill={s <= t.rating ? "currentColor" : "none"} style={{ color: s <= t.rating ? "#fbbf24" : "rgba(255,255,255,0.15)" }} />)}
+                        {[1,2,3,4,5].map(s => <Star key={s} className="w-3.5 h-3.5" fill={s <= t.rating ? "currentColor" : "none"} style={{ color: s <= t.rating ? "#fbbf24" : "rgba(150,150,150,0.15)" }} />)}
                       </div>
-                      <Quote className="w-5 h-5 text-white/10 flex-shrink-0" />
+                      <Quote className="w-5 h-5 text-slate-300 dark:text-white/10 flex-shrink-0" />
                     </div>
-                    <p className="text-[13.5px] leading-[1.72] text-white/60 flex-1 relative z-10">"{t.text}"</p>
-                    <div className="flex items-center gap-3 pt-3 border-t border-white/[0.05] relative z-10">
+                    <p className="text-[13.5px] leading-[1.72] text-slate-600 dark:text-white/60 flex-1 relative z-10">"{t.text}"</p>
+                    <div className="flex items-center gap-3 pt-3 border-t border-slate-100 dark:border-white/[0.05] relative z-10">
                       <Avatar name={t.name} image_url={t.image_url} idx={i} />
                       <div>
-                        <p className="text-[13px] font-semibold text-white/90">{t.name}</p>
-                        <p className="text-[11px] text-white/60 mt-0.5">{t.role}</p>
+                        <p className="text-[13px] font-semibold text-slate-800 dark:text-white/90">{t.name}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-white/60 mt-0.5">{t.role}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -335,9 +335,9 @@ const TestimonialsPage: React.FC = () => {
         {/* Bottom CTA */}
         {!loading && (
           <div className="text-center mt-14">
-            <p className="text-white/35 text-sm mb-4">Had a great experience? We'd love to hear from you.</p>
+            <p className="text-slate-500 dark:text-white/35 text-sm mb-4">Had a great experience? We'd love to hear from you.</p>
             <button onClick={() => setShowModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/[0.05] border border-white/[0.10] text-white/70 hover:text-white hover:border-white/20 font-semibold text-sm transition-all">
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.10] text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:border-white/20 font-semibold text-sm transition-all shadow-sm dark:shadow-none">
               <Plus className="w-4 h-4" /> Add Your Review
             </button>
           </div>

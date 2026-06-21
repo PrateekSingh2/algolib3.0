@@ -1,10 +1,11 @@
 import {
   Terminal, Swords, BookOpen, BrainCircuit,
   Binary, BarChart2, Network, FileCode2,
-  Layers, GitMerge, ListTree
+  Layers, GitMerge, ListTree, Bot, Globe, LayoutDashboard,
+  ShieldAlert, Activity, FileSpreadsheet, UserCircle, Edit3, LifeBuoy, Users
 } from "lucide-react";
 
-export type DocCategory = "Getting Started" | "Visualizers" | "Compiler" | "Arena" | "Education";
+export type DocCategory = "Getting Started" | "Visualizers" | "Compiler" | "Arena" | "Education" | "AI & Tools" | "Platform Ecosystem";
 
 export interface DocContent {
   heading: string;
@@ -483,6 +484,304 @@ export const docData: DocSection[] = [
           "Community-submitted snippets go through a moderation review before appearing in the public library."
         ],
         note: "SnippetViews are read-only. To experiment with a snippet, copy it to the Code Compiler and run it with your own test inputs."
+      }
+    ]
+  },
+
+  // ─── VECTORIS AI ──────────────────────────────────────────────────────────
+  {
+    id: "vectoris-ai",
+    title: "Vectoris AI",
+    icon: Bot,
+    description: "An advanced, context-aware AI assistant designed specifically for analyzing, optimizing, and explaining Data Structures & Algorithms.",
+    category: "AI & Tools",
+    content: [
+      {
+        heading: "Intelligent AI Companion",
+        text: [
+          "Vectoris is a state-of-the-art AI assistant seamlessly integrated into the AlgoLib ecosystem. Leveraging advanced large language models (LLMs) tuned for competitive programming and theoretical computer science, it provides high-fidelity, conversational debugging and learning support.",
+          "Vectoris maintains persistent conversational memory. It understands the nuances of algorithmic paradigms such as Dynamic Programming, Graph Traversal, and Divide-and-Conquer, allowing you to ask follow-up questions without losing context.",
+          "Mathematical precision is built-in: Vectoris utilizes full Markdown and KaTeX support to flawlessly render complex equations, recurrence relations, and Big-O notation directly in the chat interface."
+        ]
+      },
+      {
+        heading: "Execution Matrix (Dynamic Complexity Analysis)",
+        text: [
+          "Unlike standard chatbots that only provide textual answers, Vectoris actively parses and evaluates your submitted code snippets using an internal AST (Abstract Syntax Tree) analyzer to deduce Big-O characteristics.",
+          "The Execution Matrix is an interactive, graphical interface that dynamically plots the exact Time and Space Complexity of your code.",
+          "It maps the algorithm against common growth bounds—such as O(1) Constant, O(log N) Logarithmic, O(N) Linear, O(N²) Quadratic, O(2^N) Exponential, and O(N!) Factorial.",
+          "A live Recharts-powered graph visualizes the projected operation count across increasing input sizes (N), offering an immediate visual understanding of how well the algorithm scales in real-world scenarios."
+        ],
+        badge: "Core Feature"
+      },
+      {
+        heading: "Automated Code Optimization & Translation",
+        text: [
+          "Vectoris acts as an automated refactoring engine. For every analyzed snippet, context-aware action buttons allow you to instantly transform your code.",
+          "Optimize Code: Vectoris will rewrite your snippet to aggressively improve its time and space complexity. The refactored code is presented alongside a detailed, line-by-line explanation of the specific optimizations applied (e.g., trading nested loops for HashMaps, memoizing recursive calls).",
+          "One-Click Translation: Seamlessly port your logic across languages. Vectoris can convert your code between C++, Python, Java, JavaScript, and C, carefully preserving the algorithmic integrity, variable naming conventions, and language-specific idiomatic patterns."
+        ]
+      }
+    ]
+  },
+
+  // ─── SNIPPET VISUALIZER ───────────────────────────────────────────────────
+  {
+    id: "snippet-visualizer",
+    title: "Snippet Visualizer",
+    icon: Activity,
+    description: "A robust engine for safely executing and stepping through complex custom C/C++ algorithms with visual memory traces.",
+    category: "AI & Tools",
+    content: [
+      {
+        heading: "Dynamic Island Execution Engine",
+        text: [
+          "The Snippet Visualizer redefines the debugging experience by moving away from static log files to a real-time, animated HUD (Heads-Up Display) styled as a 'Dynamic Island'.",
+          "As your custom C/C++ code is compiled and executed, the Dynamic Island tracks the precise state of the execution pipeline—displaying compilation phases, standard output streams, process exits, and error boundaries instantaneously.",
+          "To guarantee platform stability, all user-submitted code is isolated and executed within a heavily sandboxed, cross-origin iframe environment. This architectural choice actively prevents runaway infinite loops, aggressive memory leaks, or malicious payloads from freezing the parent React application."
+        ]
+      },
+      {
+        heading: "Advanced Input Injection System",
+        text: [
+          "Traditional web-based compilers often struggle with synchronous I/O operations (like C's scanf() or C++'s cin). The Snippet Visualizer solves this through a custom Input Injection mechanism.",
+          "You can supply multi-line standard input (stdin) via a dedicated UI panel. When the execution begins, the engine hooks into the isolated C/C++ runtime context and safely injects the input buffer.",
+          "This guarantees flawless, non-blocking execution of scanning functions, allowing you to seamlessly test complex graph adjacency lists, matrix inputs, or multi-case competitive programming queries."
+        ]
+      }
+    ]
+  },
+
+  // ─── CONTENT DISCOVERY SITE ───────────────────────────────────────────────
+  {
+    id: "content-discovery",
+    title: "Content & Research Ecosystem",
+    icon: Globe,
+    description: "The official AlgoLib portal for reading cutting-edge algorithmic research, tech news, and system design articles.",
+    category: "Platform Ecosystem",
+    content: [
+      {
+        heading: "Next.js Architecture & Overview",
+        text: [
+          "The Content Site operates as an independent, high-performance web application built on the Next.js App Router. It serves as the dedicated knowledge and media hub for the AlgoLib ecosystem.",
+          "It aggregates premium content ranging from in-depth system design breakdowns, to competitive programming tutorials, to published academic research papers in the field of theoretical computer science."
+        ]
+      },
+      {
+        heading: "Dynamic Feed & Smart Filtering",
+        text: [
+          "The core interface features a highly optimized Infinite Scroll Feed that loads articles dynamically as you navigate, minimizing initial load times and bandwidth consumption.",
+          "Content is rigorously categorized. Users can instantly filter the feed using precise tags such as 'Artificial Intelligence', 'Data Structures', 'System Architecture', and 'Competitive Programming', ensuring that you only see the content relevant to your learning path."
+        ]
+      },
+      {
+        heading: "Integrated Academic PDF Reader",
+        text: [
+          "Algorithmic research relies heavily on complex mathematical notation, proofs, and vector graphs that standard HTML often fails to render accurately.",
+          "To solve this, the Content Site includes a native, mobile-optimized PDF reading engine. This allows you to directly consume complex academic papers and technical whitepapers within the browser.",
+          "The viewer is fully responsive, ensuring that multi-column layouts and intricate diagrams remain perfectly legible whether you are on a 4K desktop monitor or a mobile device."
+        ]
+      }
+    ]
+  },
+
+  // ─── INFRASTRUCTURE STATUS ────────────────────────────────────────────────
+  {
+    id: "infrastructure-status",
+    title: "Platform Infrastructure & Status",
+    icon: ShieldAlert,
+    description: "Real-time monitoring and incident tracking for the AlgoLib platform ecosystem.",
+    category: "Platform Ecosystem",
+    content: [
+      {
+        heading: "Real-Time Uptime Monitoring",
+        text: [
+          "AlgoLib is powered by a complex network of microservices, including the multi-language compilation engine, real-time Supabase databases, and authentication handlers. The Infrastructure Status dashboard provides 24/7 transparency into the health of these systems.",
+          "The dashboard monitors critical API endpoints and backend services, updating in real-time to alert you of any latency spikes, partial outages, or scheduled maintenance windows."
+        ]
+      },
+      {
+        heading: "Historical Metrics & Seamless Integration",
+        text: [
+          "In addition to live status, the dashboard provides a comprehensive 90-day historical log of uptime metrics, offering absolute transparency regarding platform reliability (e.g., maintaining 99.9% uptime).",
+          "If an incident occurs, detailed post-mortem reports are published, outlining the root cause and the engineering steps taken to resolve the degradation.",
+          "The entire status interface is embedded natively into the main UI using an optimized iframe approach. This unified design ensures you can verify system health instantly without ever leaving the AlgoLib environment."
+        ],
+        note: "In the event of a compilation engine timeout, check the Status Dashboard first to rule out any ongoing backend infrastructure maintenance."
+      }
+    ]
+  },
+
+  // ─── DSA SHEETS ───────────────────────────────────────────────────────────
+  {
+    id: "dsa-sheets",
+    title: "DSA Problem Sheets",
+    icon: FileSpreadsheet,
+    description: "Curated, structured pathways and problem lists designed to guide you from algorithmic fundamentals to advanced mastery.",
+    category: "Education",
+    content: [
+      {
+        heading: "Overview & Curation Strategy",
+        text: [
+          "AlgoLib's DSA Sheets are meticulously curated, structured pathways designed to guide users from algorithmic fundamentals to advanced competitive programming mastery. Unlike scattered problem sets, these sheets aggregate high-yield questions—such as the classic SDE Sheet, Blind 75, and Grind 169—into a unified tracking interface.",
+          "The sheets eliminate decision fatigue by presenting a linear progression curve, ensuring that learners build prerequisite knowledge before tackling complex topics like Dynamic Programming on Trees or Advanced Graph Algorithms.",
+          "Each problem is mapped directly to our integrated Compiler Engine, allowing you to seamlessly transition from reading the problem statement to writing code without context switching."
+        ]
+      },
+      {
+        heading: "Progress Tracking & Analytics",
+        text: [
+          "The core power of the DSA Sheets lies in their persistent progress tracking architecture. As you solve problems, your success is logged in the Supabase backend, instantly updating your visual progress bars and completion percentages.",
+          "The interface provides granular filtering capabilities: you can isolate unsolved problems, filter by specific data structures (e.g., Heaps, Tries), or target problems by difficulty tier.",
+          "Historical telemetry tracks not just completion, but the number of attempts and time taken, allowing the platform to highlight areas where you might need revision."
+        ],
+        badge: "Tracker Engine"
+      },
+      {
+        heading: "Revision Reminders & Spaced Repetition",
+        text: [
+          "To combat the forgetting curve, the DSA Sheets incorporate intelligent revision markers. Users can bookmark specific, high-complexity problems for later review.",
+          "The system categorizes these bookmarked problems in a dedicated 'Revision List', encouraging a spaced repetition learning model that is crucial for retaining esoteric algorithmic techniques prior to technical interviews."
+        ]
+      }
+    ]
+  },
+
+  // ─── DIGITAL NOTES & WORKSPACE ────────────────────────────────────────────
+  {
+    id: "digital-notes",
+    title: "Digital Notes Workspace",
+    icon: Edit3,
+    description: "A secure, cloud-synced Markdown engineering notebook for documenting proofs, code snippets, and algorithmic patterns.",
+    category: "Education",
+    content: [
+      {
+        heading: "Rich-Text Engineering Notebook",
+        text: [
+          "The integrated Notes module acts as your personal engineering notebook. Recognizing that mastering algorithms requires more than just writing code—it requires synthesizing patterns and writing down proofs—AlgoLib offers a full-featured markdown editor baked directly into the platform.",
+          "You can draft technical explanations, outline dynamic programming state transitions, or save snippets of brilliant solutions.",
+          "The editor fully supports robust syntax highlighting, making it trivial to embed complex code blocks directly into your notes alongside your theoretical explanations."
+        ]
+      },
+      {
+        heading: "Cross-Platform Synchronization",
+        text: [
+          "Your notes are automatically synced to the cloud via secure, encrypted backend handlers.",
+          "This ensures that an insight jotted down on your mobile device during a commute is instantly available when you sit down at your desktop to code.",
+          "The robust cloud synchronization means you never have to worry about local data loss, and your algorithmic knowledge base grows securely alongside your programming skills."
+        ]
+      },
+      {
+        heading: "Contextual Tagging & Searchability",
+        text: [
+          "To manage a growing repository of notes, the system implements a powerful tagging and categorization mechanism.",
+          "You can tag notes with specific algorithmic paradigms (e.g., 'Sliding Window', 'Topological Sort') or attach them directly to specific problems from the DSA Sheets.",
+          "A blazing-fast, client-side search indexing system allows you to retrieve any note instantly by querying keywords, ensuring that your hard-earned insights are always just a keystroke away when confronting a similar problem."
+        ]
+      }
+    ]
+  },
+
+  // ─── USER PROFILE & ANALYTICS ─────────────────────────────────────────────
+  {
+    id: "user-profile",
+    title: "User Profile & Analytics",
+    icon: UserCircle,
+    description: "Your centralized algorithmic identity, featuring detailed performance heatmaps, submission archives, and global reputation tracking.",
+    category: "Platform Ecosystem",
+    content: [
+      {
+        heading: "Centralized Identity & Reputation",
+        text: [
+          "The User Profile is the centralized hub of your AlgoLib identity. It aggregates your activity across all platform modules—from Visualizers and Compiler submissions to QuizForge assessments and Contest Arena rankings.",
+          "Your profile displays a comprehensive reputation dashboard, showcasing your global rank, total problems solved, and current coding streak.",
+          "This gamified approach transforms the arduous process of learning data structures into a rewarding, habit-forming journey."
+        ]
+      },
+      {
+        heading: "Detailed Telemetry & Performance Heatmaps",
+        text: [
+          "Beyond basic vanity metrics, the profile provides deep, actionable analytics. A GitHub-style contribution heatmap visualizes your daily coding consistency over the past year.",
+          "Detailed charts break down your problem-solving accuracy, visualizing your ratio of Accepted (AC) to Wrong Answer (WA) submissions.",
+          "Furthermore, it analyzes your language preferences (e.g., 70% C++, 30% Python) and highlights your strongest and weakest algorithmic topics based on your historical performance, allowing you to strategically target your weaknesses."
+        ],
+        badge: "Deep Analytics"
+      },
+      {
+        heading: "Archived Submissions & Quiz History",
+        text: [
+          "The profile serves as a permanent archive of your intellectual growth. Every code submission is saved, allowing you to revisit an old O(N²) solution and refactor it into an O(N log N) masterpiece as your skills improve.",
+          "Similarly, all QuizForge attempts are preserved with detailed post-mortem reports. You can review exactly which questions you missed on past assessments, ensuring that foundational gaps in your theoretical knowledge are permanently closed."
+        ]
+      }
+    ]
+  },
+
+  // ─── COMMUNITY & COLLABORATION ────────────────────────────────────────────
+  {
+    id: "community-collaboration",
+    title: "Community & Collaboration",
+    icon: Users,
+    description: "Engage with a global network of engineers through real-time leaderboards, snippet sharing, and peer-to-peer discussion forums.",
+    category: "Platform Ecosystem",
+    content: [
+      {
+        heading: "Global Leaderboards & Competitive Spirit",
+        text: [
+          "AlgoLib is built on the philosophy that learning in isolation is inefficient. The Community module integrates global, real-time leaderboards that rank users based on their contest performance, total solved problems, and active streaks.",
+          "This competitive ecosystem motivates users to push their boundaries, optimizing their code to shave off milliseconds of execution time just to climb a few ranks higher.",
+          "Weekly and monthly leaderboards reset periodically, giving new users a fair chance to claim the top spots."
+        ]
+      },
+      {
+        heading: "Knowledge Sharing & Snippet Contributions",
+        text: [
+          "The community thrives on shared knowledge. Users have the ability to publish their most elegant or highly-optimized solutions to the public SnippetViews library.",
+          "Once moderated, these community-contributed snippets become part of the platform's collective intelligence, annotated with the author's handle.",
+          "This encourages a culture of writing clean, well-documented code that others can learn from, transforming users from mere consumers of knowledge into active educators."
+        ]
+      },
+      {
+        heading: "Discussion Forums & Peer Support",
+        text: [
+          "Integrated discussion threads are attached to every problem in the Arena and DSA Sheets. If you are stuck on a particularly devious edge case, you can access the community forums to request hints, discuss time complexity tradeoffs, or debate the merits of a recursive versus iterative approach.",
+          "Strict moderation ensures the forums remain focused on educational hints rather than outright solution sharing, preserving the integrity of the learning process."
+        ]
+      }
+    ]
+  },
+
+  // ─── TECHNICAL SUPPORT & HELPDESK ─────────────────────────────────────────
+  {
+    id: "technical-support",
+    title: "Technical Support & Helpdesk",
+    icon: LifeBuoy,
+    description: "Comprehensive documentation, bug reporting tools, and direct engineering channels to ensure a frictionless platform experience.",
+    category: "Platform Ecosystem",
+    content: [
+      {
+        heading: "Comprehensive Documentation & Tutorials",
+        text: [
+          "The first line of defense for any technical or algorithmic issue is the expansive, searchable documentation hub (which you are currently reading).",
+          "Engineered for speed, the Cmd+K quick search palette instantly indexes hundreds of topics, tutorials, and visualizer guides.",
+          "Whether you forgot how to trigger an AVL rotation or need the boilerplate code for reading large arrays in Java, the documentation provides instant, reliable answers without requiring you to leave the IDE."
+        ]
+      },
+      {
+        heading: "Ticketing System & Bug Reporting",
+        text: [
+          "If you encounter a platform bug, a compiler anomaly, or a discrepancy in a test case, the integrated Support Helpdesk allows you to file a detailed technical ticket.",
+          "The ticketing interface automatically captures your current environment context—including browser version, active route, and recent error logs—streamlining the debugging process for the engineering team.",
+          "This frictionless reporting loop ensures that the platform remains highly stable and responsive to user feedback."
+        ]
+      },
+      {
+        heading: "Direct Developer Channels & Roadmap",
+        text: [
+          "For critical issues or enterprise-tier accounts, AlgoLib provides direct channels to the core engineering team. Support requests are routed through dedicated backend queues, ensuring rapid response times.",
+          "Additionally, the platform maintains a public changelog and roadmap, keeping the user base fully informed about upcoming features, newly added visualizers, and recent bug fixes.",
+          "This fosters a transparent and trust-based relationship between the developers and the community."
+        ]
       }
     ]
   }

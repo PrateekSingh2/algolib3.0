@@ -79,9 +79,9 @@ const SNIPPETS: Record<string, { id: string, text: string, explanation: string, 
 
 const CyberGrid = () => (
   <div className="absolute inset-0 z-0 pointer-events-none">
-    <div className="absolute inset-0 bg-[#09090b]" />
-    <div className="absolute inset-0 bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,255,136,0.05),transparent_70%)]" />
+    <div className="absolute inset-0 bg-[#dce6ec] dark:bg-[#09090b]" />
+    <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.08),transparent_70%)] dark:bg-[radial-gradient(circle_at_center,rgba(0,255,136,0.05),transparent_70%)]" />
   </div>
 );
 
@@ -705,12 +705,13 @@ const BSTVisualizer = () => {
   const renderEdges = (node: TreeNode | null): JSX.Element[] => {
       if (!node) return [];
       const edges = [];
+      const edgeColor = document.documentElement.classList.contains('dark') ? '#52525b' : '#94a3b8'; // zinc-600 / slate-400
       if (node.left) {
           edges.push(
               <motion.line key={`${node.id}-left`} initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
                   x1={`calc(50% + ${node.xOffset}px)`} y1={node.y} 
                   x2={`calc(50% + ${node.left.xOffset}px)`} y2={node.left.y} 
-                  stroke="#52525b" strokeWidth="3" 
+                  stroke={edgeColor} strokeWidth="3" 
               />
           );
           edges.push(...renderEdges(node.left));
@@ -720,7 +721,7 @@ const BSTVisualizer = () => {
               <motion.line key={`${node.id}-right`} initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
                   x1={`calc(50% + ${node.xOffset}px)`} y1={node.y} 
                   x2={`calc(50% + ${node.right.xOffset}px)`} y2={node.right.y} 
-                  stroke="#52525b" strokeWidth="3" 
+                  stroke={edgeColor} strokeWidth="3" 
               />
           );
           edges.push(...renderEdges(node.right));
@@ -738,30 +739,33 @@ const BSTVisualizer = () => {
       const isLeaf = !node.left && !node.right;
       const isRoot = root && root.id === node.id;
 
-      let borderColor = '#0ea5e9'; 
+      let borderColor = '#3b82f6'; 
       if (isUnbalanced) borderColor = '#ef4444'; 
       if (isFound) borderColor = '#22c55e'; 
       if (isActive) borderColor = '#facc15'; 
+
+      const bgColor = document.documentElement.classList.contains('dark') ? '#09090b' : '#ffffff';
+      const textColor = document.documentElement.classList.contains('dark') ? 'text-white' : 'text-slate-950';
 
       const nodes = [
           <motion.div key={node.id} initial={{ scale: 0 }}
               animate={{ scale: isActive ? 1.1 : 1, left: `calc(50% + ${node.xOffset}px)`, top: node.y }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className={`absolute w-12 h-12 lg:w-16 lg:h-16 -ml-6 -mt-6 lg:-ml-8 lg:-mt-8 rounded-full flex flex-col items-center justify-center border-4 shadow-xl z-20 bg-[#09090b]`}
-              style={{ borderColor, boxShadow: isActive ? '0 0 30px rgba(250,204,21,0.4)' : 'none' }}
+              className={`absolute w-12 h-12 lg:w-16 lg:h-16 -ml-6 -mt-6 lg:-ml-8 lg:-mt-8 rounded-full flex flex-col items-center justify-center border-[3px] dark:border-4 shadow-sm dark:shadow-xl z-20`}
+              style={{ borderColor, backgroundColor: bgColor, boxShadow: isActive ? '0 0 30px rgba(250,204,21,0.4)' : 'none' }}
           >
-              <span className="text-[7px] lg:text-[9px] text-gray-400 font-mono absolute top-1">h: {node.height}</span>
-              <span className="font-black text-lg lg:text-xl text-white mt-1">{node.value}</span>
+              <span className="text-[7px] lg:text-[9px] text-slate-500 dark:text-gray-400 font-mono absolute top-1">h: {node.height}</span>
+              <span className={`font-black text-lg lg:text-xl mt-1 ${textColor}`}>{node.value}</span>
 
               <div className="absolute -bottom-5 lg:-bottom-6 flex flex-col items-center whitespace-nowrap">
-                  <span className={`text-[8px] lg:text-[10px] font-black font-mono ${isUnbalanced ? 'text-red-500' : 'text-gray-400'}`}>
+                  <span className={`text-[8px] lg:text-[10px] font-black font-mono ${isUnbalanced ? 'text-red-500' : 'text-slate-800 dark:text-gray-400'}`}>
                       BF: {bf}
                   </span>
-                  {isLeaf && <span className="text-[7px] lg:text-[9px] font-black text-emerald-400 mt-0.5">LEAF</span>}
+                  {isLeaf && <span className="text-[7px] lg:text-[9px] font-black text-emerald-600 dark:text-emerald-400 mt-0.5">LEAF</span>}
               </div>
-              {isRoot && <div className="absolute -top-5 lg:-top-6 text-[9px] lg:text-[11px] font-black text-cyan-500">ROOT</div>}
+              {isRoot && <div className="absolute -top-5 lg:-top-6 text-[9px] lg:text-[11px] font-black text-blue-600 dark:text-blue-500">ROOT</div>}
               {isActive && (
-                  <div className="absolute -left-12 lg:-left-14 top-4 bg-yellow-500 text-black px-1.5 py-0.5 rounded text-[7px] lg:text-[8px] font-black shadow-lg">ACTIVE</div>
+                  <div className="absolute -left-12 lg:-left-14 top-4 bg-yellow-400 dark:bg-yellow-500 text-slate-900 dark:text-black px-1.5 py-0.5 rounded text-[7px] lg:text-[8px] font-black shadow-lg">ACTIVE</div>
               )}
           </motion.div>
       ];
@@ -771,57 +775,57 @@ const BSTVisualizer = () => {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden">
+    <div className="absolute inset-0 flex flex-col bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-[#09090b] font-sans text-slate-950 dark:text-white overflow-hidden">
       <CyberGrid />
       
       <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
         
         {/* LEFT: COMMAND CENTER */}
-        <div className="w-full lg:w-[340px] bg-black/95 lg:bg-black/80 backdrop-blur-md border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
+        <div className="w-full lg:w-[340px] bg-white/40 backdrop-blur-2xl/95 lg:bg-white/40 backdrop-blur-2xl/80 dark:bg-black/95 dark:lg:bg-black/80 backdrop-blur-md border-slate-300 dark:border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
           
           <div className="overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6 flex flex-col">
             
             {/* AVL Auto Balance Toggle */}
-            <div className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center justify-between shrink-0">
+            <div className="bg-white/60 backdrop-blur-xl dark:bg-white/5 p-3 rounded-xl border border-slate-300 dark:border-white/10 flex items-center justify-between shrink-0">
                 <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1"><Settings2 size={12}/> Mode</span>
-                    <span className={`text-xs font-black ${treeMode === 'avl' ? 'text-emerald-400' : 'text-cyan-400'}`}>
+                    <span className="text-[10px] font-bold text-slate-800 dark:text-gray-400 uppercase flex items-center gap-1"><Settings2 size={12}/> Mode</span>
+                    <span className={`text-xs font-black ${treeMode === 'avl' ? 'text-emerald-700 dark:text-emerald-400' : 'text-blue-700 dark:text-blue-400'}`}>
                         {treeMode === 'avl' ? 'AVL (Auto-Balance)' : 'Standard BST'}
                     </span>
                 </div>
                 <button 
                     onClick={() => { setTreeMode(treeMode === 'bst' ? 'avl' : 'bst'); setRoot(null); setTimeout(centerWorkspace, 100); }}
                     disabled={isAnimating}
-                    className="px-3 py-1.5 bg-black/50 border border-white/20 rounded hover:border-white/50 text-[9px] font-black uppercase transition-all disabled:opacity-30"
+                    className="px-3 py-1.5 bg-white dark:bg-black/50 border border-slate-400 dark:border-white/20 rounded hover:border-slate-500 dark:hover:border-white/50 text-[9px] font-black uppercase text-slate-950 dark:text-white transition-all disabled:opacity-30"
                 >
                     Switch
                 </button>
             </div>
 
             {/* Playback Controls */}
-            <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4 shrink-0">
+            <div className="bg-white/60 backdrop-blur-xl dark:bg-white/5 p-4 rounded-xl border border-slate-300 dark:border-white/10 space-y-4 shrink-0">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-gray-400 uppercase">Step Engine</span>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${isPaused ? 'border-amber-500 text-amber-500' : 'border-cyan-500 text-cyan-500'}`}>
+                <span className="text-[10px] font-bold text-slate-800 dark:text-gray-400 uppercase">Step Engine</span>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${isPaused ? 'border-amber-600 text-amber-700 dark:text-amber-500' : 'border-blue-600 text-blue-700 dark:text-blue-500'}`}>
                     {isPaused ? 'MANUAL' : 'AUTO'}
                 </span>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
+                <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-blue-400 dark:bg-blue-500/20 backdrop-blur-xl border border-blue-500 dark:border-blue-500/50 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-blue-500 dark:hover:bg-blue-500/30 transition-all text-black dark:text-blue-400">
                   {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
                 </button>
                 <div className="flex flex-1 gap-1">
                     <button 
                       disabled={!isPaused || !isAnimating || frameIdx <= 0} 
                       onClick={() => setFrameIdx(f => Math.max(0, f - 1))} 
-                      className="flex-1 py-2 bg-cyan-600 text-white rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-cyan-500 disabled:opacity-30 disabled:grayscale transition-all"
+                      className="flex-1 py-2 bg-blue-700 text-white rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-blue-600 disabled:opacity-30 disabled:grayscale transition-all"
                     >
                       <StepBack size={14} /> PREV
                     </button>
                     <button 
                       disabled={!isPaused || !isAnimating || frameIdx >= frames.length - 1} 
                       onClick={() => setFrameIdx(f => Math.min(frames.length - 1, f + 1))} 
-                      className="flex-1 py-2 bg-cyan-500 text-black rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-cyan-400 disabled:opacity-30 disabled:grayscale transition-all"
+                      className="flex-1 py-2 bg-blue-600 text-white dark:text-black rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-blue-500 disabled:opacity-30 disabled:grayscale transition-all"
                     >
                       NEXT <StepForward size={14} />
                     </button>
@@ -833,43 +837,43 @@ const BSTVisualizer = () => {
             <div className="space-y-4 shrink-0">
                <div className="flex gap-2">
                   <div className="flex-1">
-                      <label className="text-[9px] text-gray-500 uppercase font-bold">Node Payload</label>
+                      <label className="text-[9px] text-slate-800 dark:text-gray-500 uppercase font-bold">Node Payload</label>
                       <div className="flex gap-1 mt-1">
-                          <input type="number" value={inputValue} onChange={(e) => setInputValue(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-cyan-400 outline-none font-mono text-sm" />
-                          <button onClick={generateRandom} className="px-3 bg-white/5 rounded border border-white/10 hover:bg-white/10"><RotateCcw size={14}/></button>
+                          <input type="number" value={inputValue} onChange={(e) => setInputValue(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-white dark:bg-black/50 border border-slate-300 dark:border-white/10 rounded px-3 py-2 text-blue-700 dark:text-blue-400 outline-none font-mono text-sm" />
+                          <button onClick={generateRandom} className="px-3 bg-blue-400 dark:bg-blue-500/20 rounded border border-blue-500 dark:border-blue-500/50 hover:bg-blue-500 dark:hover:bg-blue-500/30 text-black dark:text-blue-400 font-bold transition-all"><RotateCcw size={14}/></button>
                       </div>
                   </div>
                </div>
                
                <div className="grid grid-cols-3 gap-2 mt-2">
-                  <button onClick={handleInsert} disabled={isAnimating} className="p-2 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[9px] font-black uppercase flex flex-col items-center justify-center gap-1 disabled:opacity-50">
+                  <button onClick={handleInsert} disabled={isAnimating} className="p-2 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[9px] font-black uppercase flex flex-col items-center justify-center gap-1 disabled:opacity-50 transition-all">
                      <Plus size={14}/> INSERT
                   </button>
-                  <button onClick={handleSearch} disabled={isAnimating} className="p-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded hover:bg-amber-500/20 text-[9px] font-black uppercase flex flex-col items-center justify-center gap-1 disabled:opacity-50">
+                  <button onClick={handleSearch} disabled={isAnimating} className="p-2 bg-blue-400 dark:bg-blue-500/20 border border-blue-500 dark:border-blue-500/50 text-black dark:text-blue-400 rounded hover:bg-blue-500 dark:hover:bg-blue-500/30 text-[9px] font-black uppercase flex flex-col items-center justify-center gap-1 disabled:opacity-50 transition-all">
                      <Search size={14}/> SEARCH
                   </button>
-                  <button onClick={handleDelete} disabled={isAnimating} className="p-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[9px] font-black uppercase flex flex-col items-center justify-center gap-1 disabled:opacity-50">
+                  <button onClick={handleDelete} disabled={isAnimating} className="p-2 bg-orange-400 dark:bg-orange-500/20 border border-orange-500 dark:border-orange-500/50 text-black dark:text-orange-400 rounded hover:bg-orange-500 dark:hover:bg-orange-500/30 text-[9px] font-black uppercase flex flex-col items-center justify-center gap-1 disabled:opacity-50 transition-all">
                      <Trash2 size={14}/> DELETE
                   </button>
                </div>
             </div>
 
-            <button onClick={() => { setRoot(null); setOutputLog([]); setTimeout(centerWorkspace, 50); }} disabled={isAnimating} className="w-full py-2 shrink-0 bg-white/5 hover:bg-red-500/20 hover:text-red-400 border border-white/5 hover:border-red-500/30 rounded text-[10px] font-bold text-gray-500 transition-all flex items-center justify-center gap-2">
+            <button onClick={() => { setRoot(null); setOutputLog([]); setTimeout(centerWorkspace, 50); }} disabled={isAnimating} className="w-full py-2 shrink-0 bg-orange-400 dark:bg-orange-500/20 hover:bg-orange-500 dark:hover:bg-orange-500/30 hover:text-black dark:hover:text-orange-400 border border-orange-500 dark:border-orange-500/50 rounded text-[10px] font-bold text-black dark:text-orange-400 transition-all flex items-center justify-center gap-2">
                   <Trash2 size={14}/> FORMAT TREE
             </button>
 
             {/* DEDICATED OUTPUT SCREEN */}
-            <div className="mt-4 flex-1 min-h-[120px] lg:min-h-[150px] bg-black/90 border border-cyan-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
-                <div className="px-3 py-2 border-b border-cyan-500/30 bg-cyan-900/20 flex items-center gap-2 shrink-0">
-                    <Terminal size={12} className="text-cyan-400" />
-                    <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">{outputTitle}</span>
+            <div className="mt-4 flex-1 min-h-[120px] lg:min-h-[150px] bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-black/90 border border-blue-300 dark:border-blue-500/30 rounded-xl flex flex-col overflow-hidden shadow-inner shrink-0">
+                 <div className="px-3 py-2 border-b border-blue-300 dark:border-blue-500/30 bg-white/60 backdrop-blur-xl dark:bg-blue-900/20 flex items-center gap-2 shrink-0">
+                    <Terminal size={12} className="text-blue-700 dark:text-blue-400" />
+                    <span className="text-[9px] font-black text-blue-700 dark:text-blue-400 uppercase tracking-widest">{outputTitle}</span>
                 </div>
-                <div ref={outputScrollRef} className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[11px] text-gray-300 flex flex-col gap-1">
+                <div ref={outputScrollRef} className="p-3 overflow-y-auto custom-scrollbar flex-1 font-mono text-[11px] text-slate-900 dark:text-gray-300 flex flex-col gap-1">
                     {outputLog.length === 0 ? (
-                        <span className="text-gray-600 italic mt-1">Awaiting execution...</span>
+                        <span className="text-slate-500 dark:text-gray-600 italic mt-1">Awaiting execution...</span>
                     ) : (
                         outputLog.map((log, i) => (
-                           <div key={i} className={`flex items-start ${log.includes('SUCCESS') || log.includes('COMPLETE') ? 'text-emerald-400 font-bold' : log.includes('FAILED') || log.includes('Abort') ? 'text-red-400' : 'text-gray-400'}`}>
+                           <div key={i} className={`flex items-start ${log.includes('SUCCESS') || log.includes('COMPLETE') ? 'text-emerald-700 dark:text-emerald-400 font-bold' : log.includes('FAILED') || log.includes('Abort') ? 'text-red-700 dark:text-red-400' : 'text-slate-800 dark:text-gray-400'}`}>
                                <span className="opacity-50 mr-2 shrink-0">{String(i).padStart(2, '0')}</span>
                                {log}
                            </div>
@@ -882,7 +886,7 @@ const BSTVisualizer = () => {
         </div>
 
         {/* VISIBLE GLOWING SEPARATOR LINE (Mobile Only) */}
-        <div className="lg:hidden h-[2px] w-full bg-gradient-to-r from-cyan-500/10 via-cyan-500/60 to-cyan-500/10 shrink-0 z-30 order-2" />
+        <div className="lg:hidden h-[2px] w-full bg-gradient-to-r from-[#cbd5e1] via-blue-500/60 to-[#cbd5e1] shrink-0 z-30 order-2" />
 
         {/* RIGHT: THE ARENA */}
         <div className="order-3 lg:order-2 flex-1 relative flex flex-col p-3 sm:p-4 lg:p-6 min-w-0 overflow-hidden lg:h-full w-full">
@@ -891,7 +895,7 @@ const BSTVisualizer = () => {
           <div className="flex justify-start lg:justify-start items-center mb-2 lg:mb-3 shrink-0 gap-2">
              <button 
                 onClick={() => setShowHUD(!showHUD)}
-                className="h-7 lg:h-8 px-3 bg-[#050505] border border-cyan-500/80 rounded-lg lg:rounded-full text-cyan-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-cyan-500/10 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)] uppercase z-40"
+                className="h-7 lg:h-8 px-3 bg-white dark:bg-[#050505] border border-cyan-400 dark:border-cyan-500/80 rounded-lg lg:rounded-full text-cyan-600 dark:text-cyan-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-cyan-50 dark:hover:bg-cyan-500/10 hover:shadow-sm dark:hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all shadow-sm dark:shadow-[0_0_10px_rgba(6,182,212,0.2)] uppercase z-40"
              >
                 {showHUD ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
                 {showHUD ? 'HIDE HUD' : 'SHOW HUD'}
@@ -899,7 +903,7 @@ const BSTVisualizer = () => {
           </div>
 
           {/* Central Arena: The Infinite Tree Canvas */}
-          <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
+          <div className="flex-1 min-h-0 border border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
              
              {/* Auto-Scrolling Camera Container */}
              <div className="flex-1 overflow-auto custom-scrollbar relative touch-pan-x touch-pan-y" ref={scrollContainerRef}>
@@ -914,8 +918,8 @@ const BSTVisualizer = () => {
                     </div>
 
                     {!root && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600 font-mono opacity-50 pointer-events-none">
-                            <Binary size={48} className="mb-4 text-gray-700" />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-gray-600 font-mono opacity-50 pointer-events-none">
+                            <Binary size={48} className="mb-4 text-slate-700 dark:text-gray-700" />
                             <p className="text-xs lg:text-sm">[ TREE_EMPTY :: AWAITING_ROOT ]</p>
                         </div>
                     )}
@@ -923,7 +927,7 @@ const BSTVisualizer = () => {
              </div>
           </div>
 
-          <div className="shrink-0 flex justify-between items-center text-[10px] lg:text-xs font-mono text-gray-500 px-2 lg:mb-2">
+          <div className="shrink-0 flex justify-between items-center text-[10px] lg:text-xs font-mono text-slate-700 dark:text-gray-500 px-2 lg:mb-2">
              <div className="flex items-center gap-2"><Activity size={14} className={isAnimating ? "text-cyan-500 animate-spin lg:w-3.5 lg:h-3.5" : "lg:w-3.5 lg:h-3.5"}/> <span className="truncate max-w-[200px] lg:max-w-none">{message}</span></div>
           </div>
 
@@ -937,9 +941,9 @@ const BSTVisualizer = () => {
                      transition={{ duration: 0.3, ease: "easeInOut" }}
                      className="flex gap-2 lg:gap-4 w-full shrink-0 overflow-hidden" 
                   >
-                     <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
-                         <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
-                            <div className="flex items-center gap-1.5 lg:gap-2 text-cyan-400">
+                     <div className="flex-1 shrink-0 bg-white/90 dark:bg-black/80 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden relative">
+                         <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-slate-200 dark:border-white/10 flex justify-between items-center bg-[#b5c8da] dark:bg-white/5 shrink-0">
+                            <div className="flex items-center gap-1.5 lg:gap-2 text-cyan-600 dark:text-cyan-400">
                                 <Terminal size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/>
                                 <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Execution_Trace</span>
                             </div>
@@ -947,15 +951,15 @@ const BSTVisualizer = () => {
                          <div ref={interpreterScrollRef} className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
                             {codeLines.length ? codeLines.map(line => (
                                <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
-                                  <div className={`font-mono ${line.active ? 'text-cyan-400' : 'text-gray-400'}`}>{line.text}</div>
-                                  {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
+                                  <div className={`font-mono ${line.active ? 'text-cyan-600 dark:text-cyan-400 font-bold' : 'text-slate-700 dark:text-gray-400'}`}>{line.text}</div>
+                                  {line.active && <div className="text-[9px] lg:text-xs text-amber-600 dark:text-amber-400 mt-0.5 lg:mt-1 flex items-center gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0"/> {line.explanation}</div>}
                                </div>
-                            )) : <div className="text-gray-600 text-[10px] lg:text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/> Awaiting BST operation...</div>}
+                            )) : <div className="text-slate-400 dark:text-gray-600 text-[10px] lg:text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/> Awaiting BST operation...</div>}
                          </div>
                      </div>
 
-                     <div className="w-[130px] lg:w-[350px] shrink-0 border border-cyan-500/30 bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner h-full overflow-hidden">
-                        <div className="absolute top-2 right-2 lg:top-3 lg:right-4 flex items-center gap-1.5 lg:gap-2 text-[8px] lg:text-[10px] font-mono text-cyan-500 uppercase tracking-widest">
+                     <div className="w-[130px] lg:w-[350px] shrink-0 border border-cyan-200 dark:border-cyan-500/30 bg-cyan-50 dark:bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner h-full overflow-hidden">
+                        <div className="absolute top-2 right-2 lg:top-3 lg:right-4 flex items-center gap-1.5 lg:gap-2 text-[8px] lg:text-[10px] font-mono text-cyan-600 dark:text-cyan-500 uppercase tracking-widest">
                             <Box size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Memory_Allocation</span><span className="lg:hidden">Heap</span>
                         </div>
                         <AnimatePresence>
@@ -964,14 +968,14 @@ const BSTVisualizer = () => {
                                 initial={{ scale: 0, y: -20, opacity: 0 }}
                                 animate={{ scale: 1, y: 0, opacity: 1 }}
                                 exit={{ opacity: 0, scale: 0.5, y: 50 }}
-                                className="w-14 h-14 lg:w-20 lg:h-20 rounded-full border-4 border-dashed border-cyan-400 flex items-center justify-center bg-cyan-500/20 shadow-[0_0_30px_rgba(6,182,212,0.4)] z-50 relative mt-4 lg:mt-6"
+                                className="w-14 h-14 lg:w-20 lg:h-20 rounded-full border-[3px] dark:border-4 border-dashed border-cyan-500 dark:border-cyan-400 flex items-center justify-center bg-cyan-100 dark:bg-cyan-500/20 shadow-sm dark:shadow-[0_0_30px_rgba(6,182,212,0.4)] z-50 relative mt-4 lg:mt-6"
                               >
-                                 <span className="text-xl lg:text-3xl font-black text-white">{phantom.val}</span>
+                                 <span className="text-xl lg:text-3xl font-black text-slate-900 dark:text-white">{phantom.val}</span>
                               </motion.div>
                            )}
                         </AnimatePresence>
                         {!phantom && (
-                            <div className="text-cyan-500/30 font-mono text-[9px] lg:text-xs flex items-center gap-1.5 lg:gap-2 mt-4">
+                            <div className="text-cyan-600/50 dark:text-cyan-500/30 font-mono text-[9px] lg:text-xs flex items-center gap-1.5 lg:gap-2 mt-4">
                                 <Zap size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Heap Ready</span><span className="lg:hidden">Empty</span>
                             </div>
                         )}

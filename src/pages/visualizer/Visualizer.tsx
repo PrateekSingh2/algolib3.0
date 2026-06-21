@@ -40,17 +40,15 @@ const HeapVisualizer = lazy(() => import('./HeapVisualizer'));
 type VisualizerKey = 'll' | 'stack' | 'queue' | 'sorting' | 'bst' | 'graph' | 'heap';
 
 const AlienBackground = ({ mobile }: { mobile: boolean }) => (
-  <div className="fixed inset-0 -z-10 bg-[#020205] overflow-hidden">
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#00f5ff]/10 via-[#050510] to-[#000000]" />
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-[#9d00ff]/10 via-transparent to-transparent opacity-50" />
-    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.04]" />
-    {!mobile && (
-      <motion.div
-        animate={{ y: ['-100%', '200%'] }}
-        transition={{ repeat: Infinity, duration: 8, ease: 'linear' }}
-        className="absolute top-0 left-0 w-full h-[18vh] bg-gradient-to-b from-transparent via-[#00f5ff]/5 to-transparent pointer-events-none"
-      />
-    )}
+  <div className="fixed inset-0 -z-10 bg-white dark:bg-[#020205] overflow-hidden">
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-50 dark:from-[#00f5ff]/10 via-white dark:via-[#050510] to-blue-50 dark:to-[#000000]" />
+    
+    {/* PREMIUM LIGHT BLUE / WHITE MESH GRADIENT */}
+    <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-sky-200/40 rounded-full blur-[100px] dark:hidden mix-blend-multiply pointer-events-none" />
+    <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-blue-100/50 rounded-full blur-[120px] dark:hidden mix-blend-multiply pointer-events-none" />
+    <div className="absolute top-[40%] left-[20%] w-[30vw] h-[30vw] bg-indigo-100/40 rounded-full blur-[80px] dark:hidden mix-blend-multiply pointer-events-none" />
+    
+    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02] dark:opacity-[0.04] pointer-events-none" />
   </div>
 );
 
@@ -197,59 +195,59 @@ const Visualizer = () => {
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
-              className="w-full max-w-[600px] bg-[#0b0c10] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col font-sans"
+              className="w-full max-w-[600px] bg-white/40 backdrop-blur-2xl dark:bg-[#0b0c10] border border-white/60 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col font-sans"
             >
-              <div className="p-6 md:p-8 border-b border-white/5 flex items-start gap-4 bg-gradient-to-b from-cyan-900/10 to-transparent">
-                <div className="p-3 rounded-xl bg-[#00f5ff]/10 border border-[#00f5ff]/20 text-[#00f5ff] shadow-[0_0_15px_rgba(0,245,255,0.15)] shrink-0">
+              <div className="p-6 md:p-8 border-b border-slate-100 dark:border-white/5 flex items-start gap-4 bg-gradient-to-b from-[#b5c8da] dark:from-cyan-900/10 to-transparent">
+                <div className="p-3 rounded-xl bg-blue-100 dark:bg-[#00f5ff]/10 border border-blue-200 dark:border-[#00f5ff]/20 text-blue-600 dark:text-[#00f5ff] shadow-sm dark:shadow-[0_0_15px_rgba(0,245,255,0.15)] shrink-0">
                   <Cpu size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl md:text-2xl font-black text-white tracking-wide font-mono">SYSTEM INITIALIZED</h2>
+                  <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-wide font-mono">SYSTEM INITIALIZED</h2>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <p className="text-[10px] text-[#00f5ff] uppercase tracking-[0.2em] font-mono font-bold">ALGOVIZ ENGINE V2.5.0</p>
+                    <p className="text-[10px] text-blue-600 dark:text-[#00f5ff] uppercase tracking-[0.2em] font-mono font-bold">ALGOVIZ ENGINE V2.5.0</p>
                   </div>
                 </div>
               </div>
 
               <div className="p-6 md:p-8 space-y-6">
-                <p className="text-gray-300 text-[13px] md:text-sm">Welcome to the interactive algorithm simulation deck.</p>
+                <p className="text-slate-800 dark:text-gray-300 text-[13px] md:text-sm">Welcome to the interactive algorithm simulation deck.</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-[#12121a] p-4 rounded-xl border border-white/5 flex gap-3">
-                    <Maximize2 size={16} className="text-[#00f5ff] shrink-0 mt-0.5" />
+                  <div className="bg-white/60 backdrop-blur-xl dark:bg-[#12121a] p-4 rounded-xl border border-white/60 dark:border-white/5 flex gap-3">
+                    <Maximize2 size={16} className="text-blue-500 dark:text-[#00f5ff] shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-white text-xs font-bold mb-1">Maximize View</h4>
-                      <p className="text-[11px] text-gray-500 leading-relaxed">Close the side navigation panel to extend the holographic canvas.</p>
+                      <h4 className="text-slate-900 dark:text-white text-xs font-bold mb-1">Maximize View</h4>
+                      <p className="text-[11px] text-slate-700 dark:text-gray-500 leading-relaxed">Close the side navigation panel to extend the holographic canvas.</p>
                     </div>
                   </div>
-                  <div className="bg-[#12121a] p-4 rounded-xl border border-white/5 flex gap-3">
-                    <Activity size={16} className="text-purple-400 shrink-0 mt-0.5" />
+                  <div className="bg-white/60 backdrop-blur-xl dark:bg-[#12121a] p-4 rounded-xl border border-white/60 dark:border-white/5 flex gap-3">
+                    <Activity size={16} className="text-purple-500 dark:text-purple-400 shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-white text-xs font-bold mb-1">Real-Time Ops</h4>
-                      <p className="text-[11px] text-gray-500 leading-relaxed">Simulations run at 60fps. Use the speed slider to slow down execution.</p>
+                      <h4 className="text-slate-900 dark:text-white text-xs font-bold mb-1">Real-Time Ops</h4>
+                      <p className="text-[11px] text-slate-700 dark:text-gray-500 leading-relaxed">Simulations run at 60fps. Use the speed slider to slow down execution.</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 flex flex-col md:flex-row gap-4 items-start md:items-center">
-                  <div className="p-2.5 bg-yellow-500/10 rounded-lg text-yellow-500 shrink-0">
+                <div className="rounded-xl border border-yellow-500/20 bg-yellow-50 dark:bg-yellow-500/5 p-4 flex flex-col md:flex-row gap-4 items-start md:items-center">
+                  <div className="p-2.5 bg-yellow-100 dark:bg-yellow-500/10 rounded-lg text-yellow-600 dark:text-yellow-500 shrink-0">
                     <BookOpen size={18} />
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-yellow-500 font-bold text-xs mb-1 font-mono uppercase tracking-widest">New User Detected?</h4>
-                    <p className="text-gray-400 text-[11px] leading-relaxed">If you are unsure how to control the visualizers or interpret the data, please refer to the system manual first.</p>
+                    <h4 className="text-yellow-600 dark:text-yellow-500 font-bold text-xs mb-1 font-mono uppercase tracking-widest">New User Detected?</h4>
+                    <p className="text-slate-700 dark:text-gray-400 text-[11px] leading-relaxed">If you are unsure how to control the visualizers or interpret the data, please refer to the system manual first.</p>
                   </div>
-                  <a href="/docs" className="shrink-0 px-4 py-2 hover:bg-yellow-500/10 text-yellow-500 text-xs font-bold rounded-lg border border-yellow-500/30 transition-all flex items-center gap-2">
+                  <a href="/docs" className="shrink-0 px-4 py-2 hover:bg-yellow-100 dark:hover:bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 text-xs font-bold rounded-lg border border-yellow-200 dark:border-yellow-500/30 transition-all flex items-center gap-2">
                     DOCS <ArrowRight size={14} />
                   </a>
                 </div>
               </div>
 
-              <div className="p-5 md:p-6 border-t border-white/5 bg-[#060609] flex justify-end">
+              <div className="p-5 md:p-6 border-t border-slate-100 dark:border-white/5 bg-white/60 backdrop-blur-xl dark:bg-[#060609] flex justify-end">
                 <button
                   onClick={handleCloseWelcome}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-[#00f5ff] hover:bg-cyan-300 text-black font-bold text-sm rounded-full transition-all shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:scale-105 active:scale-95"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-green-500 dark:bg-[#00f5ff] hover:bg-green-400 dark:hover:bg-cyan-300 text-black font-bold text-sm rounded-full transition-all shadow-md dark:shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:scale-105 active:scale-95"
                 >
                   Ok, Continue <CheckCircle2 size={16} />
                 </button>
@@ -273,7 +271,7 @@ const Visualizer = () => {
         )}
       </AnimatePresence>
 
-      <div className={`h-screen overflow-hidden text-white ${topNavHidden ? 'pt-2 sm:pt-3' : 'pt-[64px] sm:pt-[80px] lg:pt-[96px]'}`}>
+      <div className={`h-screen overflow-hidden text-black dark:text-white ${topNavHidden ? 'pt-2 sm:pt-3' : 'pt-[64px] sm:pt-[80px] lg:pt-[96px]'}`}>
         <div className="h-full flex flex-col lg:flex-row gap-3 p-2 sm:p-3 lg:p-4">
           
           {/* --- DESKTOP SIDE PANEL --- */}
@@ -284,14 +282,14 @@ const Visualizer = () => {
                 animate={{ width: 260, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="hidden lg:flex shrink-0 relative rounded-2xl bg-[#06060c]/95 border border-white/5 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.5)] z-20 overflow-hidden h-full"
+                className="hidden lg:flex shrink-0 relative rounded-2xl bg-white/40 backdrop-blur-2xl/95 dark:bg-[#06060c]/95 border border-white/60 dark:border-white/5 backdrop-blur-xl shadow-lg dark:shadow-[0_0_40px_rgba(0,0,0,0.5)] z-20 overflow-hidden h-full"
               >
                 <div className="w-[260px] h-full flex flex-col absolute top-0 left-0">
-                  <div className="p-6 border-b border-[#00f5ff]/20 shrink-0">
-                    <h1 className="text-2xl font-black text-white flex items-center gap-3 tracking-tight">
-                      <Database className="text-[#00f5ff]" size={24} /> AlgoViz
+                  <div className="p-6 border-b border-slate-100 dark:border-[#00f5ff]/20 shrink-0">
+                    <h1 className="text-2xl font-black text-black dark:text-white flex items-center gap-3 tracking-tight">
+                      <Database className="text-blue-500 dark:text-[#00f5ff]" size={24} /> AlgoViz
                     </h1>
-                    <p className="text-[10px] uppercase tracking-[0.15em] mt-2 text-[#00f5ff] font-bold">Simulator Engine of AlgoLib</p>
+                    <p className="text-[10px] uppercase tracking-[0.15em] mt-2 text-blue-500 dark:text-[#00f5ff] font-bold">Simulator Engine of AlgoLib</p>
                   </div>
                   
                   <nav className="flex-1 py-4 flex flex-col overflow-y-auto custom-scrollbar">
@@ -306,9 +304,9 @@ const Visualizer = () => {
                     ))}
                   </nav>
                   
-                  <div className="p-6 border-t border-white/5 bg-black/40 shrink-0">
-                    <div className="flex items-center gap-3 text-[10px] tracking-widest text-gray-500 font-mono">
-                      <Activity size={16} className="text-[#00ff88]" /> SYSTEM_READY
+                  <div className="p-6 border-t border-slate-100 dark:border-white/5 bg-white/60 backdrop-blur-xl dark:bg-black/40 shrink-0">
+                    <div className="flex items-center gap-3 text-[10px] tracking-widest text-slate-700 dark:text-gray-500 font-mono">
+                      <Activity size={16} className="text-emerald-500 dark:text-[#00ff88]" /> SYSTEM_READY
                     </div>
                   </div>
                 </div>
@@ -316,34 +314,34 @@ const Visualizer = () => {
             )}
           </AnimatePresence>
 
-          <section className="flex-1 min-w-0 rounded-2xl border border-white/10 bg-[#050510]/85 backdrop-blur-md overflow-hidden flex flex-col">
-            <header className="h-14 sm:h-16 border-b border-white/10 bg-black/50 px-3 sm:px-4 flex items-center justify-between shrink-0">
+          <section className="flex-1 min-w-0 rounded-2xl border border-white/60 dark:border-white/10 bg-white/40 backdrop-blur-2xl/85 dark:bg-[#050510]/85 backdrop-blur-md overflow-hidden flex flex-col">
+            <header className="h-14 sm:h-16 border-b border-white/60 dark:border-white/10 bg-white/60 backdrop-blur-xl/50 dark:bg-black/50 px-3 sm:px-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <button
                   onClick={() => setDrawerOpen(true)}
-                  className="lg:hidden h-11 w-11 shrink-0 rounded-xl border border-[#00f5ff]/40 bg-[#00f5ff]/10 grid place-items-center active:scale-95 transition-transform"
+                  className="lg:hidden h-11 w-11 shrink-0 rounded-xl border border-blue-500/20 dark:border-[#00f5ff]/40 bg-blue-50 dark:bg-[#00f5ff]/10 grid place-items-center active:scale-95 transition-transform"
                   aria-label="Open modules"
                 >
-                  <Menu size={20} className="text-[#00f5ff]" />
+                  <Menu size={20} className="text-blue-500 dark:text-[#00f5ff]" />
                 </button>
 
                 <button
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  className="hidden lg:flex h-11 w-11 shrink-0 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:text-white active:scale-95 transition-all items-center justify-center"
+                  className="hidden lg:flex h-11 w-11 shrink-0 rounded-xl border border-white/60 dark:border-white/10 bg-white/60 backdrop-blur-xl dark:bg-white/5 text-slate-700 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white active:scale-95 transition-all items-center justify-center shadow-sm dark:shadow-none"
                   aria-label="Toggle Sidebar"
                 >
                   {isSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
                 </button>
 
                 <div className="min-w-0 pl-1">
-                  <p className="font-mono text-lg sm:text-xl font-black truncate">Visualizing</p>
-                  <p className="text-xs text-gray-400 tracking-widest truncate">{activeModule?.label}</p>
+                  <p className="font-mono text-lg sm:text-xl font-black truncate text-black dark:text-white">Visualizing</p>
+                  <p className="text-xs text-slate-600 dark:text-gray-400 tracking-widest truncate">{activeModule?.label}</p>
                 </div>
               </div>
               
               <button
                 onClick={() => setTopNavHidden((prev) => !prev)}
-                className="h-11 min-w-11 shrink-0 px-3 rounded-xl border border-white/10 bg-white/5 text-gray-400 hover:text-white active:scale-95 transition-all flex items-center justify-center"
+                className="h-11 min-w-11 shrink-0 px-3 rounded-xl border border-white/60 dark:border-white/10 bg-white/60 backdrop-blur-xl dark:bg-white/5 text-slate-700 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white active:scale-95 transition-all flex items-center justify-center shadow-sm dark:shadow-none"
                 aria-label="Toggle top navbar"
               >
                 {topNavHidden ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
@@ -351,8 +349,8 @@ const Visualizer = () => {
             </header>
 
             <div className="flex-1 min-h-0 p-2 sm:p-3 lg:p-4 flex flex-col gap-3">
-              <div className="rounded-xl border border-white/10 bg-gradient-to-br from-[#020205] to-[#0a0a1a] flex-1 overflow-hidden relative">
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:32px_32px] opacity-30 pointer-events-none" />
+              <div className="rounded-xl border border-white/60 dark:border-white/10 bg-gradient-to-br from-[#dce6ec] to-[#b5c8da] dark:from-[#020205] dark:to-[#0a0a1a] flex-1 overflow-hidden relative">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000008_1px,transparent_1px),linear-gradient(to_bottom,#00000008_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:32px_32px] opacity-30 pointer-events-none" />
                 <div className="relative z-10 h-full w-full overflow-x-auto touch-pan-x">
                   <Suspense fallback={<div className="h-full grid place-items-center text-sm text-cyan-300">Booting visualizer...</div>}>
                     <AnimatePresence mode="wait">
@@ -367,20 +365,20 @@ const Visualizer = () => {
                         {/* --- AUTHENTICATION GUARD --- */}
                         {!user && activeTab !== 'll' ? (
                           <div className="h-full w-full flex flex-col items-center justify-center text-center p-6 animate-in fade-in zoom-in duration-300">
-                            <div className="h-20 w-20 rounded-2xl bg-cyan-950/40 border border-[#00f5ff]/20 flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(0,245,255,0.15)] relative overflow-hidden">
-                               <div className="absolute inset-0 bg-[#00f5ff]/10 animate-pulse" />
-                               <Lock size={32} className="text-[#00f5ff] relative z-10" />
+                            <div className="h-20 w-20 rounded-2xl bg-cyan-50 dark:bg-cyan-950/40 border border-blue-200 dark:border-[#00f5ff]/20 flex items-center justify-center mb-6 shadow-sm dark:shadow-[0_0_40px_rgba(0,245,255,0.15)] relative overflow-hidden">
+                               <div className="absolute inset-0 bg-blue-100 dark:bg-[#00f5ff]/10 animate-pulse" />
+                               <Lock size={32} className="text-blue-500 dark:text-[#00f5ff] relative z-10" />
                             </div>
-                            <h3 className="text-2xl md:text-3xl font-black font-mono tracking-tight text-white mb-3">
+                            <h3 className="text-2xl md:text-3xl font-black font-mono tracking-tight text-slate-900 dark:text-white mb-3">
                               RESTRICTED SECTOR
                             </h3>
-                            <p className="text-gray-400 max-w-md text-sm leading-relaxed mb-8">
-                              The <span className="text-[#00f5ff] font-mono">{activeModule?.label}</span> simulation module requires security clearance. Authenticate your account to unlock all advanced interactive algorithms.
+                            <p className="text-slate-700 dark:text-gray-400 max-w-md text-sm leading-relaxed mb-8">
+                              The <span className="text-blue-500 dark:text-[#00f5ff] font-mono">{activeModule?.label}</span> simulation module requires security clearance. Authenticate your account to unlock all advanced interactive algorithms.
                             </p>
                             {/* Assuming your app routes to /login for authentication */}
                             <a 
                               href="/login" 
-                              className="flex items-center gap-2 px-8 py-3.5 bg-[#00f5ff] hover:bg-cyan-300 text-black font-bold text-sm rounded-xl transition-all shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:scale-105 active:scale-95"
+                              className="flex items-center gap-2 px-8 py-3.5 bg-blue-500 dark:bg-[#00f5ff] hover:bg-blue-400 dark:hover:bg-cyan-300 text-black font-bold text-sm rounded-xl transition-all shadow-md dark:shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:scale-105 active:scale-95"
                             >
                               <Cpu size={16} /> INITIALIZE LOGIN
                             </a>
@@ -415,16 +413,16 @@ const Visualizer = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 360, damping: 34 }}
-              className="fixed z-[260] top-0 left-0 h-full w-[84vw] max-w-[340px] bg-[#06060c] border-r border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.8)] flex flex-col"
+              className="fixed z-[260] top-0 left-0 h-full w-[84vw] max-w-[340px] bg-white/40 backdrop-blur-2xl dark:bg-[#06060c] border-r border-white/60 dark:border-white/10 shadow-2xl dark:shadow-[0_0_60px_rgba(0,0,0,0.8)] flex flex-col"
             >
-              <div className="p-6 pt-12 border-b border-[#00f5ff]/20 flex items-center justify-between">
+              <div className="p-6 pt-12 border-b border-slate-100 dark:border-[#00f5ff]/20 flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-black text-white flex items-center gap-3 tracking-tight">
-                    <Database className="text-[#00f5ff]" size={24} /> AlgoViz
+                  <h2 className="text-2xl font-black text-black dark:text-white flex items-center gap-3 tracking-tight">
+                    <Database className="text-blue-500 dark:text-[#00f5ff]" size={24} /> AlgoViz
                   </h2>
-                  <p className="text-[10px] uppercase tracking-[0.15em] mt-2 text-[#00f5ff] font-bold">Simulator Engine of AlgoLib</p>
+                  <p className="text-[10px] uppercase tracking-[0.15em] mt-2 text-blue-500 dark:text-[#00f5ff] font-bold">Simulator Engine of AlgoLib</p>
                 </div>
-                <button onClick={() => setDrawerOpen(false)} className="h-10 w-10 rounded-full border border-white/10 hover:bg-white/5 flex items-center justify-center text-gray-400 transition-colors">
+                <button onClick={() => setDrawerOpen(false)} className="h-10 w-10 rounded-full border border-white/60 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 dark:text-gray-400 transition-colors">
                   <X size={18} />
                 </button>
               </div>
@@ -441,9 +439,9 @@ const Visualizer = () => {
                 ))}
               </div>
 
-              <div className="p-6 border-t border-white/5 bg-black/40">
-                <div className="flex items-center gap-3 text-[10px] tracking-widest text-gray-500 font-mono font-bold">
-                  <Activity size={16} className="text-[#00ff88]" /> SYSTEM_READY
+              <div className="p-6 border-t border-white/60 dark:border-white/5 bg-white/60 backdrop-blur-xl dark:bg-black/40">
+                <div className="flex items-center gap-3 text-[10px] tracking-widest text-slate-700 dark:text-gray-500 font-mono font-bold">
+                  <Activity size={16} className="text-emerald-500 dark:text-[#00ff88]" /> SYSTEM_READY
                 </div>
               </div>
             </motion.aside>
@@ -472,19 +470,19 @@ const MenuButton = ({
       onClick={() => onSelect(item.id)}
       className={`group w-full h-[60px] border-l-[3px] px-6 flex items-center gap-4 text-left transition-colors duration-300 relative ${
         active
-          ? 'border-[#00f5ff] bg-[#00f5ff]/10'
-          : 'border-transparent hover:bg-white/5'
+          ? 'border-blue-500 dark:border-[#00f5ff] bg-blue-50/80 dark:bg-[#00f5ff]/10'
+          : 'border-transparent hover:bg-white/60 backdrop-blur-xl dark:hover:bg-white/5'
       }`}
     >
-      <Icon size={18} strokeWidth={active ? 2.5 : 2} className={active ? 'text-[#00f5ff]' : 'text-gray-500 group-hover:text-gray-300'} />
+      <Icon size={18} strokeWidth={active ? 2.5 : 2} className={active ? 'text-blue-600 dark:text-[#00f5ff]' : 'text-slate-500 dark:text-gray-500 group-hover:text-black dark:group-hover:text-gray-300'} />
       <span className={`text-[11px] sm:text-xs font-bold font-mono tracking-widest uppercase flex-1 ${
-        active ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'
+        active ? 'text-blue-600 dark:text-white' : 'text-slate-600 dark:text-gray-500 group-hover:text-black dark:group-hover:text-gray-300'
       }`}>
         {item.label}
       </span>
       {/* Small subtle lock icon if restricted */}
       {isLocked && (
-        <Lock size={14} className="text-gray-600 group-hover:text-gray-400 absolute right-6" />
+        <Lock size={14} className="text-slate-400 dark:text-gray-600 group-hover:text-slate-700 dark:group-hover:text-gray-400 absolute right-6" />
       )}
     </button>
   );

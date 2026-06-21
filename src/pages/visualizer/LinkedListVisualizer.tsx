@@ -78,9 +78,9 @@ const headSnippets = {
 
 const CyberGrid = () => (
   <div className="absolute inset-0 z-0 pointer-events-none">
-    <div className="absolute inset-0 bg-[#09090b]" />
-    <div className="absolute inset-0 bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,255,136,0.05),transparent_70%)]" />
+    <div className="absolute inset-0 bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-[#09090b]" />
+    <div className="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:40px_40px] opacity-20" />
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.07),transparent_70%)] dark:bg-[radial-gradient(circle_at_center,rgba(0,255,136,0.05),transparent_70%)]" />
   </div>
 );
 
@@ -318,21 +318,21 @@ const LinkedListVisualizer = () => {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-[#09090b] font-sans text-white overflow-hidden">
+    <div className="absolute inset-0 flex flex-col bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-[#09090b] font-sans text-slate-900 dark:text-white overflow-hidden">
       <CyberGrid />
       
       <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
         
         {/* LEFT: COMMAND CENTER */}
-        <div className="w-full lg:w-[340px] bg-black/95 lg:bg-black/80 backdrop-blur-md border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
+        <div className="w-full lg:w-[340px] bg-white/40 backdrop-blur-2xl/95 lg:bg-white/40 backdrop-blur-2xl/80 dark:bg-black/95 dark:lg:bg-black/80 backdrop-blur-md border-slate-200 dark:border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
             <div className="overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6">
                 <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">Type</label>
+                <label className="text-[10px] font-bold text-slate-700 dark:text-gray-500 uppercase">Type</label>
                 <div className="grid grid-cols-2 gap-2">
                     {(['singly', 'doubly', 'circular', 'doubly-circular'] as ListType[]).map(type => (
                     <button key={type} onClick={() => setListType(type)} disabled={isAnimating}
                         className={`py-2 rounded text-[10px] font-bold uppercase transition-all ${
-                        listType === type ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                        listType === type ? 'bg-emerald-500 text-white dark:text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-gray-400 hover:bg-slate-200 dark:hover:bg-white/10'
                         }`}
                     >
                         {type.replace('-', ' ')}
@@ -341,15 +341,15 @@ const LinkedListVisualizer = () => {
                 </div>
                 </div>
 
-                <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
+                <div className="bg-white/60 backdrop-blur-xl dark:bg-white/5 p-4 rounded-xl border border-slate-200 dark:border-white/10 space-y-4">
                 <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase">Step Engine</span>
-                    <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${isPaused ? 'border-amber-500 text-amber-500' : 'border-emerald-500 text-emerald-500'}`}>
+                    <span className="text-[10px] font-bold text-slate-700 dark:text-gray-400 uppercase">Step Engine</span>
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${isPaused ? 'border-amber-500 text-amber-600 dark:text-amber-500' : 'border-emerald-500 text-emerald-600 dark:text-emerald-500'}`}>
                         {isPaused ? 'MANUAL' : 'AUTO'}
                     </span>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-black/50 border border-white/10 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-white/5 transition-all">
+                    <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-blue-400 dark:bg-blue-500/20 backdrop-blur-xl border border-blue-500 dark:border-blue-500/50 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-blue-500 dark:hover:bg-blue-500/30 transition-all text-black dark:text-blue-400">
                     {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
                     </button>
                     <div className="flex flex-1 gap-1">
@@ -374,36 +374,36 @@ const LinkedListVisualizer = () => {
                 <div className="space-y-4">
                     <div className="flex gap-2">
                     <div className="flex-1">
-                        <label className="text-[9px] text-gray-500 uppercase font-bold">Node Value</label>
+                        <label className="text-[9px] text-slate-700 dark:text-gray-500 uppercase font-bold">Node Value</label>
                         <div className="flex gap-1 mt-1">
-                            <input type="number" value={inputValue} onChange={(e) => setInputValue(Number(e.target.value))} className="w-full bg-black/50 border border-white/10 rounded px-3 py-2 text-emerald-400 outline-none font-mono text-sm" />
-                            <button onClick={generateRandom} className="px-3 bg-white/5 rounded border border-white/10 hover:bg-white/10"><RotateCcw size={14}/></button>
+                            <input type="number" value={inputValue} onChange={(e) => setInputValue(Number(e.target.value))} className="w-full bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-black/50 border border-slate-300 dark:border-white/10 rounded px-3 py-2 text-emerald-600 dark:text-emerald-400 outline-none font-mono text-sm dark:text-white" />
+                            <button onClick={generateRandom} className="px-3 bg-blue-400 dark:bg-blue-500/20 rounded border border-blue-500 dark:border-blue-500/50 hover:bg-blue-500 dark:hover:bg-blue-500/30 text-black dark:text-blue-400 font-bold transition-all"><RotateCcw size={14}/></button>
                         </div>
                     </div>
                     <div className="w-20">
-                        <label className="text-[9px] text-gray-500 uppercase font-bold">Target Idx</label>
-                        <input type="number" value={inputIndex} onChange={(e) => setInputIndex(Number(e.target.value))} className="w-full mt-1 bg-black/50 border border-white/10 rounded px-3 py-2 text-cyan-400 outline-none font-mono text-sm" />
+                        <label className="text-[9px] text-slate-700 dark:text-gray-500 uppercase font-bold">Target Idx</label>
+                        <input type="number" value={inputIndex} onChange={(e) => setInputIndex(Number(e.target.value))} className="w-full mt-1 bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-black/50 border border-slate-300 dark:border-white/10 rounded px-3 py-2 text-cyan-600 dark:text-cyan-400 outline-none font-mono text-sm dark:text-white" />
                     </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-2 mt-2">
-                    <button onClick={() => handleInsert('head')} disabled={isAnimating} className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                    <button onClick={() => handleInsert('head')} disabled={isAnimating} className="p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                         <CornerDownRight size={16}/> Insert Beg
                     </button>
-                    <button onClick={() => handleInsert('end')} disabled={isAnimating} className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded hover:bg-emerald-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                    <button onClick={() => handleInsert('end')} disabled={isAnimating} className="p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                         <ArrowDownToLine size={16}/> Insert End
                     </button>
-                    <button onClick={() => handleInsert('index')} disabled={isAnimating} className="p-3 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded hover:bg-cyan-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 col-span-2">
+                    <button onClick={() => handleInsert('index')} disabled={isAnimating} className="p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 col-span-2 transition-all">
                         <Target size={16}/> Insert at specific Index
                     </button>
                     
-                    <button onClick={() => handleDelete('head')} disabled={isAnimating} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                    <button onClick={() => handleDelete('head')} disabled={isAnimating} className="p-3 bg-orange-400 dark:bg-orange-500/20 border border-orange-500 dark:border-orange-500/50 text-black dark:text-orange-400 rounded hover:bg-orange-500 dark:hover:bg-orange-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                         <Trash2 size={16}/> Delete Beg
                     </button>
-                    <button onClick={() => handleDelete('end')} disabled={isAnimating} className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50">
+                    <button onClick={() => handleDelete('end')} disabled={isAnimating} className="p-3 bg-orange-400 dark:bg-orange-500/20 border border-orange-500 dark:border-orange-500/50 text-black dark:text-orange-400 rounded hover:bg-orange-500 dark:hover:bg-orange-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                         <X size={16}/> Delete End
                     </button>
-                    <button onClick={() => handleDelete('index')} disabled={isAnimating} className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded hover:bg-rose-500/20 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 col-span-2">
+                    <button onClick={() => handleDelete('index')} disabled={isAnimating} className="p-3 bg-orange-400 dark:bg-orange-500/20 border border-orange-500 dark:border-orange-500/50 text-black dark:text-orange-400 rounded hover:bg-orange-500 dark:hover:bg-orange-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 col-span-2 transition-all">
                         <Target size={16}/> Delete at specific Index
                     </button>
                     </div>
@@ -421,7 +421,7 @@ const LinkedListVisualizer = () => {
           <div className="flex justify-start lg:justify-start items-center mb-2 lg:mb-3 shrink-0 gap-2">
              <button 
                 onClick={() => setShowHUD(!showHUD)}
-                className="h-7 lg:h-8 px-3 bg-[#050505] border border-emerald-500/80 rounded-lg lg:rounded-full text-emerald-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-emerald-500/10 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all shadow-[0_0_10px_rgba(16,185,129,0.2)] uppercase z-40"
+                className="h-7 lg:h-8 px-3 bg-white dark:bg-[#050505] border border-emerald-400 dark:border-emerald-500/80 rounded-lg lg:rounded-full text-emerald-600 dark:text-emerald-400 font-black text-[10px] flex items-center gap-1.5 tracking-widest hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:shadow-sm dark:hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all shadow-sm dark:shadow-[0_0_10px_rgba(16,185,129,0.2)] uppercase z-40"
              >
                 {showHUD ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
                 {showHUD ? 'HIDE HUD' : 'SHOW HUD'}
@@ -429,7 +429,7 @@ const LinkedListVisualizer = () => {
           </div>
 
           {/* Central Arena: The Linked List Canvas */}
-          <div className="flex-1 min-h-0 border border-white/5 bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
+          <div className="flex-1 min-h-0 border border-slate-200 dark:border-white/5 bg-white/60 backdrop-blur-xl/50 dark:bg-black/30 rounded-2xl relative flex flex-col shadow-inner overflow-hidden mb-2 lg:mb-4 w-full">
              
              <div className="flex-1 w-full overflow-x-auto overflow-y-hidden custom-scrollbar relative flex items-center touch-pan-x">
                  <div className="min-w-max flex items-center px-8 sm:px-16 relative h-full py-8 pr-16 sm:pr-24 w-max" ref={containerRef}>
@@ -488,7 +488,7 @@ const LinkedListVisualizer = () => {
                      )}
 
                      <div className="relative mr-4 sm:mr-8 flex flex-col items-center shrink-0 w-14 sm:w-16">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)] bg-black z-10"><Anchor size={18}/></div>
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-amber-500 flex items-center justify-center text-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)] bg-white dark:bg-black z-10"><Anchor size={18}/></div>
                         <span className="text-[10px] font-black text-amber-500 mt-2">HEAD</span>
                         {nodes.length > 0 && <div className="absolute top-6 left-12 w-8 h-0.5 bg-amber-500" />}
                      </div>
@@ -502,12 +502,12 @@ const LinkedListVisualizer = () => {
                                  className="flex items-center shrink-0 mr-3 sm:mr-4 relative"
                                  style={{ width: '96px' }}
                               >
-                                 <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-2 flex flex-col items-center justify-center relative bg-[#09090b] z-10 transition-colors shrink-0
-                                    ${node.isDeleting ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]' : isSeeker ? 'border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.4)]' : 'border-white/20 hover:border-white/50'}`}>
+                                 <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-xl border-2 flex flex-col items-center justify-center relative bg-white dark:bg-[#09090b] z-10 transition-colors shrink-0
+                                    ${node.isDeleting ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]' : isSeeker ? 'border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.4)]' : 'border-slate-300 dark:border-white/20 hover:border-slate-400 dark:hover:border-white/50 shadow-sm'}`}>
                                     
-                                    <span className="text-[10px] sm:text-xs text-gray-500 font-mono absolute top-1.5 left-1.5 sm:top-2 sm:left-2">0x{node.id}</span>
-                                    <span className={`text-2xl sm:text-3xl font-black ${isSeeker ? 'text-cyan-400' : 'text-white'}`}>{node.value}</span>
-                                    <span className="text-[8px] sm:text-[9px] text-gray-600 font-bold absolute bottom-1.5 sm:bottom-2">IDX {i}</span>
+                                    <span className="text-[10px] sm:text-xs text-slate-400 dark:text-gray-500 font-mono absolute top-1.5 left-1.5 sm:top-2 sm:left-2">0x{node.id}</span>
+                                    <span className={`text-2xl sm:text-3xl font-black ${isSeeker ? 'text-cyan-500 dark:text-cyan-400' : 'text-slate-900 dark:text-white'}`}>{node.value}</span>
+                                    <span className="text-[8px] sm:text-[9px] text-slate-400 dark:text-gray-600 font-bold absolute bottom-1.5 sm:bottom-2">IDX {i}</span>
                                     
                                     {isSeeker && (
                                        <div className="absolute -top-10 bg-cyan-500 text-black px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap z-50 shadow-lg shadow-cyan-500/20">
@@ -517,22 +517,22 @@ const LinkedListVisualizer = () => {
                                  </div>
 
                                  {i < nodes.length - 1 && (
-                                    <div className="w-8 sm:w-10 h-0.5 bg-white/20 relative ml-[-6px] sm:ml-[-8px]">
-                                       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 border-t-2 border-r-2 border-white/40 rotate-45" />
+                                    <div className="w-8 sm:w-10 h-0.5 bg-slate-300 dark:bg-white/20 relative ml-[-6px] sm:ml-[-8px]">
+                                       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 border-t-2 border-r-2 border-slate-400 dark:border-white/40 rotate-45" />
                                        {node.isNew && <motion.div initial={{width:0}} animate={{width:"100%"}} className="absolute inset-0 bg-emerald-400 shadow-[0_0_10px_#34d399]" />}
                                     </div>
                                  )}
 
                                  {(listType === 'doubly' || listType === 'doubly-circular') && i < nodes.length - 1 && (
-                                    <div className="absolute left-[72px] sm:left-[88px] bottom-7 sm:bottom-8 w-8 sm:w-10 h-0.5 bg-purple-500/40 translate-y-3">
-                                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 border-b-2 border-l-2 border-purple-500/60 rotate-45" />
+                                    <div className="absolute left-[72px] sm:left-[88px] bottom-7 sm:bottom-8 w-8 sm:w-10 h-0.5 bg-purple-400 dark:bg-purple-500/40 translate-y-3">
+                                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 border-b-2 border-l-2 border-purple-500 dark:border-purple-500/60 rotate-45" />
                                     </div>
                                  )}
 
                                  {i === nodes.length - 1 && listType !== 'circular' && listType !== 'doubly-circular' && (
-                                    <div className="absolute left-[86px] sm:left-[104px] flex items-center opacity-30 w-14 sm:w-16">
-                                       <div className="w-6 h-0.5 bg-white" />
-                                       <div className="px-1.5 py-0.5 border border-white text-[9px] rounded ml-1">NULL</div>
+                                    <div className="absolute left-[86px] sm:left-[104px] flex items-center opacity-30 dark:opacity-30 w-14 sm:w-16">
+                                       <div className="w-6 h-0.5 bg-slate-400 dark:bg-white" />
+                                       <div className="px-1.5 py-0.5 border border-slate-400 dark:border-white text-slate-700 dark:text-white text-[9px] rounded ml-1">NULL</div>
                                     </div>
                                  )}
                               </motion.div>
@@ -544,7 +544,7 @@ const LinkedListVisualizer = () => {
           </div>
 
           {/* Message Status Bar */}
-          <div className="shrink-0 flex justify-between items-center text-[10px] lg:text-xs font-mono text-gray-500 px-2 lg:mb-2">
+          <div className="shrink-0 flex justify-between items-center text-[10px] lg:text-xs font-mono text-slate-700 dark:text-gray-500 px-2 lg:mb-2">
              <div className="flex items-center gap-2"><Activity size={14} className={isAnimating ? "text-amber-500 animate-spin" : ""}/> {message}</div>
              <div>Total Nodes: {nodes.length}</div>
           </div>
@@ -560,29 +560,29 @@ const LinkedListVisualizer = () => {
                    className="flex gap-2 lg:gap-4 w-full shrink-0 overflow-hidden"
                 >
                    {/* 1. HINGLISH INTERPRETER */}
-                   <div className="flex-1 shrink-0 bg-black/80 backdrop-blur-xl border border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden h-full">
-                       <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
-                          <div className="flex items-center gap-1.5 lg:gap-2 text-emerald-400">
+                   <div className="flex-1 shrink-0 bg-white/40 backdrop-blur-2xl/90 dark:bg-black/80 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden h-full">
+                       <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-slate-200 dark:border-white/10 flex justify-between items-center bg-white/60 backdrop-blur-xl dark:bg-white/5 shrink-0">
+                          <div className="flex items-center gap-1.5 lg:gap-2 text-emerald-600 dark:text-emerald-400">
                               <Terminal size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/>
                               <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
                           </div>
                           <div className="flex gap-2 overflow-x-auto custom-scrollbar no-scrollbar">
-                             {variables.map((v, i) => <span key={i} className="text-[9px] lg:text-[10px] font-mono whitespace-nowrap"><span className="text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
+                             {variables.map((v, i) => <span key={i} className="text-[9px] lg:text-[10px] font-mono whitespace-nowrap"><span className="text-slate-700 dark:text-gray-500">{v.name}:</span> <span style={{color: v.color}}>{v.value}</span></span>)}
                           </div>
                        </div>
                        <div className="p-3 lg:p-4 space-y-2 lg:space-y-3 overflow-y-auto custom-scrollbar flex-1">
                           {codeLines.length ? codeLines.map(line => (
                              <div key={line.id} className={`flex flex-col text-[10px] lg:text-sm transition-all ${line.active ? 'opacity-100 scale-100' : 'opacity-40 scale-95'}`}>
-                                <div className={`font-mono ${line.active ? 'text-emerald-400' : 'text-gray-400'}`}>{line.text}</div>
-                                {line.active && <div className="text-[9px] lg:text-xs text-amber-400 mt-0.5 lg:mt-1 flex items-start gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0 mt-0.5"/> {line.explanation}</div>}
+                                <div className={`font-mono ${line.active ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-700 dark:text-gray-400'}`}>{line.text}</div>
+                                {line.active && <div className="text-[9px] lg:text-xs text-amber-600 dark:text-amber-400 mt-0.5 lg:mt-1 flex items-start gap-1.5 lg:gap-2 leading-relaxed"><ArrowRight size={12} className="w-3 h-3 shrink-0 mt-0.5"/> {line.explanation}</div>}
                              </div>
-                          )) : <div className="text-gray-600 text-[10px] lg:text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/> Waiting for player action...</div>}
+                          )) : <div className="text-slate-400 dark:text-gray-600 text-[10px] lg:text-xs italic flex items-center justify-center h-full gap-2"><Activity size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/> Waiting for player action...</div>}
                        </div>
                    </div>
 
                    {/* 2. THE SPAWN ZONE */}
-                   <div className="w-[130px] lg:w-[350px] shrink-0 border border-emerald-500/30 bg-emerald-900/20 rounded-xl relative flex items-center justify-center shadow-inner h-full overflow-hidden">
-                      <div className="absolute top-2 right-2 lg:top-3 lg:right-4 flex items-center gap-1.5 lg:gap-2 text-[8px] lg:text-[10px] font-mono text-emerald-500 uppercase tracking-widest">
+                   <div className="w-[130px] lg:w-[350px] shrink-0 border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl relative flex items-center justify-center shadow-inner h-full overflow-hidden">
+                      <div className="absolute top-2 right-2 lg:top-3 lg:right-4 flex items-center gap-1.5 lg:gap-2 text-[8px] lg:text-[10px] font-mono text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">
                           <Box size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Spawn_Zone (Heap)</span><span className="lg:hidden">Heap</span>
                       </div>
                       
@@ -592,17 +592,17 @@ const LinkedListVisualizer = () => {
                               initial={{ scale: 0, y: -20, opacity: 0 }}
                               animate={{ scale: 1, y: 0, opacity: 1 }}
                               exit={{ opacity: 0, scale: 0.8, y: 40 }}
-                              className="w-14 h-14 lg:w-24 lg:h-24 rounded-lg lg:rounded-xl border-2 border-dashed border-emerald-400 flex flex-col items-center justify-center bg-emerald-500/10 shadow-[0_0_30px_rgba(16,185,129,0.3)] z-50 relative mt-4 lg:mt-6"
+                              className="w-14 h-14 lg:w-24 lg:h-24 rounded-lg lg:rounded-xl border-2 border-dashed border-emerald-400 flex flex-col items-center justify-center bg-white dark:bg-emerald-500/10 shadow-lg dark:shadow-[0_0_30px_rgba(16,185,129,0.3)] z-50 relative mt-4 lg:mt-6"
                             >
-                               <span className="text-[8px] lg:text-xs text-emerald-400 font-mono absolute top-1 left-1 lg:top-2 lg:left-2">0x{phantom.id}</span>
-                               <span className="text-xl lg:text-3xl font-black text-white">{phantom.value}</span>
-                               <div className="hidden lg:block absolute -bottom-6 bg-emerald-500 text-black px-2 py-1 rounded text-[10px] font-bold shadow-lg whitespace-nowrap">WAITING TO LINK...</div>
+                               <span className="text-[8px] lg:text-xs text-emerald-500 dark:text-emerald-400 font-mono absolute top-1 left-1 lg:top-2 lg:left-2">0x{phantom.id}</span>
+                               <span className="text-xl lg:text-3xl font-black text-slate-900 dark:text-white">{phantom.value}</span>
+                               <div className="hidden lg:block absolute -bottom-6 bg-emerald-500 text-white dark:text-black px-2 py-1 rounded text-[10px] font-bold shadow-lg whitespace-nowrap">WAITING TO LINK...</div>
                             </motion.div>
                          )}
                       </AnimatePresence>
 
                       {!phantom && (
-                          <div className="text-emerald-500/30 font-mono text-[9px] lg:text-xs flex items-center gap-1.5 lg:gap-2 mt-4">
+                          <div className="text-emerald-600/50 dark:text-emerald-500/30 font-mono text-[9px] lg:text-xs flex items-center gap-1.5 lg:gap-2 mt-4">
                               <Zap size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Memory Pool Empty</span><span className="lg:hidden">Empty</span>
                           </div>
                       )}

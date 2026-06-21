@@ -3,6 +3,7 @@ import Navbar from "@/components/Navbar";
 import AppFooter from "@/components/AppFooter";
 import AuthModal from "@/components/AuthModal";
 import HeroSection from "./HeroSection";
+import TechStackMarquee from "./TechStackMarquee";
 import FeaturesGrid from "./FeaturesGrid";
 import PlaygroundSection from "./PlaygroundSection";
 import DiscoverSection from "./DiscoverSection";
@@ -21,58 +22,57 @@ export default function LandingPage() {
   };
 
   return (
-    <div
-      className="min-h-screen text-white relative overflow-x-hidden"
-      style={{
-        fontFamily: "'Inter', sans-serif",
-        background: "linear-gradient(160deg, #06070a 0%, #050507 40%, #07060d 100%)",
-      }}
-    >
-      {/* Global glassmorphic noise texture */}
-      <div
-        className="fixed inset-0 pointer-events-none z-0 opacity-[0.025]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "256px 256px",
-        }}
-      />
-
-      {/* Global ambient light — top emerald */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] pointer-events-none z-0 opacity-30"
-        style={{ background: "radial-gradient(ellipse at top, rgba(0,230,118,0.08) 0%, transparent 65%)", filter: "blur(40px)" }}
-      />
-      {/* Global ambient light — bottom violet */}
-      <div className="fixed bottom-0 right-0 w-[600px] h-[400px] pointer-events-none z-0 opacity-20"
-        style={{ background: "radial-gradient(ellipse at bottom right, rgba(167,139,250,0.1) 0%, transparent 60%)", filter: "blur(60px)" }}
-      />
-
+    <div className="min-h-screen text-slate-800 dark:text-white relative overflow-x-hidden font-sans">
       <Navbar />
 
       <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
 
-      <main className="relative z-10">
-        <HeroSection onGetStarted={() => setAuthOpen(true)} />
+      <main className="relative z-10 flex flex-col">
+        {/* HERO SECTION */}
+        <div className="relative w-full py-8 pt-16 sm:pt-20 bg-[linear-gradient(135deg,#fdf4ff_0%,#fffbeb_100%)] dark:bg-[linear-gradient(135deg,#1f1025_0%,#18140a_100%)]">
+          <div className="absolute top-1/4 left-10 w-[500px] h-[500px] pointer-events-none z-0 opacity-[0.35] dark:opacity-[0.12] mix-blend-multiply dark:mix-blend-screen rounded-full bg-gradient-to-tr from-indigo-300 to-purple-300 blur-[80px]" />
+          <div className="absolute top-1/3 right-10 w-[600px] h-[600px] pointer-events-none z-0 opacity-[0.35] dark:opacity-[0.12] mix-blend-multiply dark:mix-blend-screen rounded-full bg-gradient-to-tr from-cyan-300 to-emerald-300 blur-[90px]" />
+          <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#818cf8 2px, transparent 2px)', backgroundSize: '30px 30px' }} />
+          <HeroSection onGetStarted={() => setAuthOpen(true)} />
+          
+          {/* TECH STACK MARQUEE */}
+          <TechStackMarquee />
+        </div>
 
-        <div className="h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
+        {/* PLAYGROUND SECTION */}
+        <div className="relative w-full py-12 bg-[linear-gradient(135deg,#f0fdf4_0%,#e0f2fe_100%)] dark:bg-[linear-gradient(135deg,#071311_0%,#0f172a_100%)]">
+          <div className="absolute top-0 right-0 w-[800px] h-[400px] pointer-events-none z-0 opacity-[0.4] dark:opacity-[0.1] mix-blend-multiply dark:mix-blend-screen rounded-full bg-gradient-to-l from-emerald-200 to-transparent blur-[100px]" />
+          <div className="absolute inset-0 opacity-[0.04] dark:opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#34d399 2px, transparent 2px)', backgroundSize: '24px 24px' }} />
+          <PlaygroundSection onRequireAuth={!user ? handleRequireAuth : undefined} />
+        </div>
 
-        <PlaygroundSection onRequireAuth={!user ? handleRequireAuth : undefined} />
+        {/* FEATURES GRID SECTION */}
+        <div className="relative w-full py-12 bg-[linear-gradient(135deg,#fff1f2_0%,#ffedd5_100%)] dark:bg-[linear-gradient(135deg,#2a1215_0%,#1f130a_100%)]">
+          <div className="absolute bottom-0 left-0 w-[600px] h-[600px] pointer-events-none z-0 opacity-[0.4] dark:opacity-[0.1] mix-blend-multiply dark:mix-blend-screen rounded-full bg-gradient-to-tr from-rose-200 to-orange-100 blur-[90px]" />
+          <div className="absolute inset-0 opacity-[0.04] dark:opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#f43f5e 2px, transparent 2px)', backgroundSize: '36px 36px' }} />
+          <FeaturesGrid onRequireAuth={!user ? handleRequireAuth : undefined} />
+        </div>
 
-        <div className="h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
+        {/* DISCOVER SECTION */}
+        <div className="relative w-full py-12 bg-[linear-gradient(135deg,#ecfeff_0%,#e0e7ff_100%)] dark:bg-[linear-gradient(135deg,#061118_0%,#172554_100%)]">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] pointer-events-none z-0 opacity-[0.5] dark:opacity-[0.1] mix-blend-multiply dark:mix-blend-screen rounded-full bg-gradient-to-r from-cyan-200 to-blue-200 blur-[100px]" />
+          <div className="absolute inset-0 opacity-[0.04] dark:opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#22d3ee 2px, transparent 2px)', backgroundSize: '28px 28px' }} />
+          <DiscoverSection />
+        </div>
 
-        <FeaturesGrid onRequireAuth={!user ? handleRequireAuth : undefined} />
+        {/* FAQ SECTION */}
+        <div className="relative w-full py-12 bg-[linear-gradient(135deg,#faf5ff_0%,#fce7f3_100%)] dark:bg-[linear-gradient(135deg,#120a17_0%,#31112c_100%)]">
+          <div className="absolute top-0 right-1/4 w-[500px] h-[500px] pointer-events-none z-0 opacity-[0.4] dark:opacity-[0.15] mix-blend-multiply dark:mix-blend-screen rounded-full bg-gradient-to-bl from-purple-300 to-pink-200 blur-[80px]" />
+          <div className="absolute inset-0 opacity-[0.04] dark:opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#c084fc 2px, transparent 2px)', backgroundSize: '32px 32px' }} />
+          <FAQSection />
+        </div>
 
-        <div className="h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
-
-        <DiscoverSection />
-
-        <div className="h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
-
-        <FAQSection />
-
-        <div className="h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
-
-        <FooterCTA onGetStarted={() => setAuthOpen(true)} />
+        {/* FOOTER CTA SECTION */}
+        <div className="relative w-full py-12 bg-[linear-gradient(135deg,#f8faff_0%,#f1f5f9_100%)] dark:bg-[linear-gradient(135deg,#0b0f19_0%,#0f172a_100%)]">
+          <div className="absolute bottom-0 inset-x-0 h-[400px] pointer-events-none z-0 opacity-[0.5] dark:opacity-[0.15] mix-blend-multiply dark:mix-blend-screen bg-gradient-to-t from-indigo-200 to-transparent blur-[60px]" />
+          <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#94a3b8 2px, transparent 2px)', backgroundSize: '40px 40px' }} />
+          <FooterCTA onGetStarted={() => setAuthOpen(true)} />
+        </div>
       </main>
 
       <AppFooter />

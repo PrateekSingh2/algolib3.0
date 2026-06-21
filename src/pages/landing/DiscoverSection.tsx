@@ -46,33 +46,42 @@ const DiscoverSection: React.FC = () => {
   }, []);
 
   return (
-    <section ref={ref} className="py-14 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
+    <section ref={ref} className="py-14 sm:py-20 px-4 sm:px-6 max-w-7xl mx-auto relative z-10">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={inView ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.6 }}
-        className="mb-16 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6"
+        className="mb-12 flex flex-row items-center justify-between gap-2 sm:gap-6"
       >
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-[11px] font-mono text-[#00bcd4] uppercase tracking-widest mb-4">
-            <Newspaper className="w-3 h-3 text-[#00bcd4]" />
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-50 dark:bg-white/[0.04] border-2 border-cyan-100 dark:border-white/[0.08] text-[12px] font-bold text-cyan-600 dark:text-[#00bcd4] uppercase tracking-widest mb-4 font-nunito">
+            <Newspaper className="w-4 h-4 text-cyan-500 dark:text-[#00bcd4]" />
             AlgoLib Discover
           </div>
-          <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight" style={{ fontFamily: "'Inter', sans-serif" }}>
+          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-800 dark:text-white tracking-tight font-comic relative">
             Stay at the<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00bcd4] to-[#60a5fa]">cutting edge.</span>
+            <span className="text-cyan-500 dark:text-[#00bcd4] relative inline-block mt-2">
+              cutting edge.
+              <svg className="absolute -bottom-2 left-0 w-full h-3 text-cyan-300 dark:text-cyan-500/50 opacity-60" viewBox="0 0 200 20" preserveAspectRatio="none">
+                <path d="M0,10 Q50,20 100,5 T150,15 T200,10" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+              </svg>
+            </span>
+            {/* Scribble Star Decor */}
+            <svg className="absolute -top-6 -left-6 w-8 h-8 text-cyan-400/50 dark:text-cyan-500/30 -rotate-12 pointer-events-none" viewBox="0 0 50 50" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M25 5 L28 20 L45 22 L32 30 L35 45 L25 35 L15 45 L18 30 L5 22 L22 20 Z" />
+            </svg>
           </h2>
         </div>
 
         <Link
           to="https://discover-algolib.netlify.app/discover"
-          className="group flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.1] text-white font-semibold text-sm hover:bg-white/[0.08] transition-colors"
+          className="group flex flex-shrink-0 items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 rounded-xl bg-white dark:bg-white/[0.04] border-2 border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-white font-black text-xs sm:text-sm hover:border-cyan-200 dark:hover:bg-white/[0.08] hover:text-cyan-600 dark:hover:text-white transition-all font-nunito shadow-sm dark:shadow-none whitespace-nowrap"
         >
-          View all articles <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          View all <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
         </Link>
       </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
         {content.map((item, i) => (
           <motion.div
             key={item.id}
@@ -82,35 +91,31 @@ const DiscoverSection: React.FC = () => {
           >
             <Link
               to={`https://discover-algolib.netlify.app/discover/${item.slug}`}
-              className="group block h-full overflow-hidden rounded-[20px] bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] hover:border-white/[0.18] hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:bg-white/[0.06] transition-all duration-500 relative"
-              style={{ boxShadow: "inset 0 1px 1px rgba(255,255,255,0.06)" }}
+              className="group block h-full overflow-hidden rounded-3xl bg-white dark:bg-white/[0.03] border-2 border-slate-100 dark:border-white/[0.08] hover:border-cyan-200 dark:hover:border-cyan-500/50 hover:shadow-lg dark:hover:shadow-[0_16px_40px_rgba(0,188,212,0.15)] dark:hover:bg-white/[0.06] transition-all duration-500 relative"
             >
-              {/* Card glare */}
-              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20" />
-              
-              <div className="aspect-[16/10] overflow-hidden bg-black relative">
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d10] via-transparent to-transparent z-10 opacity-60 group-hover:opacity-10 transition-opacity duration-500" />
+              <div className="aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-black relative">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10 opacity-60 group-hover:opacity-10 transition-opacity duration-500" />
                 {item.image_url ? (
                   <img
                     src={item.image_url}
                     alt={item.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center transition-transform duration-700 group-hover:scale-105">
-                    <Newspaper className="w-8 h-8 text-white/20" />
+                  <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-500/20 dark:to-purple-500/20 flex items-center justify-center transition-transform duration-700 group-hover:scale-105">
+                    <Newspaper className="w-8 h-8 text-indigo-300 dark:text-white/20" />
                   </div>
                 )}
-                <div className="absolute top-4 left-4 z-20 px-2.5 py-1 rounded bg-black/50 backdrop-blur-md border border-white/10 text-[9px] font-mono font-bold text-white uppercase tracking-wider shadow-sm">
+                <div className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-lg bg-white/90 dark:bg-black/50 backdrop-blur-md border border-slate-200 dark:border-white/10 text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-wider shadow-sm font-nunito">
                   {item.type}
                 </div>
               </div>
-              <div className="p-6 relative z-20">
-                <h3 className="text-[17px] font-bold text-white/90 group-hover:text-white transition-colors leading-[1.4] line-clamp-2 tracking-tight">
+              <div className="p-3 sm:p-6 relative z-20">
+                <h3 className="text-[12px] sm:text-[18px] font-black text-slate-800 dark:text-white/90 group-hover:text-cyan-600 dark:group-hover:text-white transition-colors leading-[1.3] sm:leading-[1.4] line-clamp-2 tracking-tight font-nunito">
                   {item.title}
                 </h3>
-                <div className="mt-5 flex items-center text-[12px] font-mono text-[#00bcd4] opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                  Read article <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                <div className="mt-3 sm:mt-5 flex items-center text-[10px] sm:text-[13px] font-black text-cyan-500 dark:text-[#00bcd4] opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 font-nunito">
+                  Read article <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-1.5" />
                 </div>
               </div>
             </Link>
