@@ -313,6 +313,7 @@ const VectorisWidget: React.FC = () => {
                 </button>
                 <button
                   onClick={() => navigate("/vectoris")}
+                  aria-label="Open Vectoris in full page"
                   className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
                   title="Open Vectoris in full page"
                 >
@@ -320,6 +321,7 @@ const VectorisWidget: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
+                  aria-label="Close Vectoris chat"
                   className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
                 >
                   <ChevronDown size={16} />
@@ -417,6 +419,7 @@ const VectorisWidget: React.FC = () => {
                 <button
                   onClick={() => sendMessage()}
                   disabled={!input.trim() || isLoading}
+                  aria-label={isLoading ? "Sending message" : "Send message"}
                   className={`p-2 rounded-xl transition-all shrink-0 ${input.trim() && !isLoading
                       ? "bg-gradient-to-br from-[#4facfe] to-[#00f2fe] text-white shadow-md hover:scale-105 active:scale-95"
                       : "bg-slate-200 dark:bg-white/[0.05] text-slate-400 dark:text-zinc-600 cursor-not-allowed"

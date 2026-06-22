@@ -41,6 +41,22 @@
 # RESPONSE HEADERS
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ── Security headers for ALL routes ──────────────────────────────────────────
+# COOP is set to same-origin-allow-popups (NOT same-origin) to preserve
+# Firebase Auth popups (Google/GitHub signInWithPopup). Using same-origin
+# would silently break authentication.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options                  = "DENY"
+    X-Content-Type-Options           = "nosniff"
+    X-XSS-Protection                 = "1; mode=block"
+    Referrer-Policy                  = "strict-origin-when-cross-origin"
+    Permissions-Policy               = "camera=(), microphone=(), geolocation=()"
+    Cross-Origin-Opener-Policy       = "same-origin-allow-popups"
+    Cross-Origin-Embedder-Policy     = "unsafe-none"
+    Content-Security-Policy          = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://*.firebaseapp.com https://*.firebaseio.com https://*.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: http:; connect-src 'self' https://*.supabase.co https://*.firebaseio.com https://*.googleapis.com https://api.iconify.design https://iconify.design wss://*.firebaseio.com https://ik.imagekit.io https://us-central1-algolib-bf40f.cloudfunctions.net; frame-src 'self' https://www.youtube.com https://pythontutor.com https://godbolt.org; worker-src 'self' blob:; manifest-src 'self';"
+
 # Prevent the browser from caching the SW registration script so that a
 # freshly-deployed SW is picked up immediately on the next page load.
 [[headers]]
@@ -54,12 +70,36 @@
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
 
+# Explicit MIME type for robots.txt so Lighthouse can parse it correctly.
+# Cache for 1 hour only (crawlers check frequently).
+[[headers]]
+  for = "/robots.txt"
+  [headers.values]
+    Content-Type  = "text/plain; charset=utf-8"
+    Cache-Control = "public, max-age=3600"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # REDIRECTS
 # ─────────────────────────────────────────────────────────────────────────────
 
+# CRITICAL SEO FIX: Static files must be served directly, NOT intercepted by
+# the SPA catch-all redirect below. These must come FIRST (Netlify processes
+# redirects in order and stops at the first match).
+[[redirects]]
+  from   = "/robots.txt"
+  to     = "/robots.txt"
+  status = 200
+  force  = true
+
+[[redirects]]
+  from   = "/sitemap.xml"
+  to     = "/sitemap.xml"
+  status = 200
+  force  = true
+
 # React Router SPA fallback – serves index.html for every non-asset route so
 # that client-side navigation works after a hard refresh in production.
+# MUST be LAST — it's a catch-all wildcard.
 [[redirects]]
   from   = "/*"
   to     = "/index.html"

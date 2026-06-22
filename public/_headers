@@ -3,3 +3,8 @@
 
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
+
+# robots.txt must be served fresh with correct MIME type
+/robots.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=3600

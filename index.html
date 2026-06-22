@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
 
   <title>AlgoLib | Interactive DSA Visualizer & Coding Contests</title>
+  <link rel="canonical" href="https://algolib.netlify.app/" />
   <meta name="title" content="AlgoLib | Interactive DSA Visualizer, Online Compiler & Coding Contests" />
   <meta name="description"
     content="Master Data Structures and Algorithms with AlgoLib. Experience 60FPS interactive visualizers, multi-language code libraries, online compiler and real-time competitive coding contests." />
@@ -19,9 +20,14 @@
   <link rel="preconnect" href="https://ik.imagekit.io" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
+  <!-- Non-blocking async font load — eliminates render-blocking resource (FCP fix) -->
+  <link rel="preload" as="style"
     href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap"
-    rel="stylesheet">
+    onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap">
+  </noscript>
 
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="AlgoLib" />

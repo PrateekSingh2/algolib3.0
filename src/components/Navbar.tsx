@@ -384,6 +384,7 @@ const Navbar = () => {
             {/* THEME TOGGLE ADDED TO MAIN NAVBAR ALSO */}
             <button
               onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
               title="Toggle Theme"
               className="p-2 rounded-full flex items-center justify-center transition-colors text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06]"
             >
@@ -393,6 +394,8 @@ const Navbar = () => {
             {user && profile?.is_profile_complete && (
               <div className="relative" ref={notifDeskRef}>
                 <button onClick={handleNotifOpen}
+                  aria-label="Open notifications"
+                  aria-expanded={isNotifOpen}
                   className={`p-2 rounded-full relative transition-colors ${isNotifOpen ? "bg-slate-100 text-slate-800 dark:bg-white/[0.08] dark:text-white" : "text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06]"}`}>
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
@@ -409,6 +412,8 @@ const Navbar = () => {
             {user ? (
               <div className="relative ml-1" ref={profileRef}>
                 <button onClick={() => { setIsProfileOpen(p => !p); setIsNotifOpen(false); }}
+                  aria-label="Open profile menu"
+                  aria-expanded={isProfileOpen}
                   className={`flex items-center gap-1.5 rounded-full pl-1.5 pr-2.5 py-1.5 border transition-all ${isProfileOpen ? "bg-slate-100 border-slate-200 dark:bg-white/[0.08] dark:border-white/[0.08]" : "border-transparent hover:bg-slate-100 dark:hover:bg-white/[0.06]"}`}>
                   <img src={avatarSrc} alt="avatar" className="w-6 h-6 rounded-full object-cover ring-1 ring-slate-200 dark:ring-white/10" />
                   <ChevronDown size={13} className={isProfileOpen ? "text-slate-700 dark:text-zinc-300" : "text-slate-400 dark:text-zinc-500"} />
@@ -443,7 +448,10 @@ const Navbar = () => {
           <div className="flex items-center gap-1">
             {user && profile?.is_profile_complete && (
               <div className="relative" ref={notifMobRef}>
-                <button onClick={handleNotifOpen} className={`p-2 rounded-xl relative transition-colors ${isNotifOpen ? "bg-slate-100 text-slate-800 dark:bg-white/[0.08] dark:text-white" : "text-slate-400 hover:text-slate-700 hover:bg-slate-50 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.04]"}`}>
+                <button onClick={handleNotifOpen}
+                  aria-label="Open notifications"
+                  aria-expanded={isNotifOpen}
+                  className={`p-2 rounded-xl relative transition-colors ${isNotifOpen ? "bg-slate-100 text-slate-800 dark:bg-white/[0.08] dark:text-white" : "text-slate-400 hover:text-slate-700 hover:bg-slate-50 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/[0.04]"}`}>
                   <Bell size={18} />
                   {unreadCount > 0 && (
                     <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
@@ -459,6 +467,8 @@ const Navbar = () => {
             {user && (
               <div className="relative" ref={mProfileRef}>
                 <button onClick={() => { setIsProfileOpen(p => !p); setIsNotifOpen(false); }}
+                  aria-label="Open profile menu"
+                  aria-expanded={isProfileOpen}
                   className={`flex items-center p-1 rounded-full border ml-1 transition-colors ${isProfileOpen ? "border-slate-300 bg-slate-100 dark:border-white/[0.2] dark:bg-white/[0.05]" : "border-slate-200 dark:border-white/[0.08]"}`}>
                   <img src={avatarSrc} alt="avatar" className="w-7 h-7 rounded-full object-cover" />
                 </button>
@@ -468,6 +478,7 @@ const Navbar = () => {
             
             <button
               onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
               title="Toggle Theme"
               className="p-2 ml-1 rounded-xl transition-colors text-slate-500 dark:text-zinc-300 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.08]"
             >
@@ -475,6 +486,8 @@ const Navbar = () => {
             </button>
 
             <button onClick={() => setIsMobileOpen(p => !p)}
+              aria-label={isMobileOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={isMobileOpen}
               className={`p-2 ml-1 rounded-xl transition-colors ${isMobileOpen ? "bg-indigo-50 text-indigo-600 dark:bg-white dark:text-black" : "text-slate-500 dark:text-zinc-300 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.08]"}`}>
               {isMobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>

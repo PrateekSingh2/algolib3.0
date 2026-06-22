@@ -1,21 +1,39 @@
-# AlgoLib - Global Crawler Directives
+# AlgoLib — Production Crawler Directives
+# https://algolib.netlify.app/robots.txt
 
+# Global rules — allow all well-behaved crawlers
 User-agent: *
 Allow: /
 
-# Prevent indexing of private, user-specific, or admin routes
+# Private, user-specific and admin routes — disallow indexing
 Disallow: /profile
 Disallow: /edit-profile
 Disallow: /hq
-Disallow: /analyzer
-Disallow: /community
+Disallow: /view/
+Disallow: /contest/
+Disallow: /quiz/
+Disallow: /quiz-forge
+Disallow: /quiz-panel
+Disallow: /discussion
 Disallow: /notes
-Disallow: /view/*
-Disallow: /contest/*
+Disallow: /ai-visualizer
+Disallow: /snippet-visualizer
 
-# Explicit Bot Allowances (Optional but good for specialized crawling)
+# ── Major Search Engine Bots — explicit allow for key public pages ─────────────
 User-agent: Googlebot
 Allow: /
+Allow: /compiler
+Allow: /visualizer
+Allow: /vectoris
+Allow: /docs
+Allow: /sheets
+Allow: /contests
+Allow: /testimonials
+Allow: /developer
+Allow: /support
+Allow: /terms
+Allow: /privacy
+Allow: /cookies
 
 User-agent: Bingbot
 Allow: /
@@ -26,5 +44,8 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-# Link to Sitemap for automatic discovery
+User-agent: LinkedInBot
+Allow: /
+
+# Sitemap for automatic discovery by all crawlers
 Sitemap: https://algolib.netlify.app/sitemap.xml

@@ -32,41 +32,42 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAuth, executeGoogleSignIn, executeGithubSignIn } from "@/contexts/AuthContext";
 import { useCookieConsent } from "./contexts/CookieContext";
 import Navbar from "./components/Navbar";
-import Vectoris from "./pages/vectoris/Vectoris";
-import VectorisWidget from "./components/VectorisWidget";
 
-import Quiz from "./pages/quiz/Quiz";
-import QuizPanel from "./pages/quiz/QuizPanel";
-import QuizForge from "./pages/quiz/QuizForge";
-import Maintenance from "./pages/Maintenance";
-
-// --- LAZY LOADED ROUTES ---
-import Index from "./pages/Index";
-import LandingPage from "./pages/landing/LandingPage";
-const SnippetView = lazy(() => import("./pages/SnippetView"));
-const Visualizer = lazy(() => import("./pages/visualizer/Visualizer"));
+// ─── ALL PAGE COMPONENTS ARE LAZY-LOADED ──────────────────────────────────────
+// Nothing below ships in the initial JS bundle — each chunk is downloaded
+// only when the user navigates to the corresponding route.
+const Index             = lazy(() => import("./pages/Index"));
+const LandingPage       = lazy(() => import("./pages/landing/LandingPage"));
+const Vectoris          = lazy(() => import("./pages/vectoris/Vectoris"));
+const VectorisWidget    = lazy(() => import("./components/VectorisWidget"));
+const Quiz              = lazy(() => import("./pages/quiz/Quiz"));
+const QuizPanel         = lazy(() => import("./pages/quiz/QuizPanel"));
+const QuizForge         = lazy(() => import("./pages/quiz/QuizForge"));
+const Maintenance       = lazy(() => import("./pages/Maintenance"));
+const SnippetView       = lazy(() => import("./pages/SnippetView"));
+const Visualizer        = lazy(() => import("./pages/visualizer/Visualizer"));
 const SnippetVisualizer = lazy(() => import("./pages/visualizer/SnippetVisualizer"));
 const DynamicVisualizerEngine = lazy(() => import("./pages/visualizer-dynamic/DynamicVisualizerEngine"));
-const Developer = lazy(() => import("./pages/Developer"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const Status = lazy(() => import("./pages/Status/status"));
-const Docs = lazy(() => import("./pages/Docs"));
-const Notes = lazy(() => import("./pages/notes/Notes"));
-const Support = lazy(() => import("./pages/legals/Support"));
-const Community = lazy(() => import("./components/Community"));
-const EditProfile = lazy(() => import("./pages/userprofile/EditProfile"));
-const Profile = lazy(() => import("./pages/userprofile/Profile"));
-const ContestPanel = lazy(() => import("./pages/compilerContest/ContestPanel"));
-const Contests = lazy(() => import("./pages/compilerContest/Contests"));
-const Compiler = lazy(() => import("./pages/compilerContest/Compiler"));
-const Terms = lazy(() => import("./pages/legals/Terms"));
-const Privacy = lazy(() => import("./pages/legals/Privacy"));
-const Cookies = lazy(() => import("./pages/legals/Cookies"));
-const Sheets = lazy(() => import("./pages/sheets/Sheets"));
-const Testimonials = lazy(() => import("./pages/Testimonials"));
-const DSASheet = lazy(() => import("./pages/sheets/DSASheet"));
-const CPSheet = lazy(() => import("./pages/sheets/CPSheet"));
-const TopicDetail = lazy(() => import("./pages/sheets/TopicDetail"));
+const Developer         = lazy(() => import("./pages/Developer"));
+const NotFound          = lazy(() => import("./pages/NotFound"));
+const Status            = lazy(() => import("./pages/Status/status"));
+const Docs              = lazy(() => import("./pages/Docs"));
+const Notes             = lazy(() => import("./pages/notes/Notes"));
+const Support           = lazy(() => import("./pages/legals/Support"));
+const Community         = lazy(() => import("./components/Community"));
+const EditProfile       = lazy(() => import("./pages/userprofile/EditProfile"));
+const Profile           = lazy(() => import("./pages/userprofile/Profile"));
+const ContestPanel      = lazy(() => import("./pages/compilerContest/ContestPanel"));
+const Contests          = lazy(() => import("./pages/compilerContest/Contests"));
+const Compiler          = lazy(() => import("./pages/compilerContest/Compiler"));
+const Terms             = lazy(() => import("./pages/legals/Terms"));
+const Privacy           = lazy(() => import("./pages/legals/Privacy"));
+const Cookies           = lazy(() => import("./pages/legals/Cookies"));
+const Sheets            = lazy(() => import("./pages/sheets/Sheets"));
+const Testimonials      = lazy(() => import("./pages/Testimonials"));
+const DSASheet          = lazy(() => import("./pages/sheets/DSASheet"));
+const CPSheet           = lazy(() => import("./pages/sheets/CPSheet"));
+const TopicDetail       = lazy(() => import("./pages/sheets/TopicDetail"));
 const queryClient = new QueryClient();
 
 // Removed sign in handlers to AuthContext to fix Fast Refresh issues
@@ -177,6 +178,9 @@ const CookieConsent = () => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          role="dialog"
+          aria-label="Cookie consent preferences"
+          aria-modal="true"
           className="fixed bottom-14 left-6 md:left-10 z-[999] w-[380px] max-w-[calc(100vw-48px)] bg-white/95 dark:bg-[#0A0A0A]/95 backdrop-blur-xl border border-slate-200 dark:border-white/[0.1] rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] overflow-hidden"
         >
           {showCustomize ? (
@@ -185,7 +189,7 @@ const CookieConsent = () => {
                 <h3 className="text-slate-900 dark:text-white font-medium flex items-center gap-2">
                   <Settings2 size={16} className="text-slate-500 dark:text-zinc-400" /> Customize Preferences
                 </h3>
-                <button onClick={() => setShowCustomize(false)} className="text-slate-400 dark:text-zinc-500 hover:text-slate-900 dark:hover:text-white transition-colors p-1">
+                <button onClick={() => setShowCustomize(false)} aria-label="Close cookie preferences" className="text-slate-400 dark:text-zinc-500 hover:text-slate-900 dark:hover:text-white transition-colors p-1">
                   <X size={16} />
                 </button>
               </div>
@@ -206,7 +210,7 @@ const CookieConsent = () => {
                     <span className="text-sm font-medium text-slate-900 dark:text-white">Analytics</span>
                     <span className="text-xs text-slate-500 dark:text-zinc-500 mt-1">Helps us understand how visitors interact with the matrix.</span>
                   </div>
-                  <button onClick={() => togglePreference('analytics')} className={`w-8 h-4 rounded-full transition-colors duration-300 flex items-center p-0.5 ${preferences.analytics ? 'bg-sky-500' : 'bg-slate-300 dark:bg-zinc-700'}`}>
+                  <button onClick={() => togglePreference('analytics')} aria-label="Toggle analytics cookies" className={`w-8 h-4 rounded-full transition-colors duration-300 flex items-center p-0.5 ${preferences.analytics ? 'bg-sky-500' : 'bg-slate-300 dark:bg-zinc-700'}`}>
                     <div className={`w-3 h-3 rounded-full bg-white shadow-sm transform transition-transform duration-300 ${preferences.analytics ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
@@ -216,7 +220,7 @@ const CookieConsent = () => {
                     <span className="text-sm font-medium text-slate-900 dark:text-white">Personalization</span>
                     <span className="text-xs text-slate-500 dark:text-zinc-500 mt-1">Used to tailor your visualizer experience.</span>
                   </div>
-                  <button onClick={() => togglePreference('personalization')} className={`w-8 h-4 rounded-full transition-colors duration-300 flex items-center p-0.5 ${preferences.personalization ? 'bg-sky-500' : 'bg-slate-300 dark:bg-zinc-700'}`}>
+                  <button onClick={() => togglePreference('personalization')} aria-label="Toggle personalization cookies" className={`w-8 h-4 rounded-full transition-colors duration-300 flex items-center p-0.5 ${preferences.personalization ? 'bg-sky-500' : 'bg-slate-300 dark:bg-zinc-700'}`}>
                     <div className={`w-3 h-3 rounded-full bg-white shadow-sm transform transition-transform duration-300 ${preferences.personalization ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
@@ -247,7 +251,7 @@ const CookieConsent = () => {
                   <button onClick={handleDecline} className="flex-1 py-2.5 bg-transparent border border-slate-200 dark:border-white/[0.1] text-slate-900 dark:text-white text-sm font-medium rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors">
                     Decline Optional
                   </button>
-                  <button onClick={() => setShowCustomize(true)} className="px-4 py-2.5 bg-transparent border border-slate-200 dark:border-white/[0.1] text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white text-sm font-medium rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors flex items-center justify-center">
+                  <button onClick={() => setShowCustomize(true)} aria-label="Customize cookie preferences" className="px-4 py-2.5 bg-transparent border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white text-sm font-medium rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors flex items-center justify-center">
                     <Settings2 size={16} />
                   </button>
                 </div>
@@ -391,7 +395,10 @@ const App = () => {
                 <BrowserRouter>
                   <PWAUpdater />
                   <CookieConsent />
-                  <VectorisWidget />
+                  {/* VectorisWidget: isolated Suspense so it never blocks route rendering */}
+                  <Suspense fallback={null}>
+                    <VectorisWidget />
+                  </Suspense>
                   <AuthGuard>
                     <MaintenanceGuard>
                       <AppRoutes />
