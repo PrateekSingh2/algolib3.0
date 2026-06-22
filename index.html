@@ -101,15 +101,9 @@
   <!-- Removed window.deferredPWAInstallPrompt script to fix global scope pollution -->
 </head>
 
-<!-- ═══ VERSION SENTINEL ═══════════════════════════════════════════════════════
-     This script executes SYNCHRONOUSLY before React boots.
-     It forces an immediate cache-purge + hard-reload for stale users who
-     never interact long enough to see the PWA update toast.
-     Bump ALGOLIB_VERSION with every deployment that requires a forced refresh.
-  ════════════════════════════════════════════════════════════════════════════ -->
 <script>
   (function () {
-    var CURRENT_VERSION = '4.2.5'; // ← bump this on every major deploy
+    var CURRENT_VERSION = '4.4.1'; // ← bump this on every major deploy
     var STORED_KEY = 'algolib_app_version';
     var stored = localStorage.getItem(STORED_KEY);
     if (stored && stored !== CURRENT_VERSION) {
