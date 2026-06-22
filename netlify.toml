@@ -42,20 +42,22 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Security headers for ALL routes ──────────────────────────────────────────
-# COOP is set to same-origin-allow-popups (NOT same-origin) to preserve
-# Firebase Auth popups (Google/GitHub signInWithPopup). Using same-origin
-# would silently break authentication.
+# NOTE: Cross-Origin-Opener-Policy is intentionally OMITTED.
+# Firebase signInWithPopup opens a relay at *.firebaseapp.com/__/auth/handler
+# which must postMessage back to window.opener to complete auth. Any COOP value
+# (even same-origin-allow-popups) can sever this cross-origin browsing context
+# link and silently kill the login callback. The 5 remaining headers are
+# sufficient for a strong Lighthouse Best Practices score.
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options                  = "DENY"
-    X-Content-Type-Options           = "nosniff"
-    X-XSS-Protection                 = "1; mode=block"
-    Referrer-Policy                  = "strict-origin-when-cross-origin"
-    Permissions-Policy               = "camera=(), microphone=(), geolocation=()"
-    Cross-Origin-Opener-Policy       = "same-origin-allow-popups"
-    Cross-Origin-Embedder-Policy     = "unsafe-none"
-    Content-Security-Policy          = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://*.firebaseapp.com https://*.firebaseio.com https://*.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: http:; connect-src 'self' https://*.supabase.co https://*.firebaseio.com https://*.googleapis.com https://api.iconify.design https://iconify.design wss://*.firebaseio.com https://ik.imagekit.io https://us-central1-algolib-bf40f.cloudfunctions.net; frame-src 'self' https://www.youtube.com https://pythontutor.com https://godbolt.org; worker-src 'self' blob:; manifest-src 'self';"
+    X-Frame-Options       = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection      = "1; mode=block"
+    Referrer-Policy       = "strict-origin-when-cross-origin"
+    Permissions-Policy    = "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://*.firebaseapp.com https://*.firebaseio.com https://*.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https: http:; connect-src 'self' https://*.supabase.co https://*.firebaseio.com https://*.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://api.iconify.design https://iconify.design wss://*.firebaseio.com https://ik.imagekit.io https://us-central1-algolib-bf40f.cloudfunctions.net; frame-src 'self' https://*.firebaseapp.com https://www.youtube.com https://pythontutor.com https://godbolt.org; worker-src 'self' blob:; manifest-src 'self';"
+
 
 # Prevent the browser from caching the SW registration script so that a
 # freshly-deployed SW is picked up immediately on the next page load.
