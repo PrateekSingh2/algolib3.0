@@ -98,14 +98,14 @@ export default function Sheets() {
   };
 
   return (
-    <div className="min-h-screen text-zinc-300 font-sans selection:bg-cyan-500/30 flex flex-col" style={{ backgroundColor: '#0d0f12' }}>
+    <div className="min-h-screen text-slate-800 dark:text-zinc-300 font-sans selection:bg-cyan-500/30 flex flex-col bg-sky-50 dark:bg-[#0d0f12]">
       <Helmet><title>Practice Sheets — AlgoLib</title></Helmet>
       <Navbar />
 
       {/* ─── Background ─── */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         {/* Base dark tone */}
-        <div className="absolute inset-0" style={{ backgroundColor: '#0d0f12' }} />
+        <div className="absolute inset-0 bg-sky-50 dark:bg-[#0d0f12]" />
 
         {/* Subtle dot grid */}
         <div
@@ -117,7 +117,7 @@ export default function Sheets() {
         />
 
         {/* Vignette — darkens edges */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_40%,_#080b0f_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_40%,_#e0f2fe_100%)] dark:bg-[radial-gradient(ellipse_at_center,_transparent_40%,_#080b0f_100%)]" />
 
         {/* Glowing orbs — toned down for the darker palette */}
         <div
@@ -185,10 +185,10 @@ export default function Sheets() {
           </div>
 
           <h1 className="text-[42px] sm:text-[60px] font-black tracking-tight leading-[1.05] mb-5">
-            <span className="text-white">Practice</span>{' '}
+            <span className="text-black dark:text-white">Practice</span>{' '}
             <span className="bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">Sheets</span>
           </h1>
-          <p className="text-zinc-500 max-w-xl text-[15px] sm:text-base leading-relaxed">
+          <p className="text-slate-600 dark:text-zinc-500 max-w-xl text-[15px] sm:text-base leading-relaxed">
             Curated problem sets to build algorithmic intuition. Pick a path, track your progress, and get interview-ready.
           </p>
         </motion.header>
@@ -229,15 +229,13 @@ export default function Sheets() {
             {/* Nav Buttons */}
             <button
               onClick={() => scroll('left')}
-              className="hidden md:flex absolute -left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center text-zinc-300 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:text-white border"
-              style={{ background: '#0f1318', borderColor: 'rgba(255,255,255,0.1)' }}
+              className="hidden md:flex absolute -left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center text-slate-500 dark:text-zinc-300 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:text-black dark:hover:text-white border bg-white dark:bg-[#0f1318] border-blue-200 dark:border-white/10"
             >
               <ChevronLeft size={18} />
             </button>
             <button
               onClick={() => scroll('right')}
-              className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center text-zinc-300 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:text-white border"
-              style={{ background: '#0f1318', borderColor: 'rgba(255,255,255,0.1)' }}
+              className="hidden md:flex absolute -right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center text-slate-500 dark:text-zinc-300 opacity-0 group-hover/scroll:opacity-100 transition-all duration-300 hover:text-black dark:hover:text-white border bg-white dark:bg-[#0f1318] border-blue-200 dark:border-white/10"
             >
               <ChevronRight size={18} />
             </button>
@@ -262,8 +260,8 @@ const SectionLabel = ({ label, desc, index }: { label: string; desc: string; ind
     className="flex flex-col gap-1 border-b pb-4"
     style={{ borderColor: 'rgba(255,255,255,0.05)' }}
   >
-    <h2 className="text-[20px] sm:text-2xl font-bold text-white tracking-tight">{label}</h2>
-    <p className="text-[13.5px] text-zinc-500">{desc}</p>
+    <h2 className="text-[20px] sm:text-2xl font-bold text-black dark:text-white tracking-tight">{label}</h2>
+    <p className="text-[13.5px] text-slate-600 dark:text-zinc-500">{desc}</p>
   </motion.div>
 );
 
@@ -275,8 +273,7 @@ const FeaturedCard = ({ sheet, index }: { sheet: any; index: number }) => (
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
     transition={{ duration: 0.5, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
-    className="relative group rounded-2xl overflow-hidden flex flex-col"
-    style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}
+    className="relative group rounded-2xl overflow-hidden flex flex-col border border-blue-200 dark:border-white/5 bg-white/50 dark:bg-white/[0.02]"
   >
     {/* Hover accent gradient */}
     <div
@@ -299,13 +296,13 @@ const FeaturedCard = ({ sheet, index }: { sheet: any; index: number }) => (
           </div>
           <div>
             <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: sheet.accent }}>{sheet.tag}</span>
-            <h3 className="text-white font-bold text-[17px] leading-snug">{sheet.title}</h3>
+            <h3 className="text-black dark:text-white font-bold text-[17px] leading-snug">{sheet.title}</h3>
           </div>
         </div>
       </div>
 
       {/* Description */}
-      <p className="text-zinc-500 text-[13.5px] leading-relaxed mb-6 flex-1 group-hover:text-zinc-400 transition-colors duration-300">
+      <p className="text-slate-600 dark:text-zinc-500 text-[13.5px] leading-relaxed mb-6 flex-1 group-hover:text-slate-800 dark:group-hover:text-zinc-400 transition-colors duration-300">
         {sheet.description}
       </p>
 
@@ -313,8 +310,8 @@ const FeaturedCard = ({ sheet, index }: { sheet: any; index: number }) => (
       <div className="flex items-center gap-4 mb-6">
         {sheet.stats.map((s: any) => (
           <div key={s.label} className="flex flex-col">
-            <span className="text-[11px] text-zinc-600 font-medium uppercase tracking-wider">{s.label}</span>
-            <span className="text-sm font-bold text-zinc-200">{s.value}</span>
+            <span className="text-[11px] text-slate-500 dark:text-zinc-600 font-medium uppercase tracking-wider">{s.label}</span>
+            <span className="text-sm font-bold text-slate-800 dark:text-zinc-200">{s.value}</span>
           </div>
         ))}
       </div>
@@ -350,11 +347,7 @@ const TopicCard = ({ item, index }: { item: any; index: number }) => (
     whileInView={{ opacity: 1, scale: 1 }}
     viewport={{ once: true }}
     transition={{ duration: 0.45, delay: Math.min(index * 0.04, 0.3), ease: [0.16, 1, 0.3, 1] }}
-    className="relative group flex flex-col h-full rounded-[18px] overflow-hidden transition-all duration-300"
-    style={{
-      background: 'rgba(255,255,255,0.02)',
-      border: '1px solid rgba(255,255,255,0.06)',
-    }}
+    className="relative group flex flex-col h-full rounded-[18px] overflow-hidden transition-all duration-300 border border-blue-200 dark:border-white/5 bg-white/50 dark:bg-white/[0.02]"
   >
     {/* Hover glow bg */}
     <div
@@ -378,10 +371,10 @@ const TopicCard = ({ item, index }: { item: any; index: number }) => (
       </div>
 
       {/* Title + desc */}
-      <h3 className="text-white font-semibold text-[15px] leading-snug mb-2 group-hover:text-white transition-colors">
+      <h3 className="text-black dark:text-white font-semibold text-[15px] leading-snug mb-2 transition-colors">
         {item.title}
       </h3>
-      <p className="text-zinc-600 text-[12.5px] leading-relaxed line-clamp-3 group-hover:text-zinc-400 transition-colors duration-300 flex-1">
+      <p className="text-slate-600 dark:text-zinc-500 text-[12.5px] leading-relaxed line-clamp-3 group-hover:text-slate-800 dark:group-hover:text-zinc-400 transition-colors duration-300 flex-1">
         {item.description}
       </p>
 

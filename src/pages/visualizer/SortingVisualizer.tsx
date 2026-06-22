@@ -103,10 +103,6 @@ const SortingVisualizer = () => {
   useEffect(() => { resetArray(); return () => { sortingRef.current = false; }; }, []);
   useEffect(() => { if (!isSorting) resetArray(); }, [arraySize]);
   useEffect(() => { setCodeLines(CODE_SNIPPETS[algo]); }, [algo]);
-  
-  // Auto Scrollers
-  useEffect(() => { interpreterEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [codeLines]);
-  useEffect(() => { outputEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [outputLog]);
 
   const resetArray = () => {
     sortingRef.current = false;

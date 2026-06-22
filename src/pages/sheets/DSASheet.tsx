@@ -151,7 +151,7 @@ export default function DSASheet() {
   const hasActiveFilters = search || topic !== "All" || difficulty !== "All" || status !== "All";
 
   return (
-    <div className="min-h-screen bg-[#030303] text-zinc-300 font-sans selection:bg-cyan-500/30">
+    <div className="min-h-screen bg-sky-50 dark:bg-[#030303] text-slate-800 dark:text-zinc-300 font-sans selection:bg-cyan-500/30">
       <Helmet><title>DSA Master Sheet — AlgoLib</title></Helmet>
 
       {/* Local styles for sleek dropdown scrollbar */}
@@ -172,7 +172,7 @@ export default function DSASheet() {
       <main className="relative z-10 w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-28 md:pt-32 pb-24">
 
         {/* Back button */}
-        <Link to="/sheets" className="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-200 text-sm mb-8 transition-colors group">
+        <Link to="/sheets" className="inline-flex items-center gap-1.5 text-slate-500 dark:text-zinc-500 hover:text-slate-900 dark:hover:text-zinc-200 text-sm mb-8 transition-colors group">
           <ChevronRight size={15} className="rotate-180 group-hover:-translate-x-0.5 transition-transform" />
           Back to Sheets
         </Link>
@@ -183,14 +183,14 @@ export default function DSASheet() {
             <ClipboardList size={14} className="text-cyan-400" />
             <span className="text-[11px] font-mono text-cyan-400/80 uppercase tracking-widest">Roadmap sheet</span>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight mb-3 drop-shadow-md">DSA Practice Sheet</h1>
-          <p className="text-zinc-400 max-w-2xl text-sm sm:text-base leading-relaxed">
+          <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 dark:text-white tracking-tight mb-3 drop-shadow-md">DSA Practice Sheet</h1>
+          <p className="text-slate-600 dark:text-zinc-400 max-w-2xl text-sm sm:text-base leading-relaxed">
             A highly structured, non-linear progression path to master Data Structures & Algorithms. Track your execution, queue revisions, and build algorithmic intuition.
           </p>
         </header>
 
         {/* ─── Global Progress Card ─── */}
-        <section className="mb-8 relative overflow-hidden rounded-2xl bg-white/[0.02] border border-white/[0.08] p-6 sm:p-8 backdrop-blur-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
+        <section className="mb-8 relative overflow-hidden rounded-2xl bg-white/60 dark:bg-white/[0.02] border border-blue-200 dark:border-white/[0.08] p-6 sm:p-8 backdrop-blur-3xl shadow-sm dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
@@ -207,12 +207,12 @@ export default function DSASheet() {
                 <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-widest">Completion Matrix</span>
                 <div className="flex items-center gap-3">
                   <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400 leading-none">{pct}%</span>
-                  <button onClick={() => fetchData(true)} disabled={refreshing} className="p-1.5 rounded-lg bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.1] hover:border-white/[0.15] transition-all active:scale-95 focus:outline-none shadow-sm backdrop-blur-md">
+                  <button onClick={() => fetchData(true)} disabled={refreshing} className="p-1.5 rounded-lg bg-white dark:bg-white/[0.03] border border-blue-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-white/[0.1] hover:border-blue-300 dark:hover:border-white/[0.15] transition-all active:scale-95 focus:outline-none shadow-sm backdrop-blur-md">
                     <RefreshCw size={14} className={`text-zinc-400 ${refreshing ? "animate-spin text-cyan-400" : "hover:text-white"}`} />
                   </button>
                 </div>
               </div>
-              <div className="h-2 w-full bg-black/60 rounded-full overflow-hidden border border-white/[0.05] shadow-inner relative">
+              <div className="h-2 w-full bg-slate-200 dark:bg-black/60 rounded-full overflow-hidden border border-blue-100 dark:border-white/[0.05] shadow-inner relative">
                 <motion.div 
                   initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1, ease: "circOut" }}
                   className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full relative z-10 shadow-[0_0_12px_rgba(52,211,153,0.6)]" 
@@ -223,7 +223,7 @@ export default function DSASheet() {
         </section>
 
         {/* ─── STICKY Advanced Filter Engine (MOBILE OPTIMIZED) ─── */}
-        <section className="relative z-40 mb-8 p-3 rounded-2xl bg-[#080808]/85 border border-white/[0.08] backdrop-blur-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] flex flex-col xl:flex-row gap-3 transition-all">
+        <section className="relative z-40 mb-8 p-3 rounded-2xl bg-white/80 dark:bg-[#080808]/85 border border-blue-200 dark:border-white/[0.08] backdrop-blur-3xl shadow-sm dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] flex flex-col xl:flex-row gap-3 transition-all">
           
           {/* Command Search */}
           <div className="relative flex-1 group w-full">
@@ -232,7 +232,7 @@ export default function DSASheet() {
               ref={searchInputRef}
               value={search} onChange={e => setSearch(e.target.value)} 
               placeholder="Fuzzy search (e.g., 'twosum')..."
-              className="w-full pl-11 pr-14 py-3.5 bg-black/40 border border-white/[0.06] rounded-xl text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/40 transition-all shadow-inner focus:bg-white/[0.02]" 
+              className="w-full pl-11 pr-14 py-3.5 bg-slate-50 dark:bg-black/40 border border-blue-200 dark:border-white/[0.06] rounded-xl text-sm text-slate-800 dark:text-zinc-200 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:border-cyan-500/40 focus:ring-1 focus:ring-cyan-500/40 transition-all shadow-inner focus:bg-white dark:focus:bg-white/[0.02]" 
             />
             {!search && (
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none opacity-60 group-focus-within:opacity-0 transition-opacity duration-200">
@@ -254,7 +254,7 @@ export default function DSASheet() {
             <div className="relative w-full lg:w-auto min-w-[160px] shrink-0 z-50">
               <button 
                 onClick={() => setTopicDropdownOpen(!topicDropdownOpen)}
-                className="w-full h-full flex items-center justify-between px-4 py-3.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm font-medium hover:bg-white/[0.06] transition-colors backdrop-blur-md"
+                className="w-full h-full flex items-center justify-between px-4 py-3.5 bg-white dark:bg-white/[0.03] border border-blue-200 dark:border-white/[0.08] rounded-xl text-sm font-medium hover:bg-slate-50 dark:hover:bg-white/[0.06] transition-colors backdrop-blur-md"
               >
                 <span className="flex items-center gap-2"><Filter size={14} className="text-zinc-400" /> {topic === "All" ? "All Topics" : topic}</span>
                 <ChevronDown size={14} className={`text-zinc-500 transition-transform ${topicDropdownOpen ? "rotate-180" : ""}`} />
@@ -262,10 +262,10 @@ export default function DSASheet() {
               <AnimatePresence>
                 {topicDropdownOpen && (
                   <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} transition={{ duration: 0.15 }}
-                    className="absolute top-[calc(100%+8px)] left-0 mt-0 w-full sm:w-64 max-h-[50vh] overflow-y-auto bg-[#0d0d0d]/95 backdrop-blur-3xl border border-white/[0.1] rounded-xl p-1.5 shadow-2xl z-[100] custom-scrollbar">
+                    className="absolute top-[calc(100%+8px)] left-0 mt-0 w-full sm:w-64 max-h-[50vh] overflow-y-auto bg-white/95 dark:bg-[#0d0d0d]/95 backdrop-blur-3xl border border-blue-200 dark:border-white/[0.1] rounded-xl p-1.5 shadow-2xl z-[100] custom-scrollbar">
                     {TOPICS.map(t => (
                       <button key={t} onClick={() => { setTopic(t); setTopicDropdownOpen(false); }}
-                        className={`w-full text-left px-4 py-2.5 text-sm rounded-lg transition-all ${topic === t ? "bg-cyan-500/15 text-cyan-400 shadow-sm" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"}`}>
+                        className={`w-full text-left px-4 py-2.5 text-sm rounded-lg transition-all ${topic === t ? "bg-cyan-50/80 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-400 shadow-sm" : "text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white"}`}>
                         {t}
                       </button>
                     ))}
@@ -277,12 +277,12 @@ export default function DSASheet() {
             {/* Mobile Optimized Segmented Controls (Stacks cleanly, expands fully) */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
               {/* Status Track */}
-              <div className="flex bg-black/50 border border-white/[0.06] shadow-inner rounded-xl p-1.5 w-full sm:w-auto">
+              <div className="flex bg-slate-50 dark:bg-black/50 border border-blue-200 dark:border-white/[0.06] shadow-inner rounded-xl p-1.5 w-full sm:w-auto">
                 <SegmentedControl options={STATUSES} selected={status} onChange={setStatus} />
               </div>
               
               {/* Difficulty Track */}
-              <div className="flex bg-black/50 border border-white/[0.06] shadow-inner rounded-xl p-1.5 w-full sm:w-auto">
+              <div className="flex bg-slate-50 dark:bg-black/50 border border-blue-200 dark:border-white/[0.06] shadow-inner rounded-xl p-1.5 w-full sm:w-auto">
                 <SegmentedControl options={DIFFICULTIES} selected={difficulty} onChange={setDifficulty} />
               </div>
             </div>
@@ -311,7 +311,7 @@ export default function DSASheet() {
               const topicPct = Math.round((completedInTopic / topicProblems.length) * 100);
 
               return (
-                <div key={topicName} className="rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-md overflow-hidden transition-all hover:border-white/[0.1] hover:bg-white/[0.02]">
+                <div key={topicName} className="rounded-2xl border border-blue-200 dark:border-white/[0.06] bg-white/50 dark:bg-white/[0.015] backdrop-blur-md overflow-hidden transition-all hover:border-blue-300 dark:hover:border-white/[0.1] hover:bg-white/80 dark:hover:bg-white/[0.02]">
                   
                   {/* Accordion Header */}
                   <button 
@@ -323,20 +323,20 @@ export default function DSASheet() {
                     className="w-full group flex flex-col sm:flex-row sm:items-center justify-between p-5 sm:px-6 focus:outline-none"
                   >
                     <div className="flex items-center gap-4 mb-3 sm:mb-0">
-                      <div className={`p-1.5 rounded-lg transition-all ${isExpanded ? "bg-white/[0.1] text-white shadow-sm" : "bg-white/[0.03] text-zinc-400 group-hover:bg-white/[0.08]"}`}>
+                      <div className={`p-1.5 rounded-lg transition-all ${isExpanded ? "bg-blue-100 text-blue-600 dark:bg-white/[0.1] dark:text-white shadow-sm" : "bg-slate-100 text-slate-500 dark:bg-white/[0.03] dark:text-zinc-400 group-hover:bg-slate-200 dark:group-hover:bg-white/[0.08]"}`}>
                         <ChevronRight size={16} className={`transition-transform duration-300 ${isExpanded ? "rotate-90" : ""}`} />
                       </div>
-                      <h2 className="text-[17px] font-semibold text-white tracking-wide">{topicName}</h2>
+                      <h2 className="text-[17px] font-semibold text-slate-900 dark:text-white tracking-wide">{topicName}</h2>
                     </div>
 
                     {/* Topic Metrics Pill */}
                     <div className="flex items-center gap-4 pl-12 sm:pl-0">
-                      <div className="flex items-center gap-3 px-3.5 py-2 rounded-full bg-black/40 border border-white/[0.06] shadow-inner">
+                      <div className="flex items-center gap-3 px-3.5 py-2 rounded-full bg-slate-50 dark:bg-black/40 border border-blue-200 dark:border-white/[0.06] shadow-inner">
                         <span className="text-[11px] font-mono text-zinc-400">{completedInTopic}/{topicProblems.length}</span>
                         <div className="w-16 h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
                           <div className={`h-full rounded-full transition-all duration-500 ${topicPct === 100 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-cyan-500'}`} style={{ width: `${topicPct}%` }} />
                         </div>
-                        <span className={`text-[11px] font-mono font-bold ${topicPct === 100 ? 'text-emerald-400' : 'text-zinc-300'}`}>{topicPct}%</span>
+                        <span className={`text-[11px] font-mono font-bold ${topicPct === 100 ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-600 dark:text-zinc-300'}`}>{topicPct}%</span>
                       </div>
                     </div>
                   </button>
@@ -345,15 +345,15 @@ export default function DSASheet() {
                   <AnimatePresence initial={false}>
                     {isExpanded && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-                        className="overflow-hidden border-t border-white/[0.06] bg-black/20"
+                        className="overflow-hidden border-t border-blue-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-black/20"
                       >
-                        <div className="hidden md:grid grid-cols-[3rem_1fr_100px_100px_60px_60px] items-center px-6 py-3 bg-white/[0.01] border-b border-white/[0.03]">
+                        <div className="hidden md:grid grid-cols-[3rem_1fr_100px_100px_60px_60px] items-center px-6 py-3 bg-white/40 dark:bg-white/[0.01] border-b border-blue-100 dark:border-white/[0.03]">
                           {["ID", "Problem Title", "Difficulty", "Platform", "Done", "Revise"].map((h, i) => (
                             <span key={i} className={`text-[10px] font-semibold text-zinc-500 uppercase tracking-widest ${i >= 4 ? "text-center" : ""}`}>{h}</span>
                           ))}
                         </div>
 
-                        <div className="divide-y divide-white/[0.03]">
+                        <div className="divide-y divide-blue-100 dark:divide-white/[0.03]">
                           {topicProblems.map((p, idx) => (
                             <div key={p.id}>
                               <div className="hidden md:block"><DesktopDataRow problem={p} idx={idx} toggling={toggling} onToggle={handleToggle} /></div>
@@ -382,7 +382,7 @@ const SegmentedControl = ({ options, selected, onChange }: { options: string[], 
   <div className="flex items-center gap-1 w-full sm:w-auto">
     {options.map(opt => (
       <button key={opt} onClick={() => onChange(opt)}
-        className={`flex-1 sm:flex-none px-2 py-1.5 text-[12px] sm:text-[13px] font-medium rounded-lg transition-all text-center ${selected === opt ? "bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.2)] border border-white/[0.05]" : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] border border-transparent"}`}>
+        className={`flex-1 sm:flex-none px-2 py-1.5 text-[12px] sm:text-[13px] font-medium rounded-lg transition-all text-center ${selected === opt ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-[0_2px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.2)] border border-blue-200 dark:border-white/[0.05]" : "text-slate-500 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300 hover:bg-white/50 dark:hover:bg-white/[0.04] border border-transparent"}`}>
         {opt}
       </button>
     ))}
@@ -393,11 +393,11 @@ const SegmentedControl = ({ options, selected, onChange }: { options: string[], 
 const DesktopDataRow = ({ problem: p, idx, toggling, onToggle }: any) => {
   const diffStyle = DIFF_STYLES[p.difficulty] || DIFF_STYLES["Easy"];
   return (
-    <div className={`group grid grid-cols-[3rem_1fr_100px_100px_60px_60px] items-center px-6 py-4 transition-colors hover:bg-white/[0.02] ${p.is_completed ? "opacity-60 bg-emerald-900/[0.02]" : ""}`}>
+    <div className={`group grid grid-cols-[3rem_1fr_100px_100px_60px_60px] items-center px-6 py-4 transition-colors hover:bg-white dark:hover:bg-white/[0.02] ${p.is_completed ? "opacity-60 bg-emerald-50/50 dark:bg-emerald-900/[0.02]" : ""}`}>
       <span className="text-[12px] text-zinc-600 font-mono">{(idx + 1).toString().padStart(2, '0')}</span>
       
       <a href={p.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 pr-4 group/link">
-        <span className={`text-[14.5px] font-medium truncate transition-colors ${p.is_completed ? "line-through decoration-zinc-600 text-zinc-500" : "text-zinc-200 group-hover/link:text-cyan-400"}`}>
+        <span className={`text-[14.5px] font-medium truncate transition-colors ${p.is_completed ? "line-through decoration-slate-400 text-slate-500 dark:decoration-zinc-600 dark:text-zinc-500" : "text-slate-800 dark:text-zinc-200 group-hover/link:text-cyan-600 dark:group-hover/link:text-cyan-400"}`}>
           {p.title}
         </span>
         <ExternalLink size={12} className="text-zinc-600 opacity-0 group-hover/link:opacity-100 transition-all -translate-y-1 group-hover/link:translate-y-0" />
@@ -425,10 +425,10 @@ const DesktopDataRow = ({ problem: p, idx, toggling, onToggle }: any) => {
 const MobileDataCard = ({ problem: p, toggling, onToggle }: any) => {
   const diffStyle = DIFF_STYLES[p.difficulty] || DIFF_STYLES["Easy"];
   return (
-    <div className="p-5 flex gap-3 hover:bg-white/[0.02] transition-colors">
+    <div className="p-5 flex gap-3 hover:bg-white dark:hover:bg-white/[0.02] transition-colors">
       <div className="mt-1"><ActionButton type="is_completed" problem={p} toggling={toggling} onToggle={onToggle} /></div>
       <div className="flex-1 min-w-0">
-        <a href={p.url} target="_blank" rel="noreferrer" className={`block text-[15px] font-medium mb-2 leading-snug truncate ${p.is_completed ? "line-through text-zinc-500 decoration-zinc-700" : "text-zinc-200"}`}>
+        <a href={p.url} target="_blank" rel="noreferrer" className={`block text-[15px] font-medium mb-2 leading-snug truncate ${p.is_completed ? "line-through text-slate-500 decoration-slate-400 dark:text-zinc-500 dark:decoration-zinc-700" : "text-slate-800 dark:text-zinc-200"}`}>
           {p.title}
         </a>
         <div className="flex items-center gap-2.5 text-[10px]">
@@ -450,7 +450,7 @@ const ActionButton = ({ type, problem, toggling, onToggle }: any) => {
   return (
     <button 
       onClick={() => onToggle(problem.id, type, active)} disabled={isToggling}
-      className="p-1.5 rounded-lg text-zinc-600 hover:bg-white/[0.08] active:scale-90 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50"
+      className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-600 hover:bg-slate-100 dark:hover:bg-white/[0.08] active:scale-90 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50"
     >
       {isToggling ? <Loader2 size={18} className="animate-spin text-zinc-500" /> : 
         isDone ? (active ? <CheckCircle2 size={20} className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]" /> : <Circle size={20} className="hover:text-zinc-400" />) :
@@ -461,7 +461,7 @@ const ActionButton = ({ type, problem, toggling, onToggle }: any) => {
 };
 
 // 5. Shared UI Fragments
-const StatBlock = ({ label, value, color = "text-white", glow = "" }: { label: string, value: number, color?: string, glow?: string }) => (
+const StatBlock = ({ label, value, color = "text-slate-900 dark:text-white", glow = "" }: { label: string, value: number, color?: string, glow?: string }) => (
   <div>
     <div className={`text-3xl font-bold tracking-tight mb-1 ${color} ${glow}`}>{value}</div>
     <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-widest">{label}</div>
@@ -469,14 +469,14 @@ const StatBlock = ({ label, value, color = "text-white", glow = "" }: { label: s
 );
 
 const EmptyState = ({ clearFilters, hasFilters }: any) => (
-  <div className="flex flex-col items-center justify-center py-24 text-center border border-white/[0.06] rounded-2xl bg-white/[0.01] backdrop-blur-md shadow-inner">
+  <div className="flex flex-col items-center justify-center py-24 text-center border border-blue-200 dark:border-white/[0.06] rounded-2xl bg-white/50 dark:bg-white/[0.01] backdrop-blur-md shadow-inner">
     <div className="w-14 h-14 bg-white/[0.03] rounded-2xl flex items-center justify-center mb-5 border border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
       <Search size={24} className="text-zinc-500" />
     </div>
-    <h3 className="text-zinc-200 font-semibold text-lg">No matching problems</h3>
-    <p className="text-zinc-500 text-sm mt-1 mb-5">Try adjusting your filters or search terms.</p>
+    <h3 className="text-slate-800 dark:text-zinc-200 font-semibold text-lg">No matching problems</h3>
+    <p className="text-slate-500 dark:text-zinc-500 text-sm mt-1 mb-5">Try adjusting your filters or search terms.</p>
     {hasFilters && (
-      <button onClick={clearFilters} className="px-5 py-2.5 bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 text-sm font-medium rounded-xl transition-all border border-white/[0.08] shadow-sm">
+      <button onClick={clearFilters} className="px-5 py-2.5 bg-white dark:bg-white/[0.05] hover:bg-slate-50 dark:hover:bg-white/[0.1] text-slate-700 dark:text-zinc-300 text-sm font-medium rounded-xl transition-all border border-blue-200 dark:border-white/[0.08] shadow-sm">
         Clear all filters
       </button>
     )}
@@ -486,7 +486,7 @@ const EmptyState = ({ clearFilters, hasFilters }: any) => (
 const SkeletonLoader = () => (
   <div className="space-y-5">
     {[1, 2, 3].map(i => (
-      <div key={i} className="h-20 rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-md animate-pulse shadow-sm" />
+      <div key={i} className="h-20 rounded-2xl border border-blue-200 dark:border-white/[0.06] bg-white/50 dark:bg-white/[0.02] backdrop-blur-md animate-pulse shadow-sm" />
     ))}
   </div>
 );

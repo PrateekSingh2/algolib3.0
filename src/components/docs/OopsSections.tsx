@@ -17,18 +17,18 @@ export const OOPS_SECTIONS: DocSection[] = [
         
 
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-            <h4 className="text-cyan-400 font-bold text-xl mb-3">Classes vs. Objects</h4>
+          <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+            <h4 className="text-cyan-700 dark:text-cyan-400 font-bold text-xl mb-3">Classes vs. Objects</h4>
             <p className="text-sm text-slate-400 mb-2"><strong>Class:</strong> The blueprint. It defines what properties and methods an entity will have, but it doesn't occupy memory itself until instantiated.</p>
             <p className="text-sm text-slate-400"><strong>Object:</strong> The instance. When you instantiate a class, memory is allocated, and the blueprint becomes a tangible, usable entity in heap memory.</p>
           </div>
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-            <h4 className="text-purple-400 font-bold text-xl mb-3">The Four Pillars</h4>
+          <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+            <h4 className="text-purple-700 dark:text-purple-400 font-bold text-xl mb-3">The Four Pillars</h4>
             <ul className="text-sm text-slate-400 space-y-2">
-              <li className="flex items-center gap-2"><ShieldCheck size={14} className="text-emerald-400" /> <strong>Encapsulation</strong> — Data hiding</li>
-              <li className="flex items-center gap-2"><TreePine size={14} className="text-purple-400" /> <strong>Inheritance</strong> — Code reuse</li>
-              <li className="flex items-center gap-2"><Shapes size={14} className="text-cyan-400" /> <strong>Polymorphism</strong> — Many forms</li>
-              <li className="flex items-center gap-2"><Globe size={14} className="text-amber-400" /> <strong>Abstraction</strong> — Hide complexity</li>
+              <li className="flex items-center gap-2"><ShieldCheck size={14} className="text-emerald-700 dark:text-emerald-400" /> <strong>Encapsulation</strong> — Data hiding</li>
+              <li className="flex items-center gap-2"><TreePine size={14} className="text-purple-700 dark:text-purple-400" /> <strong>Inheritance</strong> — Code reuse</li>
+              <li className="flex items-center gap-2"><Shapes size={14} className="text-cyan-700 dark:text-cyan-400" /> <strong>Polymorphism</strong> — Many forms</li>
+              <li className="flex items-center gap-2"><Globe size={14} className="text-amber-700 dark:text-amber-400" /> <strong>Abstraction</strong> — Hide complexity</li>
             </ul>
           </div>
         </div>
@@ -328,7 +328,7 @@ with managed_resource() as r:
     render: (highlight) => (
       <div className="space-y-8">
         <div>
-          <h3 className="text-emerald-400 text-2xl font-bold mb-4">Encapsulation & Data Hiding</h3>
+          <h3 className="text-emerald-700 dark:text-emerald-400 text-2xl font-bold mb-4">Encapsulation & Data Hiding</h3>
           
           <p className="text-slate-400 mb-4">
             <HighlightText text="Encapsulation is the act of bundling data and methods into a single unit (the class). Data Hiding takes this further by restricting direct access to internal states to prevent accidental corruption from external code." highlight={highlight} />
@@ -486,7 +486,7 @@ class BankAccount:
     render: (highlight) => (
       <div className="space-y-8">
         <div>
-          <h3 className="text-purple-400 text-2xl font-bold mb-4">Inheritance (IS-A Relationship)</h3>
+          <h3 className="text-purple-700 dark:text-purple-400 text-2xl font-bold mb-4">Inheritance (IS-A Relationship)</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="Inheritance solves code redundancy. A 'Child' (Derived) class can inherit fields and methods from a 'Parent' (Base) class. If a Dog IS-A Animal, it should inherit the general Animal attributes without rewriting them." highlight={highlight} />
           </p>
@@ -625,25 +625,25 @@ class Bat(Animal, Flyer):
     render: (highlight) => (
       <div className="space-y-8">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Polymorphism (Many Forms)</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Polymorphism (Many Forms)</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="The ability for a single interface or method name to represent different underlying behaviors. This is the most powerful pillar of OOP—it enables writing flexible, extensible code that works with future types." highlight={highlight} />
           </p>
 
           <div className="grid md:grid-cols-2 gap-6 mt-6">
-            <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-lg">
-              <h4 className="font-bold text-slate-50 mb-3 text-amber-400">Compile-Time (Static)</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-5 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+              <h4 className="font-bold text-slate-50 mb-3 text-amber-700 dark:text-amber-400">Compile-Time (Static)</h4>
               <p className="text-sm text-slate-400 mb-3">Resolved at compile time. Includes <strong>Method Overloading</strong> and <strong>Operator Overloading</strong>.</p>
-              <pre className="text-xs bg-slate-950 p-3 rounded font-mono text-slate-400 border border-slate-800">
+              <pre className="text-xs bg-slate-50 dark:bg-slate-950 p-3 rounded font-mono text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
 {`void print(int i)    { ... }
 void print(String s) { ... }
 void print(int i, int j) { ... }`}
               </pre>
             </div>
-            <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-lg">
-              <h4 className="font-bold text-slate-50 mb-3 text-purple-400">Run-Time (Dynamic)</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-5 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+              <h4 className="font-bold text-slate-50 mb-3 text-purple-700 dark:text-purple-400">Run-Time (Dynamic)</h4>
               <p className="text-sm text-slate-400 mb-3">Resolved at runtime via <strong>Virtual Tables (vtable)</strong>. Includes <strong>Method Overriding</strong>.</p>
-              <pre className="text-xs bg-slate-950 p-3 rounded font-mono text-slate-400 border border-slate-800">
+              <pre className="text-xs bg-slate-50 dark:bg-slate-950 p-3 rounded font-mono text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
 {`@Override
 public void makeSound() {
     System.out.println("Bark!");
@@ -654,7 +654,7 @@ public void makeSound() {
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">The Virtual Table (vtable) Mechanism</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">The Virtual Table (vtable) Mechanism</h3>
           
           <p className="text-slate-400 mb-4">
             <HighlightText text="When a class has virtual methods, the compiler creates a hidden vtable (array of function pointers). Each object stores a vptr pointing to its class's vtable. At runtime, calling a virtual method follows the vptr to find the correct function—this is called dynamic dispatch." highlight={highlight} />
@@ -802,7 +802,7 @@ for s in shapes:
     render: (highlight) => (
       <div className="space-y-8">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Abstraction</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Abstraction</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="Hiding complex implementation details and showing only the essential features to the user. Like driving a car: you know how the steering wheel works, but you don't need to know fuel injection mechanics to drive." highlight={highlight} />
           </p>
@@ -1467,12 +1467,12 @@ int_stack.push(10)
         
 
         <div className="space-y-6">
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-            <h4 className="text-cyan-400 font-bold text-xl mb-2">S — Single Responsibility Principle</h4>
+          <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+            <h4 className="text-cyan-700 dark:text-cyan-400 font-bold text-xl mb-2">S — Single Responsibility Principle</h4>
             <p className="text-sm text-slate-400 mb-3">"A class should have only ONE reason to change." Each class handles exactly one concern.</p>
             <div className="grid md:grid-cols-2 gap-4 text-xs font-mono">
               <div className="bg-rose-500/10 p-3 rounded border border-rose-500/20">
-                <strong className="text-rose-400 block mb-1">❌ Violation</strong>
+                <strong className="text-rose-700 dark:text-rose-400 block mb-1">❌ Violation</strong>
                 <pre className="text-slate-400">{`class User {
   void saveToDatabase() {...}
   void sendEmail() {...}
@@ -1480,7 +1480,7 @@ int_stack.push(10)
 }`}</pre>
               </div>
               <div className="bg-emerald-500/10 p-3 rounded border border-emerald-500/20">
-                <strong className="text-emerald-400 block mb-1">✅ Correct</strong>
+                <strong className="text-emerald-700 dark:text-emerald-400 block mb-1">✅ Correct</strong>
                 <pre className="text-slate-400">{`class User { ... }
 class UserRepository { save() }
 class EmailService { send() }
@@ -1489,23 +1489,23 @@ class ReportGenerator { gen() }`}</pre>
             </div>
           </div>
 
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-            <h4 className="text-purple-400 font-bold text-xl mb-2">O — Open/Closed Principle</h4>
+          <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+            <h4 className="text-purple-700 dark:text-purple-400 font-bold text-xl mb-2">O — Open/Closed Principle</h4>
             <p className="text-sm text-slate-400">"Software entities should be <strong>open for extension</strong> but <strong>closed for modification</strong>." Add new features by adding new code (subclasses, implementations), not by changing existing tested code. Strategy and Decorator patterns embody this.</p>
           </div>
 
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-            <h4 className="text-emerald-400 font-bold text-xl mb-2">L — Liskov Substitution Principle</h4>
+          <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+            <h4 className="text-emerald-700 dark:text-emerald-400 font-bold text-xl mb-2">L — Liskov Substitution Principle</h4>
             <p className="text-sm text-slate-400">"Subtypes must be substitutable for their base types without altering program correctness." If <code>Square extends Rectangle</code>, then everywhere a <code>Rectangle</code> is expected, a <code>Square</code> must work correctly. The classic Square/Rectangle problem violates this.</p>
           </div>
 
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-            <h4 className="text-amber-400 font-bold text-xl mb-2">I — Interface Segregation Principle</h4>
+          <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+            <h4 className="text-amber-700 dark:text-amber-400 font-bold text-xl mb-2">I — Interface Segregation Principle</h4>
             <p className="text-sm text-slate-400">"Clients should not be forced to depend on interfaces they don't use." Instead of one fat <code>Worker</code> interface with <code>work()</code>, <code>eat()</code>, <code>sleep()</code>, split into <code>Workable</code>, <code>Feedable</code>, <code>Sleepable</code>. A robot <code>implements Workable</code> only.</p>
           </div>
 
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-            <h4 className="text-orange-400 font-bold text-xl mb-2">D — Dependency Inversion Principle</h4>
+          <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+            <h4 className="text-orange-700 dark:text-orange-400 font-bold text-xl mb-2">D — Dependency Inversion Principle</h4>
             <p className="text-sm text-slate-400">"High-level modules should not depend on low-level modules. Both should depend on abstractions." Don't instantiate dependencies directly. Instead, inject interfaces. This enables testing with mocks and swapping implementations.</p>
           </div>
         </div>

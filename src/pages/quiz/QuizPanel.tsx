@@ -79,7 +79,7 @@ export default function QuizPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020202] text-zinc-100 font-sans flex flex-col relative overflow-x-hidden selection:bg-indigo-500/30">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#020202] text-slate-900 dark:text-zinc-100 font-sans flex flex-col relative overflow-x-hidden selection:bg-indigo-500/30">
       <Navbar />
       
       {/* Premium Tech Background */}
@@ -94,10 +94,10 @@ export default function QuizPanel() {
           <div className="inline-flex items-center justify-center p-1 px-3 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-6 backdrop-blur-md">
             <Sparkles size={14} className="mr-2" /> Assessment Ground
           </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black mb-4 tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-zinc-200 to-zinc-600">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black mb-4 tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-slate-900 via-slate-700 to-slate-500 dark:from-white dark:via-zinc-200 dark:to-zinc-600">
             Proctored Evaluation Hub
           </h1>
-          <p className="text-zinc-400 text-sm sm:text-base max-w-2xl leading-relaxed font-medium">
+          <p className="text-slate-600 dark:text-zinc-400 text-sm sm:text-base max-w-2xl leading-relaxed font-medium">
             Explore live environments, enter a secure assessment code, or orchestrate your own strict-proctored evaluations.
           </p>
         </motion.div>
@@ -113,22 +113,22 @@ export default function QuizPanel() {
             className="lg:col-span-8 flex flex-col gap-6"
           >
             <div className="flex items-center gap-3 mb-2">
-              <Play size={18} className="text-sky-400" />
-              <h2 className="text-lg font-bold text-white tracking-tight">Practice Open Quiz</h2>
-              <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent ml-4"></div>
+              <Play size={18} className="text-sky-500 dark:text-sky-400" />
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Practice Open Quiz</h2>
+              <div className="h-px flex-1 bg-gradient-to-r from-slate-300 dark:from-white/10 to-transparent ml-4"></div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               {loadingTours ? (
-                  <div className="col-span-full py-16 flex flex-col items-center justify-center bg-[#050505]/60 border border-white/5 rounded-[2rem]">
+                  <div className="col-span-full py-16 flex flex-col items-center justify-center bg-slate-100 dark:bg-[#050505]/60 border border-slate-200 dark:border-white/5 rounded-[2rem]">
                       <Loader2 className="animate-spin text-indigo-500 mb-3" size={32} />
-                      <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest">Querying Matrix...</p>
+                      <p className="text-slate-500 dark:text-zinc-500 text-xs font-bold uppercase tracking-widest">Querying Matrix...</p>
                   </div>
               ) : publicTours.length === 0 ? (
-                  <div className="col-span-full py-16 flex flex-col items-center justify-center bg-[#050505]/60 border border-white/5 rounded-[2rem]">
-                      <ShieldAlert className="text-zinc-600 mb-3 opacity-50" size={40} />
-                      <p className="text-zinc-400 font-bold mb-1 text-sm">No Active Tours Available</p>
-                      <p className="text-zinc-500 text-xs">Administrators have not flagged any assessments for public display.</p>
+                  <div className="col-span-full py-16 flex flex-col items-center justify-center bg-slate-100 dark:bg-[#050505]/60 border border-slate-200 dark:border-white/5 rounded-[2rem]">
+                      <ShieldAlert className="text-slate-400 dark:text-zinc-600 mb-3 opacity-50" size={40} />
+                      <p className="text-slate-600 dark:text-zinc-400 font-bold mb-1 text-sm">No Active Tours Available</p>
+                      <p className="text-slate-500 dark:text-zinc-500 text-xs">Administrators have not flagged any assessments for public display.</p>
                   </div>
               ) : (
                   publicTours.map((tour, idx) => {
@@ -141,7 +141,7 @@ export default function QuizPanel() {
                       <div 
                         key={tour.id} 
                         onClick={() => navigate(`/quiz/${tour.id}`)}
-                        className={`relative bg-[#050505]/80 backdrop-blur-2xl border border-white/[0.08] rounded-[2rem] p-6 sm:p-8 cursor-pointer overflow-hidden transition-all duration-300 group ${colors.hoverBorder} ${isFeatured ? 'sm:col-span-2' : 'col-span-1'} hover:-translate-y-1 shadow-[0_10px_40px_rgba(0,0,0,0.4)]`}
+                        className={`relative bg-white dark:bg-[#050505]/80 backdrop-blur-2xl border border-slate-200 dark:border-white/[0.08] rounded-[2rem] p-6 sm:p-8 cursor-pointer overflow-hidden transition-all duration-300 group ${colors.hoverBorder} ${isFeatured ? 'sm:col-span-2' : 'col-span-1'} hover:-translate-y-1 shadow-sm hover:shadow-md dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)]`}
                       >
                         <div className={`absolute inset-0 bg-gradient-to-br ${colors.glow} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`}></div>
                         
@@ -155,15 +155,15 @@ export default function QuizPanel() {
                                     {tour.duration_seconds ? tour.duration_seconds / 60 : 45} Min
                                 </span>
                             </div>
-                            <h3 className={`${isFeatured ? 'text-2xl sm:text-3xl' : 'text-xl'} font-bold text-white mb-3 tracking-tight`}>{tour.title}</h3>
-                            <p className={`text-zinc-400 font-medium leading-relaxed ${isFeatured ? 'text-sm sm:text-base max-w-lg mb-8' : 'text-xs mb-6'}`}>
+                            <h3 className={`${isFeatured ? 'text-2xl sm:text-3xl' : 'text-xl'} font-bold text-slate-900 dark:text-white mb-3 tracking-tight`}>{tour.title}</h3>
+                            <p className={`text-slate-600 dark:text-zinc-400 font-medium leading-relaxed ${isFeatured ? 'text-sm sm:text-base max-w-lg mb-8' : 'text-xs mb-6'}`}>
                                 {tour.description || "A highly secure, proctored environment."}
                             </p>
                           </div>
                           
                           <div className="flex items-center gap-2 mt-auto">
-                            <span className="text-xs font-bold text-white">Attempt Now</span>
-                            <ChevronRight size={16} className="text-zinc-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">Attempt Now</span>
+                            <ChevronRight size={16} className="text-slate-400 dark:text-zinc-500 group-hover:text-slate-900 dark:group-hover:text-white group-hover:translate-x-1 transition-all" />
                           </div>
                         </div>
                       </div>
@@ -181,22 +181,22 @@ export default function QuizPanel() {
             className="lg:col-span-4 flex flex-col gap-6"
           >
             <div className="flex items-center gap-3 mb-2">
-              <TerminalSquare size={18} className="text-indigo-400" />
-              <h2 className="text-lg font-bold text-white tracking-tight">Control Panel</h2>
-              <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent ml-4"></div>
+              <TerminalSquare size={18} className="text-indigo-500 dark:text-indigo-400" />
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Control Panel</h2>
+              <div className="h-px flex-1 bg-gradient-to-r from-slate-300 dark:from-white/10 to-transparent ml-4"></div>
             </div>
 
             {/* 1. COMPACT JOIN CARD */}
-            <div className="bg-[#050505]/80 backdrop-blur-3xl border border-white/5 rounded-[2rem] p-6 shadow-[0_20px_40px_rgba(0,0,0,0.4)] relative overflow-hidden group/join">
+            <div className="bg-white dark:bg-[#050505]/80 backdrop-blur-3xl border border-slate-200 dark:border-white/5 rounded-[2rem] p-6 shadow-md dark:shadow-[0_20px_40px_rgba(0,0,0,0.4)] relative overflow-hidden group/join">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[60px] rounded-full pointer-events-none transition-colors group-hover/join:bg-indigo-500/20"></div>
                 
                 <div className="flex items-center gap-3 mb-3 relative z-10">
-                    <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20 shadow-inner">
+                    <div className="p-2 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 rounded-xl border border-indigo-500/20 shadow-inner">
                         <Fingerprint size={18} />
                     </div>
-                    <h3 className="font-bold text-white tracking-tight text-lg">Candidate Access</h3>
+                    <h3 className="font-bold text-slate-900 dark:text-white tracking-tight text-lg">Candidate Access</h3>
                 </div>
-                <p className="text-xs text-zinc-400 mb-6 leading-relaxed relative z-10 font-medium">Input your 6-digit secure code to authenticate your identity.</p>
+                <p className="text-xs text-slate-600 dark:text-zinc-400 mb-6 leading-relaxed relative z-10 font-medium">Input your 6-digit secure code to authenticate your identity.</p>
                 
                 <form onSubmit={handleJoin} className="relative z-10 space-y-4">
                     <div className="relative group/input">
@@ -207,19 +207,19 @@ export default function QuizPanel() {
                             value={joinCode}
                             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                             placeholder="CODE" 
-                            className="relative w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 sm:py-4 text-2xl sm:text-3xl tracking-[0.4em] text-center font-mono focus:border-indigo-500/50 outline-none text-white transition-all uppercase placeholder:text-zinc-800 placeholder:tracking-widest shadow-inner"
+                            className="relative w-full bg-slate-50 dark:bg-[#0a0a0a] border border-slate-300 dark:border-white/10 rounded-xl px-4 py-3 sm:py-4 text-2xl sm:text-3xl tracking-[0.4em] text-center font-mono focus:border-indigo-500/50 outline-none text-slate-900 dark:text-white transition-all uppercase placeholder:text-slate-400 dark:placeholder:text-zinc-800 placeholder:tracking-widest shadow-inner"
                         />
                     </div>
                     
                     <AnimatePresence>
                         {error && (
-                            <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-rose-400 text-xs font-bold text-center bg-rose-500/10 py-2 rounded-lg border border-rose-500/20">
+                            <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-rose-600 dark:text-rose-400 text-xs font-bold text-center bg-rose-500/10 py-2 rounded-lg border border-rose-500/20">
                                 {error}
                             </motion.p>
                         )}
                     </AnimatePresence>
 
-                    <button type="submit" disabled={isJoining || joinCode.length !== 6} className="w-full py-3.5 bg-white hover:bg-zinc-200 text-black font-bold text-sm rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] disabled:opacity-50 flex justify-center items-center gap-2 hover:scale-[1.02] active:scale-[0.98]">
+                    <button type="submit" disabled={isJoining || joinCode.length !== 6} className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-black font-bold text-sm rounded-xl transition-all shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.1)] disabled:opacity-50 flex justify-center items-center gap-2 hover:scale-[1.02] active:scale-[0.98]">
                         {isJoining ? <Loader2 className="animate-spin" size={16} /> : <KeyRound size={16} />}
                         {isJoining ? "Validating..." : "Enter Arena"}
                     </button>
@@ -227,23 +227,23 @@ export default function QuizPanel() {
             </div>
 
             {/* 2. COMPACT CREATE CARD */}
-            <div className="bg-[#050505]/60 backdrop-blur-3xl border border-white/5 rounded-[2rem] p-6 shadow-xl flex flex-col relative overflow-hidden group/create hover:bg-[#0a0a0a] transition-all">
+            <div className="bg-white/80 dark:bg-[#050505]/60 backdrop-blur-3xl border border-slate-200 dark:border-white/5 rounded-[2rem] p-6 shadow-md dark:shadow-xl flex flex-col relative overflow-hidden group/create hover:bg-slate-50 dark:hover:bg-[#0a0a0a] transition-all">
                 <div className="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[50px] rounded-full pointer-events-none transition-colors group-hover/create:bg-emerald-500/10"></div>
                 
                 <div className="flex items-center gap-3 mb-3 relative z-10">
-                    <div className="p-2 bg-zinc-900 text-emerald-400 rounded-xl border border-white/10 shadow-inner group-hover/create:scale-110 transition-transform">
+                    <div className="p-2 bg-slate-100 dark:bg-zinc-900 text-emerald-500 dark:text-emerald-400 rounded-xl border border-slate-200 dark:border-white/10 shadow-inner group-hover/create:scale-110 transition-transform">
                         <ShieldAlert size={18} />
                     </div>
-                    <h3 className="font-bold text-white tracking-tight text-lg">Quiz Forge</h3>
+                    <h3 className="font-bold text-slate-900 dark:text-white tracking-tight text-lg">Quiz Forge</h3>
                 </div>
-                <p className="text-xs text-zinc-400 mb-6 leading-relaxed relative z-10 font-medium">Design, schedule, and orchestrate your own strict-proctored assessments.</p>
+                <p className="text-xs text-slate-600 dark:text-zinc-400 mb-6 leading-relaxed relative z-10 font-medium">Design, schedule, and orchestrate your own strict-proctored assessments.</p>
                 
-                <button onClick={() => navigate('/quiz-forge')} className="w-full py-3.5 bg-zinc-900/80 border border-white/10 hover:border-white/30 text-white font-bold text-sm rounded-xl transition-all flex justify-between px-5 items-center shadow-inner hover:bg-zinc-800 relative z-10 mt-auto">
+                <button onClick={() => navigate('/quiz-forge')} className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900/80 border border-slate-200 dark:border-white/10 dark:hover:border-white/30 text-slate-900 dark:text-white font-bold text-sm rounded-xl transition-all flex justify-between px-5 items-center shadow-sm dark:shadow-inner dark:hover:bg-zinc-800 relative z-10 mt-auto">
                     <div className="flex items-center gap-2">
-                        <LayoutGrid size={16} className="text-zinc-500 group-hover/create:text-emerald-400 transition-colors" />
+                        <LayoutGrid size={16} className="text-slate-500 dark:text-zinc-500 group-hover/create:text-emerald-500 dark:group-hover/create:text-emerald-400 transition-colors" />
                         <span>Open Dashboard</span>
                     </div>
-                    <ChevronRight size={16} className="text-zinc-600 group-hover/create:text-white group-hover/create:translate-x-1 transition-all" />
+                    <ChevronRight size={16} className="text-slate-400 dark:text-zinc-600 group-hover/create:text-slate-900 dark:group-hover/create:text-white group-hover/create:translate-x-1 transition-all" />
                 </button>
             </div>
 

@@ -14,15 +14,15 @@ export const DSA_SECTIONS: DocSection[] = [
     render: (highlight) => (
       <div className="space-y-12">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Algorithms & Asymptotic Notations</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Algorithms & Asymptotic Notations</h3>
           
           <p className="text-slate-400 mb-4">
             <HighlightText text="To engineer scalable AI or server backends, we measure algorithmic efficiency independently of hardware. We evaluate how execution time scales as input size (N) grows toward infinity." highlight={highlight} />
           </p>
-          <ul className="space-y-2 text-sm text-slate-400 font-mono bg-slate-900 p-4 rounded-lg border border-slate-800 shadow-inner">
-            <li><strong className="text-emerald-400">Big O (O):</strong> Upper bound. Worst-case scenario. Guarantee that runtime won't exceed this.</li>
-            <li><strong className="text-amber-400">Omega (Ω):</strong> Lower bound. Best-case scenario.</li>
-            <li><strong className="text-purple-400">Theta (Θ):</strong> Tight bound. Average case where upper and lower limits converge.</li>
+          <ul className="space-y-2 text-sm text-slate-700 dark:text-slate-400 font-mono bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-800 shadow-inner">
+            <li><strong className="text-emerald-700 dark:text-emerald-400">Big O (O):</strong> Upper bound. Worst-case scenario. Guarantee that runtime won't exceed this.</li>
+            <li><strong className="text-amber-700 dark:text-amber-400">Omega (Ω):</strong> Lower bound. Best-case scenario.</li>
+            <li><strong className="text-purple-700 dark:text-purple-400">Theta (Θ):</strong> Tight bound. Average case where upper and lower limits converge.</li>
           </ul>
 
           <ComplexityTable
@@ -41,7 +41,7 @@ export const DSA_SECTIONS: DocSection[] = [
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Space Complexity</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Space Complexity</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="Space complexity measures the total memory an algorithm uses relative to input size. It includes auxiliary space (extra memory beyond input) and input space. In-place algorithms use O(1) auxiliary space." highlight={highlight} />
           </p>
@@ -51,23 +51,23 @@ export const DSA_SECTIONS: DocSection[] = [
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Arrays & Address Translation</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Arrays & Address Translation</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="Arrays store data contiguously. Physical RAM is a strictly one-dimensional ribbon. The compiler must mathematically translate a 2D matrix index (like A[i][j]) into a 1D memory address." highlight={highlight} />
           </p>
           <div className="grid md:grid-cols-2 gap-6 mt-6">
-            <div className="bg-slate-900 p-5 rounded-xl border border-emerald-500/30 shadow-lg">
-              <h4 className="font-bold text-slate-50 mb-3 text-emerald-400">Row-Major Order (C/C++, Java)</h4>
-              <p className="text-xs text-emerald-400 bg-slate-950 p-2 rounded font-mono mb-3">Addr(A[i][j]) = Base + w * [ (i - L1)*N + (j - L2) ]</p>
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-emerald-500/30 shadow-sm dark:shadow-lg">
+              <h4 className="font-bold text-slate-50 mb-3 text-emerald-700 dark:text-emerald-400">Row-Major Order (C/C++, Java)</h4>
+              <p className="text-xs text-emerald-600 dark:text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-slate-950 p-2 rounded font-mono mb-3">Addr(A[i][j]) = Base + w * [ (i - L1)*N + (j - L2) ]</p>
               <ul className="text-xs text-slate-400 list-disc pl-4 space-y-1">
                 <li><code>w</code>: Size of one element (e.g., 4 bytes for int)</li>
                 <li><code>N</code>: Total number of columns</li>
                 <li><code>L1, L2</code>: Lower bounds (usually index 0)</li>
               </ul>
             </div>
-            <div className="bg-slate-900 p-5 rounded-xl border border-purple-500/30 shadow-lg">
-              <h4 className="font-bold text-slate-50 mb-3 text-purple-400">Column-Major Order (Fortran)</h4>
-              <p className="text-xs text-purple-400 bg-slate-950 p-2 rounded font-mono mb-3">Addr(A[i][j]) = Base + w * [ (j - L2)*M + (i - L1) ]</p>
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-purple-500/30 shadow-sm dark:shadow-lg">
+              <h4 className="font-bold text-slate-50 mb-3 text-purple-700 dark:text-purple-400">Column-Major Order (Fortran)</h4>
+              <p className="text-xs text-purple-600 dark:text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-slate-950 p-2 rounded font-mono mb-3">Addr(A[i][j]) = Base + w * [ (j - L2)*M + (i - L1) ]</p>
               <ul className="text-xs text-slate-400 list-disc pl-4 space-y-1">
                 <li><code>M</code>: Total number of rows</li>
                 <li>Iterates column by column in memory.</li>
@@ -86,7 +86,7 @@ export const DSA_SECTIONS: DocSection[] = [
     render: (highlight) => (
       <div className="space-y-12">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">The Linked List Family</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">The Linked List Family</h3>
           
           <p className="text-slate-400 mb-4">
             <HighlightText text="Unlike arrays, Linked Lists allocate memory dynamically at runtime. Nodes are scattered across the heap and connected via explicit pointers. This prevents fragmentation and resizing overhead, but sacrifices O(1) random access." highlight={highlight} />
@@ -107,7 +107,7 @@ export const DSA_SECTIONS: DocSection[] = [
         </div>
 
         <div>
-          <h4 className="text-cyan-400 font-bold text-xl mb-2">1. Singly Linked List</h4>
+          <h4 className="text-cyan-700 dark:text-cyan-400 font-bold text-xl mb-2">1. Singly Linked List</h4>
           <p className="text-sm text-slate-400 mb-4">A standard, forward-only chain. Best for basic Stacks and Queues.</p>
           <CodeTabs tabs={[
             {
@@ -263,7 +263,7 @@ def reverse_list(head):
         </div>
 
         <div>
-          <h4 className="text-emerald-400 font-bold text-xl mb-2">2. Doubly Linked List</h4>
+          <h4 className="text-emerald-700 dark:text-emerald-400 font-bold text-xl mb-2">2. Doubly Linked List</h4>
           <p className="text-sm text-slate-400 mb-4">Stores both <code>next</code> and <code>prev</code> pointers. Essential for browser histories, LRU caches, or music playlists.</p>
           <CodeTabs tabs={[
             {
@@ -359,7 +359,7 @@ def insert_at_tail(head, val):
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4 border-t border-slate-800 pt-8 mt-8">Polynomial Manipulation</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4 border-t border-slate-800 pt-8 mt-8">Polynomial Manipulation</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="Algebraic expressions like 5x³ + 2x¹ are mapped to a Linked List where nodes store (Coefficient, Exponent). To add them, we merge two sorted lists based on exponent powers." highlight={highlight} />
           </p>
@@ -490,7 +490,7 @@ def add_polynomials(p1, p2):
     render: (highlight) => (
       <div className="space-y-12">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Stacks (LIFO) Architectures</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Stacks (LIFO) Architectures</h3>
           
           <p className="text-slate-400 mb-4">
             <HighlightText text="Last-In-First-Out processing. Stacks are the backbone of program memory (the Call Stack), Depth-First Search, undo/redo systems, and syntax parsing in compilers." highlight={highlight} />
@@ -599,7 +599,7 @@ public static int[] nextGreater(int[] arr) {
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Infix to Postfix & Evaluation</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Infix to Postfix & Evaluation</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="Machines evaluate expressions linearly. They convert human-readable Infix (A + B * C) into Postfix (A B C * +) using Dijkstra's Shunting Yard algorithm, eliminating parenthesis parsing." highlight={highlight} />
           </p>
@@ -692,7 +692,7 @@ def infix_to_postfix(exp):
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Recursion Architecture</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Recursion Architecture</h3>
           <ProTip>
             <HighlightText text="Recursion leverages the OS Call Stack. Each recursive call pushes a new state frame (local variables, return address). Without a reachable Base Case, the stack outgrows its memory limit, triggering a Stack Overflow. Every recursive solution can be converted to iterative using an explicit stack." highlight={highlight} />
           </ProTip>
@@ -745,14 +745,14 @@ def infix_to_postfix(exp):
     render: (highlight) => (
       <div className="space-y-12">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Queues (FIFO)</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Queues (FIFO)</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="First-In-First-Out processing. Data enters at the Rear and exits at the Front. Crucial for asynchronous data transfer, BFS Graph traversal, printer spooling, and CPU job scheduling." highlight={highlight} />
           </p>
         </div>
 
         <div>
-          <h4 className="text-emerald-400 font-bold text-xl mb-4">Circular Queue (Array)</h4>
+          <h4 className="text-emerald-700 dark:text-emerald-400 font-bold text-xl mb-4">Circular Queue (Array)</h4>
           
           <p className="text-sm text-slate-400 mb-4">A standard linear array queue suffers from 'false full' conditions. Circular Queues solve this using modulo arithmetic: <code>(rear + 1) % size</code>.</p>
           <CodeTabs tabs={[
@@ -865,14 +865,14 @@ int dequeue(CircularQueue& q) {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-            <h4 className="text-purple-400 font-bold text-lg mb-2">Deque (Double-Ended Queue)</h4>
+          <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+            <h4 className="text-purple-700 dark:text-purple-400 font-bold text-lg mb-2">Deque (Double-Ended Queue)</h4>
             <p className="text-sm text-slate-400">
               <HighlightText text="Allows insertion and deletion at BOTH the Front and Rear. Used in sliding window problems, palindrome checking, and implementing both stacks and queues." highlight={highlight} />
             </p>
           </div>
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-            <h4 className="text-amber-400 font-bold text-lg mb-2">Priority Queue</h4>
+          <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+            <h4 className="text-amber-700 dark:text-amber-400 font-bold text-lg mb-2">Priority Queue</h4>
             <p className="text-sm text-slate-400">
               <HighlightText text="Dequeues elements based on assigned priority, not arrival time. Implemented using Binary Heaps for O(log N) insert/extract. Used in Dijkstra's, Huffman coding, and task schedulers." highlight={highlight} />
             </p>
@@ -889,7 +889,7 @@ int dequeue(CircularQueue& q) {
     render: (highlight) => (
       <div className="space-y-12">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Tree Traversals & BST</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Tree Traversals & BST</h3>
           
           <p className="text-slate-400 mb-4">
             <HighlightText text="A hierarchical data structure. Binary Search Trees (BST) organize data such that left children are strictly smaller, and right children are larger, halving search space per step for O(log N) average lookups." highlight={highlight} />
@@ -1088,10 +1088,10 @@ def level_order(root):
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">AVL Trees (Self-Balancing)</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">AVL Trees (Self-Balancing)</h3>
           <div className="space-y-6">
-            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-              <h4 className="font-bold text-slate-50 mb-2 text-purple-400">Height Balanced (AVL) Tree</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+              <h4 className="font-bold text-slate-50 mb-2 text-purple-700 dark:text-purple-400">Height Balanced (AVL) Tree</h4>
               <p className="text-sm text-slate-400 mb-4">If data is inserted sequentially (1, 2, 3...), a BST degrades into a linear O(N) list. AVL Trees monitor the <strong>Balance Factor</strong> <code>(Height(Left) - Height(Right))</code>. If it exceeds 1 or drops below -1, it executes rotations to restore O(log N) equilibrium.</p>
               <ComplexityTable
                 title="AVL Rotation Cases"
@@ -1105,8 +1105,8 @@ def level_order(root):
               />
             </div>
 
-            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-              <h4 className="font-bold text-slate-50 mb-2 text-emerald-400">Threaded Binary Tree</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+              <h4 className="font-bold text-slate-50 mb-2 text-emerald-700 dark:text-emerald-400">Threaded Binary Tree</h4>
               <p className="text-sm text-slate-400">In standard trees, leaf nodes have NULL pointers representing wasted space. Threaded trees replace these with "threads" pointing to the Inorder Predecessor or Successor, completely eliminating the need for stack-based recursive traversal.</p>
             </div>
           </div>
@@ -1121,7 +1121,7 @@ def level_order(root):
     searchContent: "heaps binary heap max min operations heapify heap sort priority queue",
     render: (highlight) => (
       <div className="space-y-6">
-        <h3 className="text-cyan-400 text-2xl font-bold mb-4">Binary Heaps</h3>
+        <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Binary Heaps</h3>
         
         <p className="text-slate-400 mb-4">
           <HighlightText text="A complete binary tree mapped efficiently to an array (no pointers needed). Parent at index i has children at 2i+1 and 2i+2. A Max-Heap guarantees the parent is strictly greater than its children. Crucial for Priority Queues and Heap Sort (O(N log N) guaranteed)." highlight={highlight} />
@@ -1207,7 +1207,7 @@ def heap_sort(arr):
     render: (highlight) => (
       <div className="space-y-12">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Graph Foundations</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Graph Foundations</h3>
           
           <p className="text-slate-400 mb-4">
             <HighlightText text="Graphs map complex relationships. Adjacency Matrix is a V×V grid (O(V²) space, O(1) edge check). Adjacency List uses arrays of vectors (O(V+E) space, efficient for sparse graphs like social networks)." highlight={highlight} />
@@ -1226,7 +1226,7 @@ def heap_sort(arr):
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">BFS & DFS Traversals</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">BFS & DFS Traversals</h3>
           <CodeTabs tabs={[
             {
               language: "C++",
@@ -1373,17 +1373,17 @@ def topo_sort(V, adj):
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Minimum Spanning Trees</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Minimum Spanning Trees</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="A subgraph connecting all V vertices with V-1 edges and minimum total weight. Used in network routing, circuit design, and clustering." highlight={highlight} />
           </p>
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-              <h4 className="text-emerald-400 font-bold mb-2">Prim's Algorithm</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-xl border border-slate-300 dark:border-slate-800">
+              <h4 className="text-emerald-700 dark:text-emerald-400 font-bold mb-2">Prim's Algorithm</h4>
               <p className="text-sm text-slate-400">Greedy, node-based. Starts at root, grows MST by adding cheapest adjacent edge. Uses priority queue. O(E log V).</p>
             </div>
-            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-              <h4 className="text-purple-400 font-bold mb-2">Kruskal's Algorithm</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-xl border border-slate-300 dark:border-slate-800">
+              <h4 className="text-purple-700 dark:text-purple-400 font-bold mb-2">Kruskal's Algorithm</h4>
               <p className="text-sm text-slate-400">Greedy, edge-based. Sort all edges, add cheapest if no cycle (Union-Find). O(E log E).</p>
             </div>
           </div>
@@ -1503,14 +1503,14 @@ def merge_sort(arr):
     render: (highlight) => (
       <div className="space-y-12">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4 flex items-center gap-2"><Key className="text-amber-400" /> Hash Tables & Collisions</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4 flex items-center gap-2"><Key className="text-amber-700 dark:text-amber-400" /> Hash Tables & Collisions</h3>
           
           <p className="text-slate-400 mb-4">
             <HighlightText text="Hashing condenses massive data universes into a small, finite array index, targeting O(1) retrieval speed. When two keys hash to the same index, a Collision occurs." highlight={highlight} />
           </p>
           <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-lg">
-              <h4 className="font-bold text-slate-50 mb-2 text-cyan-400">Hash Functions</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+              <h4 className="font-bold text-slate-50 mb-2 text-cyan-700 dark:text-cyan-400">Hash Functions</h4>
               <ul className="text-sm text-slate-400 list-disc pl-4 space-y-1">
                 <li><strong>Division:</strong> <code>index = key % size</code></li>
                 <li><strong>Mid Square:</strong> Square key, isolate middle digits</li>
@@ -1518,8 +1518,8 @@ def merge_sort(arr):
                 <li><strong>Multiplication:</strong> <code>floor(size * frac(key * A))</code></li>
               </ul>
             </div>
-            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-lg">
-              <h4 className="font-bold text-slate-50 mb-2 text-emerald-400">Collision Resolution</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+              <h4 className="font-bold text-slate-50 mb-2 text-emerald-700 dark:text-emerald-400">Collision Resolution</h4>
               <ul className="text-sm text-slate-400 list-disc pl-4 space-y-1">
                 <li><strong>Chaining:</strong> Each slot → Linked List of entries</li>
                 <li><strong>Linear Probing:</strong> Check next slot (+1)</li>
@@ -1617,18 +1617,18 @@ void removeKey(vector<list<int>>& table, int key) {
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Advanced Tree Structures</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Advanced Tree Structures</h3>
           <div className="space-y-6">
-            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-              <h4 className="text-xl font-bold text-emerald-400 mb-2">Splay Trees</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+              <h4 className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mb-2">Splay Trees</h4>
               <p className="text-sm text-slate-400">Self-adjusting BST. Recently accessed elements are rotated to the root, exploiting locality of reference for cache-friendly O(log N) amortized access.</p>
             </div>
-            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-              <h4 className="text-xl font-bold text-purple-400 mb-2">B-Trees (Disk-Optimized)</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+              <h4 className="text-xl font-bold text-purple-700 dark:text-purple-400 mb-2">B-Trees (Disk-Optimized)</h4>
               <p className="text-sm text-slate-400">Extremely "fat" trees where each node fills an entire disk block (hundreds of keys). This collapses tree height to 2-3 levels, minimizing expensive disk I/O operations. Used by all major databases (MySQL, PostgreSQL).</p>
             </div>
-            <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
-              <h4 className="text-xl font-bold text-amber-400 mb-2">van Emde Boas Trees</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+              <h4 className="text-xl font-bold text-amber-700 dark:text-amber-400 mb-2">van Emde Boas Trees</h4>
               <p className="text-sm text-slate-400">O(log log U) operations on integer keys by recursively dividing the universe. Used in router IP table lookups and specialized integer sorting.</p>
             </div>
           </div>
@@ -1648,12 +1648,12 @@ void removeKey(vector<list<int>>& table, int key) {
         </p>
 
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-lg">
-            <h4 className="font-bold text-slate-50 mb-3 text-cyan-400">Top-Down (Memoization)</h4>
+          <div className="bg-slate-100 dark:bg-slate-900 p-5 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+            <h4 className="font-bold text-slate-50 mb-3 text-cyan-700 dark:text-cyan-400">Top-Down (Memoization)</h4>
             <p className="text-sm text-slate-400">Start from the original problem, recurse down, and cache results. Natural recursive thinking. Uses a hash map or array to store computed values.</p>
           </div>
-          <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-lg">
-            <h4 className="font-bold text-slate-50 mb-3 text-emerald-400">Bottom-Up (Tabulation)</h4>
+          <div className="bg-slate-100 dark:bg-slate-900 p-5 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+            <h4 className="font-bold text-slate-50 mb-3 text-emerald-700 dark:text-emerald-400">Bottom-Up (Tabulation)</h4>
             <p className="text-sm text-slate-400">Start from the smallest subproblems, build up iteratively. More space-efficient, avoids recursion overhead. Uses a DP table (array).</p>
           </div>
         </div>

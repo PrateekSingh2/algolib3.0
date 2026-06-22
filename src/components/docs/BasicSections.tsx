@@ -15,31 +15,31 @@ export const BASIC_SECTIONS: DocSection[] = [
         </p>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">The Compilation Pipeline</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">The Compilation Pipeline</h3>
           
           <p className="text-slate-400 mb-4">Source code goes through multiple stages before execution:</p>
-          <ul className="space-y-4 text-sm text-slate-400 font-mono bg-slate-900 p-6 rounded-lg border border-slate-800 shadow-inner">
-            <li><strong className="text-cyan-400 text-base block mb-1">1. Preprocessing:</strong> Handles directives like <code>#include</code> and <code>#define</code>. Macros are expanded, comments removed, and header files are merged into a single translation unit.</li>
-            <li><strong className="text-emerald-400 text-base block mb-1">2. Compilation:</strong> The preprocessed code is parsed into an Abstract Syntax Tree (AST), semantically analyzed, and translated into assembly language specific to your CPU architecture (x86, ARM).</li>
-            <li><strong className="text-purple-400 text-base block mb-1">3. Assembly:</strong> The assembler converts human-readable assembly into machine code (object files, <code>.o</code> or <code>.obj</code>), producing binary opcodes.</li>
-            <li><strong className="text-amber-400 text-base block mb-1">4. Linking:</strong> The linker resolves external references, merges multiple object files, and links library code to produce the final executable binary.</li>
+          <ul className="space-y-4 text-sm text-slate-700 dark:text-slate-400 font-mono bg-slate-50 dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 shadow-inner">
+            <li><strong className="text-cyan-700 dark:text-cyan-400 text-base block mb-1">1. Preprocessing:</strong> Handles directives like <code>#include</code> and <code>#define</code>. Macros are expanded, comments removed, and header files are merged into a single translation unit.</li>
+            <li><strong className="text-emerald-700 dark:text-emerald-400 text-base block mb-1">2. Compilation:</strong> The preprocessed code is parsed into an Abstract Syntax Tree (AST), semantically analyzed, and translated into assembly language specific to your CPU architecture (x86, ARM).</li>
+            <li><strong className="text-purple-700 dark:text-purple-400 text-base block mb-1">3. Assembly:</strong> The assembler converts human-readable assembly into machine code (object files, <code>.o</code> or <code>.obj</code>), producing binary opcodes.</li>
+            <li><strong className="text-amber-700 dark:text-amber-400 text-base block mb-1">4. Linking:</strong> The linker resolves external references, merges multiple object files, and links library code to produce the final executable binary.</li>
           </ul>
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">The Memory Layout</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">The Memory Layout</h3>
           
           <p className="text-slate-400 mb-4">When a program runs, the OS allocates a chunk of RAM divided into distinct segments:</p>
-          <ul className="space-y-4 text-sm text-slate-400 font-mono bg-slate-900 p-6 rounded-lg border border-slate-800 shadow-inner">
-            <li><strong className="text-cyan-400 text-base block mb-1">Text Segment:</strong> Where the compiled binary code (machine instructions) is stored. It is read-only to prevent accidental modification.</li>
-            <li><strong className="text-emerald-400 text-base block mb-1">Data Segment (BSS + Initialized):</strong> Stores global and static variables. The BSS segment holds uninitialized globals (zeroed out), while the initialized data segment holds explicitly assigned globals.</li>
-            <li><strong className="text-purple-400 text-base block mb-1">The Stack:</strong> Fast, organized memory used for local variables, function parameters, and return addresses. Memory is automatically allocated and deallocated (LIFO). <em>If recursion goes too deep, you hit a "Stack Overflow."</em></li>
-            <li><strong className="text-amber-400 text-base block mb-1">The Heap:</strong> A large pool of unorganized memory used for dynamic allocation during runtime (e.g., <code>new</code>, <code>malloc</code>). You must manage this manually in C/C++, or let the Garbage Collector handle it in Java/Python. Unmanaged heap memory leads to fragmentation and memory leaks.</li>
+          <ul className="space-y-4 text-sm text-slate-700 dark:text-slate-400 font-mono bg-slate-50 dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 shadow-inner">
+            <li><strong className="text-cyan-700 dark:text-cyan-400 text-base block mb-1">Text Segment:</strong> Where the compiled binary code (machine instructions) is stored. It is read-only to prevent accidental modification.</li>
+            <li><strong className="text-emerald-700 dark:text-emerald-400 text-base block mb-1">Data Segment (BSS + Initialized):</strong> Stores global and static variables. The BSS segment holds uninitialized globals (zeroed out), while the initialized data segment holds explicitly assigned globals.</li>
+            <li><strong className="text-purple-700 dark:text-purple-400 text-base block mb-1">The Stack:</strong> Fast, organized memory used for local variables, function parameters, and return addresses. Memory is automatically allocated and deallocated (LIFO). <em>If recursion goes too deep, you hit a "Stack Overflow."</em></li>
+            <li><strong className="text-amber-700 dark:text-amber-400 text-base block mb-1">The Heap:</strong> A large pool of unorganized memory used for dynamic allocation during runtime (e.g., <code>new</code>, <code>malloc</code>). You must manage this manually in C/C++, or let the Garbage Collector handle it in Java/Python. Unmanaged heap memory leads to fragmentation and memory leaks.</li>
           </ul>
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Compiled vs. Interpreted Languages</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Compiled vs. Interpreted Languages</h3>
           <ComplexityTable
             title="Language Execution Models"
             cols={["Type", "Examples", "Speed", "Portability", "Error Detection"]}
@@ -53,7 +53,7 @@ export const BASIC_SECTIONS: DocSection[] = [
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Process vs. Thread</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Process vs. Thread</h3>
           <p className="text-slate-400 mb-4">A <strong>process</strong> is an independent program in execution with its own memory space. A <strong>thread</strong> is a lightweight unit of execution within a process that shares memory with other threads.</p>
           <ComplexityTable
             title="Process vs Thread Comparison"
@@ -96,20 +96,20 @@ export const BASIC_SECTIONS: DocSection[] = [
         />
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Type Casting & Conversion</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Type Casting & Conversion</h3>
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-lg">
-              <h4 className="font-bold text-slate-50 mb-3 text-emerald-400">Widening (Implicit)</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-5 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+              <h4 className="font-bold text-slate-50 mb-3 text-emerald-700 dark:text-emerald-400">Widening (Implicit)</h4>
               <p className="text-sm text-slate-400 mb-3">Automatic conversion from smaller to larger type. No data loss.</p>
-              <pre className="text-xs bg-slate-950 p-3 rounded font-mono text-slate-400 border border-slate-800">
+              <pre className="text-xs bg-slate-50 dark:bg-slate-950 p-3 rounded font-mono text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
 {`int x = 42;
 double y = x; // 42.0 (automatic)`}
               </pre>
             </div>
-            <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-lg">
-              <h4 className="font-bold text-slate-50 mb-3 text-rose-400">Narrowing (Explicit)</h4>
+            <div className="bg-slate-100 dark:bg-slate-900 p-5 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg">
+              <h4 className="font-bold text-slate-50 mb-3 text-rose-700 dark:text-rose-400">Narrowing (Explicit)</h4>
               <p className="text-sm text-slate-400 mb-3">Manual conversion from larger to smaller type. Risk of data loss!</p>
-              <pre className="text-xs bg-slate-950 p-3 rounded font-mono text-slate-400 border border-slate-800">
+              <pre className="text-xs bg-slate-50 dark:bg-slate-950 p-3 rounded font-mono text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
 {`double pi = 3.14159;
 int x = (int)pi; // 3 (truncated!)`}
               </pre>
@@ -126,7 +126,7 @@ int x = (int)pi; // 3 (truncated!)`}
         </ProTip>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Constants & Enumerations</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Constants & Enumerations</h3>
           <p className="text-slate-400 mb-4">Constants are variables whose values cannot be modified after initialization. Use them for mathematical constants, configuration values, and magic numbers.</p>
           <CodeTabs tabs={[
             {
@@ -228,7 +228,7 @@ print(Color.RED.value) # 1`
         />
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Short-Circuit Evaluation</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Short-Circuit Evaluation</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="Logical operators && and || use short-circuit evaluation: the second operand is only evaluated if the first doesn't determine the result. This is not just an optimization—it's a programming technique for safe dereferencing." highlight={highlight} />
           </p>
@@ -305,7 +305,7 @@ print(a is b) # False (Memory Location)`
     render: (highlight) => (
       <div className="space-y-8">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Conditional Branching</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Conditional Branching</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="Programs make decisions based on boolean logic using if/else statements. For checking a single variable against many specific constants, a Switch statement is computationally faster due to jump tables compiled by the optimizer." highlight={highlight} />
           </p>
@@ -366,7 +366,7 @@ match point:
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Iteration & Jump Statements</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Iteration & Jump Statements</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="Executing code repeatedly. Use a for loop when you know the exact number of iterations. Use a while loop when iterating until a condition breaks. Use do-while when you need at least one execution." highlight={highlight} />
           </p>
@@ -473,7 +473,7 @@ while True:
     render: (highlight) => (
       <div className="space-y-8">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">User-Defined Functions</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">User-Defined Functions</h3>
           
           <p className="text-slate-400 mb-4">
             <HighlightText text="Functions encapsulate logic to follow the DRY (Don't Repeat Yourself) principle. When calling a function, parameters are passed on the Call Stack, creating a new stack frame for each invocation." highlight={highlight} />
@@ -553,7 +553,7 @@ def factorial(n):
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Arrays & Pointers (The C++ Connection)</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Arrays & Pointers (The C++ Connection)</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="An Array is a contiguous block of memory. In C/C++, the name of the array is actually just a Pointer to the first element's memory address. Understanding this connection is fundamental to mastering C++." highlight={highlight} />
           </p>
@@ -629,7 +629,7 @@ nums.pop()`
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Multi-Dimensional Arrays</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Multi-Dimensional Arrays</h3>
           <CodeTabs tabs={[
             {
               language: "C++",
@@ -711,7 +711,7 @@ jagged = [
         </p>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">C-Strings vs C++ Strings</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">C-Strings vs C++ Strings</h3>
           
           <CodeTabs tabs={[
             {
@@ -949,7 +949,7 @@ print(bin(flags)) # '0b11010000'`
     render: (highlight) => (
       <div className="space-y-8">
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">Structures (Structs)</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">Structures (Structs)</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="Arrays store multiple items of the same type. Structs allow you to group multiple variables of DIFFERENT types under a single name. This is the precursor to Object-Oriented Programming." highlight={highlight} />
           </p>
@@ -1038,7 +1038,7 @@ print(p1.distance_to(p2)) # 5.0`
         </div>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">File Handling (I/O)</h3>
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">File Handling (I/O)</h3>
           <p className="text-slate-400 mb-4">
             <HighlightText text="Variables in RAM are volatile—they vanish when the program exits. To persist data, we use streams to write data directly to the hard drive. Understanding file modes (read, write, append, binary) is essential." highlight={highlight} />
           </p>
@@ -1163,8 +1163,8 @@ with open("data.json", "w") as f:
         </p>
 
         <div>
-          <h3 className="text-cyan-400 text-2xl font-bold mb-4">The Exception Hierarchy</h3>
-          <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg font-mono text-sm text-slate-400">
+          <h3 className="text-cyan-700 dark:text-cyan-400 text-2xl font-bold mb-4">The Exception Hierarchy</h3>
+          <div className="bg-slate-100 dark:bg-slate-900 p-6 rounded-xl border border-slate-300 dark:border-slate-800 shadow-sm dark:shadow-lg font-mono text-sm text-slate-700 dark:text-slate-400">
             <pre>{`Throwable
 ├── Error (JVM-level, unrecoverable)
 │   ├── StackOverflowError
