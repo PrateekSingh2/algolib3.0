@@ -73,7 +73,7 @@ const HeapVisualizer = () => {
   const [inputValue, setInputValue] = useState<number | ''>('');
   
   // HUD State
-  const [showHUD, setShowHUD] = useState(true); 
+  const [showHUD, setShowHUD] = useState(false); 
   const [heapMode, setHeapMode] = useState<HeapMode>('max');
 
   // Engine State

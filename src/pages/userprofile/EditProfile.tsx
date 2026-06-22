@@ -32,13 +32,13 @@ const emptyState: ProfileFormState = {
 
 // --- HIGH GLASSMORPHISM SECTION CARD ---
 const SectionCard = ({ title, description, children }: { title: string, description: string, children: React.ReactNode }) => (
-  <div className="relative bg-white/[0.02] backdrop-blur-3xl border border-white/[0.08] border-t-white/[0.2] border-l-white/[0.15] rounded-[2rem] p-6 sm:p-10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] mb-8 overflow-hidden group">
-    {/* Subtle glossy overlay */}
-    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.03] to-white/[0.08] pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity duration-700 z-0" />
+  <div className="relative bg-sky-50 dark:bg-white/[0.02] backdrop-blur-3xl border border-blue-200 dark:border-white/[0.08] dark:border-t-white/[0.2] dark:border-l-white/[0.15] rounded-[2rem] p-6 sm:p-10 shadow-sm dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] mb-8 overflow-hidden group">
+    {/* Diagonal Glossy Overlay */}
+    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-blue-100/50 dark:via-white/[0.03] to-blue-200/50 dark:to-white/[0.08] pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity duration-700 z-0" />
     
-    <div className="relative z-10 mb-8 pb-6 border-b border-white/[0.08] shadow-[0_1px_0_rgba(0,0,0,0.3)]">
-      <h2 className="text-2xl font-bold text-white tracking-tight drop-shadow-md">{title}</h2>
-      <p className="text-sm text-zinc-400 mt-1.5 drop-shadow-sm">{description}</p>
+    <div className="relative z-10 mb-8 pb-6 border-b border-slate-200 dark:border-white/[0.08] shadow-[0_1px_0_rgba(0,0,0,0.05)] dark:shadow-[0_1px_0_rgba(0,0,0,0.3)]">
+      <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight drop-shadow-md">{title}</h2>
+      <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1.5 drop-shadow-sm">{description}</p>
     </div>
     <div className="relative z-10 grid grid-cols-1 gap-7 sm:grid-cols-2">{children}</div>
   </div>
@@ -47,9 +47,9 @@ const SectionCard = ({ title, description, children }: { title: string, descript
 // --- PREMIUM INPUT WRAPPER ---
 const InputWrapper = ({ label, icon: Icon, children, fullWidth = false }: any) => (
   <div className={`flex flex-col gap-2.5 ${fullWidth ? 'sm:col-span-2' : ''}`}>
-    <label className="text-xs font-bold tracking-widest text-zinc-400 uppercase ml-1 drop-shadow-sm">{label}</label>
+    <label className="text-xs font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase ml-1 drop-shadow-sm">{label}</label>
     <div className="relative group/input">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within/input:text-sky-400 transition-colors pointer-events-none z-10">
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 group-focus-within/input:text-sky-500 dark:group-focus-within/input:text-sky-400 transition-colors pointer-events-none z-10">
         <Icon size={18} />
       </div>
       {children}
@@ -180,15 +180,15 @@ const EditProfile = () => {
   };
 
   // Shared input styling
-  const inputGlossyClasses = "h-12 w-full rounded-2xl border border-white/[0.1] border-t-white/[0.2] bg-black/40 backdrop-blur-md pl-12 pr-4 focus:border-sky-500/50 focus:ring-4 focus:ring-sky-500/10 focus:outline-none transition-all placeholder-zinc-600 text-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-black/60 relative z-0";
+  const inputGlossyClasses = "h-12 w-full rounded-2xl border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] bg-blue-100/50 dark:bg-black/40 backdrop-blur-md pl-12 pr-4 focus:border-sky-500/50 focus:ring-4 focus:ring-sky-500/10 focus:outline-none transition-all placeholder-slate-400 dark:placeholder-zinc-600 text-slate-900 dark:text-white shadow-inner dark:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-blue-200/50 dark:hover:bg-black/60 relative z-0";
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white flex flex-col relative pb-28 selection:bg-sky-500/30">
+    <div className="min-h-screen bg-blue-50 dark:bg-[#020202] text-slate-900 dark:text-white flex flex-col relative pb-28 selection:bg-sky-500/30">
       
       {/* Background Ambience */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)]" />
-      <div className="fixed top-[-10%] right-[5%] w-[50vw] h-[50vh] bg-sky-500 rounded-full blur-[200px] mix-blend-screen opacity-[0.08] pointer-events-none" />
-      <div className="fixed bottom-[-10%] left-[-10%] w-[60vw] h-[60vh] bg-indigo-600 rounded-full blur-[200px] mix-blend-screen opacity-[0.08] pointer-events-none" />
+      <div className="fixed inset-0 z-0 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.03)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)] dark:[mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)]" />
+      <div className="fixed top-[-10%] right-[5%] w-[50vw] h-[50vh] bg-sky-500 rounded-full blur-[200px] mix-blend-screen opacity-[0.05] dark:opacity-[0.08] pointer-events-none" />
+      <div className="fixed bottom-[-10%] left-[-10%] w-[60vw] h-[60vh] bg-indigo-600 rounded-full blur-[200px] mix-blend-screen opacity-[0.05] dark:opacity-[0.08] pointer-events-none" />
 
       <div className="relative z-50">
         <Navbar />
@@ -200,7 +200,7 @@ const EditProfile = () => {
           {!isFirstTime && (
             <Link 
               to="/profile" 
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/[0.03] border border-white/[0.1] border-t-white/[0.25] text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-all duration-300 text-sm font-medium group shadow-lg backdrop-blur-xl hover:shadow-[0_8px_24px_rgba(255,255,255,0.05)] mb-6"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-sky-50 dark:bg-white/[0.03] border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.25] text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-blue-100/50 dark:hover:bg-white/[0.08] transition-all duration-300 text-sm font-medium group shadow-sm dark:shadow-lg backdrop-blur-xl dark:hover:shadow-[0_8px_24px_rgba(255,255,255,0.05)] mb-6"
             >
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
               Back to Profile
@@ -209,12 +209,12 @@ const EditProfile = () => {
           
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tighter mt-2 leading-tight">
             {isFirstTime ? (
-              <>Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-500 drop-shadow-[0_0_40px_rgba(56,189,248,0.2)]">AlgoLib!</span></>
+              <>Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-600 dark:from-sky-400 dark:via-indigo-400 dark:to-purple-500 drop-shadow-[0_0_40px_rgba(56,189,248,0.2)]">AlgoLib!</span></>
             ) : (
-              <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-white to-zinc-500">System Settings</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-br from-slate-900 via-slate-800 to-slate-500 dark:from-white dark:via-white dark:to-zinc-500">System Settings</span>
             )}
           </h1>
-          <p className="mt-3 text-lg text-zinc-400 font-light max-w-2xl">
+          <p className="mt-3 text-lg text-slate-500 dark:text-zinc-400 font-light max-w-2xl">
             {isFirstTime 
               ? "Please complete your developer profile to initialize your matrix and access global features." 
               : "Manage your system parameters and personal telemetry data."}
@@ -254,13 +254,13 @@ const EditProfile = () => {
                 value={form.gender} onChange={(e) => handleChange("gender", e.target.value)}
                 className={`${inputGlossyClasses} appearance-none pr-10 cursor-pointer`}
               >
-                <option value="" disabled className="text-zinc-500">Select Gender</option>
+                <option value="" disabled className="text-slate-400 dark:text-zinc-500">Select Gender</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
                 <option value="Non-binary">Non-binary</option>
                 <option value="Prefer not to say">Prefer not to say</option>
               </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none z-10" />
+              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 pointer-events-none z-10" />
             </InputWrapper>
           </SectionCard>
 
@@ -269,9 +269,9 @@ const EditProfile = () => {
             
             {/* COLLEGE RECOMMENDER */}
             <div className="sm:col-span-2 flex flex-col gap-2.5" ref={wrapperRef}>
-              <label className="text-xs font-bold tracking-widest text-zinc-400 uppercase ml-1 drop-shadow-sm">College / Institute</label>
+              <label className="text-xs font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase ml-1 drop-shadow-sm">College / Institute</label>
               <div className="relative group/input">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within/input:text-sky-400 transition-colors pointer-events-none z-10">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 group-focus-within/input:text-sky-500 dark:group-focus-within/input:text-sky-400 transition-colors pointer-events-none z-10">
                   <GraduationCap size={18} />
                 </div>
                 <input 
@@ -285,23 +285,23 @@ const EditProfile = () => {
                   placeholder="Search globally or type your specific institute..."
                   autoComplete="off"
                 />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none z-10">
-                  {isSearchingColleges ? <Loader2 size={16} className="animate-spin text-sky-400" /> : <Search size={16} />}
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 pointer-events-none z-10">
+                  {isSearchingColleges ? <Loader2 size={16} className="animate-spin text-sky-500 dark:text-sky-400" /> : <Search size={16} />}
                 </div>
 
                 {/* Glassy Dropdown Menu */}
                 {showCollegeDropdown && form.college.trim().length > 0 && (
-                  <div className="absolute top-[calc(100%+8px)] left-0 right-0 py-2 bg-black/60 backdrop-blur-3xl border border-white/[0.15] border-t-white/[0.3] rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.6)] z-50 max-h-60 overflow-y-auto ring-1 ring-black">
+                  <div className="absolute top-[calc(100%+8px)] left-0 right-0 py-2 bg-blue-100/50 dark:bg-black/60 backdrop-blur-3xl border border-blue-200 dark:border-white/[0.15] dark:border-t-white/[0.3] rounded-2xl shadow-lg dark:shadow-[0_16px_40px_rgba(0,0,0,0.6)] z-50 max-h-60 overflow-y-auto ring-1 ring-blue-200 dark:ring-black">
                     {isSearchingColleges ? (
-                      <div className="px-4 py-4 text-sm text-zinc-400 flex items-center justify-center gap-2">
-                        <Loader2 size={16} className="animate-spin text-sky-400" />
+                      <div className="px-4 py-4 text-sm text-slate-500 dark:text-zinc-400 flex items-center justify-center gap-2">
+                        <Loader2 size={16} className="animate-spin text-sky-500 dark:text-sky-400" />
                         Scanning databases...
                       </div>
                     ) : (
                       <>
                         {collegeSuggestions.length > 0 ? (
                           <>
-                            <div className="px-4 py-1.5 text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Suggestions</div>
+                            <div className="px-4 py-1.5 text-[10px] font-bold tracking-widest text-slate-400 dark:text-zinc-500 uppercase">Suggestions</div>
                             {collegeSuggestions.map((college, idx) => (
                               <button
                                 key={idx}
@@ -310,23 +310,23 @@ const EditProfile = () => {
                                   handleChange("college", college);
                                   setShowCollegeDropdown(false);
                                 }}
-                                className="w-full text-left px-4 py-2.5 text-sm text-zinc-300 hover:bg-white/10 hover:text-white transition-colors"
+                                className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-zinc-300 hover:bg-blue-200/50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors"
                               >
                                 {college}
                               </button>
                             ))}
                           </>
                         ) : (
-                          <div className="px-4 py-3 text-sm text-zinc-500">
+                          <div className="px-4 py-3 text-sm text-slate-500 dark:text-zinc-500">
                             No global university match found.
                           </div>
                         )}
                         
-                        <div className="mt-1 border-t border-white/[0.08] pt-1">
+                        <div className="mt-1 border-t border-slate-200 dark:border-white/[0.08] pt-1">
                           <button
                             type="button"
                             onClick={() => setShowCollegeDropdown(false)}
-                            className="w-full text-left px-4 py-3 text-sm font-medium text-sky-400 hover:bg-sky-400/10 transition-colors flex items-center gap-2"
+                            className="w-full text-left px-4 py-3 text-sm font-medium text-sky-500 dark:text-sky-400 hover:bg-sky-500/10 dark:hover:bg-sky-400/10 transition-colors flex items-center gap-2"
                           >
                             <CheckCircle2 size={16} />
                             Set as "{form.college}"
@@ -348,10 +348,10 @@ const EditProfile = () => {
             </InputWrapper>
 
             <div className="sm:col-span-2 flex flex-col gap-2.5">
-              <label className="text-xs font-bold tracking-widest text-zinc-400 uppercase ml-1 drop-shadow-sm">Terminal Bio</label>
+              <label className="text-xs font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase ml-1 drop-shadow-sm">Terminal Bio</label>
               <textarea 
                 rows={4} value={form.bio} onChange={(e) => handleChange("bio", e.target.value)} 
-                className="w-full rounded-2xl border border-white/[0.1] border-t-white/[0.2] bg-black/40 backdrop-blur-md p-4 focus:border-sky-500/50 focus:ring-4 focus:ring-sky-500/10 focus:outline-none transition-all placeholder-zinc-600 text-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-black/60 resize-y min-h-[120px] relative z-0" 
+                className="w-full rounded-2xl border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] bg-blue-100/50 dark:bg-black/40 backdrop-blur-md p-4 focus:border-sky-500/50 focus:ring-4 focus:ring-sky-500/10 focus:outline-none transition-all placeholder-slate-400 dark:placeholder-zinc-600 text-slate-900 dark:text-white shadow-inner dark:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-blue-200/50 dark:hover:bg-black/60 resize-y min-h-[120px] relative z-0" 
                 placeholder="Tell us about your stack and current projects..."
               />
             </div>
@@ -364,10 +364,10 @@ const EditProfile = () => {
                 value={form.country} onChange={(e) => { handleChange("country", e.target.value); handleChange("state", ""); handleChange("city", ""); }}
                 className={`${inputGlossyClasses} appearance-none pr-10 cursor-pointer`}
               >
-                <option value="" disabled className="text-zinc-500">Select Country</option>
+                <option value="" disabled className="text-slate-400 dark:text-zinc-500">Select Country</option>
                 {countries.map((country) => <option key={country.isoCode} value={country.name}>{country.name}</option>)}
               </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none z-10" />
+              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 pointer-events-none z-10" />
             </InputWrapper>
 
             <InputWrapper label="State / Province" icon={Map}>
@@ -375,10 +375,10 @@ const EditProfile = () => {
                 value={form.state} onChange={(e) => { handleChange("state", e.target.value); handleChange("city", ""); }} disabled={!form.country}
                 className={`${inputGlossyClasses} appearance-none pr-10 disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                <option value="" disabled className="text-zinc-500">{form.country ? "Select State" : "Select Country first"}</option>
+                <option value="" disabled className="text-slate-400 dark:text-zinc-500">{form.country ? "Select State" : "Select Country first"}</option>
                 {states.map((state) => <option key={state.isoCode} value={state.name}>{state.name}</option>)}
               </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none z-10" />
+              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 pointer-events-none z-10" />
             </InputWrapper>
 
             <InputWrapper label="City" icon={MapPin}>
@@ -386,10 +386,10 @@ const EditProfile = () => {
                 value={form.city} onChange={(e) => handleChange("city", e.target.value)} disabled={!form.state}
                 className={`${inputGlossyClasses} appearance-none pr-10 disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                <option value="" disabled className="text-zinc-500">{form.state ? "Select City" : "Select State first"}</option>
+                <option value="" disabled className="text-slate-400 dark:text-zinc-500">{form.state ? "Select City" : "Select State first"}</option>
                 {cities.map((city) => <option key={city.name} value={city.name}>{city.name}</option>)}
               </select>
-              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none z-10" />
+              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 pointer-events-none z-10" />
             </InputWrapper>
           </SectionCard>
 
@@ -397,21 +397,21 @@ const EditProfile = () => {
       </main>
 
       {/* --- PREMIUM STICKY ACTION BAR --- */}
-      <div className="fixed bottom-0 left-0 w-full bg-black/40 backdrop-blur-3xl border-t border-white/[0.15] shadow-[0_-8px_32px_rgba(0,0,0,0.5)] z-50 py-4 px-6 before:absolute before:inset-0 before:bg-gradient-to-t before:from-black/40 before:to-transparent before:-z-10">
+      <div className="fixed bottom-0 left-0 w-full bg-blue-50/80 dark:bg-black/40 backdrop-blur-3xl border-t border-blue-200 dark:border-white/[0.15] shadow-[0_-8px_32px_rgba(0,0,0,0.1)] dark:shadow-[0_-8px_32px_rgba(0,0,0,0.5)] z-50 py-4 px-6 before:absolute before:inset-0 before:bg-gradient-to-t before:from-blue-50/80 dark:before:from-black/40 before:to-transparent before:-z-10">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
           
           {/* Status Indicators */}
           <div className="flex items-center gap-4">
             {user ? (
-              <span className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/40 border border-white/[0.1] border-t-white/[0.2] shadow-inner text-zinc-300 text-xs font-mono backdrop-blur-md">
+              <span className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-blue-100/50 dark:bg-black/40 border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] shadow-inner text-slate-600 dark:text-zinc-300 text-xs font-mono backdrop-blur-md">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_#10b981]"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 dark:bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600 dark:bg-emerald-500 shadow-[0_0_8px_#10b981]"></span>
                 </span>
-                UID: <span className="text-white">{user.email}</span>
+                UID: <span className="text-slate-900 dark:text-white">{user.email}</span>
               </span>
             ) : (
-              <span className="text-xs text-rose-400 font-mono flex items-center gap-2 px-4 py-2 rounded-full bg-rose-500/10 border border-rose-500/20">
+              <span className="text-xs text-rose-500 dark:text-rose-400 font-mono flex items-center gap-2 px-4 py-2 rounded-full bg-rose-100 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20">
                 <ShieldAlert size={14} /> Unauthorized access
               </span>
             )}

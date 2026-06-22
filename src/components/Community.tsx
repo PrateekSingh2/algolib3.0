@@ -50,8 +50,8 @@ interface Post {
 
 // --- SAAS BACKGROUND ---
 const SaaSBackground = () => (
-  <div className="fixed inset-0 z-0 pointer-events-none bg-[#030303] flex items-center justify-center overflow-hidden">
-    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)]" />
+  <div className="fixed inset-0 z-0 pointer-events-none bg-blue-50 dark:bg-[#030303] flex items-center justify-center overflow-hidden">
+    <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.05)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:48px_48px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)] dark:[mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)]" />
     <div className="absolute top-[-10%] right-[10%] w-[50vw] h-[50vh] bg-blue-600/10 rounded-full blur-[120px] mix-blend-screen" />
     <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vh] bg-indigo-600/10 rounded-full blur-[120px] mix-blend-screen" />
   </div>
@@ -72,13 +72,13 @@ const BentoCard = ({ children, className = "", id }: { children: React.ReactNode
     <div
       id={id}
       onMouseMove={handleMouseMove}
-      className={`group/card relative rounded-[20px] sm:rounded-[24px] bg-white/[0.02] border border-white/[0.04] backdrop-blur-xl overflow-hidden hover:border-white/[0.08] transition-all duration-500 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] ${className}`}
+      className={`group/card relative rounded-[20px] sm:rounded-[24px] bg-sky-50 dark:bg-white/[0.02] border border-blue-200 dark:border-white/[0.04] backdrop-blur-xl overflow-hidden hover:border-blue-300 dark:hover:border-white/[0.08] transition-all duration-500 shadow-sm dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] ${className}`}
     >
       <motion.div
         className="pointer-events-none absolute -inset-px rounded-[20px] sm:rounded-[24px] opacity-0 transition duration-500 group-hover/card:opacity-100 z-20"
         style={{ background: useMotionTemplate`radial-gradient(400px circle at ${mouseX}px ${mouseY}px, rgba(255,255,255,0.06), transparent 80%)` }}
       />
-      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-100/50 dark:from-white/[0.02] to-transparent pointer-events-none" />
       <div className="relative z-30">{children}</div>
     </div>
   );
@@ -92,7 +92,7 @@ const renderText = (text: string) => {
     if (blockPart.startsWith('\u0060\u0060\u0060') && blockPart.endsWith('\u0060\u0060\u0060')) {
       const codeContent = blockPart.slice(3, -3);
       return (
-        <pre key={`block-${index}`} className="bg-[#09090b] border border-white/[0.06] p-3 sm:p-4 rounded-xl my-3 sm:my-4 overflow-x-auto font-mono text-[13px] text-blue-100/80 shadow-inner custom-scrollbar">
+        <pre key={`block-${index}`} className="bg-blue-100/50 dark:bg-[#09090b] border border-blue-200 dark:border-white/[0.06] p-3 sm:p-4 rounded-xl my-3 sm:my-4 overflow-x-auto font-mono text-[13px] text-black dark:text-blue-100/80 shadow-inner custom-scrollbar">
           {codeContent}
         </pre>
       );
@@ -100,12 +100,12 @@ const renderText = (text: string) => {
     const boldParts = blockPart.split(/(\*\*[\s\S]*?\*\*)/g);
     return boldParts.map((boldPart, bIdx) => {
       if (boldPart.startsWith('**') && boldPart.endsWith('**')) {
-          return <strong key={`bold-${index}-${bIdx}`} className="text-zinc-100 font-semibold">{boldPart.slice(2, -2)}</strong>;
+          return <strong key={`bold-${index}-${bIdx}`} className="text-black dark:text-zinc-100 font-semibold">{boldPart.slice(2, -2)}</strong>;
       }
       const italicParts = boldPart.split(/(_[\s\S]*?_)/g);
       return italicParts.map((italicPart, iIdx) => {
         if (italicPart.startsWith('_') && italicPart.endsWith('_')) {
-            return <em key={`italic-${index}-${bIdx}-${iIdx}`} className="italic text-zinc-300">{italicPart.slice(1, -1)}</em>;
+            return <em key={`italic-${index}-${bIdx}-${iIdx}`} className="italic text-slate-800 dark:text-zinc-300">{italicPart.slice(1, -1)}</em>;
         }
         const linkParts = italicPart.split(/(\[[^\]]+\]\([^)]+\))/g);
         return linkParts.map((linkPart, lIdx) => {
@@ -114,7 +114,7 @@ const renderText = (text: string) => {
                 let url = linkMatch[2];
                 if (!url.match(/^https?:\/\//i) && !url.startsWith('mailto:')) url = `https://${url}`;
                 return (
-                    <a key={`link-${index}-${bIdx}-${iIdx}-${lIdx}`} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline-offset-4 hover:underline transition-colors font-medium decoration-blue-500/30">
+                    <a key={`link-${index}-${bIdx}-${iIdx}-${lIdx}`} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline-offset-4 hover:underline transition-colors font-medium decoration-blue-500/30">
                         {linkMatch[1]}
                     </a>
                 );
@@ -123,7 +123,7 @@ const renderText = (text: string) => {
             return inlineParts.map((part, pIdx) => {
                 if (part.startsWith('`') && part.endsWith('`')) {
                     return (
-                        <code key={`inline-${index}-${bIdx}-${iIdx}-${lIdx}-${pIdx}`} className="bg-zinc-800/60 text-indigo-300 px-1.5 py-0.5 rounded-md text-[13px] font-mono border border-white/[0.08]">
+                        <code key={`inline-${index}-${bIdx}-${iIdx}-${lIdx}-${pIdx}`} className="bg-blue-100 dark:bg-zinc-800/60 text-indigo-800 dark:text-indigo-300 px-1.5 py-0.5 rounded-md text-[13px] font-mono border border-blue-200 dark:border-white/[0.08]">
                         {part.slice(1, -1)}
                         </code>
                     );
@@ -141,23 +141,23 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, type }: { isOpen: bool
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-white/80 dark:bg-black/60 backdrop-blur-md" onClick={onClose} />
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="bg-[#09090b] border border-white/[0.08] rounded-[24px] shadow-2xl p-6 sm:p-8 w-full max-w-md relative z-10"
+        className="bg-white dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] rounded-[24px] shadow-2xl p-6 sm:p-8 w-full max-w-md relative z-10"
       >
         <div className="flex items-start gap-4 sm:gap-5">
-          <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl shrink-0 shadow-[inset_0_0_12px_rgba(239,68,68,0.2)]">
+          <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-2xl shrink-0 shadow-inner dark:shadow-[inset_0_0_12px_rgba(239,68,68,0.2)]">
             <AlertTriangle size={24} />
           </div>
           <div className="pt-1">
-            <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 tracking-tight">Delete {type === 'post' ? 'Discussion' : 'Reply'}</h3>
-            <p className="text-sm text-zinc-400 leading-relaxed">Are you sure you want to permanently delete this {type}? This action cannot be undone.</p>
+            <h3 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white mb-2 tracking-tight">Delete {type === 'post' ? 'Discussion' : 'Reply'}</h3>
+            <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">Are you sure you want to permanently delete this {type}? This action cannot be undone.</p>
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-8">
-          <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-zinc-300 hover:text-white bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.08] rounded-xl transition-all active:scale-95">Cancel</button>
-          <button onClick={() => { onConfirm(); onClose(); }} className="px-5 py-2.5 text-sm font-medium text-white bg-red-500/90 hover:bg-red-500 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all active:scale-95">Delete</button>
+          <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.08] rounded-xl transition-all active:scale-95">Cancel</button>
+          <button onClick={() => { onConfirm(); onClose(); }} className="px-5 py-2.5 text-sm font-medium text-white bg-red-500/90 hover:bg-red-500 rounded-xl shadow-md dark:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all active:scale-95">Delete</button>
         </div>
       </motion.div>
     </div>
@@ -181,15 +181,15 @@ const MarkdownToolbar = ({ onInsert }: { onInsert: (prefix: string, suffix: stri
   ];
 
   return (
-      <div className="flex items-center gap-1 bg-black/40 border-b border-white/[0.06] px-3 sm:px-4 py-2 overflow-x-auto rounded-t-2xl">
+      <div className="flex items-center gap-1 bg-slate-100 dark:bg-black/40 border-b border-slate-200 dark:border-white/[0.06] px-3 sm:px-4 py-2 overflow-x-auto rounded-t-2xl">
           {tools.map((tool, idx) => 
               tool.action === 'separator' ? (
-                  <React.Fragment key={idx}>{tool.icon}</React.Fragment>
+                  <React.Fragment key={idx}><div className="w-[1px] h-4 bg-slate-300 dark:bg-white/10 mx-1.5" /></React.Fragment>
               ) : (
                   <button
                       key={idx} type="button" title={tool.label}
                       onClick={() => onInsert(tool.prefix!, tool.suffix!)}
-                      className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/[0.08] rounded-lg transition-colors shrink-0"
+                      className="p-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/[0.08] rounded-lg transition-colors shrink-0"
                   >
                       {tool.icon}
                   </button>
@@ -295,28 +295,28 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
 
   return (
     <>
-    <motion.div layout className={`relative p-4 sm:p-5 rounded-2xl transition-all duration-300 ${reply.isAccepted ? "bg-blue-900/10 border border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.05)]" : "bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]"}`}>
-      {reply.isAccepted && <div className="absolute left-0 top-6 bottom-6 w-[3px] bg-gradient-to-b from-blue-400 to-indigo-500 rounded-r-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />}
+    <motion.div layout className={`relative p-4 sm:p-5 rounded-2xl transition-all duration-300 ${reply.isAccepted ? "bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/30 shadow-sm dark:shadow-[0_0_30px_rgba(59,130,246,0.05)]" : "bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04] hover:border-slate-300 dark:hover:border-white/[0.08]"}`}>
+      {reply.isAccepted && <div className="absolute left-0 top-6 bottom-6 w-[3px] bg-gradient-to-b from-blue-400 to-indigo-500 rounded-r-full shadow-sm dark:shadow-[0_0_10px_rgba(59,130,246,0.5)]" />}
 
       <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-3 mb-3">
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="relative shrink-0">
-            <img src={reply.authorAvatar} alt="" className="w-8 h-8 rounded-full object-cover ring-2 ring-white/5 ring-offset-2 ring-offset-[#09090b]" />
-            {reply.isAccepted && <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-0.5 border-2 border-[#09090b]"><CheckCircle2 size={10} className="text-white"/></div>}
+            <img src={reply.authorAvatar} alt="" className="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-white/5 ring-offset-2 ring-offset-white dark:ring-offset-[#09090b]" />
+            {reply.isAccepted && <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-0.5 border-2 border-white dark:border-[#09090b]"><CheckCircle2 size={10} className="text-white"/></div>}
           </div>
           <div className="flex flex-col">
-             <span className="font-semibold text-zinc-100 text-sm tracking-tight">{reply.authorName}</span>
-             <span className="text-zinc-500 text-xs font-medium">
+             <span className="font-semibold text-slate-900 dark:text-zinc-100 text-sm tracking-tight">{reply.authorName}</span>
+             <span className="text-slate-500 dark:text-zinc-500 text-xs font-medium">
                {new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-               {reply.isEdited && <span className="ml-1 text-zinc-600">· Edited</span>}
+               {reply.isEdited && <span className="ml-1 text-slate-400 dark:text-zinc-600">· Edited</span>}
              </span>
           </div>
         </div>
         
         <div className="flex items-center gap-2 ml-auto sm:ml-0">
           {(isPostAuthor || reply.isAccepted) && (
-            <button onClick={handleToggleAcceptReply} disabled={!isPostAuthor} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${reply.isAccepted ? "text-blue-400 bg-blue-500/10 border border-blue-500/20" : "text-zinc-400 hover:text-zinc-200 bg-white/[0.03] hover:bg-white/[0.08] border border-transparent"} ${!isPostAuthor && "cursor-default"}`}>
-              <CheckCircle2 size={14} className={reply.isAccepted ? "text-blue-400" : "text-zinc-500"} />
+            <button onClick={handleToggleAcceptReply} disabled={!isPostAuthor} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${reply.isAccepted ? "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20" : "text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/[0.08] border border-transparent"} ${!isPostAuthor && "cursor-default"}`}>
+              <CheckCircle2 size={14} className={reply.isAccepted ? "text-blue-500 dark:text-blue-400" : "text-slate-400 dark:text-zinc-500"} />
               <span className="hidden sm:inline">{reply.isAccepted ? "Accepted Solution" : "Mark as Solution"}</span>
               <span className="sm:hidden">{reply.isAccepted ? "Accepted" : "Accept"}</span>
             </button>
@@ -324,15 +324,15 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
 
           {isReplyAuthor && !isEditing && (
             <div className="relative">
-              <button onClick={() => setShowMenu(!showMenu)} className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-white/[0.08] transition-colors">
+              <button onClick={() => setShowMenu(!showMenu)} className="p-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors">
                  <MoreVertical size={18} />
               </button>
               {showMenu && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />
-                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute right-0 mt-2 w-36 bg-[#09090b] border border-white/[0.08] rounded-xl shadow-2xl z-40 py-1 overflow-hidden backdrop-blur-xl">
-                    <button onClick={() => { setIsEditing(true); setShowMenu(false); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-300 hover:bg-white/[0.05] hover:text-white flex items-center gap-2"><Edit2 size={14}/> Edit</button>
-                    <button onClick={() => { setShowDeleteModal(true); setShowMenu(false); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2"><Trash2 size={14}/> Delete</button>
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute right-0 mt-2 w-36 bg-white dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] rounded-xl shadow-lg dark:shadow-2xl z-40 py-1 overflow-hidden backdrop-blur-xl">
+                    <button onClick={() => { setIsEditing(true); setShowMenu(false); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-white/[0.05] hover:text-slate-900 dark:hover:text-white flex items-center gap-2"><Edit2 size={14}/> Edit</button>
+                    <button onClick={() => { setShowDeleteModal(true); setShowMenu(false); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300 flex items-center gap-2"><Trash2 size={14}/> Delete</button>
                   </motion.div>
                 </>
               )}
@@ -342,29 +342,29 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
       </div>
 
       {isEditing ? (
-        <div className="mt-3 flex flex-col border border-white/[0.08] rounded-2xl overflow-hidden bg-black/20 focus-within:border-white/[0.2] transition-colors shadow-inner">
+        <div className="mt-3 flex flex-col border border-slate-200 dark:border-white/[0.08] rounded-2xl overflow-hidden bg-slate-50 dark:bg-black/20 focus-within:border-slate-300 dark:focus-within:border-white/[0.2] transition-colors shadow-inner">
           <MarkdownToolbar onInsert={insertFormatEditReply} />
           <textarea 
             ref={editReplyRef}
             value={editContent} onChange={e => setEditContent(e.target.value)} 
-            className="w-full bg-transparent p-4 sm:p-5 text-zinc-200 text-sm focus:outline-none resize-y cursor-text min-h-[100px] leading-relaxed" 
+            className="w-full bg-transparent p-4 sm:p-5 text-slate-900 dark:text-zinc-200 text-sm focus:outline-none resize-y cursor-text min-h-[100px] leading-relaxed" 
           />
-          <div className="flex gap-2 justify-end p-3 border-t border-white/[0.06] bg-black/40">
-            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors font-medium">Cancel</button>
-            <button onClick={handleUpdateReply} className="px-4 py-2 text-sm bg-gradient-to-b from-white to-zinc-200 text-black rounded-xl font-medium transition-all active:scale-95 shadow-md">Save</button>
+          <div className="flex gap-2 justify-end p-3 border-t border-slate-200 dark:border-white/[0.06] bg-slate-100 dark:bg-black/40">
+            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-sm text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors font-medium">Cancel</button>
+            <button onClick={handleUpdateReply} className="px-4 py-2 text-sm bg-gradient-to-b from-slate-200 to-slate-300 dark:from-white dark:to-zinc-200 text-slate-900 dark:text-black rounded-xl font-medium transition-all active:scale-95 shadow-sm dark:shadow-md">Save</button>
           </div>
         </div>
       ) : (
-        <div className="text-zinc-300 whitespace-pre-wrap leading-relaxed text-[14px] sm:text-[15px] font-normal pl-1">{renderText(reply.content)}</div>
+        <div className="text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed text-[14px] sm:text-[15px] font-normal pl-1">{renderText(reply.content)}</div>
       )}
 
       {/* Voting Buttons UI */}
-      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/[0.04]">
-        <button onClick={(e) => handleReplyVote(e, 'up')} className={`transition-all flex items-center gap-1.5 px-2 py-1 rounded-md ${localLikes.includes(user?.uid || "") ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'}`}>
+      <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.04]">
+        <button onClick={(e) => handleReplyVote(e, 'up')} className={`transition-all flex items-center gap-1.5 px-2 py-1 rounded-md ${localLikes.includes(user?.uid || "") ? 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/10' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/[0.05]'}`}>
           <ChevronUp size={16} strokeWidth={2.5} />
           <span className="text-sm font-semibold">{replyScore > 0 ? replyScore : 0}</span>
         </button>
-        <button onClick={(e) => handleReplyVote(e, 'down')} className={`transition-all flex items-center gap-1.5 px-2 py-1 rounded-md ${localDislikes.includes(user?.uid || "") ? 'text-red-400 bg-red-500/10' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'}`}>
+        <button onClick={(e) => handleReplyVote(e, 'down')} className={`transition-all flex items-center gap-1.5 px-2 py-1 rounded-md ${localDislikes.includes(user?.uid || "") ? 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-500/10' : 'text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/[0.05]'}`}>
           <ChevronDown size={16} strokeWidth={2.5} />
         </button>
       </div>
@@ -531,34 +531,34 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
       <div className="flex-1 min-w-0 w-full">
         <div className="flex justify-between items-start mb-3 w-full">
           <div className="flex items-center gap-3">
-            <img src={post.authorAvatar} alt="author" className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-white/10 ring-offset-2 ring-offset-[#09090b]" />
+            <img src={post.authorAvatar} alt="author" className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-white dark:ring-white/10 ring-offset-2 ring-offset-white dark:ring-offset-[#09090b]" />
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-[14px] sm:text-[15px] text-zinc-100 tracking-tight">{post.authorName}</span>
+                <span className="font-semibold text-[14px] sm:text-[15px] text-slate-900 dark:text-zinc-100 tracking-tight">{post.authorName}</span>
                 {hasAcceptedAnswer && (
-                  <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
+                  <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-500/10 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-500/20">
                     <CheckCircle2 size={10} /> <span className="hidden sm:inline">Answered</span>
                   </span>
                 )}
               </div>
-              <span className="text-zinc-500 text-[11px] sm:text-xs font-medium mt-0.5">
+              <span className="text-slate-500 dark:text-zinc-500 text-[11px] sm:text-xs font-medium mt-0.5">
                 {post.createdAt?.toDate ? post.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Just now"}
-                {post.isEdited && <span className="ml-1.5 text-zinc-600">· Edited</span>}
+                {post.isEdited && <span className="ml-1.5 text-slate-400 dark:text-zinc-600">· Edited</span>}
               </span>
             </div>
           </div>
 
           {isAuthor && !isEditing && (
             <div className="relative z-20">
-              <button onClick={() => setShowMenu(!showMenu)} className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-white/[0.08] transition-colors">
+              <button onClick={() => setShowMenu(!showMenu)} className="p-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors">
                 <MoreVertical size={18} />
               </button>
               {showMenu && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />
-                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute right-0 mt-2 w-32 sm:w-36 bg-[#09090b] border border-white/[0.08] rounded-xl shadow-2xl z-40 py-1 overflow-hidden backdrop-blur-xl">
-                    <button onClick={() => { setIsEditing(true); setShowMenu(false); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-zinc-300 hover:bg-white/[0.05] hover:text-white flex items-center gap-2"><Edit2 size={14}/> Edit</button>
-                    <button onClick={() => { setShowDeleteModal(true); setShowMenu(false); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2"><Trash2 size={14}/> Delete</button>
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute right-0 mt-2 w-32 sm:w-36 bg-white dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] rounded-xl shadow-lg dark:shadow-2xl z-40 py-1 overflow-hidden backdrop-blur-xl">
+                    <button onClick={() => { setIsEditing(true); setShowMenu(false); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-white/[0.05] hover:text-slate-900 dark:hover:text-white flex items-center gap-2"><Edit2 size={14}/> Edit</button>
+                    <button onClick={() => { setShowDeleteModal(true); setShowMenu(false); }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300 flex items-center gap-2"><Trash2 size={14}/> Delete</button>
                   </motion.div>
                 </>
               )}
@@ -567,88 +567,88 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
         </div>
 
         {isEditing ? (
-          <div className="space-y-3 mb-4 sm:mb-6 bg-black/20 p-4 sm:p-5 rounded-[20px] border border-white/[0.08] shadow-inner">
+          <div className="space-y-3 mb-4 sm:mb-6 bg-slate-50 dark:bg-black/20 p-4 sm:p-5 rounded-[20px] border border-slate-200 dark:border-white/[0.08] shadow-inner">
             <input 
               type="text" value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} 
-              className="w-full bg-transparent text-white font-semibold text-lg sm:text-xl border-b border-white/[0.08] pb-3 focus:outline-none focus:border-white/[0.3] cursor-text transition-colors" placeholder="Title"
+              className="w-full bg-transparent text-slate-900 dark:text-white font-semibold text-lg sm:text-xl border-b border-slate-200 dark:border-white/[0.08] pb-3 focus:outline-none focus:border-slate-300 dark:focus:border-white/[0.3] cursor-text transition-colors placeholder-slate-400 dark:placeholder-zinc-600" placeholder="Title"
             />
-            <div className="flex flex-col border border-white/[0.08] rounded-2xl overflow-hidden focus-within:border-white/[0.2] transition-colors">
+            <div className="flex flex-col border border-slate-200 dark:border-white/[0.08] rounded-2xl overflow-hidden focus-within:border-slate-300 dark:focus-within:border-white/[0.2] transition-colors">
               <MarkdownToolbar onInsert={insertFormatEditPost} />
               <textarea 
                 ref={editBodyRef}
                 value={editForm.body} onChange={e => setEditForm({...editForm, body: e.target.value})} rows={6}
-                className="w-full bg-transparent text-zinc-300 text-[14px] sm:text-[15px] p-4 sm:p-5 focus:outline-none resize-y cursor-text leading-relaxed" placeholder="Description..."
+                className="w-full bg-transparent text-slate-700 dark:text-zinc-300 text-[14px] sm:text-[15px] p-4 sm:p-5 focus:outline-none resize-y cursor-text leading-relaxed placeholder-slate-400 dark:placeholder-zinc-600" placeholder="Description..."
               />
             </div>
             <input 
               type="text" value={editForm.tags} onChange={e => setEditForm({...editForm, tags: e.target.value})} 
-              className="w-full bg-transparent text-zinc-300 text-sm border border-white/[0.08] rounded-xl px-4 py-3 focus:outline-none focus:border-white/[0.2] cursor-text transition-colors" placeholder="Tags (comma separated)"
+              className="w-full bg-transparent text-slate-700 dark:text-zinc-300 text-sm border border-slate-200 dark:border-white/[0.08] rounded-xl px-4 py-3 focus:outline-none focus:border-slate-300 dark:focus:border-white/[0.2] cursor-text transition-colors placeholder-slate-400 dark:placeholder-zinc-600" placeholder="Tags (comma separated)"
             />
             <div className="flex justify-end gap-3 pt-2">
-              <button onClick={() => setIsEditing(false)} className="px-4 sm:px-5 py-2 sm:py-2.5 text-sm font-medium text-zinc-400 hover:text-white transition-colors">Cancel</button>
-              <button onClick={handleUpdatePost} disabled={isUpdating} className="px-5 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-b from-white to-zinc-200 hover:from-white hover:to-white text-black text-sm font-semibold rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50">
+              <button onClick={() => setIsEditing(false)} className="px-4 sm:px-5 py-2 sm:py-2.5 text-sm font-medium text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-colors">Cancel</button>
+              <button onClick={handleUpdatePost} disabled={isUpdating} className="px-5 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-b from-slate-200 to-slate-300 dark:from-white dark:to-zinc-200 hover:from-slate-300 hover:to-slate-400 dark:hover:from-white dark:hover:to-white text-slate-900 dark:text-black text-sm font-semibold rounded-xl flex items-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50">
                 {isUpdating ? <Loader2 size={16} className="animate-spin"/> : <Save size={16}/>} Save
               </button>
             </div>
           </div>
         ) : (
           <>
-            <h3 className="text-lg sm:text-[22px] font-bold text-white mb-3 leading-snug tracking-tight pr-4">{post.title}</h3>
+            <h3 className="text-lg sm:text-[22px] font-bold text-slate-900 dark:text-white mb-3 leading-snug tracking-tight pr-4">{post.title}</h3>
             
             <div className={`relative transition-all duration-500 ease-in-out w-full ${!isExpanded && isLongPost ? (post.imageUrl ? 'max-h-[380px] overflow-hidden' : 'max-h-[160px] overflow-hidden') : ''}`}>
-              <div className="text-zinc-300 text-[14px] sm:text-[15px] whitespace-pre-wrap leading-relaxed font-normal pb-3">
+              <div className="text-slate-700 dark:text-zinc-300 text-[14px] sm:text-[15px] whitespace-pre-wrap leading-relaxed font-normal pb-3">
                 {renderText(post.body)}
               </div>
               
               {post.imageUrl && (
                 <div 
-                  className={`mb-4 sm:mb-6 bg-black/40 border border-white/[0.04] p-2 rounded-2xl relative inline-block w-full max-w-2xl ${isMagnified ? 'cursor-zoom-out z-10' : 'cursor-zoom-in'} shadow-inner`}
+                  className={`mb-4 sm:mb-6 bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/[0.04] p-2 rounded-2xl relative inline-block w-full max-w-2xl ${isMagnified ? 'cursor-zoom-out z-10' : 'cursor-zoom-in'} shadow-inner`}
                   onClick={() => setIsMagnified(!isMagnified)} onMouseMove={handleImageMouseMove} onMouseLeave={() => setIsMagnified(false)}
                 >
                   <img src={post.imageUrl} alt="Context" style={{ transform: isMagnified ? 'scale(2)' : 'scale(1)', transformOrigin: `${magPos.x} ${magPos.y}` }} className="max-h-[300px] w-full object-contain rounded-xl transition-transform duration-300 ease-out" />
                 </div>
               )}
 
-              {!isExpanded && isLongPost && <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-[#09090b] via-[#09090b]/80 to-transparent pointer-events-none" />}
+              {!isExpanded && isLongPost && <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white dark:from-[#09090b] via-white/80 dark:via-[#09090b]/80 to-transparent pointer-events-none" />}
             </div>
 
             {isLongPost && (
-              <button onClick={() => setIsExpanded(!isExpanded)} className="text-blue-400 hover:text-blue-300 text-sm font-semibold mb-4 sm:mb-6 mt-1 transition-colors flex items-center gap-1.5">
+              <button onClick={() => setIsExpanded(!isExpanded)} className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-semibold mb-4 sm:mb-6 mt-1 transition-colors flex items-center gap-1.5">
                 {isExpanded ? <><ChevronUp size={16} strokeWidth={2.5}/> Show less</> : <><ChevronDown size={16} strokeWidth={2.5}/> Read more</>}
               </button>
             )}
           </>
         )}
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-5 pt-4 border-t border-white/[0.04]">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-5 pt-4 border-t border-slate-200 dark:border-white/[0.04]">
           <div className="flex flex-wrap gap-2">
             {post.tags?.map((tag, idx) => (
-              <span key={idx} className="px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-[12px] font-medium text-zinc-300 bg-white/[0.03] border border-white/[0.06] rounded-full transition-colors hover:border-white/[0.1] hover:bg-white/[0.06] hover:text-white flex items-center gap-1.5">
+              <span key={idx} className="px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-[12px] font-medium text-slate-700 dark:text-zinc-300 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] rounded-full transition-colors hover:border-slate-300 dark:hover:border-white/[0.1] hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5">
                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500/50"></span> {tag}
               </span>
             ))}
           </div>
           
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-5 w-full sm:w-auto mt-2 sm:mt-0">
-            <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-full p-1 shadow-inner shrink-0">
-              <button onClick={(e) => handleVote(e, 'up')} className={`p-1.5 rounded-full transition-all active:scale-90 ${localLikes.includes(user?.uid || "") ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+            <div className="flex items-center gap-1 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] rounded-full p-1 shadow-inner shrink-0">
+              <button onClick={(e) => handleVote(e, 'up')} className={`p-1.5 rounded-full transition-all active:scale-90 ${localLikes.includes(user?.uid || "") ? 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-500/10' : 'text-slate-500 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300 hover:bg-slate-200 dark:hover:bg-white/5'}`}>
                 <ChevronUp size={16} strokeWidth={2.5} />
               </button>
-              <span className={`text-[13px] sm:text-[14px] font-bold min-w-[20px] text-center ${score > 0 ? 'text-blue-400' : score < 0 ? 'text-red-400' : 'text-zinc-400'}`}>
+              <span className={`text-[13px] sm:text-[14px] font-bold min-w-[20px] text-center ${score > 0 ? 'text-blue-600 dark:text-blue-400' : score < 0 ? 'text-red-500 dark:text-red-400' : 'text-slate-600 dark:text-zinc-400'}`}>
                 {score}
               </span>
-              <button onClick={(e) => handleVote(e, 'down')} className={`p-1.5 rounded-full transition-all active:scale-90 ${localDislikes.includes(user?.uid || "") ? 'text-red-400 bg-red-500/10' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}`}>
+              <button onClick={(e) => handleVote(e, 'down')} className={`p-1.5 rounded-full transition-all active:scale-90 ${localDislikes.includes(user?.uid || "") ? 'text-red-500 dark:text-red-400 bg-red-100 dark:bg-red-500/10' : 'text-slate-500 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300 hover:bg-slate-200 dark:hover:bg-white/5'}`}>
                 <ChevronDown size={16} strokeWidth={2.5} />
               </button>
             </div>
 
-            <div className="w-[1px] h-6 bg-white/[0.08] hidden sm:block"></div>
+            <div className="w-[1px] h-6 bg-slate-300 dark:bg-white/[0.08] hidden sm:block"></div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2 text-zinc-400 text-xs sm:text-sm font-semibold shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-slate-500 dark:text-zinc-400 text-xs sm:text-sm font-semibold shrink-0">
                <MessageSquare size={16} /> {post.replies?.length || 0}
             </div>
             
-            <button onClick={() => setShowReplyBox(!showReplyBox)} className="flex-1 sm:flex-none text-xs sm:text-sm font-semibold text-white bg-white/[0.04] border border-white/[0.08] hover:bg-white hover:text-black flex justify-center items-center gap-2 transition-all px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl active:scale-95 shadow-sm shrink-0">
+            <button onClick={() => setShowReplyBox(!showReplyBox)} className="flex-1 sm:flex-none text-xs sm:text-sm font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-white/[0.04] border border-slate-300 dark:border-white/[0.08] hover:bg-white dark:hover:bg-white hover:text-black flex justify-center items-center gap-2 transition-all px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl active:scale-95 shadow-sm shrink-0">
               <Reply size={16} /> {showReplyBox ? "Cancel" : "Reply"}
             </button>
           </div>
@@ -656,15 +656,15 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
 
         <AnimatePresence>
         {showReplyBox && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-4 sm:mt-6 bg-black/40 rounded-2xl border border-white/[0.08] focus-within:border-white/[0.2] transition-colors overflow-hidden shadow-2xl backdrop-blur-md">
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-4 sm:mt-6 bg-slate-50 dark:bg-black/40 rounded-2xl border border-slate-200 dark:border-white/[0.08] focus-within:border-slate-300 dark:focus-within:border-white/[0.2] transition-colors overflow-hidden shadow-sm dark:shadow-2xl backdrop-blur-md">
             <MarkdownToolbar onInsert={insertFormatReply} />
             <textarea 
               ref={replyBodyRef}
               rows={4} placeholder="Write your reply... (Markdown supported)" value={replyContent} onChange={(e) => setReplyContent(e.target.value)}
-              className="w-full bg-transparent text-zinc-200 border-none px-4 py-3 sm:px-5 sm:py-4 text-[14px] sm:text-[15px] focus:outline-none resize-y cursor-text leading-relaxed"
+              className="w-full bg-transparent text-slate-900 dark:text-zinc-200 border-none px-4 py-3 sm:px-5 sm:py-4 text-[14px] sm:text-[15px] focus:outline-none resize-y cursor-text leading-relaxed placeholder-slate-400 dark:placeholder-zinc-500"
             />
-            <div className="flex justify-end px-3 py-2 sm:px-4 sm:py-3 border-t border-white/[0.06] bg-black/20">
-              <button onClick={handleReplySubmit} disabled={isSubmittingReply || !replyContent.trim()} className="bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white px-5 py-2 sm:px-6 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold disabled:opacity-50 transition-all active:scale-95 flex items-center gap-2 shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-blue-400/20">
+            <div className="flex justify-end px-3 py-2 sm:px-4 sm:py-3 border-t border-slate-200 dark:border-white/[0.06] bg-slate-100 dark:bg-black/20">
+              <button onClick={handleReplySubmit} disabled={isSubmittingReply || !replyContent.trim()} className="bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:hover:from-blue-400 dark:hover:to-blue-500 text-white px-5 py-2 sm:px-6 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold disabled:opacity-50 transition-all active:scale-95 flex items-center gap-2 shadow-[0_0_20px_rgba(59,130,246,0.2)] border border-blue-400/20">
                 {isSubmittingReply ? <Loader2 size={16} className="animate-spin" /> : "Post Reply"}
               </button>
             </div>
@@ -674,14 +674,14 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
 
         {sortedReplies.length > 0 && (
           <div className="mt-6 sm:mt-8 space-y-4 sm:space-y-5 sm:pl-6 relative">
-            <div className="absolute left-0 top-0 bottom-8 w-[2px] bg-gradient-to-b from-white/[0.08] to-transparent rounded-full hidden sm:block"></div>
+            <div className="absolute left-0 top-0 bottom-8 w-[2px] bg-gradient-to-b from-slate-200 dark:from-white/[0.08] to-transparent rounded-full hidden sm:block"></div>
             
             {sortedReplies.slice(0, showAllReplies ? sortedReplies.length : 1).map((reply) => (
                <ReplyItem key={reply.id} reply={reply} postId={post.id} postReplies={post.replies} isPostAuthor={isAuthor} user={user} />
             ))}
             
             {sortedReplies.length > 1 && (
-              <button onClick={() => setShowAllReplies(!showAllReplies)} className="text-blue-400 hover:text-blue-300 text-xs sm:text-sm font-semibold mt-4 sm:mt-5 flex items-center gap-1.5 transition-colors sm:ml-2">
+              <button onClick={() => setShowAllReplies(!showAllReplies)} className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs sm:text-sm font-semibold mt-4 sm:mt-5 flex items-center gap-1.5 transition-colors sm:ml-2">
                 {showAllReplies ? <ChevronUp size={16} strokeWidth={2.5}/> : <ChevronDown size={16} strokeWidth={2.5}/>}
                 {showAllReplies ? "Collapse replies" : `View all ${sortedReplies.length} replies`}
               </button>
@@ -828,7 +828,7 @@ export default function Community() {
   );
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white font-sans relative flex flex-col selection:bg-blue-500/30">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#030303] text-slate-900 dark:text-white font-sans relative flex flex-col selection:bg-blue-500/30">
       <SaaSBackground />
 
       <div className="relative z-50">
@@ -840,13 +840,13 @@ export default function Community() {
         {/* LEFT COLUMN: Main Feed */}
         <div className="lg:col-span-8 space-y-6 sm:space-y-8 order-2 lg:order-1">
           
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 mb-2 pb-6 sm:pb-8 border-b border-white/[0.06]">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 mb-2 pb-6 sm:pb-8 border-b border-slate-200 dark:border-white/[0.06]">
              <div>
-               <h1 className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-500 tracking-tight">Discussions</h1>
-               <p className="text-sm sm:text-[15px] text-zinc-400 mt-2 font-medium">Ask questions, share architecture, and collaborate with the community.</p>
+               <h1 className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-slate-500 dark:from-white dark:to-zinc-500 tracking-tight">Discussions</h1>
+               <p className="text-sm sm:text-[15px] text-slate-500 dark:text-zinc-400 mt-2 font-medium">Ask questions, share architecture, and collaborate with the community.</p>
              </div>
-             <div className="w-fit bg-white/[0.02] border border-white/[0.06] px-4 py-2 sm:px-5 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold text-zinc-300 shadow-inner flex items-center gap-2 backdrop-blur-md">
-                <Sparkles size={16} className="text-blue-400" /> {posts.length} Active Threads
+             <div className="w-fit bg-slate-100 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] px-4 py-2 sm:px-5 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold text-slate-600 dark:text-zinc-300 shadow-inner flex items-center gap-2 backdrop-blur-md">
+                <Sparkles size={16} className="text-blue-500 dark:text-blue-400" /> {posts.length} Active Threads
              </div>
           </div>
 
@@ -857,12 +857,12 @@ export default function Community() {
           </div>
           
           {filteredPosts.length === 0 && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20 sm:py-32 border border-dashed border-white/[0.1] rounded-[24px] sm:rounded-[32px] bg-white/[0.01] backdrop-blur-sm">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/[0.03] rounded-2xl border border-white/[0.05] flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-inner">
-                <MessageCircle className="text-zinc-600" size={24} strokeWidth={1.5} />
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20 sm:py-32 border border-dashed border-slate-300 dark:border-white/[0.1] rounded-[24px] sm:rounded-[32px] bg-slate-50 dark:bg-white/[0.01] backdrop-blur-sm">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white dark:bg-white/[0.03] rounded-2xl border border-slate-200 dark:border-white/[0.05] flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-inner">
+                <MessageCircle className="text-slate-400 dark:text-zinc-600" size={24} strokeWidth={1.5} />
               </div>
-              <p className="text-white font-semibold mb-2 text-lg sm:text-xl tracking-tight">No discussions found</p>
-              <p className="text-sm sm:text-[15px] text-zinc-500 font-medium">Adjust your search or start a new thread to get help.</p>
+              <p className="text-slate-900 dark:text-white font-semibold mb-2 text-lg sm:text-xl tracking-tight">No discussions found</p>
+              <p className="text-sm sm:text-[15px] text-slate-500 dark:text-zinc-500 font-medium">Adjust your search or start a new thread to get help.</p>
             </motion.div>
           )}
         </div>
@@ -872,14 +872,14 @@ export default function Community() {
           
           <div className="relative group order-1 sm:order-2 w-full">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-[16px] sm:rounded-[20px] blur opacity-0 group-focus-within:opacity-100 transition duration-500"></div>
-            <div className="relative flex items-center bg-[#09090b] border border-white/[0.08] rounded-[16px] sm:rounded-[20px] px-4 py-3 sm:px-5 sm:py-4 shadow-2xl transition-all group-focus-within:border-white/[0.2] group-focus-within:bg-black">
-              <Search className="text-zinc-500 mr-2 sm:mr-3" size={18} />
+            <div className="relative flex items-center bg-white dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] rounded-[16px] sm:rounded-[20px] px-4 py-3 sm:px-5 sm:py-4 shadow-sm dark:shadow-2xl transition-all group-focus-within:border-slate-300 dark:group-focus-within:border-white/[0.2] group-focus-within:bg-slate-50 dark:group-focus-within:bg-black">
+              <Search className="text-slate-400 dark:text-zinc-500 mr-2 sm:mr-3" size={18} />
               <input 
                 ref={searchInputRef}
                 type="text" placeholder="Search topics..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent text-sm sm:text-[15px] font-medium focus:outline-none text-white placeholder:text-zinc-600"
+                className="w-full bg-transparent text-sm sm:text-[15px] font-medium focus:outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-600"
               />
-              <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-white/[0.05] rounded-md border border-white/[0.05] text-zinc-500 text-xs font-mono ml-2">
+              <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-slate-100 dark:bg-white/[0.05] rounded-md border border-slate-200 dark:border-white/[0.05] text-slate-500 dark:text-zinc-500 text-xs font-mono ml-2">
                 <Command size={12} /> K
               </div>
             </div>
@@ -887,43 +887,43 @@ export default function Community() {
 
           <button 
             onClick={() => setShowCreateModal(true)}
-            className="w-full order-2 sm:order-1 bg-gradient-to-b from-white to-zinc-200 hover:from-white hover:to-white text-black px-6 py-3.5 sm:py-4 rounded-[20px] transition-all font-bold text-sm sm:text-[15px] shadow-[0_0_40px_rgba(255,255,255,0.15)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
+            className="w-full order-2 sm:order-1 bg-gradient-to-b from-slate-200 to-slate-300 dark:from-white dark:to-zinc-200 hover:from-slate-300 hover:to-slate-400 dark:hover:from-white dark:hover:to-white text-slate-900 dark:text-black px-6 py-3.5 sm:py-4 rounded-[20px] transition-all font-bold text-sm sm:text-[15px] shadow-sm dark:shadow-[0_0_40px_rgba(255,255,255,0.15)] flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95"
           >
             <SquarePen size={18} strokeWidth={2.5}/> Start New Discussion
           </button>
 
-          <div className="order-3 bg-white/[0.02] border border-white/[0.06] rounded-[20px] sm:rounded-[24px] overflow-hidden hidden sm:block shadow-2xl backdrop-blur-xl w-full">
-            <div className="p-5 sm:p-6 border-b border-white/[0.04] flex items-center gap-3 bg-white/[0.01]">
+          <div className="order-3 bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] rounded-[20px] sm:rounded-[24px] overflow-hidden hidden sm:block shadow-sm dark:shadow-2xl backdrop-blur-xl w-full">
+            <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-white/[0.04] flex items-center gap-3 bg-slate-50 dark:bg-white/[0.01]">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/20 flex items-center justify-center shadow-inner">
-                <Trophy size={18} className="text-amber-400" />
+                <Trophy size={18} className="text-amber-500 dark:text-amber-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-white tracking-tight text-md sm:text-lg">Top Contributors</h3>
-                <p className="text-[11px] sm:text-xs text-zinc-500 font-medium">Community MVPs</p>
+                <h3 className="font-semibold text-slate-900 dark:text-white tracking-tight text-md sm:text-lg">Top Contributors</h3>
+                <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-500 font-medium">Community MVPs</p>
               </div>
             </div>
             
             <div className="p-3 sm:p-4 space-y-1">
               {topContributors.length > 0 ? (
                 topContributors.map((contributor, index) => (
-                  <div key={contributor.name} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 hover:bg-white/[0.04] rounded-xl transition-colors group/item">
-                    <span className={`text-[11px] sm:text-xs font-bold font-mono tracking-widest w-5 text-center ${index === 0 ? 'text-amber-400' : index === 1 ? 'text-zinc-300' : index === 2 ? 'text-orange-400' : 'text-zinc-600'}`}>
+                  <div key={contributor.name} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 hover:bg-slate-50 dark:hover:bg-white/[0.04] rounded-xl transition-colors group/item">
+                    <span className={`text-[11px] sm:text-xs font-bold font-mono tracking-widest w-5 text-center ${index === 0 ? 'text-amber-500 dark:text-amber-400' : index === 1 ? 'text-slate-400 dark:text-zinc-300' : index === 2 ? 'text-orange-500 dark:text-orange-400' : 'text-slate-300 dark:text-zinc-600'}`}>
                       0{index + 1}
                     </span>
                     <div className="relative">
-                      <img src={contributor.avatar} alt={contributor.name} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-white/5 group-hover/item:ring-white/20 transition-all" />
-                      {index === 0 && <div className="absolute -top-1.5 -right-1.5 text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.5)]"><Sparkles size={14}/></div>}
+                      <img src={contributor.avatar} alt={contributor.name} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-white dark:ring-white/5 group-hover/item:ring-slate-200 dark:group-hover/item:ring-white/20 transition-all" />
+                      {index === 0 && <div className="absolute -top-1.5 -right-1.5 text-amber-500 dark:text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.5)]"><Sparkles size={14}/></div>}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-xs sm:text-[14px] text-zinc-200 truncate">{contributor.name}</p>
-                      <p className="text-[10px] sm:text-xs font-medium text-zinc-500 mt-0.5 flex items-center gap-1.5">
-                         <CheckCircle2 size={12} className="text-blue-400/80"/> {contributor.score} Solutions
+                      <p className="font-semibold text-xs sm:text-[14px] text-slate-900 dark:text-zinc-200 truncate">{contributor.name}</p>
+                      <p className="text-[10px] sm:text-xs font-medium text-slate-500 dark:text-zinc-500 mt-0.5 flex items-center gap-1.5">
+                         <CheckCircle2 size={12} className="text-blue-500 dark:text-blue-400/80"/> {contributor.score} Solutions
                       </p>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="p-6 sm:p-8 text-center text-sm sm:text-[15px] text-zinc-600 font-medium">Not enough data to rank.</div>
+                <div className="p-6 sm:p-8 text-center text-sm sm:text-[15px] text-slate-500 dark:text-zinc-600 font-medium">Not enough data to rank.</div>
               )}
             </div>
           </div>
@@ -935,33 +935,33 @@ export default function Community() {
       <AnimatePresence>
       {showCreateModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-[#030303]/80 backdrop-blur-xl" onClick={() => setShowCreateModal(false)} />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-white/80 dark:bg-[#030303]/80 backdrop-blur-xl" onClick={() => setShowCreateModal(false)} />
           <motion.div 
             initial={{ scale: 0.95, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.95, y: 20, opacity: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="bg-[#09090b] border border-white/[0.08] rounded-[24px] sm:rounded-[32px] p-5 sm:p-8 w-full max-w-6xl relative z-10 shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden"
+            className="bg-white dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] rounded-[24px] sm:rounded-[32px] p-5 sm:p-8 w-full max-w-6xl relative z-10 shadow-2xl dark:shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden"
           >
-            <div className="flex justify-between items-start mb-4 sm:mb-8 border-b border-white/[0.06] pb-4 sm:pb-6">
+            <div className="flex justify-between items-start mb-4 sm:mb-8 border-b border-slate-200 dark:border-white/[0.06] pb-4 sm:pb-6">
                 <div>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-1 sm:mb-2">Create Discussion</h2>
-                    <p className="text-xs sm:text-[15px] text-zinc-400 font-medium">Share your thoughts, ask questions, or collaborate on architecture.</p>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-1 sm:mb-2">Create Discussion</h2>
+                    <p className="text-xs sm:text-[15px] text-slate-500 dark:text-zinc-400 font-medium">Share your thoughts, ask questions, or collaborate on architecture.</p>
                 </div>
-                <button onClick={() => setShowCreateModal(false)} className="text-zinc-500 hover:text-white transition-all p-2 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.1] rounded-xl sm:rounded-2xl active:scale-95"><X size={20} className="sm:hidden"/><X size={24} className="hidden sm:block"/></button>
+                <button onClick={() => setShowCreateModal(false)} className="text-slate-500 dark:text-zinc-500 hover:text-slate-900 dark:hover:text-white transition-all p-2 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.1] rounded-xl sm:rounded-2xl active:scale-95"><X size={20} className="sm:hidden"/><X size={24} className="hidden sm:block"/></button>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-12 overflow-y-auto pr-2 custom-scrollbar pb-2 sm:pb-4">
                 
                 <form onSubmit={handleCreatePost} className="space-y-4 sm:space-y-6 flex flex-col h-full">
                 <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-zinc-300 mb-2">Title <span className="text-red-500">*</span></label>
+                    <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-2">Title <span className="text-red-500">*</span></label>
                     <input 
                     type="text" required placeholder="e.g. How to optimize a large React context?" value={newPost.title} onChange={e => setNewPost({...newPost, title: e.target.value})}
-                    className="w-full bg-black/40 border border-white/[0.08] text-white rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-sm sm:text-[15px] font-medium focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-zinc-600 shadow-inner"
+                    className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-white rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-sm sm:text-[15px] font-medium focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-600 shadow-inner"
                     />
                 </div>
                 
                 <div className="flex-1 flex flex-col">
-                  <label className="block text-xs sm:text-sm font-semibold text-zinc-300 mb-2">Details <span className="text-red-500">*</span></label>
-                  <div className="flex flex-col flex-1 border border-white/[0.08] rounded-xl sm:rounded-2xl overflow-hidden focus-within:border-blue-500/50 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all bg-black/40 shadow-inner">
+                  <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-2">Details <span className="text-red-500">*</span></label>
+                  <div className="flex flex-col flex-1 border border-slate-200 dark:border-white/[0.08] rounded-xl sm:rounded-2xl overflow-hidden focus-within:border-blue-500/50 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all bg-slate-50 dark:bg-black/40 shadow-inner">
                   <MarkdownToolbar onInsert={insertFormatCreatePost} />
                   <textarea 
                       ref={createBodyRef}
@@ -970,60 +970,60 @@ export default function Community() {
                       placeholder="Describe the issue or concept here in detail..." 
                       value={newPost.body} 
                       onChange={e => setNewPost({...newPost, body: e.target.value})}
-                      className="w-full h-full min-h-[150px] sm:min-h-[250px] bg-transparent text-zinc-200 px-4 py-4 sm:px-5 sm:py-5 text-sm sm:text-[15px] focus:outline-none resize-y placeholder:text-zinc-600 leading-relaxed"
+                      className="w-full h-full min-h-[150px] sm:min-h-[250px] bg-transparent text-slate-800 dark:text-zinc-200 px-4 py-4 sm:px-5 sm:py-5 text-sm sm:text-[15px] focus:outline-none resize-y placeholder:text-slate-400 dark:placeholder:text-zinc-600 leading-relaxed"
                   ></textarea>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div>
-                        <label className="block text-xs sm:text-sm font-semibold text-zinc-300 mb-2">Tags <span className="text-red-500">*</span></label>
+                        <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-2">Tags <span className="text-red-500">*</span></label>
                         <input 
                         type="text" required placeholder="e.g. react, architecture" value={newPost.tags} onChange={e => setNewPost({...newPost, tags: e.target.value})}
-                        className="w-full bg-black/40 border border-white/[0.08] text-zinc-200 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-sm sm:text-[15px] focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-zinc-600 shadow-inner"
+                        className="w-full bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-zinc-200 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-sm sm:text-[15px] focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-zinc-600 shadow-inner"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs sm:text-sm font-semibold text-zinc-300 mb-2">Attachment (Optional)</label>
-                        <div className="bg-black/40 border border-white/[0.08] rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between shadow-inner hover:border-white/[0.15] transition-colors cursor-pointer" onClick={() => document.getElementById('image-upload')?.click()}>
-                            <div className="text-sm sm:text-[15px] font-medium text-zinc-400 flex items-center gap-2 sm:gap-3 w-full">
-                              <div className="p-1.5 sm:p-2 bg-white/[0.05] rounded-lg text-white"><ImageIcon size={16} className="sm:hidden" /><ImageIcon size={18} className="hidden sm:block" /></div>
-                              <span className="truncate text-white">{imageFile ? imageFile.name : "Upload image file"}</span>
+                        <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-zinc-300 mb-2">Attachment (Optional)</label>
+                        <div className="bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.08] rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between shadow-inner hover:border-slate-300 dark:hover:border-white/[0.15] transition-colors cursor-pointer" onClick={() => document.getElementById('image-upload')?.click()}>
+                            <div className="text-sm sm:text-[15px] font-medium text-slate-500 dark:text-zinc-400 flex items-center gap-2 sm:gap-3 w-full">
+                              <div className="p-1.5 sm:p-2 bg-slate-200 dark:bg-white/[0.05] rounded-lg text-slate-600 dark:text-white"><ImageIcon size={16} className="sm:hidden" /><ImageIcon size={18} className="hidden sm:block" /></div>
+                              <span className="truncate text-slate-900 dark:text-white">{imageFile ? imageFile.name : "Upload image file"}</span>
                             </div>
                             <input id="image-upload" type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleImageChange} />
                         </div>
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-3 sm:gap-4 pt-4 sm:pt-6 mt-2 sm:mt-4 border-t border-white/[0.06]">
-                    <button type="button" onClick={() => setShowCreateModal(false)} disabled={isPublishing} className="px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-[15px] font-semibold text-zinc-400 hover:text-white transition-all bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.08] rounded-xl active:scale-95">
+                <div className="flex justify-end gap-3 sm:gap-4 pt-4 sm:pt-6 mt-2 sm:mt-4 border-t border-slate-200 dark:border-white/[0.06]">
+                    <button type="button" onClick={() => setShowCreateModal(false)} disabled={isPublishing} className="px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-[15px] font-semibold text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-all bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.08] rounded-xl active:scale-95">
                     Cancel
                     </button>
-                    <button type="submit" disabled={isPublishing || !newPost.title || !newPost.body || !newPost.tags} className="px-5 py-2.5 sm:px-8 sm:py-3 bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white text-sm sm:text-[15px] font-bold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-blue-400/20 active:scale-95">
+                    <button type="submit" disabled={isPublishing || !newPost.title || !newPost.body || !newPost.tags} className="px-5 py-2.5 sm:px-8 sm:py-3 bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:hover:from-blue-400 dark:hover:to-blue-500 text-white text-sm sm:text-[15px] font-bold rounded-xl transition-all disabled:opacity-50 flex items-center gap-2 shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-blue-400/20 active:scale-95">
                     {isPublishing ? <><Loader2 size={16} className="animate-spin" /> Publishing...</> : "Publish Discussion"}
                     </button>
                 </div>
                 </form>
 
-                <div className="hidden lg:flex flex-col border-l border-white/[0.06] pl-12 h-full">
-                    <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-4">Live Preview</h3>
-                    <div className="flex-1 bg-white/[0.01] rounded-[24px] border border-white/[0.04] p-8 overflow-y-auto min-h-[400px] shadow-inner backdrop-blur-sm custom-scrollbar">
+                <div className="hidden lg:flex flex-col border-l border-slate-200 dark:border-white/[0.06] pl-12 h-full">
+                    <h3 className="text-sm font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-4">Live Preview</h3>
+                    <div className="flex-1 bg-white dark:bg-white/[0.01] rounded-[24px] border border-slate-200 dark:border-white/[0.04] p-8 overflow-y-auto min-h-[400px] shadow-sm dark:shadow-inner backdrop-blur-sm custom-scrollbar">
                         {newPost.title || newPost.body || imageFile ? (
                             <div className="break-words">
-                                <h3 className="text-3xl font-bold text-white mb-6 leading-snug tracking-tight">{newPost.title || "Post Title Preview"}</h3>
-                                <div className="text-[15px] text-zinc-300 whitespace-pre-wrap leading-relaxed font-normal pb-6">
+                                <h3 className="text-3xl font-bold text-slate-900 dark:text-white mb-6 leading-snug tracking-tight">{newPost.title || "Post Title Preview"}</h3>
+                                <div className="text-[15px] text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed font-normal pb-6">
                                     {renderText(newPost.body)}
                                 </div>
                                 {imageFile && (
-                                    <div className="mt-4 bg-black/50 border border-white/[0.05] p-3 rounded-2xl inline-block w-full">
+                                    <div className="mt-4 bg-slate-100 dark:bg-black/50 border border-slate-200 dark:border-white/[0.05] p-3 rounded-2xl inline-block w-full">
                                         <img src={URL.createObjectURL(imageFile)} alt="Preview" className="max-h-[350px] w-full object-contain rounded-xl" />
                                     </div>
                                 )}
                             </div>
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-zinc-600 space-y-5 opacity-40">
-                                <div className="p-6 bg-white/[0.02] border border-white/[0.05] rounded-[24px]">
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-zinc-600 space-y-5 opacity-40">
+                                <div className="p-6 bg-slate-100 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] rounded-[24px]">
                                     <MessageSquare size={40} strokeWidth={1.5} />
                                 </div>
                                 <p className="text-[15px] font-medium">Your preview will appear here</p>
@@ -1048,7 +1048,7 @@ export default function Community() {
           >
             <button
               onClick={scrollToTop}
-              className="p-3 lg:p-4 bg-white/[0.05] backdrop-blur-xl hover:bg-white text-zinc-300 hover:text-black rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-all border border-white/[0.1] flex items-center justify-center group active:scale-90"
+              className="p-3 lg:p-4 bg-white dark:bg-white/[0.05] backdrop-blur-xl hover:bg-slate-50 dark:hover:bg-white text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-black rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.1)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-all border border-slate-200 dark:border-white/[0.1] flex items-center justify-center group active:scale-90"
               aria-label="Scroll to top"
             >
               <ArrowUp size={20} strokeWidth={2.5} className="group-hover:-translate-y-1 transition-transform" />

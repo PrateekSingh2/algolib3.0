@@ -14,10 +14,10 @@ import {
 
 // --- THE APEX BACKGROUND (Static, High-Depth Glass Ambience) ---
 const ApexBackground = () => (
-  <div className="fixed inset-0 z-0 pointer-events-none bg-[#020202] flex items-center justify-center overflow-hidden">
-    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)]" />
-    <div className="absolute top-[-10%] right-[5%] w-[60vw] md:w-[40vw] h-[40vh] bg-sky-500 rounded-full blur-[200px] mix-blend-screen opacity-[0.08]" />
-    <div className="absolute bottom-[-10%] left-[-5%] w-[60vw] md:w-[40vw] h-[40vh] bg-indigo-600 rounded-full blur-[200px] mix-blend-screen opacity-[0.08]" />
+  <div className="fixed inset-0 z-0 pointer-events-none bg-blue-50 dark:bg-[#020202] flex items-center justify-center overflow-hidden">
+    <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.03)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)] dark:[mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,#000_20%,transparent_100%)]" />
+    <div className="absolute top-[-10%] right-[5%] w-[60vw] md:w-[40vw] h-[40vh] bg-sky-500 rounded-full blur-[200px] mix-blend-screen opacity-[0.05] dark:opacity-[0.08]" />
+    <div className="absolute bottom-[-10%] left-[-5%] w-[60vw] md:w-[40vw] h-[40vh] bg-indigo-600 rounded-full blur-[200px] mix-blend-screen opacity-[0.05] dark:opacity-[0.08]" />
   </div>
 );
 
@@ -35,10 +35,10 @@ const BentoCard = ({ children, className = "" }: { children: React.ReactNode, cl
   return (
     <div
       onMouseMove={handleMouseMove}
-      className={`group relative rounded-3xl md:rounded-[2.5rem] bg-white/[0.02] backdrop-blur-3xl border border-white/[0.08] border-t-white/[0.2] border-l-white/[0.15] overflow-hidden hover:border-white/[0.25] transition-all duration-500 flex flex-col p-6 md:p-8 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] hover:shadow-[0_20px_40px_-15px_rgba(0,210,255,0.15)] hover:-translate-y-1 ${className}`}
+      className={`group relative rounded-3xl md:rounded-[2.5rem] bg-sky-50 dark:bg-white/[0.02] backdrop-blur-3xl border border-blue-200 dark:border-white/[0.08] dark:border-t-white/[0.2] dark:border-l-white/[0.15] overflow-hidden hover:border-blue-300 dark:hover:border-white/[0.25] transition-all duration-500 flex flex-col p-6 md:p-8 shadow-sm dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,210,255,0.15)] hover:-translate-y-1 ${className}`}
     >
       {/* Glossy Diagonal Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.03] to-white/[0.08] pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity duration-700 z-0" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-blue-100/50 dark:via-white/[0.03] to-blue-200/50 dark:to-white/[0.08] pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity duration-700 z-0" />
       
       {/* Interactive Mouse Spotlight */}
       <motion.div
@@ -57,13 +57,13 @@ const BentoCard = ({ children, className = "" }: { children: React.ReactNode, cl
 
 // --- GLOSSY INNER DATA NODE ---
 const DataNode = ({ label, value, icon: Icon }: any) => (
-  <div className="relative flex flex-col p-4 md:p-5 rounded-2xl bg-black/40 backdrop-blur-md border border-white/[0.1] border-t-white/[0.2] shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-black/60 transition-colors group/node z-10">
-    <div className="flex items-center gap-2 mb-2 md:mb-3 text-zinc-400">
-      <Icon size={14} className="text-zinc-500 group-hover/node:text-sky-400 transition-colors" />
+  <div className="relative flex flex-col p-4 md:p-5 rounded-2xl bg-blue-100/50 dark:bg-black/40 backdrop-blur-md border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] shadow-inner dark:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-blue-200/50 dark:hover:bg-black/60 transition-colors group/node z-10">
+    <div className="flex items-center gap-2 mb-2 md:mb-3 text-slate-500 dark:text-zinc-400">
+      <Icon size={14} className="text-slate-400 dark:text-zinc-500 group-hover/node:text-sky-500 dark:group-hover/node:text-sky-400 transition-colors" />
       <span className="text-[10px] font-bold uppercase tracking-widest drop-shadow-sm">{label}</span>
     </div>
     {value && value !== "—" ? (
-      <span className="text-sm font-medium text-white tracking-tight leading-snug drop-shadow-sm">{value}</span>
+      <span className="text-sm font-medium text-slate-900 dark:text-white tracking-tight leading-snug drop-shadow-sm">{value}</span>
     ) : (
       <span className="text-xs text-zinc-600 font-mono italic flex items-center gap-2">
         <div className="w-1.5 h-1.5 rounded-full bg-zinc-700 shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" />
@@ -177,10 +177,10 @@ const Profile = () => {
   }, [profile, user]);
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white font-sans selection:bg-sky-500/30 flex flex-col relative pb-10">
+    <div className="min-h-screen bg-blue-50 dark:bg-[#020202] text-slate-900 dark:text-white font-sans selection:bg-sky-500/30 flex flex-col relative pb-10">
       <ApexBackground />
       
-      <div className="fixed top-0 left-0 w-full z-[100] bg-black/20 backdrop-blur-2xl border-b border-white/[0.05] shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+      <div className="fixed top-0 left-0 w-full z-[100] bg-sky-50/80 dark:bg-black/20 backdrop-blur-2xl border-b border-blue-200 dark:border-white/[0.05] shadow-sm dark:shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
         <Navbar />
       </div>
 
@@ -189,7 +189,7 @@ const Profile = () => {
         {/* --- PREMIUM HEADER BANNER --- */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, type: "spring", stiffness: 90, damping: 20 }}
-          className="relative w-full rounded-[2rem] md:rounded-[2.5rem] bg-white/[0.03] backdrop-blur-3xl border border-white/[0.1] border-t-white/[0.25] p-6 sm:p-8 md:p-10 flex flex-col md:flex-row items-center md:items-center justify-between gap-6 md:gap-8 mb-10 overflow-hidden shadow-[0_16px_40px_rgba(0,0,0,0.5)] text-center md:text-left group"
+          className="relative w-full rounded-[2rem] md:rounded-[2.5rem] bg-sky-50 dark:bg-white/[0.03] backdrop-blur-3xl border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.25] p-6 sm:p-8 md:p-10 flex flex-col md:flex-row items-center md:items-center justify-between gap-6 md:gap-8 mb-10 overflow-hidden shadow-sm dark:shadow-[0_16px_40px_rgba(0,0,0,0.5)] text-center md:text-left group"
         >
           {/* Subtle Ambient Sphere Inside Banner */}
           <div className="absolute top-0 right-0 w-full md:w-[600px] h-[600px] bg-gradient-to-bl from-sky-500/10 to-transparent rounded-full blur-3xl pointer-events-none transform translate-x-1/4 -translate-y-1/4 group-hover:opacity-100 opacity-60 transition-opacity duration-700" />
@@ -221,8 +221,8 @@ const Profile = () => {
                   <ShieldCheck size={14} className="drop-shadow-[0_0_4px_rgba(52,211,153,0.8)]" /> Authenticated
                 </span>
               </div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-2 leading-none drop-shadow-md">{displayName}</h1>
-              <p className="text-sm md:text-base text-zinc-300 font-mono mt-1 font-medium bg-black/30 px-3 py-1 rounded-lg border border-white/[0.05] shadow-inner">{user?.email}</p>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2 leading-none drop-shadow-md">{displayName}</h1>
+              <p className="text-sm md:text-base text-slate-600 dark:text-zinc-300 font-mono mt-1 font-medium bg-blue-100/50 dark:bg-black/30 px-3 py-1 rounded-lg border border-blue-200 dark:border-white/[0.05] shadow-inner">{user?.email}</p>
             </div>
           </div>
 
@@ -245,12 +245,12 @@ const Profile = () => {
             <BentoCard>
               <div className="flex items-center justify-between mb-6 md:mb-8 relative z-10">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/[0.05] border border-white/[0.1] border-t-white/[0.2] flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md">
-                    <Fingerprint className="text-sky-300 w-5 h-5 md:w-6 md:h-6 drop-shadow-md" />
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-blue-100/50 dark:bg-white/[0.05] border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] flex items-center justify-center shadow-inner dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] backdrop-blur-md">
+                    <Fingerprint className="text-sky-500 dark:text-sky-300 w-5 h-5 md:w-6 md:h-6 drop-shadow-md" />
                   </div>
-                  <h2 className="text-xl md:text-2xl font-bold text-white tracking-tight drop-shadow-md">Identity Matrix</h2>
+                  <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white tracking-tight drop-shadow-md">Identity Matrix</h2>
                 </div>
-                <Database className="text-zinc-600 w-5 h-5 md:w-6 md:h-6 opacity-60" />
+                <Database className="text-slate-400 dark:text-zinc-600 w-5 h-5 md:w-6 md:h-6 opacity-60" />
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
@@ -263,9 +263,9 @@ const Profile = () => {
             </BentoCard>
 
             {/* HIGH-GLASS ARENA PERFORMANCE DASHBOARD */}
-            <div className="group relative rounded-[2rem] md:rounded-[2.5rem] bg-white/[0.02] backdrop-blur-3xl border border-white/[0.08] border-t-white/[0.2] border-l-white/[0.15] overflow-hidden flex flex-col shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] transition-all duration-500 hover:border-white/[0.25] hover:shadow-[0_20px_40px_-15px_rgba(0,210,255,0.15)]">
+            <div className="group relative rounded-[2rem] md:rounded-[2.5rem] bg-sky-50 dark:bg-white/[0.02] backdrop-blur-3xl border border-blue-200 dark:border-white/[0.08] dark:border-t-white/[0.2] dark:border-l-white/[0.15] overflow-hidden flex flex-col shadow-sm dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] transition-all duration-500 hover:border-blue-300 dark:hover:border-white/[0.25] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,210,255,0.15)]">
               {/* Glossy Terminal Bar */}
-              <div className="h-12 md:h-14 bg-black/60 border-b border-white/[0.1] flex items-center px-5 md:px-7 gap-3 shrink-0 shadow-[0_2px_10px_rgba(0,0,0,0.3)] backdrop-blur-xl relative z-20">
+              <div className="h-12 md:h-14 bg-blue-100/50 dark:bg-black/60 border-b border-blue-200 dark:border-white/[0.1] flex items-center px-5 md:px-7 gap-3 shrink-0 shadow-inner dark:shadow-[0_2px_10px_rgba(0,0,0,0.3)] backdrop-blur-xl relative z-20">
                 <div className="flex gap-2">
                   <div className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-rose-500 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)]" />
                   <div className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-amber-500 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)]" />
@@ -280,46 +280,46 @@ const Profile = () => {
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none opacity-50" />
                 
                 {/* Stat Modules */}
-                <div className="relative z-10 flex flex-col items-center justify-center p-6 bg-black/40 backdrop-blur-md border border-white/[0.1] border-t-white/[0.2] rounded-[1.5rem] hover:bg-black/60 hover:-translate-y-1 transition-all shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]">
-                    <Target className="w-7 h-7 text-emerald-400 mb-3 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
-                    <span className="text-4xl font-extrabold text-white mb-1 font-mono drop-shadow-md">{arenaStats.totalScore}</span>
-                    <span className="text-[10px] text-emerald-200/70 font-bold uppercase tracking-widest text-center mt-1">Total Elo Score</span>
+                <div className="relative z-10 flex flex-col items-center justify-center p-6 bg-blue-100/50 dark:bg-black/40 backdrop-blur-md border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] rounded-[1.5rem] hover:bg-blue-200/50 dark:hover:bg-black/60 hover:-translate-y-1 transition-all shadow-inner dark:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]">
+                    <Target className="w-7 h-7 text-emerald-500 dark:text-emerald-400 mb-3 drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+                    <span className="text-4xl font-extrabold text-slate-900 dark:text-white mb-1 font-mono drop-shadow-md">{arenaStats.totalScore}</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-200/70 font-bold uppercase tracking-widest text-center mt-1">Total Elo Score</span>
                 </div>
 
-                <div className="relative z-10 flex flex-col items-center justify-center p-6 bg-black/40 backdrop-blur-md border border-white/[0.1] border-t-white/[0.2] rounded-[1.5rem] hover:bg-black/60 hover:-translate-y-1 transition-all shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]">
-                    <Activity className="w-7 h-7 text-sky-400 mb-3 drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
-                    <span className="text-4xl font-extrabold text-white mb-1 font-mono drop-shadow-md">{arenaStats.problemsSolved}</span>
-                    <span className="text-[10px] text-sky-200/70 font-bold uppercase tracking-widest text-center mt-1">Problems Solved</span>
+                <div className="relative z-10 flex flex-col items-center justify-center p-6 bg-blue-100/50 dark:bg-black/40 backdrop-blur-md border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] rounded-[1.5rem] hover:bg-blue-200/50 dark:hover:bg-black/60 hover:-translate-y-1 transition-all shadow-inner dark:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]">
+                    <Activity className="w-7 h-7 text-sky-500 dark:text-sky-400 mb-3 drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]" />
+                    <span className="text-4xl font-extrabold text-slate-900 dark:text-white mb-1 font-mono drop-shadow-md">{arenaStats.problemsSolved}</span>
+                    <span className="text-[10px] text-sky-600 dark:text-sky-200/70 font-bold uppercase tracking-widest text-center mt-1">Problems Solved</span>
                 </div>
 
-                <div className="relative z-10 flex flex-col items-center justify-center p-6 bg-black/40 backdrop-blur-md border border-white/[0.1] border-t-white/[0.2] rounded-[1.5rem] hover:bg-black/60 hover:-translate-y-1 transition-all shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]">
-                    <Code2 className="w-7 h-7 text-purple-400 mb-3 drop-shadow-[0_0_8px_rgba(192,132,252,0.6)]" />
+                <div className="relative z-10 flex flex-col items-center justify-center p-6 bg-blue-100/50 dark:bg-black/40 backdrop-blur-md border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] rounded-[1.5rem] hover:bg-blue-200/50 dark:hover:bg-black/60 hover:-translate-y-1 transition-all shadow-inner dark:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]">
+                    <Code2 className="w-7 h-7 text-purple-500 dark:text-purple-400 mb-3 drop-shadow-[0_0_8px_rgba(192,132,252,0.6)]" />
                     <div className="flex gap-2 mb-2 flex-wrap justify-center">
                         {arenaStats.languages.length > 0 ? arenaStats.languages.map(lang => (
-                            <span key={lang} className="text-[10px] md:text-xs font-bold text-purple-100 bg-purple-500/20 border border-purple-500/30 px-2 py-1 rounded-lg uppercase font-mono shadow-sm backdrop-blur-sm">{lang}</span>
-                        )) : <span className="text-zinc-500 font-mono text-sm bg-white/5 px-3 py-1 rounded-md shadow-inner border border-white/5">NULL</span>}
+                            <span key={lang} className="text-[10px] md:text-xs font-bold text-purple-700 dark:text-purple-100 bg-purple-100 dark:bg-purple-500/20 border border-purple-200 dark:border-purple-500/30 px-2 py-1 rounded-lg uppercase font-mono shadow-sm backdrop-blur-sm">{lang}</span>
+                        )) : <span className="text-slate-500 dark:text-zinc-500 font-mono text-sm bg-blue-100/50 dark:bg-white/5 px-3 py-1 rounded-md shadow-inner border border-blue-200 dark:border-white/5">NULL</span>}
                     </div>
-                    <span className="text-[10px] text-purple-200/70 font-bold uppercase tracking-widest text-center mt-1">Languages Used</span>
+                    <span className="text-[10px] text-purple-600 dark:text-purple-200/70 font-bold uppercase tracking-widest text-center mt-1">Languages Used</span>
                 </div>
               </div>
 
               {/* CONTEST HISTORY LOG */}
-              <div className="border-t border-white/[0.1] p-6 md:p-8 bg-black/60 backdrop-blur-xl relative z-10">
+              <div className="border-t border-blue-200 dark:border-white/[0.1] p-6 md:p-8 bg-blue-50/50 dark:bg-black/60 backdrop-blur-xl relative z-10">
                   <div className="flex items-center gap-3 mb-6">
-                    <History size={18} className="text-sky-400 drop-shadow-md" />
-                    <h3 className="text-xs md:text-sm font-bold text-zinc-300 tracking-widest uppercase">Contest History Log</h3>
+                    <History size={18} className="text-sky-500 dark:text-sky-400 drop-shadow-md" />
+                    <h3 className="text-xs md:text-sm font-bold text-slate-700 dark:text-zinc-300 tracking-widest uppercase">Contest History Log</h3>
                   </div>
                   
                   <div className="space-y-4">
                       {attendedContests.length === 0 ? (
-                          <div className="text-center py-8 text-sm text-zinc-500 font-mono bg-black/40 rounded-2xl border border-white/[0.05] shadow-inner">No contests attended yet.</div>
+                          <div className="text-center py-8 text-sm text-slate-500 dark:text-zinc-500 font-mono bg-blue-100/50 dark:bg-black/40 rounded-2xl border border-blue-200 dark:border-white/[0.05] shadow-inner">No contests attended yet.</div>
                       ) : (
                           attendedContests.map(contest => (
-                              <div key={contest.id} className="group/log flex flex-col sm:flex-row sm:items-center justify-between bg-white/[0.02] border border-white/[0.05] border-t-white/[0.1] p-5 rounded-2xl hover:bg-white/[0.06] transition-all gap-4 sm:gap-0 shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.4)]">
+                              <div key={contest.id} className="group/log flex flex-col sm:flex-row sm:items-center justify-between bg-sky-50 dark:bg-white/[0.02] border border-blue-200 dark:border-white/[0.05] dark:border-t-white/[0.1] p-5 rounded-2xl hover:bg-blue-100/50 dark:hover:bg-white/[0.06] transition-all gap-4 sm:gap-0 shadow-sm dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.4)]">
                                   <div>
-                                      <h4 className="text-white font-bold text-sm md:text-base mb-1.5 drop-shadow-sm">{contest.title}</h4>
-                                      <div className="flex items-center gap-2 text-xs text-zinc-400 font-medium">
-                                          <Calendar size={14} className="text-zinc-500" /> {new Date(contest.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                      <h4 className="text-slate-900 dark:text-white font-bold text-sm md:text-base mb-1.5 drop-shadow-sm">{contest.title}</h4>
+                                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-400 font-medium">
+                                          <Calendar size={14} className="text-slate-400 dark:text-zinc-500" /> {new Date(contest.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                       </div>
                                   </div>
                                   <div className="flex items-center justify-center sm:justify-start gap-2 bg-gradient-to-b from-emerald-400/20 to-emerald-600/10 text-emerald-400 px-4 py-2 rounded-xl border border-emerald-500/30 border-t-emerald-400/50 w-full sm:w-auto shadow-[0_2px_8px_rgba(16,185,129,0.2)]">
@@ -369,43 +369,43 @@ const Profile = () => {
                   </defs>
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl md:text-4xl font-extrabold text-white tracking-tighter drop-shadow-md">
+                  <span className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tighter drop-shadow-md">
                     {completionPercentage}%
                   </span>
                 </div>
               </div>
-              <p className="text-[11px] md:text-xs text-sky-200/80 font-bold tracking-wide">Profile Parameters Configured</p>
+              <p className="text-[11px] md:text-xs text-sky-600 dark:text-sky-200/80 font-bold tracking-wide">Profile Parameters Configured</p>
             </BentoCard>
 
             {/* Network Nodes */}
             <BentoCard className="!p-6 md:!p-8">
-              <h2 className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase mb-4 md:mb-5 flex items-center gap-2 drop-shadow-sm">
-                <Network size={14} className="text-sky-400" /> Network Nodes
+              <h2 className="text-[10px] font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase mb-4 md:mb-5 flex items-center gap-2 drop-shadow-sm">
+                <Network size={14} className="text-sky-500 dark:text-sky-400" /> Network Nodes
               </h2>
               
               <div className="flex flex-col gap-3 md:gap-4 relative z-10">
                 {profile?.github_url ? (
-                  <a href={profile.github_url} target="_blank" rel="noreferrer" className="group/link flex items-center justify-between p-4 rounded-2xl bg-black/40 backdrop-blur-md border border-white/[0.1] border-t-white/[0.2] shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-black/60 hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all">
+                  <a href={profile.github_url} target="_blank" rel="noreferrer" className="group/link flex items-center justify-between p-4 rounded-2xl bg-blue-100/50 dark:bg-black/40 backdrop-blur-md border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] shadow-inner dark:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-blue-200/50 dark:hover:bg-black/60 hover:-translate-y-0.5 hover:shadow-md dark:hover:shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all">
                     <div className="flex items-center gap-3">
-                      <Github size={20} className="text-white drop-shadow-md" />
-                      <span className="text-sm font-bold text-white drop-shadow-sm">GitHub</span>
+                      <Github size={20} className="text-slate-900 dark:text-white drop-shadow-md" />
+                      <span className="text-sm font-bold text-slate-900 dark:text-white drop-shadow-sm">GitHub</span>
                     </div>
-                    <ArrowUpRight size={16} className="text-zinc-500 group-hover/link:text-sky-400 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-all" />
+                    <ArrowUpRight size={16} className="text-slate-500 dark:text-zinc-500 group-hover/link:text-sky-500 dark:group-hover/link:text-sky-400 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-all" />
                   </a>
                 ) : (
-                  <div className="flex items-center justify-between p-4 rounded-2xl bg-black/20 border border-white/[0.05] shadow-inner">
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-blue-100/50 dark:bg-black/20 border border-blue-200 dark:border-white/[0.05] shadow-inner">
                      <div className="flex items-center gap-3">
-                      <Github size={20} className="text-zinc-600" />
-                      <span className="text-sm font-bold text-zinc-500">GitHub</span>
+                      <Github size={20} className="text-slate-400 dark:text-zinc-600" />
+                      <span className="text-sm font-bold text-slate-500 dark:text-zinc-500">GitHub</span>
                     </div>
-                    <span className="text-[10px] text-zinc-600 font-mono bg-white/5 px-2 py-1 rounded">NULL</span>
+                    <span className="text-[10px] text-slate-500 dark:text-zinc-600 font-mono bg-blue-100/50 dark:bg-white/5 px-2 py-1 rounded">NULL</span>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-black/40 backdrop-blur-md border border-white/[0.1] border-t-white/[0.2] shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]">
+                <div className="flex items-center justify-between p-4 rounded-2xl bg-blue-100/50 dark:bg-black/40 backdrop-blur-md border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] shadow-inner dark:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)]">
                   <div className="flex items-center gap-3 w-full">
-                    <Mail size={18} className="text-zinc-400 shrink-0" />
-                    <span className="text-sm font-medium text-white truncate drop-shadow-sm">{profile?.email || user?.email}</span>
+                    <Mail size={18} className="text-slate-400 dark:text-zinc-400 shrink-0" />
+                    <span className="text-sm font-medium text-slate-900 dark:text-white truncate drop-shadow-sm">{profile?.email || user?.email}</span>
                   </div>
                 </div>
               </div>
@@ -420,14 +420,14 @@ const Profile = () => {
                 <h2 className="text-[10px] font-bold tracking-widest text-zinc-400 uppercase drop-shadow-sm">Telemetry Config</h2>
               </div>
               
-              <div className="relative z-10 p-5 md:p-6 rounded-2xl bg-black/40 backdrop-blur-md border border-white/[0.1] border-t-white/[0.2] shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-black/60 transition-colors group/node">
-                <div className="flex items-center gap-2 mb-2 text-zinc-400">
-                  <Globe2 size={14} className="group-hover/node:text-sky-400 transition-colors" />
+              <div className="relative z-10 p-5 md:p-6 rounded-2xl bg-blue-100/50 dark:bg-black/40 backdrop-blur-md border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] shadow-inner dark:shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] hover:bg-blue-200/50 dark:hover:bg-black/60 transition-colors group/node">
+                <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-zinc-400">
+                  <Globe2 size={14} className="group-hover/node:text-sky-500 dark:group-hover/node:text-sky-400 transition-colors" />
                   <span className="text-[10px] font-bold uppercase tracking-widest drop-shadow-sm">Current Location</span>
                 </div>
                 
                 {profile?.city || profile?.state || profile?.country ? (
-                  <span className="text-sm md:text-base font-bold text-white tracking-tight leading-snug drop-shadow-md">
+                  <span className="text-sm md:text-base font-bold text-slate-900 dark:text-white tracking-tight leading-snug drop-shadow-md">
                     {[profile?.city, profile?.state, profile?.country]
                       .filter(Boolean)
                       .join(", ")}
@@ -445,7 +445,7 @@ const Profile = () => {
         </div>
       </main>
       
-      <div className="relative z-10 border-t border-white/[0.05] bg-black/40 backdrop-blur-xl">
+      <div className="relative z-10 border-t border-blue-200 dark:border-white/[0.05] bg-blue-50/50 dark:bg-black/40 backdrop-blur-xl">
         <Footer />
       </div>
     </div>

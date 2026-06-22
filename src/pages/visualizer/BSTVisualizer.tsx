@@ -104,7 +104,7 @@ const BSTVisualizer = () => {
   const [inputValue, setInputValue] = useState<number | ''>('');
   
   // HUD State
-  const [showHUD, setShowHUD] = useState(true); 
+  const [showHUD, setShowHUD] = useState(false); 
   const [treeMode, setTreeMode] = useState<TreeMode>('bst');
 
   // Engine State
