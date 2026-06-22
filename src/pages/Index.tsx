@@ -16,7 +16,10 @@ import {
 import { fetchAlgorithms, type Algorithm } from "@/lib/algorithms";
 
 // --- HYPER-GLASS BENTO ALGO CARD ---
-const AlgoDataCard = ({ algo, onClick, index }: { algo: Algorithm, onClick: () => void, index: number }) => {
+// Must be wrapped with forwardRef — AnimatePresence mode="popLayout" needs
+// a DOM ref on exit animations. Without it framer-motion throws a warning.
+const AlgoDataCard = React.forwardRef<HTMLDivElement, { algo: Algorithm, onClick: () => void, index: number }>(
+  ({ algo, onClick, index }, ref) => {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
@@ -28,6 +31,7 @@ const AlgoDataCard = ({ algo, onClick, index }: { algo: Algorithm, onClick: () =
 
   return (
     <motion.div
+      ref={ref}
       layout="position"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
@@ -85,7 +89,8 @@ const AlgoDataCard = ({ algo, onClick, index }: { algo: Algorithm, onClick: () =
       )}
     </motion.div>
   );
-};
+});
+AlgoDataCard.displayName = "AlgoDataCard";
 
 // --- MAIN DASHBOARD VIEW ---
 const Index = () => {

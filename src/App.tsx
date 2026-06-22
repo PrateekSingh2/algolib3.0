@@ -264,7 +264,59 @@ const CookieConsent = () => {
   );
 };
 
+class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Global React Error Caught:", error, errorInfo);
+    // If it's a chunk load error from Vite/React.lazy, auto-reload once to fix the broken module graph
+    if (error.message && (error.message.includes('Failed to fetch dynamically imported module') || error.message.includes('Load failed') || error.message.includes('loading chunk'))) {
+      if (!sessionStorage.getItem('algolib_chunk_reloaded')) {
+        sessionStorage.setItem('algolib_chunk_reloaded', 'true');
+        window.location.reload();
+      }
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-center mb-6">
+            <X size={32} className="text-rose-500" />
+          </div>
+          <h1 className="text-2xl font-bold mb-3 tracking-tight">Render Error Intercepted</h1>
+          <p className="text-zinc-400 text-sm mb-8 max-w-md">
+            The application encountered an unexpected runtime failure. This typically happens when background updates invalidate cached modules.
+          </p>
+          <button 
+            onClick={() => {
+              sessionStorage.removeItem('algolib_chunk_reloaded');
+              window.location.reload();
+            }}
+            className="px-6 py-3 bg-white text-black font-bold rounded-xl hover:bg-zinc-200 transition-colors"
+          >
+            Hard Refresh Matrix
+          </button>
+          <div className="mt-8 p-4 bg-white/5 border border-white/10 rounded-xl text-left max-w-2xl overflow-auto text-xs font-mono text-rose-300">
+            {this.state.error?.toString()}
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const UnauthenticatedLanding = LandingPage;
+
 
 const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, profile, loading } = useAuth();
@@ -392,20 +444,30 @@ const App = () => {
             */}
             <AuthProvider>
               <CookieProvider>
-                <BrowserRouter>
-                  <PWAUpdater />
-                  <CookieConsent />
-                  {/* VectorisWidget: isolated Suspense so it never blocks route rendering */}
-                  <Suspense fallback={null}>
-                    <VectorisWidget />
-                  </Suspense>
-                  <AuthGuard>
-                    <MaintenanceGuard>
-                      <AppRoutes />
-                    </MaintenanceGuard>
-                  </AuthGuard>
-                  <InstallPrompt />
-                </BrowserRouter>
+                <GlobalErrorBoundary>
+                  <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                    <PWAUpdater />
+                    <CookieConsent />
+                    {/* VectorisWidget: isolated Suspense so it never blocks route rendering */}
+                    <Suspense fallback={null}>
+                      <VectorisWidget />
+                    </Suspense>
+                    {/*
+                      TOP-LEVEL Suspense: must wrap AuthGuard AND MaintenanceGuard because
+                      both can render lazy components (LandingPage, Maintenance) directly
+                      outside of AppRoutes. Without this boundary, lazy throws propagate
+                      to the root and pages never mount.
+                    */}
+                    <Suspense fallback={<ModuleLoader />}>
+                      <AuthGuard>
+                        <MaintenanceGuard>
+                          <AppRoutes />
+                        </MaintenanceGuard>
+                      </AuthGuard>
+                    </Suspense>
+                    <InstallPrompt />
+                  </BrowserRouter>
+                </GlobalErrorBoundary>
               </CookieProvider>
             </AuthProvider>
           </TooltipProvider>

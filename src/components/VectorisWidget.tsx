@@ -99,8 +99,6 @@ const VectorisWidget: React.FC = () => {
   // Hide on specific routes
   const hiddenRoutes = ["/vectoris", "/contest", "/quiz", "/view"];
   const isHidden = hiddenRoutes.some(route => location.pathname.startsWith(route));
-  if (isHidden) return null;
-
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<WidgetMessage[]>([]);
   const [input, setInput] = useState("");
@@ -146,7 +144,6 @@ const VectorisWidget: React.FC = () => {
       return () => { clearTimeout(timer1); clearTimeout(timer2); };
     }
   }, []);
-
   useEffect(() => {
     if (isOpen) {
       setShowLabel(false);
@@ -220,6 +217,8 @@ const VectorisWidget: React.FC = () => {
     "When to use DP?",
     "Graph vs Tree difference",
   ];
+
+  if (isHidden) return null;
 
   return (
     <>
