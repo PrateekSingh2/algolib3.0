@@ -100,7 +100,7 @@ const Support = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white font-sans selection:bg-sky-500/30 overflow-hidden relative">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#030303] text-slate-900 dark:text-white font-sans selection:bg-sky-500/30 overflow-hidden relative">
       
       {/* Background Ambient Glows */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
@@ -123,7 +123,7 @@ const Support = () => {
       </Helmet>
 
       {/* NAVBAR */}
-      <div className="fixed top-0 left-0 w-full z-[100] bg-transparent backdrop-blur-md border-b border-white/[0.05]">
+      <div className="fixed top-0 left-0 w-full z-[100] bg-white/80 dark:bg-transparent backdrop-blur-md border-b border-slate-200 dark:border-white/[0.05]">
         <Navbar />
       </div>
 
@@ -131,9 +131,9 @@ const Support = () => {
         <div className="mb-8">
           <Link 
             to="/" 
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] text-zinc-400 hover:text-white hover:bg-white/[0.06] hover:border-white/[0.15] transition-all duration-300 text-sm font-medium group backdrop-blur-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/[0.06] hover:border-slate-300 dark:hover:border-white/[0.15] transition-all duration-300 text-sm font-medium group backdrop-blur-sm"
           >
-            <ArrowLeft size={16} className="text-zinc-500 group-hover:text-white group-hover:-translate-x-1 transition-all duration-300" />
+            <ArrowLeft size={16} className="text-slate-400 dark:text-zinc-500 group-hover:text-slate-900 dark:group-hover:text-white group-hover:-translate-x-1 transition-all duration-300" />
             <span>Back to Dashboard</span>
           </Link>
         </div>
@@ -165,25 +165,25 @@ const Support = () => {
             <div className="h-px w-full bg-gradient-to-r from-white/[0.1] to-transparent my-2" />
 
             <div className="flex flex-col gap-4">
-              <h3 className="text-sm font-semibold text-zinc-300 tracking-wide uppercase">Quick Contact</h3>
+              <h3 className="text-sm font-semibold text-slate-500 dark:text-zinc-300 tracking-wide uppercase">Quick Contact</h3>
               
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors">
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-colors">
                 <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
                   <Mail size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">Direct Email</p>
-                  <p className="text-xs text-zinc-500">teamalgolib@gmail.com</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Direct Email</p>
+                  <p className="text-xs text-slate-500 dark:text-zinc-500">teamalgolib@gmail.com</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors">
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.05] hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-colors">
                 <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400">
                   <Globe size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">Community Forum</p>
-                  <p className="text-xs text-zinc-500">Join the discussion</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">Community Forum</p>
+                  <p className="text-xs text-slate-500 dark:text-zinc-500">Join the discussion</p>
                 </div>
               </div>
             </div>
@@ -196,7 +196,7 @@ const Support = () => {
             transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
             className="lg:col-span-7"
           >
-            <div className="bg-[#0A0A0B] border border-white/[0.08] rounded-3xl p-6 md:p-10 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+            <div className="bg-white dark:bg-[#0A0A0B] border border-slate-200 dark:border-white/[0.08] rounded-3xl p-6 md:p-10 shadow-2xl relative overflow-hidden backdrop-blur-xl">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-sky-500/50 to-transparent opacity-50" />
               
               <motion.form 
@@ -209,16 +209,16 @@ const Support = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Name Input */}
                   <motion.div variants={itemVariants} className="flex flex-col gap-2 relative">
-                    <label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider ml-1">Full Name</label>
+                    <label className="text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider ml-1">Full Name</label>
                     <div className="relative group">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-sky-400 transition-colors" />
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-zinc-500 group-focus-within:text-sky-600 dark:group-focus-within:text-sky-400 transition-colors" />
                       <input 
                         required 
                         type="text" 
                         name="name" 
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full bg-black/50 border border-white/[0.1] rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-zinc-600 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition-all shadow-inner" 
+                        className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/[0.1] rounded-xl pl-12 pr-4 py-3.5 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition-all shadow-inner" 
                         placeholder="Your Name" 
                       />
                     </div>
@@ -227,15 +227,15 @@ const Support = () => {
                   {/* Email Input - Now Contextually Locked */}
                   <motion.div variants={itemVariants} className="flex flex-col gap-2 relative">
                     <div className="flex justify-between items-center ml-1">
-                      <label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">Email Address</label>
+                      <label className="text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">Email Address</label>
                       {isAuthenticated && (
-                        <span className="flex items-center gap-1 text-[10px] text-sky-400 font-medium uppercase tracking-wider">
+                        <span className="flex items-center gap-1 text-[10px] text-sky-600 dark:text-sky-400 font-medium uppercase tracking-wider">
                           <Lock size={10} /> Verified
                         </span>
                       )}
                     </div>
                     <div className="relative group">
-                      <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${isAuthenticated ? 'text-sky-500/50' : 'text-zinc-500 group-focus-within:text-sky-400'}`} />
+                      <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${isAuthenticated ? 'text-sky-500/50' : 'text-slate-400 dark:text-zinc-500 group-focus-within:text-sky-600 dark:group-focus-within:text-sky-400'}`} />
                       <input 
                         required 
                         type="email" 
@@ -243,10 +243,10 @@ const Support = () => {
                         value={formData.email}
                         onChange={handleChange}
                         readOnly={isAuthenticated}
-                        className={`w-full border rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-zinc-600 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition-all shadow-inner ${
+                        className={`w-full border rounded-xl pl-12 pr-4 py-3.5 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition-all shadow-inner ${
                           isAuthenticated 
-                            ? 'bg-white/[0.02] border-white/[0.05] text-zinc-400 cursor-not-allowed select-none' 
-                            : 'bg-black/50 border-white/[0.1]'
+                            ? 'bg-slate-100 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.05] text-slate-400 dark:text-zinc-400 cursor-not-allowed select-none' 
+                            : 'bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/[0.1]'
                         }`} 
                         placeholder="your.email@example.com" 
                       />
@@ -256,14 +256,14 @@ const Support = () => {
                 
                 {/* Select Input */}
                 <motion.div variants={itemVariants} className="flex flex-col gap-2">
-                  <label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider ml-1">How can we help?</label>
+                  <label className="text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider ml-1">How can we help?</label>
                   <div className="relative group">
-                    <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 group-focus-within:text-sky-400 transition-colors z-10" />
+                    <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-zinc-500 group-focus-within:text-sky-600 dark:group-focus-within:text-sky-400 transition-colors z-10" />
                     <select 
                       name="type" 
                       value={formData.type}
                       onChange={handleChange}
-                      className="w-full bg-black/50 border border-white/[0.1] rounded-xl pl-12 pr-10 py-3.5 text-white focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition-all appearance-none cursor-pointer shadow-inner"
+                      className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/[0.1] rounded-xl pl-12 pr-10 py-3.5 text-slate-900 dark:text-white focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition-all appearance-none cursor-pointer shadow-inner"
                     >
                       <option value="Bug Report">Report a Bug / Anomaly</option>
                       <option value="Feedback">Suggest Feedback</option>
@@ -275,25 +275,25 @@ const Support = () => {
                       <option value="Quiz Access">Request Quiz Dashboard Access</option>
                       <option value="Other">Other Inquiry</option>
                     </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 pointer-events-none" />
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-zinc-500 pointer-events-none" />
                   </div>
                 </motion.div>
 
                 {/* Textarea */}
                 <motion.div variants={itemVariants} className="flex flex-col gap-2">
                   <div className="flex items-center justify-between ml-1">
-                    <label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">Message</label>
-                    <span className="text-xs text-zinc-600 font-mono">{formData.message.length} chars</span>
+                    <label className="text-xs text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider">Message</label>
+                    <span className="text-xs text-slate-400 dark:text-zinc-600 font-mono">{formData.message.length} chars</span>
                   </div>
                   <div className="relative group">
-                    <MessageSquare className="absolute left-4 top-4 w-5 h-5 text-zinc-500 group-focus-within:text-sky-400 transition-colors" />
+                    <MessageSquare className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-zinc-500 group-focus-within:text-sky-600 dark:group-focus-within:text-sky-400 transition-colors" />
                     <textarea 
                       required 
                       name="message" 
                       value={formData.message}
                       onChange={handleChange}
                       rows={5} 
-                      className="w-full bg-black/50 border border-white/[0.1] rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-zinc-600 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition-all resize-none shadow-inner" 
+                      className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/[0.1] rounded-xl pl-12 pr-4 py-3.5 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition-all resize-none shadow-inner" 
                       placeholder="Please provide as much detail as possible..."
                     ></textarea>
                   </div>
@@ -304,7 +304,7 @@ const Support = () => {
                   <button 
                     type="submit" 
                     disabled={isSubmitting}
-                    className="group relative w-full bg-white text-black font-semibold py-4 rounded-xl hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden"
+                    className="group relative w-full bg-slate-900 dark:bg-white text-white dark:text-black font-semibold py-4 rounded-xl hover:bg-slate-800 dark:hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden"
                   >
                     {/* Button hover gradient effect */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />

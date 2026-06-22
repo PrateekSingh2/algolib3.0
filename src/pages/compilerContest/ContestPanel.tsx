@@ -5,6 +5,7 @@ import Editor from '@monaco-editor/react';
 import { Play, Send, Lock, Clock, CheckCircle2, Terminal as TerminalIcon, ArrowLeft, Loader2, X, AlertTriangle, Settings, RotateCcw, Wand2, Cpu, Database, Award, Activity, Code2, AlertCircle, Sparkles, ListOrdered } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { toast } from 'sonner';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // --- PURE CODEFORCES TEMPLATES ---
 const userTemplates: Record<string, string> = {
@@ -324,6 +325,7 @@ const SubmissionDashboard = ({ result, onReset, onShowLogs, onNextProblem, hasNe
 
 export default function ContestPanel({ user, onLoginRequest }: { user: any, onLoginRequest: any }) {
   const { contestId } = useParams();
+  const { theme } = useTheme();
   
   const editorRef = useRef<any>(null); 
   const monacoRef = useRef<any>(null);
@@ -908,7 +910,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     }
   };
 
-  if (loading) return <div className="h-screen bg-[#121212] flex items-center justify-center"><Loader2 className="animate-spin text-sky-500" size={32} /></div>;
+  if (loading) return <div className="h-screen bg-sky-50 dark:bg-[#121212] flex items-center justify-center"><Loader2 className="animate-spin text-sky-500" size={32} /></div>;
 
   const activeProblem = problems[activeProblemIndex];
   const activeDifficultyStr = (activeProblem?.difficulty || 'easy').toLowerCase();
@@ -1317,9 +1319,9 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                     </div>
 
                     <div className="flex-1 bg-white dark:bg-[#121212] relative">
-                       <Editor
-                         height="100%"
-                         theme={document.documentElement.classList.contains('dark') ? 'vs-dark' : 'light'}
+                         <Editor
+                          height="100%"
+                          theme={theme === 'dark' ? 'vs-dark' : 'light'}
                          language={language === 'c++' ? 'cpp' : language}
                          value={code}
                          onChange={(v) => setCode(v || '')}
@@ -1411,8 +1413,10 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
       `}} />
     </div>

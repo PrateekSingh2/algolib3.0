@@ -39,6 +39,8 @@ import { useAuth, executeGoogleSignIn, executeGithubSignIn } from "@/contexts/Au
 import { useCookieConsent } from "./contexts/CookieContext";
 import Navbar from "./components/Navbar";
 import Vectoris from "./pages/vectoris/Vectoris";
+import VectorisWidget from "./components/VectorisWidget";
+
 import Quiz from "./pages/quiz/Quiz";
 import QuizPanel from "./pages/quiz/QuizPanel";
 import QuizForge from "./pages/quiz/QuizForge";
@@ -181,15 +183,15 @@ const CookieConsent = () => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed bottom-14 left-6 md:left-10 z-[999] w-[380px] max-w-[calc(100vw-48px)] bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/[0.1] rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] overflow-hidden"
+          className="fixed bottom-14 left-6 md:left-10 z-[999] w-[380px] max-w-[calc(100vw-48px)] bg-white/95 dark:bg-[#0A0A0A]/95 backdrop-blur-xl border border-slate-200 dark:border-white/[0.1] rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] overflow-hidden"
         >
           {showCustomize ? (
             <div className="p-6 flex flex-col gap-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-white font-medium flex items-center gap-2">
-                  <Settings2 size={16} className="text-zinc-400" /> Customize Preferences
+                <h3 className="text-slate-900 dark:text-white font-medium flex items-center gap-2">
+                  <Settings2 size={16} className="text-slate-500 dark:text-zinc-400" /> Customize Preferences
                 </h3>
-                <button onClick={() => setShowCustomize(false)} className="text-zinc-500 hover:text-white transition-colors p-1">
+                <button onClick={() => setShowCustomize(false)} className="text-slate-400 dark:text-zinc-500 hover:text-slate-900 dark:hover:text-white transition-colors p-1">
                   <X size={16} />
                 </button>
               </div>
@@ -197,8 +199,8 @@ const CookieConsent = () => {
               <div className="flex flex-col gap-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-white">Strictly Necessary</span>
-                    <span className="text-xs text-zinc-500 mt-1">Required for the website to function.</span>
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">Strictly Necessary</span>
+                    <span className="text-xs text-slate-500 dark:text-zinc-500 mt-1">Required for the website to function.</span>
                   </div>
                   <div className="w-8 h-4 rounded-full bg-sky-500/50 flex items-center p-0.5 opacity-50 cursor-not-allowed">
                     <div className="w-3 h-3 rounded-full bg-white transform translate-x-4 shadow-sm" />
@@ -207,51 +209,51 @@ const CookieConsent = () => {
 
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-white">Analytics</span>
-                    <span className="text-xs text-zinc-500 mt-1">Helps us understand how visitors interact with the matrix.</span>
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">Analytics</span>
+                    <span className="text-xs text-slate-500 dark:text-zinc-500 mt-1">Helps us understand how visitors interact with the matrix.</span>
                   </div>
-                  <button onClick={() => togglePreference('analytics')} className={`w-8 h-4 rounded-full transition-colors duration-300 flex items-center p-0.5 ${preferences.analytics ? 'bg-sky-500' : 'bg-zinc-700'}`}>
+                  <button onClick={() => togglePreference('analytics')} className={`w-8 h-4 rounded-full transition-colors duration-300 flex items-center p-0.5 ${preferences.analytics ? 'bg-sky-500' : 'bg-slate-300 dark:bg-zinc-700'}`}>
                     <div className={`w-3 h-3 rounded-full bg-white shadow-sm transform transition-transform duration-300 ${preferences.analytics ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
 
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-white">Personalization</span>
-                    <span className="text-xs text-zinc-500 mt-1">Used to tailor your visualizer experience.</span>
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">Personalization</span>
+                    <span className="text-xs text-slate-500 dark:text-zinc-500 mt-1">Used to tailor your visualizer experience.</span>
                   </div>
-                  <button onClick={() => togglePreference('personalization')} className={`w-8 h-4 rounded-full transition-colors duration-300 flex items-center p-0.5 ${preferences.personalization ? 'bg-sky-500' : 'bg-zinc-700'}`}>
+                  <button onClick={() => togglePreference('personalization')} className={`w-8 h-4 rounded-full transition-colors duration-300 flex items-center p-0.5 ${preferences.personalization ? 'bg-sky-500' : 'bg-slate-300 dark:bg-zinc-700'}`}>
                     <div className={`w-3 h-3 rounded-full bg-white shadow-sm transform transition-transform duration-300 ${preferences.personalization ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </div>
               </div>
 
-              <button onClick={handleSavePreferences} className="w-full py-2.5 mt-2 bg-white text-black text-sm font-medium rounded-xl hover:bg-zinc-200 transition-colors">
+              <button onClick={handleSavePreferences} className="w-full py-2.5 mt-2 bg-slate-900 dark:bg-white text-white dark:text-black text-sm font-medium rounded-xl hover:bg-slate-800 dark:hover:bg-zinc-200 transition-colors">
                 Save Preferences
               </button>
             </div>
           ) : (
             <div className="p-6 flex flex-col gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-white/[0.05] border border-white/[0.1] flex items-center justify-center">
-                  <Cookie className="w-4 h-4 text-zinc-300" />
+                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.1] flex items-center justify-center">
+                  <Cookie className="w-4 h-4 text-slate-600 dark:text-zinc-300" />
                 </div>
-                <h3 className="text-white font-medium">Telemetry & Cookies</h3>
+                <h3 className="text-slate-900 dark:text-white font-medium">Telemetry & Cookies</h3>
               </div>
-              <p className="text-sm text-zinc-400 leading-relaxed">
+              <p className="text-sm text-slate-600 dark:text-zinc-400 leading-relaxed">
                 We use strictly necessary cookies to keep the AlgoLib engine running, and optional analytics to monitor system telemetry.
-                <Link to="/cookies" className="text-white ml-1 hover:underline underline-offset-2">Read policy.</Link>
+                <Link to="/cookies" className="text-slate-900 dark:text-white ml-1 hover:underline underline-offset-2">Read policy.</Link>
               </p>
 
               <div className="flex flex-col gap-2 mt-2">
-                <button onClick={handleAcceptAll} className="w-full py-2.5 bg-white text-black text-sm font-medium rounded-xl hover:bg-zinc-200 transition-colors">
+                <button onClick={handleAcceptAll} className="w-full py-2.5 bg-slate-900 dark:bg-white text-white dark:text-black text-sm font-medium rounded-xl hover:bg-slate-800 dark:hover:bg-zinc-200 transition-colors">
                   Accept All
                 </button>
                 <div className="flex gap-2">
-                  <button onClick={handleDecline} className="flex-1 py-2.5 bg-transparent border border-white/[0.1] text-white text-sm font-medium rounded-xl hover:bg-white/[0.05] transition-colors">
+                  <button onClick={handleDecline} className="flex-1 py-2.5 bg-transparent border border-slate-200 dark:border-white/[0.1] text-slate-900 dark:text-white text-sm font-medium rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors">
                     Decline Optional
                   </button>
-                  <button onClick={() => setShowCustomize(true)} className="px-4 py-2.5 bg-transparent border border-white/[0.1] text-zinc-400 hover:text-white text-sm font-medium rounded-xl hover:bg-white/[0.05] transition-colors flex items-center justify-center">
+                  <button onClick={() => setShowCustomize(true)} className="px-4 py-2.5 bg-transparent border border-slate-200 dark:border-white/[0.1] text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white text-sm font-medium rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors flex items-center justify-center">
                     <Settings2 size={16} />
                   </button>
                 </div>
@@ -395,6 +397,7 @@ const App = () => {
                 <BrowserRouter>
                   <PWAUpdater />
                   <CookieConsent />
+                  <VectorisWidget />
                   <AuthGuard>
                     <MaintenanceGuard>
                       <AppRoutes />

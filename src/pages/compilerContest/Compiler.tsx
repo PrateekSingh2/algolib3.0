@@ -12,6 +12,7 @@ import { Icon } from '@iconify/react';
 import { Panel, PanelGroup, PanelResizeHandle, ImperativePanelHandle } from 'react-resizable-panels';
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchAlgorithms, type Algorithm } from '@/lib/algorithms';
@@ -142,7 +143,8 @@ export default function Compiler() {
   const [executionStatus, setExecutionStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
   const [executionMetrics, setExecutionMetrics] = useState<{ time?: string | number; memory?: string | number } | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
+  const { theme } = useTheme();
+  const darkMode = theme === 'dark';
   const [input, setInput] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [navVisible, setNavVisible] = useState(true);

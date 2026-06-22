@@ -72,25 +72,28 @@ const sanitizeLatex = (text: string) => {
     return `$ ${p1.trim()} $`;
   });
 
-  // 4. Auto-wrap raw equations that LLM forgot to wrap
+  let inCodeBlock = false;
   const lines = clean.split('\n');
   const processedLines = lines.map(line => {
-    if (line.includes('$') || line.includes('\\[') || line.includes('\\(')) return line;
-    
-    const trimmed = line.trim();
-    // If the line is purely an equation
-    if (
-      trimmed.startsWith('\\int') || 
-      trimmed.startsWith('-\\int') || 
-      trimmed.startsWith('\\frac') || 
-      trimmed.startsWith('-\\frac') || 
-      trimmed.startsWith('\\cot') || 
-      trimmed.startsWith('-\\cot') ||
-      trimmed.startsWith('\\tan')
-    ) {
+    if (line.trim().startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      return line;
+    }
+
+    let processedLine = line;
+    if (!inCodeBlock) {
+      // Prevent markdown from treating indented text as code blocks, but keep small indents
+      processedLine = processedLine.replace(/^[ \t]+/, (match) => {
+        return match.includes('\t') || match.length >= 4 ? '  ' : match;
+      });
+    }
+
+    if (processedLine.includes('$') || processedLine.includes('\\[') || processedLine.includes('\\(')) return processedLine;
+    const trimmed = processedLine.trim();
+    if (trimmed.startsWith('\\int') || trimmed.startsWith('-\\int') || trimmed.startsWith('\\frac') || trimmed.startsWith('-\\frac') || trimmed.startsWith('\\cot') || trimmed.startsWith('-\\cot') || trimmed.startsWith('\\tan')) {
       return `$$${trimmed}$$`;
     }
-    return line;
+    return processedLine;
   });
 
   return processedLines.join('\n');
