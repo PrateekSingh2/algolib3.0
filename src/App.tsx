@@ -20,7 +20,6 @@ import {
   Cookie, X, Settings2, BookOpen, MessageSquare, Activity, HelpCircle,
   ChevronDown, ListFilter, Trophy, Github
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 import { incrementVisitCount } from "@/lib/algorithms";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -85,8 +84,7 @@ const SYSTEM_MODULES = [
 
 const MaintenanceGuard = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const [maintainedRoutes, setMaintainedRoutes] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [maintainedRoutes, setMaintainedRoutes] = useState<string[] | null>(null);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(firestoreDB, "system_settings", "maintenance"), (docSnap) => {
@@ -95,25 +93,24 @@ const MaintenanceGuard = ({ children }: { children: React.ReactNode }) => {
       } else {
         setMaintainedRoutes([]);
       }
-      setLoading(false);
     });
     return () => unsub();
   }, []);
-
-  if (loading) return <ModuleLoader />;
 
   // Absolute safety override: Never lock out the admin panel.
   if (location.pathname.startsWith('/hq')) {
     return <>{children}</>;
   }
 
-  const isLocked = maintainedRoutes.some(route => {
+  // Do not block the initial render while fetching from Firestore.
+  // This drastically improves FCP/LCP metrics for Lighthouse.
+  const isLocked = maintainedRoutes?.some(route => {
     if (route === '/') return location.pathname === '/'; // Exact match for home
     return location.pathname.startsWith(route); // Sub-path match for other tools
   });
 
   if (isLocked) {
-    const availableModules = SYSTEM_MODULES.filter(m => !maintainedRoutes.includes(m.id));
+    const availableModules = SYSTEM_MODULES.filter(m => !maintainedRoutes!.includes(m.id));
     return <Maintenance availableModules={availableModules} />;
   }
 
@@ -171,17 +168,13 @@ const CookieConsent = () => {
   };
 
   return (
-    <AnimatePresence>
+    <>
       {isCookieConsentOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        <div
           role="dialog"
           aria-label="Cookie consent preferences"
           aria-modal="true"
-          className="fixed bottom-14 left-6 md:left-10 z-[999] w-[380px] max-w-[calc(100vw-48px)] bg-white/95 dark:bg-[#0A0A0A]/95 backdrop-blur-xl border border-slate-200 dark:border-white/[0.1] rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] overflow-hidden"
+          className="fixed bottom-14 left-6 md:left-10 z-[999] w-[380px] max-w-[calc(100vw-48px)] bg-white/95 dark:bg-[#0A0A0A]/95 backdrop-blur-xl border border-slate-200 dark:border-white/[0.1] rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-300"
         >
           {showCustomize ? (
             <div className="p-6 flex flex-col gap-5">
@@ -258,9 +251,9 @@ const CookieConsent = () => {
               </div>
             </div>
           )}
-        </motion.div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 

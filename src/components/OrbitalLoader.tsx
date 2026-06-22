@@ -2,7 +2,6 @@
 
 import React from "react"
 import { cva } from "class-variance-authority"
-import { motion } from "framer-motion"
 
 import { cn } from "@/lib/utils"
 
@@ -42,37 +41,13 @@ export function OrbitalLoader({
   ...props
 }: React.ComponentProps<"div"> & OrbitalLoaderProps) {
   
-  // The core loader element
+  // The core loader element with pure CSS animations
   const loaderContent = (
     <div className={cn(orbitalLoaderVariants({ messagePlacement }))}>
       <div className={cn("relative w-16 h-16", className)} {...props}>
-        <motion.div
-          className="absolute inset-0 border-2 border-transparent border-t-foreground rounded-full"
-          animate={{ rotate: 360 }}
-          transition={{
-            duration: 1,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "linear",
-          }}
-        />
-        <motion.div
-          className="absolute inset-2 border-2 border-transparent border-t-foreground rounded-full"
-          animate={{ rotate: -360 }}
-          transition={{
-            duration: 1.5,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "linear",
-          }}
-        />
-        <motion.div
-          className="absolute inset-4 border-2 border-transparent border-t-foreground rounded-full"
-          animate={{ rotate: 360 }}
-          transition={{
-            duration: 0.8,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "linear",
-          }}
-        />
+        <div className="absolute inset-0 border-2 border-transparent border-t-foreground rounded-full animate-[spin_1s_linear_infinite]" />
+        <div className="absolute inset-2 border-2 border-transparent border-t-foreground rounded-full animate-[spin_1.5s_linear_infinite_reverse]" />
+        <div className="absolute inset-4 border-2 border-transparent border-t-foreground rounded-full animate-[spin_0.8s_linear_infinite]" />
       </div>
       {message && <div className="text-sm font-medium text-foreground/80">{message}</div>}
     </div>
