@@ -7,13 +7,7 @@ import { BrowserRouter, Routes, Route, useLocation, Link, Navigate, useNavigate 
 import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CookieProvider } from "./contexts/CookieContext";
-// ─── PWA Updater ─────────────────────────────────────────────────────────────
-// PWAUpdater is in its own file so that `virtual:pwa-register/react` is a
-// static import ONLY inside that module.  We then lazy-load the whole module
-// only in production.  In dev mode the dynamic import() is never called, so
-// the virtual module stub is never parsed and never corrupts React's internal
-// dispatcher — which was the root cause of:
-//   TypeError: Cannot read properties of null (reading 'useContext')
+
 const PWAUpdater = import.meta.env.DEV
   ? () => null                                              // dev: no-op, no import
   : lazy(() => import("@/components/PWAUpdater"));          // prod: real SW updater
