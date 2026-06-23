@@ -12,7 +12,7 @@ import {
   Bell, CheckCircle2, UserCircle2, UserPen, ChevronDown, Zap, Activity,
   Sparkles, Sun, Moon, Code2, BarChart3, BrainCircuit, Network,
   TerminalSquare, BookText, Trophy, GraduationCap, Layers, Github, Globe, Newspaper,
-  ClipboardList, Settings
+  ClipboardList, Settings, BadgeCheck
 } from "lucide-react";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
@@ -197,13 +197,16 @@ const Navbar = () => {
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-[#0c0c0e] rounded-full" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm text-slate-800 dark:text-zinc-100 font-bold truncate tracking-tight font-nunito">{avatarName}</p>
+              <p className="text-sm text-slate-800 dark:text-zinc-100 font-bold tracking-tight font-nunito flex items-center gap-1.5 truncate">
+                <span className="truncate">{avatarName}</span>
+                {profile?.is_verified && <BadgeCheck size={14} className="text-sky-500 fill-sky-100 dark:fill-sky-500/20 shrink-0" />}
+              </p>
               <p className="text-xs text-slate-500 dark:text-zinc-500 truncate mt-0.5">{user.email}</p>
             </div>
           </div>
 
           <div className="flex flex-col gap-0.5">
-            <Link to="/profile"      className="menu-item"><UserCircle2 size={15} className="menu-icon" /> View Profile</Link>
+            <Link to={profile?.username ? `/user/${profile.username}` : "/profile"} className="menu-item"><UserCircle2 size={15} className="menu-icon" /> View Profile</Link>
             <Link to="/edit-profile" className="menu-item"><UserPen     size={15} className="menu-icon" /> Edit Profile</Link>
             <Link to="/settings" className="menu-item"><Settings size={15} className="menu-icon" /> Settings</Link>
             <div className="h-[2px] bg-slate-100 dark:bg-white/[0.05] my-1 mx-2 rounded-full" />
@@ -430,7 +433,7 @@ const Navbar = () => {
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="relative flex items-center justify-between p-2.5 rounded-[20px] bg-white/90 dark:bg-[#050505]/50 backdrop-blur-2xl border border-slate-200 dark:border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)] z-50"
+          className="relative flex items-center justify-between p-2.5 rounded-[20px] bg-white/80 dark:bg-[#0c0c0e]/80 backdrop-blur-2xl border border-slate-200 dark:border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)] z-50"
         >
           <Link to="/" className="flex items-center gap-2 px-2 group">
             <Zap className="w-4 h-4 text-slate-800 dark:text-zinc-100 group-hover:text-indigo-500 dark:group-hover:text-blue-400 transition-colors" fill="currentColor" />
@@ -456,6 +459,15 @@ const Navbar = () => {
               </div>
             )}
             
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+              title="Toggle Theme"
+              className="p-2 ml-1 rounded-xl transition-colors text-slate-500 dark:text-zinc-300 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.08]"
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
             {user && (
               <div className="relative" ref={mProfileRef}>
                 <button onClick={() => { setIsProfileOpen(p => !p); setIsNotifOpen(false); }}
@@ -467,15 +479,6 @@ const Navbar = () => {
                 <ProfileDropdown mobile />
               </div>
             )}
-            
-            <button
-              onClick={toggleTheme}
-              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-              title="Toggle Theme"
-              className="p-2 ml-1 rounded-xl transition-colors text-slate-500 dark:text-zinc-300 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.08]"
-            >
-              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
 
             <button onClick={() => setIsMobileOpen(p => !p)}
               aria-label={isMobileOpen ? "Close navigation menu" : "Open navigation menu"}
@@ -524,12 +527,12 @@ const Navbar = () => {
                         setIsMobileOpen(false);
                         handleExternalNavigation(e, tab.path);
                       }}
-                      className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden"
+                      className="relative px-4 py-3 shrink-0 rounded-[16px] flex items-center gap-4 group overflow-hidden"
                     >
                       {contentJSX}
                     </a>
                   ) : (
-                    <Link key={tab.name} to={tab.path} onClick={() => setIsMobileOpen(false)} className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden">
+                    <Link key={tab.name} to={tab.path} onClick={() => setIsMobileOpen(false)} className="relative px-4 py-3 shrink-0 rounded-[16px] flex items-center gap-4 group overflow-hidden">
                       {contentJSX}
                     </Link>
                   );
@@ -564,7 +567,7 @@ const Navbar = () => {
                   target="_blank" 
                   rel="noopener noreferrer" 
                   onClick={() => setIsMobileOpen(false)}
-                  className="relative px-4 py-3.5 rounded-[16px] flex items-center gap-4 group overflow-hidden"
+                  className="relative px-4 py-3 shrink-0 rounded-[16px] flex items-center gap-4 group overflow-hidden"
                 >
                   <div className="relative z-10 p-1.5 rounded-lg border border-transparent text-slate-400 dark:text-zinc-500 group-hover:text-indigo-500 dark:group-hover:text-zinc-300 group-hover:bg-slate-50 dark:group-hover:bg-white/[0.04] transition-all">
                     <Code2 size={18} />

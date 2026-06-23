@@ -26,12 +26,15 @@ const clearSession = () => {
 export interface AppUserProfile {
   id: string;
   firebase_uid?: string | null;
+  username?: string | null;
   email?: string | null;
   full_name?: string | null;
   display_name?: string | null;
   avatar_url?: string | null;
+  banner_url?: string | null;
   has_seen_welcome?: boolean;
   is_profile_complete?: boolean; // <-- NEW COLUMN ADDED HERE
+  is_verified?: boolean;
   college?: string | null;
   age?: number | null;
   gender?: string | null;
@@ -39,7 +42,12 @@ export interface AppUserProfile {
   state?: string | null;
   country?: string | null;
   github_url?: string | null;
+  linkedin_url?: string | null;
   bio?: string | null;
+  email_public?: boolean;
+  age_public?: boolean;
+  location_public?: boolean;
+  gender_public?: boolean;
   vectoris_save_history?: boolean;
   vectoris_daily_count?: number;
   vectoris_monthly_count?: number;

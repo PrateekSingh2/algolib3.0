@@ -8,11 +8,22 @@ if (!supabaseServiceKey) {
     console.error("FATAL ERROR: SUPABASE_SERVICE_ROLE_KEY is missing.");
 }
 
+const { verifyToken } = require('./utils/auth');
+const { rateLimit } = require('./utils/rate-limit');
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method Not Allowed' };
     try {
+        rateLimit(event, 60, 60000);
+        
+        let userUid = null;
+        try {
+           const decodedToken = await verifyToken(event);
+           userUid = decodedToken.uid;
+        } catch (e) {
+           // Proceed as unauthenticated guest/student
+        }
         const quizId = event.queryStringParameters.id;
         if (!quizId) return { statusCode: 400, body: JSON.stringify({ error: 'Missing quiz ID' }) };
         
@@ -26,7 +37,18 @@ exports.handler = async (event) => {
         const { data: questions, error: qErr } = await supabase.from('quiz_questions').select('*').eq('quiz_id', quizId);
         if (qErr) throw qErr;
 
-        return { statusCode: 200, body: JSON.stringify({ quiz: quizData, questions: questions || [] }) };
+        let safeQuestions = questions || [];
+        const isCreator = userUid && quizData.creator_uid === userUid;
+        
+        // SECURITY: Hide correct answers from the frontend unless the user is the creator!
+        if (!isCreator) {
+            safeQuestions = safeQuestions.map(q => {
+               const { correct_options, ...safeQ } = q;
+               return safeQ;
+            });
+        }
+
+        return { statusCode: 200, body: JSON.stringify({ quiz: quizData, questions: safeQuestions }) };
     } catch (err) {
         console.error("Get Quiz Details Error:", err);
         return { statusCode: 500, body: JSON.stringify({ error: err.message }) };

@@ -5,15 +5,17 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method Not Allowed' };
 
   try {
-    await verifyToken(event);
+    const decodedToken = await verifyToken(event);
+    const userUid = decodedToken.uid;
 
     const contestId = event.queryStringParameters?.contest_id;
     if (!contestId) return { statusCode: 400, body: JSON.stringify({ error: 'Missing contest_id' }) };
 
     const { data: subs, error: subsErr } = await supabaseAdmin
       .from('submissions')
-      .select('*')
+      .select('id, user_uid, problem_id, contest_id, language, passed, score_awarded, time_taken_seconds, created_at')
       .eq('contest_id', contestId)
+      .eq('user_uid', userUid)
       .order('created_at', { ascending: false });
 
     if (subsErr) throw subsErr;

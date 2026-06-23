@@ -5,8 +5,12 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+const { rateLimit } = require('./utils/rate-limit');
+
 exports.handler = async (event) => {
     try {
+        rateLimit(event, 60, 60000);
+        
         const authHeader = event.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
         const token = authHeader.split('Bearer ')[1];
@@ -15,9 +19,16 @@ exports.handler = async (event) => {
 
         if (event.httpMethod === 'DELETE') {
             const quizId = event.queryStringParameters.id;
+            
+            // SECURITY: Ensure the user actually created this quiz before deleting
+            const { data: checkData, error: checkErr } = await supabase.from('quizzes').select('creator_uid').eq('id', quizId).single();
+            if (checkErr || !checkData || checkData.creator_uid !== userUid) {
+                return { statusCode: 403, body: JSON.stringify({ error: 'Forbidden: You do not own this quiz.' }) };
+            }
+            
             await supabase.from('quiz_submissions').delete().eq('quiz_id', quizId);
             await supabase.from('quiz_questions').delete().eq('quiz_id', quizId);
-            const { error } = await supabase.from('quizzes').delete().eq('id', quizId);
+            const { error } = await supabase.from('quizzes').delete().eq('id', quizId).eq('creator_uid', userUid);
             if (error) throw error;
             return { statusCode: 200, body: JSON.stringify({ success: true }) };
         }
@@ -30,10 +41,16 @@ exports.handler = async (event) => {
             let joinCode = "";
 
             if (currentQuizId) {
+                // SECURITY: Ensure the user actually created this quiz before updating
+                const { data: checkData, error: checkErr } = await supabase.from('quizzes').select('creator_uid').eq('id', currentQuizId).single();
+                if (checkErr || !checkData || checkData.creator_uid !== userUid) {
+                    return { statusCode: 403, body: JSON.stringify({ error: 'Forbidden: You do not own this quiz.' }) };
+                }
+
                 const { error: updateErr } = await supabase.from('quizzes').update({ 
                     title, start_time: startTime, end_time: endTime, duration_seconds: durationSeconds, max_warnings: maxWarnings,
                     description: description || '', theme: theme || 'sky', featured: featured || false
-                }).eq('id', currentQuizId);
+                }).eq('id', currentQuizId).eq('creator_uid', userUid);
                 if (updateErr) throw updateErr;
 
                 const { data } = await supabase.from('quizzes').select('join_code').eq('id', currentQuizId).single();
@@ -50,6 +67,12 @@ exports.handler = async (event) => {
                 
                 if (insertErr) throw insertErr;
                 currentQuizId = data[0].id;
+            }
+
+            // SECURITY: Ensure quiz belongs to user before modifying questions
+            const { data: qCheck } = await supabase.from('quizzes').select('creator_uid').eq('id', currentQuizId).single();
+            if (!qCheck || qCheck.creator_uid !== userUid) {
+                return { statusCode: 403, body: JSON.stringify({ error: 'Forbidden: You do not own this quiz.' }) };
             }
 
             await supabase.from('quiz_questions').delete().eq('quiz_id', currentQuizId);

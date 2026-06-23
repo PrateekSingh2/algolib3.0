@@ -1,4 +1,6 @@
 const { supabaseAdmin } = require('./utils/supabase');
+const { verifyToken } = require('./utils/auth');
+const { rateLimit } = require('./utils/rate-limit');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') {
@@ -6,7 +8,15 @@ exports.handler = async (event) => {
   }
 
   try {
-    const targetUid = event.queryStringParameters.uid;
+    rateLimit(event, 60, 60000);
+    let targetUid = event.queryStringParameters.uid;
+
+    if (!targetUid) {
+      // Only require auth if no uid is explicitly requested
+      const decodedToken = await verifyToken(event);
+      targetUid = decodedToken.uid;
+    }
+
     if (!targetUid) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing uid parameter' }) };
     }

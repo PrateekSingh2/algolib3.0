@@ -1,5 +1,6 @@
 const { supabaseAdmin } = require('./utils/supabase');
 const { verifyToken } = require('./utils/auth');
+const { rateLimit } = require('./utils/rate-limit');
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -21,6 +22,7 @@ exports.handler = async (event) => {
   }
 
   try {
+    rateLimit(event, 60, 60000);
     // Verify Firebase auth token
     const decodedToken = await verifyToken(event);
     const userId = decodedToken.uid;

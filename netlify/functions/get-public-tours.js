@@ -3,11 +3,13 @@ const { createClient } = require('@supabase/supabase-js');
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY; 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const { rateLimit } = require('./utils/rate-limit');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method Not Allowed' };
     
     try {
+        rateLimit(event, 60, 60000);
         // Fetch quizzes where featured is true, bypassing RLS securely
         const { data, error } = await supabase
             .from('quizzes')

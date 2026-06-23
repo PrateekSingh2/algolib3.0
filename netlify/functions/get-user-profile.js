@@ -1,6 +1,7 @@
 // Adjust the paths if your utils folder is structured differently
 const { admin } = require('./utils/firebase-admin');
 const { supabase } = require('./utils/supabase');
+const { rateLimit } = require('./utils/rate-limit');
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'GET') {
@@ -8,6 +9,7 @@ exports.handler = async (event) => {
     }
 
     try {
+        rateLimit(event, 60, 60000);
         // 1. Verify the Firebase Admin Token
         const authHeader = event.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {

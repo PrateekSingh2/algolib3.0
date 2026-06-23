@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, ChevronDown, User, AtSign, MapPin, 
   Map, Globe2, Github, Calendar, Hash, Loader2, 
-  GraduationCap, Search, CheckCircle2, ShieldAlert
+  GraduationCap, Search, CheckCircle2, ShieldAlert,
+  Linkedin, Eye, EyeOff, Lock, Camera, Image as ImageIcon
 } from "lucide-react";
 import { Country, State, City } from "country-state-city";
 
@@ -13,6 +14,7 @@ import GlobalRibbon from "@/components/GlobalRibbon";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProfileFormState {
+  username: string;
   full_name: string;
   display_name: string;
   college: string;
@@ -22,12 +24,21 @@ interface ProfileFormState {
   state: string;
   country: string;
   github_url: string;
+  linkedin_url: string;
   bio: string;
+  email_public: boolean;
+  age_public: boolean;
+  location_public: boolean;
+  gender_public: boolean;
+  avatar_url: string;
+  banner_url: string;
 }
 
 const emptyState: ProfileFormState = {
-  full_name: "", display_name: "", college: "", age: "", gender: "", 
-  city: "", state: "", country: "", github_url: "", bio: "",
+  username: "", full_name: "", display_name: "", college: "", age: "", gender: "", 
+  city: "", state: "", country: "", github_url: "", linkedin_url: "", bio: "",
+  email_public: false, age_public: false, location_public: false, gender_public: false,
+  avatar_url: "", banner_url: ""
 };
 
 // --- HIGH GLASSMORPHISM SECTION CARD ---
@@ -45,9 +56,17 @@ const SectionCard = ({ title, description, children }: { title: string, descript
 );
 
 // --- PREMIUM INPUT WRAPPER ---
-const InputWrapper = ({ label, icon: Icon, children, fullWidth = false }: any) => (
+const InputWrapper = ({ label, icon: Icon, children, fullWidth = false, togglePublic, isPublic, onToggle }: any) => (
   <div className={`flex flex-col gap-2.5 ${fullWidth ? 'sm:col-span-2' : ''}`}>
-    <label className="text-xs font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase ml-1 drop-shadow-sm">{label}</label>
+    <div className="flex items-center justify-between ml-1">
+      <label className="text-xs font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase drop-shadow-sm">{label}</label>
+      {togglePublic && (
+        <button type="button" onClick={onToggle} className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest bg-blue-100/50 dark:bg-white/5 border border-blue-200 dark:border-white/10 px-2 py-1 rounded-md transition-colors hover:bg-blue-200/50 dark:hover:bg-white/10 group/toggle">
+          {isPublic ? <Eye size={12} className="text-sky-500" /> : <EyeOff size={12} className="text-slate-400 dark:text-zinc-500" />}
+          <span className={isPublic ? "text-sky-600 dark:text-sky-400" : "text-slate-500 dark:text-zinc-400"}>{isPublic ? 'Public' : 'Private'}</span>
+        </button>
+      )}
+    </div>
     <div className="relative group/input">
       <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 group-focus-within/input:text-sky-500 dark:group-focus-within/input:text-sky-400 transition-colors pointer-events-none z-10">
         <Icon size={18} />
@@ -67,6 +86,10 @@ const EditProfile = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" | "" }>({ text: "", type: "" });
 
+  // Username validation state
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+
   // College Autocomplete State
   const [collegeSuggestions, setCollegeSuggestions] = useState<string[]>([]);
   const [isSearchingColleges, setIsSearchingColleges] = useState(false);
@@ -77,12 +100,56 @@ const EditProfile = () => {
   useEffect(() => {
     if (!profile) return;
     setForm({
+      username: profile.username || "",
       full_name: profile.full_name || "", display_name: profile.display_name || "",
       college: profile.college || "", age: profile.age ? String(profile.age) : "",
       gender: profile.gender || "", city: profile.city || "", state: profile.state || "",
-      country: profile.country || "", github_url: profile.github_url || "", bio: profile.bio || "",
+      country: profile.country || "", github_url: profile.github_url || "", 
+      linkedin_url: profile.linkedin_url || "", bio: profile.bio || "",
+      email_public: profile.email_public ?? false,
+      age_public: profile.age_public ?? false,
+      location_public: profile.location_public ?? false,
+      gender_public: profile.gender_public ?? false,
+      avatar_url: profile.avatar_url || "",
+      banner_url: profile.banner_url || ""
     });
+    if (profile.username) setUsernameAvailable(true); // Treat existing as available
   }, [profile]);
+
+  // --- USERNAME AVAILABILITY CHECK ---
+  useEffect(() => {
+    if (!form.username || form.username === profile?.username) {
+      if (form.username === profile?.username) setUsernameAvailable(true);
+      else setUsernameAvailable(null);
+      return;
+    }
+    
+    // Check rules: alphanumeric, length > 4, must contain at least one number
+    const validRegex = /^[a-zA-Z0-9_]+$/;
+    const hasNumber = /\d/;
+    if (form.username.length <= 4 || !validRegex.test(form.username) || !hasNumber.test(form.username)) {
+      setUsernameAvailable(false);
+      return;
+    }
+
+    const checkUsername = async () => {
+      setIsCheckingUsername(true);
+      try {
+        const res = await fetch(`/.netlify/functions/check-username?username=${encodeURIComponent(form.username)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setUsernameAvailable(data.available);
+        }
+      } catch (err) {
+        console.error("Username check error", err);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(checkUsername, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [form.username, profile?.username]);
 
   // --- COLLEGE AUTOCOMPLETE LOGIC ---
   useEffect(() => {
@@ -128,15 +195,66 @@ const EditProfile = () => {
   const selectedStateCode = useMemo(() => states.find(s => s.name === form.state)?.isoCode, [form.state, states]);
   const cities = useMemo(() => (selectedCountryCode && selectedStateCode) ? City.getCitiesOfState(selectedCountryCode, selectedStateCode) : [], [selectedCountryCode, selectedStateCode]);
 
-  // --- HANDLERS ---
-  const handleChange = (key: keyof ProfileFormState, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setMessage({ text: "", type: "" }); // Clear messages on edit
+  const handleChange = (key: keyof ProfileFormState, value: string | boolean) => {
+    let finalValue = value;
+    if (typeof finalValue === "string") {
+        finalValue = finalValue.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '');
+    }
+    setForm((prev) => ({ ...prev, [key]: finalValue }));
+    setMessage({ text: "", type: "" }); 
+  };
+
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (type === 'avatar') setUploadingAvatar(true);
+    if (type === 'banner') setUploadingBanner(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "ffjmgu1h"); 
+      formData.append("cloud_name", "dmmv8phgq"); 
+      
+      const res = await fetch(`https://api.cloudinary.com/v1_1/dmmv8phgq/image/upload`, { 
+        method: "POST", 
+        body: formData 
+      });
+      const data = await res.json();
+      
+      if (data.secure_url) {
+        setForm(prev => ({ ...prev, [type === 'avatar' ? 'avatar_url' : 'banner_url']: data.secure_url }));
+        setMessage({ text: `${type === 'avatar' ? 'Profile picture' : 'Banner'} uploaded successfully. Don't forget to save!`, type: "success" });
+      } else {
+        throw new Error("Failed to get secure URL from Cloudinary");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setMessage({ text: `Failed to upload ${type}.`, type: "error" });
+    } finally {
+      if (type === 'avatar') setUploadingAvatar(false);
+      if (type === 'banner') setUploadingBanner(false);
+    }
   };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!user) return;
+    
+    if (!form.username || form.username.trim() === "") {
+      setMessage({ text: "Username is required.", type: "error" });
+      return;
+    }
+    
+    if (usernameAvailable === false) {
+      setMessage({ text: "Username is not available or invalid.", type: "error" });
+      return;
+    }
+    
     setSaving(true);
     setMessage({ text: "", type: "" });
 
@@ -149,6 +267,7 @@ const EditProfile = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
+          username: form.username.toLowerCase().trim() || null,
           full_name: form.full_name.trim() || null, 
           display_name: form.display_name.trim() || null,
           college: form.college.trim() || null, 
@@ -158,12 +277,24 @@ const EditProfile = () => {
           state: form.state.trim() || null, 
           country: form.country.trim() || null,
           github_url: form.github_url.trim() || null, 
+          linkedin_url: form.linkedin_url.trim() || null,
           bio: form.bio.trim() || null,
+          email_public: form.email_public,
+          age_public: form.age_public,
+          location_public: form.location_public,
+          gender_public: form.gender_public,
+          avatar_url: form.avatar_url || null,
+          banner_url: form.banner_url || null,
           is_profile_complete: true
         })
       });
       
-      if (!response.ok) throw new Error("Update failed");
+      if (!response.ok) {
+        if (response.status === 409) {
+          throw new Error("Username is already taken. Please choose another.");
+        }
+        throw new Error("Update failed");
+      }
       
       await refreshProfile();
       
@@ -172,10 +303,19 @@ const EditProfile = () => {
       } else {
         setMessage({ text: "Profile updated successfully.", type: "success" });
       }
-    } catch (error) {
-      setMessage({ text: "Failed to update profile.", type: "error" });
+    } catch (error: any) {
+      setMessage({ text: error.message || "Failed to update profile.", type: "error" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Back button
+  const handleBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate("/");
     }
   };
 
@@ -198,13 +338,13 @@ const EditProfile = () => {
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 pt-32 sm:px-6 relative z-10">
         <div className="mb-10">
           {!isFirstTime && (
-            <Link 
-              to="/profile" 
+            <button 
+              onClick={handleBack} 
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-sky-50 dark:bg-white/[0.03] border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.25] text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-blue-100/50 dark:hover:bg-white/[0.08] transition-all duration-300 text-sm font-medium group shadow-sm dark:shadow-lg backdrop-blur-xl dark:hover:shadow-[0_8px_24px_rgba(255,255,255,0.05)] mb-6"
             >
               <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-              Back to Profile
-            </Link>
+              Back
+            </button>
           )}
           
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tighter mt-2 leading-tight">
@@ -217,14 +357,127 @@ const EditProfile = () => {
           <p className="mt-3 text-lg text-slate-500 dark:text-zinc-400 font-light max-w-2xl">
             {isFirstTime 
               ? "Please complete your developer profile to initialize your matrix and access global features." 
-              : "Manage your system parameters and personal telemetry data."}
+              : "Manage your system parameters, public profile, and privacy controls."}
           </p>
         </div>        
+
+        {/* --- VISUALS UPLOAD SECTION --- */}
+        <SectionCard title="Profile Visuals" description="Personalize your public profile with a custom banner and avatar.">
+          <div className="sm:col-span-2 flex flex-col gap-6">
+            
+            {/* Banner Upload */}
+            <div className="flex flex-col gap-2.5">
+              <label className="text-xs font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase drop-shadow-sm">Profile Banner</label>
+              <div className="relative w-full h-32 md:h-40 rounded-2xl bg-slate-100 dark:bg-black/40 border-2 border-dashed border-slate-300 dark:border-white/[0.1] overflow-hidden group/banner flex items-center justify-center transition-all hover:bg-slate-200 dark:hover:bg-black/60">
+                {form.banner_url ? (
+                  <img src={form.banner_url} alt="Banner" className="w-full h-full object-cover opacity-80 group-hover/banner:opacity-50 transition-opacity" />
+                ) : (
+                  <div className="flex flex-col items-center text-slate-400 dark:text-zinc-500">
+                    <ImageIcon size={32} className="mb-2 opacity-50" />
+                    <span className="text-sm font-medium">Upload Banner Image</span>
+                  </div>
+                )}
+                
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => handleImageUpload(e, 'banner')}
+                  disabled={uploadingBanner}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10" 
+                />
+                
+                {uploadingBanner && (
+                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20">
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  </div>
+                )}
+                
+                {form.banner_url && !uploadingBanner && (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/banner:opacity-100 transition-opacity pointer-events-none z-0">
+                    <span className="bg-slate-900/80 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg backdrop-blur-md flex items-center gap-2">
+                      <Camera size={16} /> Change Banner
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Avatar Upload */}
+            <div className="flex flex-col gap-2.5">
+              <label className="text-xs font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase drop-shadow-sm">Profile Picture</label>
+              <div className="flex items-center gap-6">
+                <div className="relative w-24 h-24 rounded-full bg-slate-100 dark:bg-black/40 border-2 border-dashed border-slate-300 dark:border-white/[0.1] overflow-hidden group/avatar flex items-center justify-center transition-all hover:bg-slate-200 dark:hover:bg-black/60 shrink-0">
+                  {form.avatar_url ? (
+                    <img src={form.avatar_url} alt="Avatar" className="w-full h-full object-cover opacity-80 group-hover/avatar:opacity-50 transition-opacity" />
+                  ) : (
+                    <User size={32} className="text-slate-400 dark:text-zinc-500 opacity-50" />
+                  )}
+                  
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => handleImageUpload(e, 'avatar')}
+                    disabled={uploadingAvatar}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10" 
+                  />
+
+                  {uploadingAvatar && (
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20">
+                      <Loader2 className="w-6 h-6 text-white animate-spin" />
+                    </div>
+                  )}
+
+                  {!uploadingAvatar && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity pointer-events-none z-0">
+                      <Camera size={24} className="text-white drop-shadow-lg" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">Profile Picture</span>
+                  <span className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Recommended 256x256px.<br/>Click the circle to upload a new image.</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </SectionCard>
         
         <form onSubmit={handleSubmit} className="flex flex-col relative z-10">
           
           {/* --- SECTION 1: IDENTITY --- */}
           <SectionCard title="Identity Matrix" description="Your core personal identifiers used across the platform.">
+            
+            <div className="sm:col-span-2 flex flex-col gap-2.5">
+              <label className="text-xs font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase ml-1 drop-shadow-sm flex items-center gap-2">
+                Public Username <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative group/input">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 group-focus-within/input:text-sky-500 dark:group-focus-within/input:text-sky-400 transition-colors pointer-events-none z-10">
+                  <AtSign size={18} />
+                </div>
+                <input 
+                  required
+                  value={form.username} 
+                  onChange={(e) => handleChange("username", e.target.value)} 
+                  readOnly={!!profile?.username}
+                  className={`${inputGlossyClasses} ${usernameAvailable === false ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10' : ''} ${!!profile?.username ? 'opacity-60 cursor-not-allowed bg-slate-100 dark:bg-white/[0.02] focus:ring-0 focus:border-blue-200 dark:focus:border-white/[0.1]' : ''}`} 
+                  placeholder="johndoe99"
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center z-10">
+                  {!!profile?.username ? (
+                    <Lock size={16} className="text-slate-400 dark:text-zinc-500" />
+                  ) : isCheckingUsername ? (
+                    <Loader2 size={18} className="animate-spin text-sky-500" />
+                  ) : form.username && form.username !== profile?.username ? (
+                    usernameAvailable ? <CheckCircle2 size={18} className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" /> : <ShieldAlert size={18} className="text-rose-500 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]" />
+                  ) : null}
+                </div>
+              </div>
+              {usernameAvailable === false && !profile?.username && <p className="text-[10px] uppercase font-bold tracking-widest text-rose-500 ml-2 mt-1">Taken or invalid (&gt;4 chars, min 1 number)</p>}
+              {!!profile?.username && <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400 dark:text-zinc-500 ml-2 mt-1 flex items-center gap-1.5"><Lock size={10} /> Username is permanently locked</p>}
+            </div>
+
             <InputWrapper label="Legal Name" icon={User}>
               <input 
                 value={form.full_name} onChange={(e) => handleChange("full_name", e.target.value)} 
@@ -233,15 +486,21 @@ const EditProfile = () => {
               />
             </InputWrapper>
             
-            <InputWrapper label="Display Name" icon={AtSign}>
+            <InputWrapper label="Display Name" icon={User}>
               <input 
                 value={form.display_name} onChange={(e) => handleChange("display_name", e.target.value)} 
                 className={inputGlossyClasses} 
-                placeholder="johndoe99"
+                placeholder="John D."
               />
             </InputWrapper>
 
-            <InputWrapper label="Age" icon={Calendar}>
+            <InputWrapper 
+              label="Age" 
+              icon={Calendar} 
+              togglePublic 
+              isPublic={form.age_public} 
+              onToggle={() => handleChange("age_public", !form.age_public)}
+            >
               <input 
                 type="number" min={0} value={form.age} onChange={(e) => handleChange("age", e.target.value)} 
                 className={inputGlossyClasses} 
@@ -249,7 +508,13 @@ const EditProfile = () => {
               />
             </InputWrapper>
 
-            <InputWrapper label="Gender" icon={Hash}>
+            <InputWrapper 
+              label="Gender" 
+              icon={Hash}
+              togglePublic 
+              isPublic={form.gender_public} 
+              onToggle={() => handleChange("gender_public", !form.gender_public)}
+            >
               <select 
                 value={form.gender} onChange={(e) => handleChange("gender", e.target.value)}
                 className={`${inputGlossyClasses} appearance-none pr-10 cursor-pointer`}
@@ -347,6 +612,14 @@ const EditProfile = () => {
               />
             </InputWrapper>
 
+            <InputWrapper label="LinkedIn URL" icon={Linkedin} fullWidth>
+              <input 
+                type="url" value={form.linkedin_url} onChange={(e) => handleChange("linkedin_url", e.target.value)} 
+                className={inputGlossyClasses} 
+                placeholder="https://linkedin.com/in/username"
+              />
+            </InputWrapper>
+
             <div className="sm:col-span-2 flex flex-col gap-2.5">
               <label className="text-xs font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase ml-1 drop-shadow-sm">Terminal Bio</label>
               <textarea 
@@ -359,6 +632,14 @@ const EditProfile = () => {
 
           {/* --- SECTION 3: TELEMETRY --- */}
           <SectionCard title="Telemetry Config" description="Your geographical coordinates.">
+            
+            <div className="sm:col-span-2 flex justify-end">
+                <button type="button" onClick={() => handleChange("location_public", !form.location_public)} className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-widest bg-blue-100/50 dark:bg-white/5 border border-blue-200 dark:border-white/10 px-2 py-1 rounded-md transition-colors hover:bg-blue-200/50 dark:hover:bg-white/10 group/toggle">
+                  {form.location_public ? <Eye size={12} className="text-sky-500" /> : <EyeOff size={12} className="text-slate-400 dark:text-zinc-500" />}
+                  <span className={form.location_public ? "text-sky-600 dark:text-sky-400" : "text-slate-500 dark:text-zinc-400"}>{form.location_public ? 'Public Location' : 'Private Location'}</span>
+                </button>
+            </div>
+
             <InputWrapper label="Country" icon={Globe2}>
               <select 
                 value={form.country} onChange={(e) => { handleChange("country", e.target.value); handleChange("state", ""); handleChange("city", ""); }}
@@ -403,13 +684,12 @@ const EditProfile = () => {
           {/* Status Indicators */}
           <div className="flex items-center gap-4">
             {user ? (
-              <span className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-blue-100/50 dark:bg-black/40 border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] shadow-inner text-slate-600 dark:text-zinc-300 text-xs font-mono backdrop-blur-md">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 dark:bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600 dark:bg-emerald-500 shadow-[0_0_8px_#10b981]"></span>
-                </span>
-                UID: <span className="text-slate-900 dark:text-white">{user.email}</span>
-              </span>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100/50 dark:bg-black/40 border border-blue-200 dark:border-white/[0.1] dark:border-t-white/[0.2] shadow-inner text-slate-600 dark:text-zinc-300 backdrop-blur-md cursor-pointer hover:bg-blue-200/50 transition-colors" onClick={() => handleChange("email_public", !form.email_public)}>
+                <button type="button" className="flex items-center justify-center p-1 hover:bg-white/10 rounded-full transition-colors">
+                    {form.email_public ? <Eye size={12} className="text-sky-500" /> : <EyeOff size={12} className="text-slate-400 dark:text-zinc-500" />}
+                </button>
+                <span className="text-xs font-mono">UID: <span className="text-slate-900 dark:text-white">{user.email}</span></span>
+              </div>
             ) : (
               <span className="text-xs text-rose-500 dark:text-rose-400 font-mono flex items-center gap-2 px-4 py-2 rounded-full bg-rose-100 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20">
                 <ShieldAlert size={14} /> Unauthorized access
@@ -426,7 +706,7 @@ const EditProfile = () => {
 
           <button 
             onClick={handleSubmit}
-            disabled={!user || saving} 
+            disabled={!user || saving || usernameAvailable === false} 
             className="w-full sm:w-auto h-12 px-8 rounded-full bg-gradient-to-b from-sky-400 to-sky-600 border border-sky-300/50 border-t-sky-200 text-white shadow-[0_0_20px_rgba(14,165,233,0.3)] text-sm font-bold hover:shadow-[0_0_30px_rgba(14,165,233,0.5)] hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:hover:scale-100 disabled:hover:shadow-[0_0_20px_rgba(14,165,233,0.3)] transition-all flex items-center justify-center gap-2"
           >
             {saving && <Loader2 size={18} className="animate-spin" />}

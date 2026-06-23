@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
-import { Trophy, Clock, Calendar, ChevronRight, Activity, Code2, Sparkles, ArrowRight, Loader2, BarChart2, X, Medal, HeartHandshake, Lock, Info, ShieldAlert, AlertOctagon, ListOrdered, UserCheck, TrendingDown, Eye, Layers } from 'lucide-react';
+import { Trophy, Clock, Calendar, ChevronRight, Activity, Code2, Sparkles, ArrowRight, Loader2, BarChart2, X, Medal, HeartHandshake, Lock, Info, ShieldAlert, AlertOctagon, ListOrdered, UserCheck, TrendingDown, Eye, Layers, BadgeCheck } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -140,8 +140,18 @@ export default function Contests() {
           
           leaderboard.forEach((entry: any) => {
           if (!userMap[entry.user_uid]) {
-            const realName = dbUserMap[entry.user_uid] || entry.display_name || 'Anonymous User';
-            userMap[entry.user_uid] = { uid: entry.user_uid, name: realName, score: 0, time: 0, langs: new Set(), solvedProblems: new Set() };
+            const dbUser = users?.find((u: any) => u.firebase_uid === entry.user_uid) || {};
+            const realName = dbUser.display_name || dbUser.full_name || entry.display_name || 'Anonymous User';
+            userMap[entry.user_uid] = { 
+              uid: entry.user_uid, 
+              name: realName, 
+              username: dbUser.username || null,
+              is_verified: !!dbUser.is_verified,
+              score: 0, 
+              time: 0, 
+              langs: new Set(), 
+              solvedProblems: new Set() 
+            };
           }
           const u = userMap[entry.user_uid];
           
@@ -307,7 +317,17 @@ export default function Contests() {
                                   {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                                 </div>
                                 <div className="flex flex-col">
-                                   <span>{user.name}</span>
+                                   {user.username ? (
+                                      <Link to={`/user/${user.username}`} className="hover:text-sky-500 dark:hover:text-sky-400 transition-colors flex items-center gap-1.5 group/link">
+                                        {user.name}
+                                        {user.is_verified && <BadgeCheck size={16} className="text-sky-500 fill-sky-100 dark:fill-sky-500/20 group-hover/link:scale-110 transition-transform" />}
+                                      </Link>
+                                   ) : (
+                                      <span className="flex items-center gap-1.5">
+                                        {user.name}
+                                        {user.is_verified && <BadgeCheck size={16} className="text-sky-500 fill-sky-100 dark:fill-sky-500/20" />}
+                                      </span>
+                                   )}
                                    {currentUser?.uid === user.uid && (
                                      <span className="text-[10px] text-sky-600 dark:text-sky-400 font-medium uppercase tracking-wider">You</span>
                                    )}

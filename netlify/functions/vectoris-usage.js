@@ -1,8 +1,10 @@
 const { supabaseAdmin } = require('./utils/supabase');
 const { verifyToken } = require('./utils/auth');
+const { rateLimit } = require('./utils/rate-limit');
 
 exports.handler = async (event) => {
   try {
+    rateLimit(event, 30, 60000);
     const decodedToken = await verifyToken(event);
     const uid = decodedToken.uid;
     

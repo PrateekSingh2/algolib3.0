@@ -1,5 +1,6 @@
 // netlify/functions/getDiscoverContent.ts
 import { createClient } from '@supabase/supabase-js';
+const { rateLimit } = require('./utils/rate-limit');
 
 export const handler = async (event: any, context: any) => {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -17,6 +18,7 @@ export const handler = async (event: any, context: any) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
+    rateLimit(event, 60, 60000);
     // 2. Fetch data (Ensure 'created_at' and 'image_url' match your table exactly)
     const { data, error } = await supabase
       .from('discover_content')

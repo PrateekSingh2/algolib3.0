@@ -8,12 +8,14 @@ if (!supabaseServiceKey) {
     console.error("FATAL ERROR: SUPABASE_SERVICE_ROLE_KEY is missing from environment variables.");
 }
 
+const { rateLimit } = require('./utils/rate-limit');
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 exports.handler = async (event) => {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
     try {
+        rateLimit(event, 10, 60000); // Strict limit: 10 attempts per minute to prevent brute-force
         const { joinCode } = JSON.parse(event.body);
 
         if (!joinCode) {

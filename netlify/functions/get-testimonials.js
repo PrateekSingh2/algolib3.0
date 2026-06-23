@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('./utils/supabase');
+const { rateLimit } = require('./utils/rate-limit');
 
 exports.handler = async (event) => {
   const headers = {
@@ -10,6 +11,7 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return { statusCode: 405, headers, body: 'Method Not Allowed' };
 
   try {
+    rateLimit(event, 60, 60000);
     const landingOnly = event.queryStringParameters?.landing === 'true';
     let query = supabaseAdmin
       .from('testimonials')

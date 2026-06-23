@@ -1,4 +1,5 @@
 const { admin, db } = require('./utils/firebase-admin');
+const { rateLimit } = require('./utils/rate-limit');
 
 exports.handler = async (event, context) => {
   // 1. CORS Headers
@@ -12,6 +13,7 @@ exports.handler = async (event, context) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
+    rateLimit(event, 10, 60000); // 10 requests per minute
     // 2. Authentication Verification
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

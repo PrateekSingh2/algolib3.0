@@ -33,7 +33,7 @@ exports.handler = async (event) => {
         .in('problem_id', problemIds);
 
       if (tcError) throw tcError;
-      testCasesData = tcData || [];
+      testCasesData = (tcData || []).filter(tc => tc.is_public === true || tc.is_public === 'true' || tc.isPublic === true || tc.isPublic === 'true');
     }
 
     return {

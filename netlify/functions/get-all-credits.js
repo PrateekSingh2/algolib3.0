@@ -1,4 +1,5 @@
 const { admin, db } = require('./utils/firebase-admin');
+const { rateLimit } = require('./utils/rate-limit');
 
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'GET') {
@@ -6,6 +7,7 @@ exports.handler = async (event, context) => {
     }
 
     try {
+        rateLimit(event, 30, 60000);
         const authHeader = event.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };

@@ -4,6 +4,7 @@
  * Model   : llama-3.3-70b-versatile 
  */
 const { stream } = require('@netlify/functions'); 
+const { rateLimit } = require('./utils/rate-limit');
 
 const API_ENDPOINT  = 'https://api.groq.com/openai/v1/chat/completions';
 const TARGET_MODEL  = 'llama-3.3-70b-versatile';
@@ -82,6 +83,12 @@ const SYSTEM_PROMPT = [
 
 exports.handler = stream(async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+  
+  try {
+      rateLimit(event, 10, 60000);
+  } catch (err) {
+      return { statusCode: 429, headers: CORS_HEADERS, body: JSON.stringify({ error: err.message }) };
+  }
   
   let body = {};
   try { body = JSON.parse(event.body || '{}'); }

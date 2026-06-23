@@ -1,10 +1,12 @@
 const { supabaseAdmin } = require('./utils/supabase');
 const { verifyToken } = require('./utils/auth');
+const { rateLimit } = require('./utils/rate-limit');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
 
   try {
+    rateLimit(event, 20, 60000); // Strict limit for sync
     const decodedToken = await verifyToken(event);
     const firebaseUser = JSON.parse(event.body);
 

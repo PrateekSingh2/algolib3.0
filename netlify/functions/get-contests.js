@@ -1,9 +1,11 @@
 const { supabaseAdmin } = require('./utils/supabase');
+const { rateLimit } = require('./utils/rate-limit');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method Not Allowed' };
 
   try {
+    rateLimit(event, 60, 60000);
     const { data, error } = await supabaseAdmin
       .from('contests')
       .select('*')

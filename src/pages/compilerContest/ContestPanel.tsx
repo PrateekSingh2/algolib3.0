@@ -363,6 +363,18 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
 
   const [submissionPhase, setSubmissionPhase] = useState<'idle' | 'evaluating' | 'complete'>('idle');
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null);
+  const [evaluatingText, setEvaluatingText] = useState('Evaluating...');
+
+  useEffect(() => {
+     if (submissionPhase === 'evaluating') {
+        setEvaluatingText('Sending to server...');
+        const t1 = setTimeout(() => setEvaluatingText('Compiling...'), 800);
+        const t2 = setTimeout(() => setEvaluatingText('Judging...'), 2000);
+        return () => { clearTimeout(t1); clearTimeout(t2); };
+     } else {
+        setEvaluatingText('Evaluating...');
+     }
+  }, [submissionPhase]);
 
   useEffect(() => {
     if (problems.length === 0 || !contestId) return;
@@ -470,7 +482,12 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     
     const fetchTestCases = async () => {
       try {
-        const response = await fetch(`/.netlify/functions/get-test-cases?problemId=${currentProblem.id}&t=${Date.now()}`);
+        let headers: any = {};
+        if (user && user.getIdToken) {
+           const token = await user.getIdToken();
+           headers['Authorization'] = `Bearer ${token}`;
+        }
+        const response = await fetch(`/.netlify/functions/get-test-cases?problemId=${currentProblem.id}&t=${Date.now()}`, { headers });
         if (response.ok) {
           const tcData = await response.json();
           if (tcData && tcData.length > 0) setTestCases(tcData);
@@ -515,17 +532,22 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     const fetchHistoricSubmissions = async () => {
       try {
         const uid = user.uid || user.id;
-        const response = await fetch(`/.netlify/functions/get-user-submissions?userId=${uid}&problemId=${currentProblem.id}&contestId=${contestId}`);
+        let headers: any = {};
+        if (user && user.getIdToken) {
+           const token = await user.getIdToken();
+           headers['Authorization'] = `Bearer ${token}`;
+        }
+        const response = await fetch(`/.netlify/functions/get-contest-submissions?contest_id=${contestId}`, { headers });
         if (response.ok) {
           const data = await response.json();
           if (data && data.length > 0) {
              setUserSubmissions(prev => {
-                const merged = [...prev];
-                data.forEach((serverSub: any) => {
-                   if (!merged.find(s => s.id === serverSub.id)) {
-                      merged.push(serverSub);
-                   }
-                });
+                const pendingSubs = prev.filter(s => s.isPending); // keep only active evaluations
+                
+                // Map server subs directly
+                const serverSubs = data.filter((s: any) => s.problem_id === currentProblem.id);
+                
+                const merged = [...pendingSubs, ...serverSubs];
                 return merged.sort((a, b) => new Date(b.time || b.created_at).getTime() - new Date(a.time || a.created_at).getTime());
              });
           }
@@ -756,121 +778,125 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
     const startTimeExecute = performance.now();
 
     try {
-      // Single payload transaction execution avoids process spawning overhead bottlenecks completely
-      const batchResults = await executeBatchExecutionEngine(language, code, casesToRun);
-      
       let passedCount = 0;
       let runtimeCapMaxMs = 0;
+      let allPassed = false;
+      let totalBatchDurationMs = 0;
+      let pointsEarned = 0;
+      let dbTimeTakenSeconds = 0;
+      const diffStr = (currentProblem?.difficulty || 'easy').toLowerCase();
+      const defaultPts = diffStr === 'hard' ? 300 : diffStr === 'medium' ? 200 : 100;
+      const defaultPenalty = diffStr === 'hard' ? 20 : diffStr === 'medium' ? 10 : 5;
 
-      for (let i = 0; i < casesToRun.length; i++) {
-        const tc = casesToRun[i];
-        const res = batchResults[i];
-        const caseNum = i + 1;
-        const isPub = tc.is_public === true || tc.is_public === 'true' || tc.isPublic;
-        
-        const expOut = String(tc.expected_output || tc.expected || '').trim();
-        const hasMultiple = tc.has_multiple_answers === true || tc.has_multiple_answers === 'true';
-
-        let isCorrect = false;
-        if (res && res.status === 'success') {
-          const normalizedActual = (res.output || '').replace(/\s+/g, '');
-          runtimeCapMaxMs = Math.max(runtimeCapMaxMs, (res.time || 0) * 1000);
-
-          if (hasMultiple) {
-            const expectedLines = expOut.split('\n').map(l => l.trim()).filter(Boolean);
-            const actualLines = (res.output || '').split('\n').map(l => l.trim()).filter(Boolean);
-            if (expectedLines.length === actualLines.length && actualLines.length > 0) {
-                isCorrect = expectedLines.every((expLine, index) => {
-                    const actLine = actualLines[index].replace(/\s+/g, ''); 
-                    const possibleAnswers = expLine.split('|||').map(ans => ans.replace(/\s+/g, ''));
-                    return possibleAnswers.includes(actLine);
-                });
-            }
-          } else {
-            const normalizedExpected = expOut.replace(/\s+/g, '');
-            isCorrect = normalizedActual === normalizedExpected && normalizedExpected !== '';
+      if (contest?.start_time) {
+          const startTimeMs = new Date(contest.start_time).getTime();
+          if (Date.now() > startTimeMs) {
+              dbTimeTakenSeconds = Math.floor((Date.now() - startTimeMs) / 1000);
           }
-        }
-
-        if (isCorrect) passedCount++;
-
-        // Render detailed feedback stream to user terminal pane logs
-        if (!isSubmit || !isCorrect) {
-          if (!isSubmit) addLog('case_header', `${caseNum}`);
-          if (res && res.status === 'error') {
-            if (isSubmit) addLog('case_header', `${caseNum} (Hidden runtime context boundary condition failed)`);
-            addLog('error', `Execution Error:\n${res.output}`);
-          } else if (isCorrect) {
-            if (!isSubmit) {
-               addLog('success', 'Accepted');
-               if (isPub) addLog('actual_pass', res.output);
-            }
-          } else {
-            if (isSubmit) addLog('case_header', `${caseNum} (Hidden case verification step variance)`);
-            addLog('error', 'Wrong Answer');
-            if (isPub) {
-                addLog('expected', expOut);
-                addLog('actual_fail', res ? res.output : 'No production value derived');
-            } else if (isSubmit) {
-                addLog('system', 'Private context metadata masked out from direct output streaming.');
-            }
-          }
-        }
       }
 
-      const endTimeExecute = performance.now();
-      const totalBatchDurationMs = Math.round(endTimeExecute - startTimeExecute);
-      const allPassed = passedCount === casesToRun.length;
+          let backendTotalCases = casesToRun.length;
+          if (isSubmit) {
+              if (!user || !user.getIdToken) {
+                  throw new Error("Authentication error. Please log in.");
+              }
+              const token = await user.getIdToken();
+              const submitRes = await fetch('/.netlify/functions/submit-code', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                  body: JSON.stringify({
+                      problem_id: currentProblem.id, contest_id: contestId,
+                      language: language, code: code, time_taken_seconds: dbTimeTakenSeconds
+                  })
+              });
+              
+              if (!submitRes.ok) {
+                  const errData = await submitRes.json();
+                  throw new Error(errData.error || "Submission evaluation failed on server");
+              }
+              
+              const submitData = await submitRes.json();
+              allPassed = submitData.allPassed;
+              passedCount = submitData.passedCount;
+              runtimeCapMaxMs = submitData.timeTakenMs;
+              totalBatchDurationMs = submitData.timeTakenMs;
+              pointsEarned = Math.max(0, submitData.score_awarded);
+              backendTotalCases = submitData.totalCases || casesToRun.length;
+              
+              if (allPassed) {
+                  addLog('success', `All ${passedCount}/${backendTotalCases} hidden and public criteria verified successfully on secure server.`);
+              } else {
+                  addLog('error', `Submission failed. Passed ${passedCount}/${backendTotalCases} test cases.`);
+              }
+      } else {
+          // Single payload transaction execution avoids process spawning overhead bottlenecks completely
+          const batchResults = await executeBatchExecutionEngine(language, code, casesToRun);
+          
+          for (let i = 0; i < casesToRun.length; i++) {
+            const tc = casesToRun[i];
+            const res = batchResults[i];
+            const caseNum = i + 1;
+            const isPub = tc.is_public === true || tc.is_public === 'true' || tc.isPublic;
+            
+            const expOut = String(tc.expected_output || tc.expected || '').trim();
+            const hasMultiple = tc.has_multiple_answers === true || tc.has_multiple_answers === 'true';
+
+            let isCorrect = false;
+            if (res && res.status === 'success') {
+              const normalizedActual = (res.output || '').replace(/\s+/g, '');
+              runtimeCapMaxMs = Math.max(runtimeCapMaxMs, (res.time || 0) * 1000);
+
+              if (hasMultiple) {
+                const expectedLines = expOut.split('\n').map(l => l.trim()).filter(Boolean);
+                const actualLines = (res.output || '').split('\n').map(l => l.trim()).filter(Boolean);
+                if (expectedLines.length === actualLines.length && actualLines.length > 0) {
+                    isCorrect = expectedLines.every((expLine, index) => {
+                        const actLine = actualLines[index].replace(/\s+/g, ''); 
+                        const possibleAnswers = expLine.split('|||').map(ans => ans.replace(/\s+/g, ''));
+                        return possibleAnswers.includes(actLine);
+                    });
+                }
+              } else {
+                const normalizedExpected = expOut.replace(/\s+/g, '');
+                isCorrect = normalizedActual === normalizedExpected && normalizedExpected !== '';
+              }
+            }
+
+            if (isCorrect) passedCount++;
+
+            // Render detailed feedback stream to user terminal pane logs
+            if (!isCorrect) {
+              addLog('case_header', `${caseNum}`);
+              if (res && res.status === 'error') {
+                addLog('error', `Execution Error:\n${res.output}`);
+              } else {
+                addLog('error', 'Wrong Answer');
+                if (isPub) {
+                    addLog('expected', expOut);
+                    addLog('actual_fail', res ? res.output : 'No production value derived');
+                }
+              }
+            } else {
+                addLog('case_header', `${caseNum}`);
+                addLog('success', 'Accepted');
+                if (isPub) addLog('actual_pass', res.output);
+            }
+          }
+          
+          const endTimeExecute = performance.now();
+          totalBatchDurationMs = Math.round(endTimeExecute - startTimeExecute);
+          allPassed = passedCount === casesToRun.length;
+          
+          if (allPassed) addLog('system', `All ${passedCount}/${casesToRun.length} public criteria verified successfully.`);
+      }
 
       if (isSubmit) {
-        const diffStr = (currentProblem?.difficulty || 'easy').toLowerCase();
-        const defaultPts = diffStr === 'hard' ? 300 : diffStr === 'medium' ? 200 : 100;
-        const defaultPenalty = diffStr === 'hard' ? 20 : diffStr === 'medium' ? 10 : 5;
-        
-        const previousWrongAttempts = userSubmissions.filter(s => 
-            s.id !== tempSubId && 
-            !s.isPending && 
-            !(s.passed === true || s.verdict === 'Accepted' || (s.score_awarded && s.score_awarded > 0))
-        ).length;
-        
-        const hasAlreadySolved = userSubmissions.some(s => 
-            s.id !== tempSubId && 
-            !s.isPending && 
-            (s.passed === true || s.verdict === 'Accepted' || (s.score_awarded && s.score_awarded > 0))
-        );
-
-        const pointsEarned = hasAlreadySolved ? 0 : Math.max(0, defaultPts - (previousWrongAttempts * defaultPenalty));
-        
         // Update local accuracy stat (visual only)
         const currentStats = problemStats[pId] || { correct: 0, total: 0 };
         const newTotal = currentStats.total + 1;
         const newCorrect = allPassed ? currentStats.correct + 1 : currentStats.correct;
         const accuracy = Math.round((newCorrect / newTotal) * 100);
         setProblemStats(prev => ({ ...prev, [pId]: { correct: newCorrect, total: newTotal } }));
-
-        let dbTimeTakenSeconds = 0;
-        if (contest?.start_time) {
-            const startTimeMs = new Date(contest.start_time).getTime();
-            if (Date.now() > startTimeMs) {
-                dbTimeTakenSeconds = Math.floor((Date.now() - startTimeMs) / 1000);
-            }
-        }
-
-        // Database-First state execution tracking push strategy safely prevents page tab manipulation loss
-        if (user && user.getIdToken) {
-          try {
-              const token = await user.getIdToken();
-              await fetch('/.netlify/functions/submit-code', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                  body: JSON.stringify({
-                      problem_id: currentProblem.id, contest_id: contestId,
-                      language: language, code: code, passed: allPassed,
-                      score_awarded: allPassed ? pointsEarned : -defaultPenalty, time_taken_seconds: dbTimeTakenSeconds
-                  })
-              });
-          } catch (e) { console.error("Database connection fault during remote persistent write:", e); }
-        }
 
         // UPDATE THE PENDING SUBMISSION RECORD IN UI
         setUserSubmissions(prev => prev.map(sub => 
@@ -886,15 +912,13 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
 
         // Generate immediate view presentation context configuration
         setSubmissionResult({
-           passed: passedCount, total: casesToRun.length, allPassed,
+           passed: passedCount, total: backendTotalCases, allPassed,
            timeTakenMs: runtimeCapMaxMs > 0 ? Math.round(runtimeCapMaxMs) : totalBatchDurationMs,
            language, accuracy, attemptsCorrect: newCorrect, attemptsTotal: newTotal,
-           pointsEarned: allPassed ? pointsEarned : 0,
+           pointsEarned: pointsEarned,
            estimatedMemoryKB: 1024 + Math.random() * 2048, estimatedComplexity: 'O(N)' 
         });
         setSubmissionPhase('complete');
-      } else {
-          if (allPassed) addLog('system', `All ${passedCount}/${casesToRun.length} public criteria verified successfully.`);
       }
 
     } catch (error: any) {
@@ -1197,7 +1221,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                                        )}
                                        <div className="flex flex-col">
                                           <span className={`font-bold font-mono text-sm ${isPending ? 'text-sky-600 dark:text-sky-400' : isAccepted ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                                             {sub.verdict}
+                                             {sub.verdict || (isAccepted ? 'Accepted' : 'Wrong Answer')}
                                           </span>
                                           <span className="text-xs text-slate-500 dark:text-zinc-500 font-medium">
                                              {isPending ? 'Processing in execution environment...' : (sub.time_taken_seconds ? `Solved in ${Math.floor(sub.time_taken_seconds / 60)}m` : 'Practiced runtime environment')} • {sub.language_used || sub.language || 'C++'}
@@ -1371,8 +1395,8 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
                                <div className="w-16 h-16 border-4 border-sky-500/20 rounded-full"></div>
                                <div className="w-16 h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
                              </div>
-                             <h3 className="mt-6 text-lg font-bold text-slate-900 dark:text-zinc-100">Evaluating Solution...</h3>
-                             <p className="mt-2 text-sm text-slate-500 dark:text-zinc-400">Running complete test suite on balanced core engine matrix</p>
+                             <h3 className="mt-6 text-lg font-bold text-slate-900 dark:text-zinc-100">{evaluatingText}</h3>
+                             <p className="mt-2 text-sm text-slate-500 dark:text-zinc-400">Please wait while your code is being processed</p>
                           </div>
                        ) : submissionPhase === 'complete' && submissionResult ? (
                           <SubmissionDashboard 

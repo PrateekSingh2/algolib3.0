@@ -6,13 +6,13 @@ import {
 } from "firebase/firestore";
 import { firestoreDB } from "../lib/firebase";
 import { useAuth } from "@/contexts/AuthContext"; 
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { 
   MessageSquare, Image as ImageIcon, Reply, Loader2, 
   CheckCircle2, Trophy, Search, Edit2, Trash2, X, Save,
   MoreVertical, ChevronUp, ChevronDown, AlertTriangle,
-  Heading, Bold, Italic, ListOrdered, List, Quote, Code, Terminal, Link, SquarePen,
-  ArrowUp, MessageCircle, Sparkles, Command
+  Heading, Bold, Italic, ListOrdered, List, Quote, Code, Terminal, Link as LinkIcon, SquarePen,
+  ArrowUp, MessageCircle, Sparkles, Command, BadgeCheck
 } from "lucide-react";
 import { motion, AnimatePresence, useMotionTemplate, useMotionValue } from "framer-motion";
 import Navbar from "./Navbar"; 
@@ -177,7 +177,7 @@ const MarkdownToolbar = ({ onInsert }: { onInsert: (prefix: string, suffix: stri
       { icon: <div className="w-[1px] h-4 bg-white/10 mx-1.5" />, action: 'separator' },
       { icon: <Code size={15}/>, prefix: '\n\u0060\u0060\u0060\n', suffix: '\n\u0060\u0060\u0060\n', label: 'Code Block' },
       { icon: <Terminal size={15}/>, prefix: '`', suffix: '`', label: 'Inline Code' },
-      { icon: <Link size={15}/>, prefix: '[', suffix: '](url)', label: 'Link' },
+      { icon: <LinkIcon size={15}/>, prefix: '[', suffix: '](url)', label: 'Link' },
   ];
 
   return (
@@ -200,7 +200,7 @@ const MarkdownToolbar = ({ onInsert }: { onInsert: (prefix: string, suffix: stri
 };
 
 // --- REPLY ITEM ---
-const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: ReplyType, postId: string, postReplies: ReplyType[], isPostAuthor: boolean, user: User | null }) => {
+const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user, userMeta }: { reply: ReplyType, postId: string, postReplies: ReplyType[], isPostAuthor: boolean, user: User | null, userMeta: Record<string, {username: string | null, is_verified: boolean, display_name: string}> }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(reply.content);
   const [showMenu, setShowMenu] = useState(false);
@@ -305,7 +305,19 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
             {reply.isAccepted && <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-0.5 border-2 border-white dark:border-[#09090b]"><CheckCircle2 size={10} className="text-white"/></div>}
           </div>
           <div className="flex flex-col">
-             <span className="font-semibold text-slate-900 dark:text-zinc-100 text-sm tracking-tight">{reply.authorName}</span>
+             <div className="flex items-center gap-1.5">
+               {userMeta[reply.authorId]?.username ? (
+                 <Link to={`/user/${userMeta[reply.authorId].username}`} className="font-semibold text-slate-900 dark:text-zinc-100 text-sm tracking-tight hover:text-sky-500 dark:hover:text-sky-400 transition-colors group/link flex items-center gap-1.5">
+                   {userMeta[reply.authorId].display_name || reply.authorName}
+                   {userMeta[reply.authorId].is_verified && <BadgeCheck size={14} className="text-sky-500 fill-sky-100 dark:fill-sky-500/20 group-hover/link:scale-110 transition-transform" />}
+                 </Link>
+               ) : (
+                 <span className="font-semibold text-slate-900 dark:text-zinc-100 text-sm tracking-tight flex items-center gap-1.5">
+                   {userMeta[reply.authorId]?.display_name || reply.authorName}
+                   {userMeta[reply.authorId]?.is_verified && <BadgeCheck size={14} className="text-sky-500 fill-sky-100 dark:fill-sky-500/20" />}
+                 </span>
+               )}
+             </div>
              <span className="text-slate-500 dark:text-zinc-500 text-xs font-medium">
                {new Date(reply.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                {reply.isEdited && <span className="ml-1 text-slate-400 dark:text-zinc-600">· Edited</span>}
@@ -376,7 +388,7 @@ const ReplyItem = ({ reply, postId, postReplies, isPostAuthor, user }: { reply: 
 };
 
 // --- POST ITEM ---
-const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Post, user: User | null, currentUserName: string, currentUserAvatar: string }) => {
+const PostItem = ({ post, user, currentUserName, currentUserAvatar, userMeta }: { post: Post, user: User | null, currentUserName: string, currentUserAvatar: string, userMeta: Record<string, {username: string | null, is_verified: boolean, display_name: string}> }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false);
@@ -534,7 +546,17 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
             <img src={post.authorAvatar} alt="author" className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-white dark:ring-white/10 ring-offset-2 ring-offset-white dark:ring-offset-[#09090b]" />
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-[14px] sm:text-[15px] text-slate-900 dark:text-zinc-100 tracking-tight">{post.authorName}</span>
+                 {userMeta[post.authorId]?.username ? (
+                   <Link to={`/user/${userMeta[post.authorId].username}`} className="font-semibold text-[14px] sm:text-[15px] text-slate-900 dark:text-zinc-100 tracking-tight hover:text-sky-500 dark:hover:text-sky-400 transition-colors group/link flex items-center gap-1.5">
+                     {userMeta[post.authorId].display_name || post.authorName}
+                     {userMeta[post.authorId].is_verified && <BadgeCheck size={16} className="text-sky-500 fill-sky-100 dark:fill-sky-500/20 group-hover/link:scale-110 transition-transform" />}
+                   </Link>
+                 ) : (
+                   <span className="font-semibold text-[14px] sm:text-[15px] text-slate-900 dark:text-zinc-100 tracking-tight flex items-center gap-1.5">
+                     {userMeta[post.authorId]?.display_name || post.authorName}
+                     {userMeta[post.authorId]?.is_verified && <BadgeCheck size={16} className="text-sky-500 fill-sky-100 dark:fill-sky-500/20" />}
+                   </span>
+                 )}
                 {hasAcceptedAnswer && (
                   <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-500/10 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-500/20">
                     <CheckCircle2 size={10} /> <span className="hidden sm:inline">Answered</span>
@@ -677,7 +699,7 @@ const PostItem = ({ post, user, currentUserName, currentUserAvatar }: { post: Po
             <div className="absolute left-0 top-0 bottom-8 w-[2px] bg-gradient-to-b from-slate-200 dark:from-white/[0.08] to-transparent rounded-full hidden sm:block"></div>
             
             {sortedReplies.slice(0, showAllReplies ? sortedReplies.length : 1).map((reply) => (
-               <ReplyItem key={reply.id} reply={reply} postId={post.id} postReplies={post.replies} isPostAuthor={isAuthor} user={user} />
+               <ReplyItem key={reply.id} reply={reply} postId={post.id} postReplies={post.replies} isPostAuthor={isAuthor} user={user} userMeta={userMeta} />
             ))}
             
             {sortedReplies.length > 1 && (
@@ -702,6 +724,7 @@ export default function Community() {
   const { user, profile } = useAuth();
   const location = useLocation();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [userMeta, setUserMeta] = useState<Record<string, {username: string | null, is_verified: boolean, display_name: string}>>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -748,6 +771,35 @@ export default function Community() {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (posts.length === 0) return;
+    const fetchMeta = async () => {
+      try {
+        const uids = new Set<string>();
+        posts.forEach(p => {
+          if (p.authorId) uids.add(p.authorId);
+          if (p.replies) {
+            p.replies.forEach((r: any) => { if (r.authorId) uids.add(r.authorId); });
+          }
+        });
+        const uniqueUids = Array.from(uids);
+        if (uniqueUids.length === 0) return;
+        
+        const response = await fetch('/.netlify/functions/get-users-meta', {
+          method: 'POST',
+          body: JSON.stringify({ uids: uniqueUids })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUserMeta(prev => ({ ...prev, ...data }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch user meta", err);
+      }
+    };
+    fetchMeta();
+  }, [posts]);
 
   useEffect(() => {
     const handleScroll = () => setShowScrollTop(window.scrollY > 400);
@@ -852,7 +904,7 @@ export default function Community() {
 
           <div className="space-y-4 sm:space-y-6">
             {filteredPosts.map((post) => (
-              <PostItem key={post.id} post={post} user={user} currentUserName={currentUserName} currentUserAvatar={currentUserAvatar} />
+              <PostItem key={post.id} post={post} user={user} currentUserName={currentUserName} currentUserAvatar={currentUserAvatar} userMeta={userMeta} />
             ))}
           </div>
           

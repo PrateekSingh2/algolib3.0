@@ -1,9 +1,11 @@
 const { supabaseAdmin } = require('./utils/supabase');
+const { rateLimit } = require('./utils/rate-limit');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') return { statusCode: 405, body: 'Method Not Allowed' };
 
   try {
+    rateLimit(event, 60, 60000);
     const contestId = event.queryStringParameters.id;
     if (!contestId) return { statusCode: 400, body: JSON.stringify({ error: 'Missing contest id' }) };
 
@@ -34,7 +36,7 @@ exports.handler = async (event) => {
       // 3. Get user details
       const { data: dbUsers, error: uError } = await supabaseAdmin
         .from('users')
-        .select('firebase_uid, display_name, full_name')
+        .select('firebase_uid, display_name, full_name, username, is_verified')
         .in('firebase_uid', userUids);
         
       if (uError) throw uError;

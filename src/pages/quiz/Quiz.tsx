@@ -8,7 +8,7 @@ import remarkGfm from 'remark-gfm';
 import { 
   AlertTriangle, Clock, ShieldAlert, ChevronRight, 
   ChevronLeft, Send, CheckCircle2, AlertOctagon, Maximize, Trophy, Target, 
-  Loader2, Lock, SearchX, Calendar, Check, Hash, CircleDot, CheckSquare, ToggleLeft
+  Loader2, Lock, SearchX, Calendar, Check, Hash, CircleDot, CheckSquare, ToggleLeft, BadgeCheck
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 
@@ -17,7 +17,7 @@ type QuestionType = 'single' | 'multiple' | 'true_false' | 'numerical';
 interface QuizOption { id: string; text: string; }
 interface QuizQuestion { id: string; text: string; questionType: QuestionType; options: QuizOption[]; correctOptions: string[]; }
 interface QuizData { id: string; title: string; startTime: string; endTime: string; durationSeconds: number; maxWarnings: number; questions: QuizQuestion[]; personalEndTime?: string; }
-interface LeaderboardEntry { display_name: string; score: number; time_taken_seconds: number; }
+interface LeaderboardEntry { display_name: string; username?: string; is_verified?: boolean; score: number; time_taken_seconds: number; }
 
 // UTILITY: Unbiased array randomizer (Fisher-Yates Shuffle)
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -344,7 +344,17 @@ export default function QuizArena() {
                 <div className="flex items-center gap-3">
                    <span className={`w-6 text-center font-mono text-sm font-bold ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-zinc-300' : idx === 2 ? 'text-amber-600' : 'text-zinc-600'}`}>#{idx + 1}</span>
                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-white/5"><span className="text-xs font-bold text-zinc-300">{(entry.display_name || 'U').charAt(0).toUpperCase()}</span></div>
-                   <span className="text-sm font-medium text-zinc-200 truncate max-w-[100px] md:max-w-[120px]">{entry.display_name || 'Anonymous'}</span>
+                   {entry.username ? (
+                     <Link to={`/user/${entry.username}`} className="text-sm font-medium text-zinc-200 truncate max-w-[100px] md:max-w-[120px] hover:text-sky-400 transition-colors flex items-center gap-1.5 group/link">
+                       {entry.display_name || 'Anonymous'}
+                       {entry.is_verified && <BadgeCheck size={14} className="text-sky-500 fill-sky-100 dark:fill-sky-500/20 group-hover/link:scale-110 transition-transform shrink-0" />}
+                     </Link>
+                   ) : (
+                     <span className="text-sm font-medium text-zinc-200 truncate max-w-[100px] md:max-w-[120px] flex items-center gap-1.5">
+                       {entry.display_name || 'Anonymous'}
+                       {entry.is_verified && <BadgeCheck size={14} className="text-sky-500 fill-sky-100 dark:fill-sky-500/20 shrink-0" />}
+                     </span>
+                   )}
                 </div>
                 <div className="flex flex-col items-end gap-0.5"><span className="font-mono text-sm font-bold text-white">{entry.score} <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-sans">pts</span></span></div>
              </div>

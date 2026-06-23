@@ -55,7 +55,7 @@ const Notes             = lazy(() => import("./pages/notes/Notes"));
 const Support           = lazy(() => import("./pages/legals/Support"));
 const Community         = lazy(() => import("./components/Community"));
 const EditProfile       = lazy(() => import("./pages/userprofile/EditProfile"));
-const Profile           = lazy(() => import("./pages/userprofile/Profile"));
+const PublicProfile     = lazy(() => import("./pages/userprofile/PublicProfile"));
 const Settings          = lazy(() => import("./pages/Settings"));
 const ContestPanel      = lazy(() => import("./pages/compilerContest/ContestPanel"));
 const Contests          = lazy(() => import("./pages/compilerContest/Contests"));
@@ -318,7 +318,7 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
 
   const publicRoutes = ['/terms', '/privacy', '/cookies', '/developer', '/support', '/docs', '/compiler', '/visualizer', '/discover', '/testimonials'];
-  const isPublicRoute = publicRoutes.includes(location.pathname.replace(/\/$/, '')) || location.pathname.startsWith('/blog/');
+  const isPublicRoute = publicRoutes.includes(location.pathname.replace(/\/$/, '')) || location.pathname.startsWith('/blog/') || location.pathname.startsWith('/user/');
 
   const getCleanPath = (path: string) => {
     if (path.startsWith('/view/')) return 'snippet_library';
@@ -378,7 +378,7 @@ const AppRoutes = () => {
         <Route path="/ai-visualizer" element={<DynamicVisualizerEngine />} />
         <Route path="/developer" element={<Developer />} />
         <Route path="/discussion" element={<Community />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/user/:username" element={<PublicProfile />} />
         <Route path="/edit-profile" element={<EditProfile />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/settings/:tab" element={<Settings />} />
