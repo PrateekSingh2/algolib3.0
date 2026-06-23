@@ -11,12 +11,17 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { useAuth } from "@/contexts/AuthContext";
+import AuthModal from "@/components/AuthModal";
+import { firestoreDB as db } from "@/lib/firebase";
+import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface WidgetMessage {
   role: "user" | "ai";
   content: string;
   isError?: boolean;
+  result?: any;
 }
 
 // ─── Math & String Sanitizer ────────────────────────────────────────────────
@@ -94,18 +99,21 @@ const WidgetMarkdown = ({ content }: { content: string }) => (
 const VectorisWidget: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
 
   // Hide on specific routes
   const hiddenRoutes = ["/vectoris", "/contest", "/quiz", "/view"];
   const isHidden = hiddenRoutes.some(route => location.pathname.startsWith(route));
   const [isOpen, setIsOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [messages, setMessages] = useState<WidgetMessage[]>([]);
+  const [chatId, setChatId] = useState<string | null>(() => localStorage.getItem("vectoris_widget_chatId"));
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [unread, setUnread] = useState(0);
   const [hasLoaded, setHasLoaded] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Load chat history from localStorage on mount
@@ -121,13 +129,23 @@ const VectorisWidget: React.FC = () => {
 
   // Save chat history whenever messages change
   useEffect(() => {
-    if (hasLoaded) {
+    if (hasLoaded && profile?.vectoris_save_history !== false) {
       localStorage.setItem("vectoris_widget_chat", JSON.stringify(messages));
+      if (chatId) localStorage.setItem("vectoris_widget_chatId", chatId);
+      else localStorage.removeItem("vectoris_widget_chatId");
+    } else if (hasLoaded) {
+      localStorage.removeItem("vectoris_widget_chat");
+      localStorage.removeItem("vectoris_widget_chatId");
     }
-  }, [messages, hasLoaded]);
+  }, [messages, chatId, hasLoaded, profile?.vectoris_save_history]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
   }, [messages, isLoading]);
 
   const [showLabel, setShowLabel] = useState(false);
@@ -191,8 +209,38 @@ const VectorisWidget: React.FC = () => {
       const raw = JSON.parse(data.choices[0].message.content);
       const aiContent = raw.explanation || raw.code || JSON.stringify(raw);
 
-      const aiMsg: WidgetMessage = { role: "ai", content: aiContent };
-      setMessages((prev) => [...prev, aiMsg]);
+      const aiMsg: WidgetMessage = { role: "ai", content: aiContent, result: raw };
+      const finalMessages = [...updatedMessages, aiMsg];
+      setMessages(finalMessages);
+
+      if (profile?.vectoris_save_history !== false) {
+        try {
+           const dbCollection = collection(db, 'users', user.uid, 'analysis_history');
+           if (chatId) {
+              await updateDoc(doc(dbCollection, chatId), { messages: finalMessages, updatedAt: serverTimestamp() });
+           } else {
+              const docRef = await addDoc(dbCollection, { title: text.substring(0, 40) + '...', messages: finalMessages, timestamp: serverTimestamp(), updatedAt: serverTimestamp() });
+              setChatId(docRef.id);
+              localStorage.setItem("vectoris_widget_chatId", docRef.id);
+           }
+        } catch (err) { console.error("Firebase sync error:", err); }
+      }
+
+      // Track usage securely via backend
+      try {
+        const res = await fetch('/.netlify/functions/vectoris-usage', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+           const errText = await res.text();
+           console.error("Vectoris usage update failed:", res.status, errText);
+           toast.error(`Usage update failed (Status: ${res.status}): ${errText}`);
+        }
+        await refreshProfile();
+      } catch (err) { console.error("Usage track error:", err); }
+
       if (!isOpen) setUnread((n) => n + 1);
     } catch (err: any) {
       setMessages((prev) => [
@@ -303,7 +351,9 @@ const VectorisWidget: React.FC = () => {
                 <button
                   onClick={() => {
                     setMessages([]);
+                    setChatId(null);
                     localStorage.removeItem("vectoris_widget_chat");
+                    localStorage.removeItem("vectoris_widget_chatId");
                   }}
                   className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors text-[10px] font-medium"
                   title="Clear chat"
@@ -311,7 +361,13 @@ const VectorisWidget: React.FC = () => {
                   Clear
                 </button>
                 <button
-                  onClick={() => navigate("/vectoris")}
+                  onClick={() => {
+                    if (!user) {
+                      setIsAuthModalOpen(true);
+                    } else {
+                      navigate(chatId ? `/vectoris/${chatId}` : "/vectoris");
+                    }
+                  }}
                   aria-label="Open Vectoris in full page"
                   className="p-1.5 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
                   title="Open Vectoris in full page"
@@ -329,7 +385,9 @@ const VectorisWidget: React.FC = () => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 min-h-0"
+            <div 
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3 min-h-0"
               style={{ scrollbarWidth: "none" }}>
               {messages.length === 0 ? (
                 <div className="flex flex-col gap-4 h-full">
@@ -394,7 +452,7 @@ const VectorisWidget: React.FC = () => {
                 </div>
               )}
 
-              <div ref={bottomRef} />
+              <div className="h-1" />
             </div>
 
             {/* Input */}
@@ -434,6 +492,8 @@ const VectorisWidget: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );
 };

@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { firestoreDB as db } from "@/lib/firebase";
 import { doc, onSnapshot, collection, addDoc, updateDoc, serverTimestamp, query, orderBy, deleteDoc, getDoc } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
+import { useParams, useNavigate } from 'react-router-dom';
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Navbar from "@/components/Navbar"; 
@@ -180,8 +181,11 @@ const safeStringify = (data: any): string => {
 };
 
 export default function Analyzer() {
-  const { user, profile } = useAuth(); 
+  const { user, profile, refreshProfile } = useAuth(); 
   const [credits, setCredits] = useState<number | null>(null);
+  
+  const { id: routeId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   const currentUser = user;
   const userName = (profile && (profile.display_name || (profile as any).name)) || user?.displayName || (user?.email ? user.email.split('@')[0] : 'Guest');
@@ -212,6 +216,31 @@ export default function Analyzer() {
   }, []);
 
   useEffect(() => {
+    if (routeId && routeId !== chatIdRef.current) {
+      const fetchChat = async () => {
+        if (!user) return;
+        try {
+          const docRef = doc(db, 'users', user.uid, 'analysis_history', routeId);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setChatId(routeId);
+            setMessages(data.messages || []);
+          } else {
+            navigate('/vectoris', { replace: true });
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      };
+      fetchChat();
+    } else if (!routeId && chatIdRef.current) {
+      setChatId(null);
+      setMessages([]);
+    }
+  }, [routeId, user, navigate]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isAnalyzing]);
 
@@ -228,9 +257,7 @@ export default function Analyzer() {
   };
 
   const handleNewAnalysis = () => {
-    setMessages([]);
-    setInputCode('');
-    setChatId(null);
+    navigate('/vectoris');
     if (window.innerWidth < 768) setIsSidebarOpen(false); 
   };
 
@@ -284,7 +311,7 @@ export default function Analyzer() {
   }, [user]);
 
   const saveChatToFirebase = async (chatMessages: ChatMessage[]) => {
-    if (!user) return;
+    if (!user || profile?.vectoris_save_history === false) return;
     try {
       const dbCollection = collection(db, 'users', user.uid, 'analysis_history');
       if (chatIdRef.current) {
@@ -294,6 +321,7 @@ export default function Analyzer() {
         const generatedTitle = firstUserMsg ? firstUserMsg.content.substring(0, 40) + '...' : 'New Chat';
         const docRef = await addDoc(dbCollection, { title: generatedTitle, messages: chatMessages, timestamp: serverTimestamp(), updatedAt: serverTimestamp() });
         setChatId(docRef.id);
+        navigate(`/vectoris/${docRef.id}`, { replace: true });
       }
     } catch (err) { console.error("Failed to save thread:", err); }
   };
@@ -328,6 +356,16 @@ export default function Analyzer() {
       const finalMessages: ChatMessage[] = [...currentMessages, { role: 'ai', content: '', result: aiResult }];
       setMessages(finalMessages);
       await saveChatToFirebase(finalMessages);
+
+      // Track usage securely via backend
+      try {
+        const usageRes = await fetch('/.netlify/functions/vectoris-usage', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!usageRes.ok) console.error("Vectoris usage update failed:", await usageRes.text());
+        if (refreshProfile) await refreshProfile();
+      } catch (err) { console.error("Usage track error:", err); }
 
     } catch (err: any) {
       setMessages([...currentMessages, { role: 'ai', content: err.message || "An error occurred processing your request.", isError: true }]);
@@ -364,13 +402,12 @@ export default function Analyzer() {
     if (!user) return;
     try {
       await deleteDoc(doc(db, 'users', user.uid, 'analysis_history', id));
-      if (currentChatId === id) handleNewAnalysis(); 
+      if (routeId === id) handleNewAnalysis(); 
     } catch (err) { console.error(err); }
   };
 
   const loadHistoryItem = (item: HistoryItem) => {
-    setChatId(item.id);
-    if (item.messages && item.messages.length > 0) setMessages(item.messages);
+    navigate(`/vectoris/${item.id}`);
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 

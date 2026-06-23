@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, Clock, HardDrive, Copy, Check, 
   TerminalSquare, Hash, BookOpen, Cpu, Sparkles,
-  Zap, Send, Loader2, X, MessageSquare, HelpCircle, ChevronDown
+  Zap, Send, Loader2, X, MessageSquare, HelpCircle, ChevronDown, Maximize2
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -24,6 +24,8 @@ import { fetchAlgorithms, type Algorithm } from "@/lib/algorithms";
 import Navbar from "@/components/Navbar";
 import GlobalRibbon from "@/components/GlobalRibbon";
 import { useAuth } from "@/contexts/AuthContext";
+import { firestoreDB as db } from "@/lib/firebase";
+import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
 
 // ─── Math & String Sanitizer ────────────────────────────────────────────────
 const sanitizeLatex = (text: string) => {
@@ -102,7 +104,7 @@ const GlassCard = ({ children, className = "", delay = 0 }: { children: React.Re
 const SnippetView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   
   const [activeTab, setActiveTab] = useState<"java" | "cpp" | "python">("java");
   const [algorithm, setAlgorithm] = useState<Algorithm | null>(null);
@@ -111,7 +113,8 @@ const SnippetView = () => {
 
   // ── AlgoAsk AI State ──
   const [isAskOpen, setIsAskOpen] = useState(false);
-  const [askMessages, setAskMessages] = useState<{ role: "user" | "ai"; content: string; isError?: boolean }[]>([]);
+  const [askChatId, setAskChatId] = useState<string | null>(null);
+  const [askMessages, setAskMessages] = useState<{ role: "user" | "ai"; content: string; isError?: boolean; result?: any }[]>([]);
   const [askInput, setAskInput] = useState("");
   const [askLoading, setAskLoading] = useState(false);
   const askBottomRef = useRef<HTMLDivElement>(null);
@@ -207,7 +210,37 @@ User intent: ${intent}`;
       const data = await res.json();
       const raw = JSON.parse(data.choices[0].message.content);
       const aiContent = raw.explanation || raw.code || JSON.stringify(raw);
-      setAskMessages(prev => [...prev, { role: "ai", content: aiContent }]);
+      
+      const finalMessages = [...updatedMessages, { role: "ai" as const, content: aiContent, result: raw }];
+      setAskMessages(finalMessages);
+
+      if (profile?.vectoris_save_history !== false) {
+        try {
+           const dbCollection = collection(db, 'users', user.uid, 'analysis_history');
+           if (askChatId) {
+              await updateDoc(doc(dbCollection, askChatId), { messages: finalMessages, updatedAt: serverTimestamp() });
+           } else {
+              const title = visibleText.substring(0, 40) + '...';
+              const docRef = await addDoc(dbCollection, { title, messages: finalMessages, timestamp: serverTimestamp(), updatedAt: serverTimestamp() });
+              setAskChatId(docRef.id);
+           }
+        } catch (err) { console.error("Firebase sync error:", err); }
+      }
+
+      // Track usage securely via backend
+      try {
+        const usageRes = await fetch('/.netlify/functions/vectoris-usage', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!usageRes.ok) {
+           const errText = await usageRes.text();
+           console.error("Vectoris usage update failed:", errText);
+        }
+        await refreshProfile();
+      } catch (err) { console.error("Usage track error:", err); }
+      
     } catch (err: any) {
       setAskMessages(prev => [...prev, { role: "ai", content: err.message || "An error occurred.", isError: true }]);
     } finally {
@@ -518,12 +551,23 @@ User intent: ${intent}`;
                     <p className="text-[11px] text-slate-400 dark:text-zinc-500">Vectoris AI · Context-aware</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsAskOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-700 dark:hover:text-white transition-colors"
-                >
-                  <X size={18} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                       navigate(askChatId ? `/vectoris/${askChatId}` : "/vectoris");
+                    }}
+                    className="p-2 rounded-xl text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-700 dark:hover:text-white transition-colors"
+                    title="Open in full screen"
+                  >
+                    <Maximize2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => setIsAskOpen(false)}
+                    className="p-2 rounded-xl text-slate-400 dark:text-zinc-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-700 dark:hover:text-white transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* Quick Intent Buttons */}

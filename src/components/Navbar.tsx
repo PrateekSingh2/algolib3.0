@@ -12,7 +12,7 @@ import {
   Bell, CheckCircle2, UserCircle2, UserPen, ChevronDown, Zap, Activity,
   Sparkles, Sun, Moon, Code2, BarChart3, BrainCircuit, Network,
   TerminalSquare, BookText, Trophy, GraduationCap, Layers, Github, Globe, Newspaper,
-  ClipboardList
+  ClipboardList, Settings
 } from "lucide-react";
 
 // ─── Configuration ────────────────────────────────────────────────────────────
@@ -205,15 +205,7 @@ const Navbar = () => {
           <div className="flex flex-col gap-0.5">
             <Link to="/profile"      className="menu-item"><UserCircle2 size={15} className="menu-icon" /> View Profile</Link>
             <Link to="/edit-profile" className="menu-item"><UserPen     size={15} className="menu-icon" /> Edit Profile</Link>
-            <button onClick={toggleTheme} className="menu-item w-full justify-between">
-              <span className="flex items-center gap-2.5">
-                {theme === "dark"
-                  ? <Sun  size={15} className="menu-icon" />
-                  : <Moon size={15} className="menu-icon" />}
-                Theme
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-zinc-600 font-nunito">{theme}</span>
-            </button>
+            <Link to="/settings" className="menu-item"><Settings size={15} className="menu-icon" /> Settings</Link>
             <div className="h-[2px] bg-slate-100 dark:bg-white/[0.05] my-1 mx-2 rounded-full" />
             <button onClick={logout} className="menu-item w-full text-slate-500 hover:text-red-500 hover:bg-red-50 dark:text-zinc-400 dark:hover:text-red-400 dark:hover:bg-red-500/10 transition-colors">
               <LogOut size={15} className="text-slate-400 group-hover:text-red-500 dark:text-zinc-500 dark:group-hover:text-red-400" /> Log Out

@@ -40,6 +40,12 @@ export interface AppUserProfile {
   country?: string | null;
   github_url?: string | null;
   bio?: string | null;
+  vectoris_save_history?: boolean;
+  vectoris_daily_count?: number;
+  vectoris_monthly_count?: number;
+  vectoris_last_active_day?: string;
+  vectoris_last_active_month?: string;
+  deletion_scheduled_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }

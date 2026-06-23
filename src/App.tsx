@@ -56,6 +56,7 @@ const Support           = lazy(() => import("./pages/legals/Support"));
 const Community         = lazy(() => import("./components/Community"));
 const EditProfile       = lazy(() => import("./pages/userprofile/EditProfile"));
 const Profile           = lazy(() => import("./pages/userprofile/Profile"));
+const Settings          = lazy(() => import("./pages/Settings"));
 const ContestPanel      = lazy(() => import("./pages/compilerContest/ContestPanel"));
 const Contests          = lazy(() => import("./pages/compilerContest/Contests"));
 const Compiler          = lazy(() => import("./pages/compilerContest/Compiler"));
@@ -79,7 +80,8 @@ const SYSTEM_MODULES = [
   { id: '/', name: 'Home' }, { id: '/compiler', name: 'Compiler' }, { id: '/visualizer', name: 'Visualizer Dashboard' },
   { id: '/vectoris', name: 'Vectoris' }, { id: '/view-profile', name: 'View Profile' }, { id: '/edit-profile', name: 'Edit Profile' },
   { id: '/contests', name: 'Contest' }, { id: '/quiz-panel', name: 'Quiz' }, { id: '/discussion', name: 'Community' },
-  { id: '/docs', name: 'Documentation' }, { id: '/notes', name: 'AlgoLib Notes' }, { id: '/sheets', name: 'Practice Sheets' }
+  { id: '/docs', name: 'Documentation' }, { id: '/notes', name: 'AlgoLib Notes' }, { id: '/sheets', name: 'Practice Sheets' },
+  { id: '/settings', name: 'Settings' }
 ];
 
 const MaintenanceGuard = ({ children }: { children: React.ReactNode }) => {
@@ -378,10 +380,13 @@ const AppRoutes = () => {
         <Route path="/discussion" element={<Community />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/edit-profile" element={<EditProfile />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/settings/:tab" element={<Settings />} />
         <Route path="/contests" element={<Contests />} />
         <Route path="/contest/:contestId" element={<ContestPanel user={user} onLoginRequest={handleLoginRequest} />} />
         <Route path="/compiler" element={<Compiler />} />
         <Route path="/vectoris" element={<Vectoris />} />
+        <Route path="/vectoris/:id" element={<Vectoris />} />
         <Route path="/quiz/:id" element={<Quiz />} />
         <Route path="/quiz-forge" element={<QuizForge />} />
         <Route path="/quiz-panel" element={<QuizPanel />} />

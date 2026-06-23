@@ -39,7 +39,7 @@ const AlgoDataCard = React.forwardRef<HTMLDivElement, { algo: Algorithm, onClick
       transition={{ duration: 0.4, delay: (index % 12) * 0.04, ease: "easeOut" }}
       onClick={onClick}
       onMouseMove={handleMouseMove}
-      className="group relative flex flex-col p-5 rounded-[1.5rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/60 dark:bg-white/[0.02] backdrop-blur-3xl hover:bg-white/90 dark:hover:bg-white/[0.04] transition-all duration-300 cursor-pointer overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)]"
+      className="group relative flex flex-col p-4 sm:p-5 rounded-[1.25rem] sm:rounded-[1.5rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/60 dark:bg-white/[0.02] backdrop-blur-3xl hover:bg-white/90 dark:hover:bg-white/[0.04] transition-all duration-300 cursor-pointer overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)]"
     >
       <motion.div
         className="pointer-events-none absolute -inset-px rounded-[1.5rem] opacity-0 transition duration-300 group-hover:opacity-100 hidden sm:block"
@@ -50,39 +50,39 @@ const AlgoDataCard = React.forwardRef<HTMLDivElement, { algo: Algorithm, onClick
         }}
       />
 
-      <div className="relative z-10 flex justify-between items-start mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] flex items-center justify-center shadow-inner group-hover:border-blue-500/40 group-hover:bg-blue-500/10 transition-all duration-300">
-            <Layers size={16} className="text-slate-500 dark:text-zinc-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
+      <div className="relative z-10 flex justify-between items-start mb-3 sm:mb-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] flex items-center justify-center shadow-inner group-hover:border-blue-500/40 group-hover:bg-blue-500/10 transition-all duration-300">
+            <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-zinc-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
           </div>
-          <span className="text-[10px] font-mono font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/[0.08] px-2.5 py-1 rounded-md shadow-sm dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] group-hover:text-slate-800 dark:group-hover:text-zinc-200 group-hover:border-slate-300 dark:group-hover:border-white/[0.15] transition-colors">
+          <span className="text-[8px] sm:text-[10px] font-mono font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/[0.08] px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md shadow-sm dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] group-hover:text-slate-800 dark:group-hover:text-zinc-200 group-hover:border-slate-300 dark:group-hover:border-white/[0.15] transition-colors truncate max-w-[80px] sm:max-w-none">
             {algo.category}
           </span>
         </div>
-        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white/[0.05] opacity-0 group-hover:opacity-100 transition-all duration-300 sm:-translate-x-2 sm:group-hover:translate-x-0">
-          <ChevronRight size={16} className="text-white" />
+        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-white/[0.05] opacity-0 group-hover:opacity-100 transition-all duration-300 sm:-translate-x-2 sm:group-hover:translate-x-0">
+          <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
         </div>
       </div>
 
       <div className="relative z-10 flex-1">
-        <h3 className="text-lg font-bold text-slate-800 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-white mb-2 transition-colors tracking-tight drop-shadow-sm dark:drop-shadow-md">
+        <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-white mb-1.5 sm:mb-2 transition-colors tracking-tight drop-shadow-sm dark:drop-shadow-md line-clamp-1 sm:line-clamp-none">
           {algo.title}
         </h3>
-        <p className="text-[13px] text-slate-500 dark:text-zinc-400 line-clamp-2 leading-relaxed font-light group-hover:text-slate-700 dark:group-hover:text-zinc-300 transition-colors">
+        <p className="text-[11px] sm:text-[13px] text-slate-500 dark:text-zinc-400 line-clamp-2 leading-relaxed font-light group-hover:text-slate-700 dark:group-hover:text-zinc-300 transition-colors">
           {algo.description}
         </p>
       </div>
 
       {algo.tags && algo.tags.length > 0 && (
-        <div className="relative z-10 flex flex-wrap gap-2 mt-5 pt-4 border-t border-slate-200 dark:border-white/[0.04]">
-          {algo.tags.slice(0, 3).map((tag, idx) => (
-            <span key={idx} className="text-[10px] px-2.5 py-1 rounded-md text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.05] font-medium tracking-wide">
+        <div className="relative z-10 flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-200 dark:border-white/[0.04]">
+          {algo.tags.slice(0, 2).map((tag, idx) => (
+            <span key={idx} className="text-[9px] sm:text-[10px] px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.05] font-medium tracking-wide whitespace-nowrap">
               {tag}
             </span>
           ))}
-          {algo.tags.length > 3 && (
-            <span className="text-[10px] px-2 py-1 rounded-md text-slate-500 dark:text-zinc-500 font-medium border border-transparent">
-              +{algo.tags.length - 3}
+          {algo.tags.length > 2 && (
+            <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md text-slate-500 dark:text-zinc-500 font-medium border border-transparent whitespace-nowrap">
+              +{algo.tags.length - 2}
             </span>
           )}
         </div>
@@ -318,20 +318,20 @@ const Index = () => {
 
         <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:px-10">
 
-          {/* ── HERO BENTO ROW ── */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 mb-6 sm:mb-8 mt-2">
+          {/* ── BENTO DASHBOARD MATRIX ── */}
+          <section className="grid grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-5 mb-6 sm:mb-8 mt-2">
 
-            {/* Welcome Card – 8 cols */}
+            {/* 1. Welcome Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-              className="lg:col-span-8 rounded-[1.75rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-7 sm:p-10 flex flex-col justify-between relative overflow-hidden group shadow-[0_8px_40px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)] min-h-[280px]"
+              className="col-span-2 lg:col-span-8 rounded-[1.5rem] lg:rounded-[1.75rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-6 lg:p-8 flex flex-col justify-between relative overflow-hidden group shadow-[0_8px_40px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)] lg:min-h-[280px]"
             >
               {/* Ambient glow */}
               <div className="absolute right-[-8%] top-[-15%] w-[420px] h-[420px] bg-blue-100 dark:bg-blue-600/10 rounded-full blur-[90px] pointer-events-none group-hover:bg-blue-200/80 dark:group-hover:bg-blue-600/18 transition-colors duration-700 hidden sm:block" />
               <div className="absolute left-[-5%] bottom-[-10%] w-[200px] h-[200px] bg-indigo-100/60 dark:bg-indigo-500/5 rounded-full blur-[70px] pointer-events-none hidden sm:block" />
 
               <div className="relative z-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 mb-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 mb-4 lg:mb-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
                   <Activity size={13} className="text-blue-500 dark:text-blue-400" />
                   <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-300 uppercase tracking-widest">Active Workspace</span>
                 </div>
@@ -349,212 +349,209 @@ const Index = () => {
                 </p>
               </div>
 
-              <div className="relative z-10 mt-8 flex flex-wrap gap-3">
+              <div className="relative z-10 mt-6 sm:mt-8 grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
                 <button
                   onClick={() => setIsSearchModalOpen(true)}
-                  className="px-5 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-sm font-bold rounded-xl hover:bg-blue-600 dark:hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center gap-2 shadow-lg"
+                  className="w-full sm:w-auto justify-center px-2 lg:px-5 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-[11px] sm:text-sm font-bold rounded-xl hover:bg-blue-600 dark:hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center gap-1.5 sm:gap-2 shadow-lg whitespace-nowrap"
                 >
-                  <Search size={16} /> Search Algorithms
+                  <Search size={14} className="sm:w-4 sm:h-4 shrink-0" /> Search Algos
                 </button>
                 <Link
                   to="/compiler"
-                  className="px-5 py-3 bg-white dark:bg-white/[0.05] text-slate-700 dark:text-zinc-300 text-sm font-semibold rounded-xl border border-slate-200 dark:border-white/[0.08] hover:border-blue-400 dark:hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400 active:scale-[0.98] transition-all flex items-center gap-2 shadow-sm"
+                  className="w-full sm:w-auto justify-center px-2 lg:px-5 py-3 bg-white dark:bg-white/[0.05] text-slate-700 dark:text-zinc-300 text-[11px] sm:text-sm font-semibold rounded-xl border border-slate-200 dark:border-white/[0.08] hover:border-blue-400 dark:hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400 active:scale-[0.98] transition-all flex items-center gap-1.5 sm:gap-2 shadow-sm whitespace-nowrap"
                 >
-                  <Terminal size={16} /> Open Compiler
+                  <Terminal size={14} className="sm:w-4 sm:h-4 shrink-0" /> Open Compiler
                 </Link>
               </div>
             </motion.div>
 
-            {/* Stats Card – 4 cols */}
+            {/* 2. Total Algorithms Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
-              className="lg:col-span-4 rounded-[1.75rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-7 sm:p-8 flex flex-col justify-between relative overflow-hidden group shadow-[0_8px_40px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)] min-h-[280px]"
+              className="col-span-1 lg:col-span-4 rounded-[1.25rem] lg:rounded-[1.75rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-4 lg:p-7 xl:p-8 flex flex-col justify-between relative overflow-hidden group shadow-[0_4px_20px_rgba(0,0,0,0.04)] lg:shadow-[0_8px_40px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_4px_20px_rgba(0,0,0,0.15)] lg:dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)] min-h-[160px] lg:min-h-[280px]"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/60 dark:from-cyan-500/[0.04] to-transparent pointer-events-none" />
 
-              <div className="relative z-10 flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-600 dark:text-zinc-300 flex items-center gap-2">
-                  <Database size={15} className="text-cyan-500 dark:text-cyan-400" /> Total Algorithms
+              <div className="relative z-10 flex items-center justify-between mb-2 lg:mb-0">
+                <span className="text-[10px] lg:text-sm font-semibold text-slate-600 dark:text-zinc-300 flex items-center gap-1.5 lg:gap-2">
+                  <Database className="w-3 h-3 lg:w-[15px] lg:h-[15px] text-cyan-500 dark:text-cyan-400 shrink-0" />
+                  <span className="truncate lg:hidden">Total Algos</span>
+                  <span className="hidden lg:inline">Total Algorithms</span>
                 </span>
-                <span className="text-[10px] font-mono font-bold tracking-wider text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-400/10 px-2.5 py-1 rounded-md border border-green-200 dark:border-green-500/20 animate-pulse">
+                <span className="text-[8px] lg:text-[10px] font-mono font-bold tracking-wider text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-400/10 px-1.5 lg:px-2.5 py-0.5 lg:py-1 rounded-md border border-green-200 dark:border-green-500/20 animate-pulse shrink-0">
                   ● LIVE
                 </span>
               </div>
 
-              <div className="relative z-10 flex flex-col gap-1">
-                <span className="text-7xl sm:text-8xl font-black text-slate-800 dark:text-white tracking-tighter tabular-nums">
+              <div className="relative z-10 flex flex-col gap-0.5 lg:gap-1 mb-3 lg:mb-0 mt-1 lg:mt-0">
+                <span className="text-4xl lg:text-7xl xl:text-8xl font-black text-slate-800 dark:text-white tracking-tighter tabular-nums leading-none lg:leading-normal">
                   {algorithms.length > 0 ? algorithms.length : "0"}
                 </span>
-                <div className="flex items-center gap-2">
-                  <TrendingUp size={14} className="text-green-500" />
-                  <span className="text-xs text-green-600 dark:text-green-400 font-semibold">All categories covered</span>
+                <div className="flex items-center gap-1.5 lg:gap-2 mt-1 lg:mt-0">
+                  <TrendingUp className="w-3 h-3 lg:w-3.5 lg:h-3.5 text-green-500 shrink-0" />
+                  <span className="text-[9px] lg:text-xs text-green-600 dark:text-green-400 font-semibold truncate lg:whitespace-normal">All categories covered</span>
                 </div>
               </div>
 
-              <div className="relative z-10 grid grid-cols-2 gap-3 pt-4 border-t border-slate-100 dark:border-white/[0.05]">
+              <div className="relative z-10 grid grid-cols-2 gap-2 lg:gap-3 pt-2.5 lg:pt-4 border-t border-slate-100 dark:border-white/[0.05]">
                 {[
                   { label: "Categories", value: new Set(algorithms.map(a => a.category)).size || "—" },
                   { label: "With Tags", value: algorithms.filter(a => a.tags?.length).length || "—" },
                 ].map(stat => (
-                  <div key={stat.label} className="bg-slate-50 dark:bg-white/[0.03] rounded-xl px-3 py-2.5 border border-slate-100 dark:border-white/[0.05]">
-                    <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-medium uppercase tracking-wider mb-0.5">{stat.label}</p>
-                    <p className="text-lg font-bold text-slate-700 dark:text-zinc-200 tabular-nums">{stat.value}</p>
+                  <div key={stat.label} className="bg-slate-50 dark:bg-white/[0.03] rounded-lg lg:rounded-xl px-2 lg:px-3 py-1.5 lg:py-2.5 border border-slate-100 dark:border-white/[0.05]">
+                    <p className="text-[8px] lg:text-[10px] text-slate-400 dark:text-zinc-500 font-medium uppercase tracking-wider mb-0.5 lg:mb-1 truncate">{stat.label}</p>
+                    <p className="text-xs lg:text-lg font-bold text-slate-700 dark:text-zinc-200 tabular-nums">{stat.value}</p>
                   </div>
                 ))}
               </div>
             </motion.div>
-          </section>
 
-          {/* ── ALGORITHM INTELLIGENCE PANEL ── */}
-          {algorithms.length > 0 && featuredAlgo && (() => {
-            // Derive live data from the algorithms array
-            const complexityGroups = [
-              { label: "O(1) / O(log n)", color: "emerald", darkColor: "emerald", matches: (t: string) => /O\(1\)|O\(log/.test(t) },
-              { label: "O(n)", color: "blue", darkColor: "blue", matches: (t: string) => /^O\(n\)$/.test(t.trim()) },
-              { label: "O(n log n)", color: "violet", darkColor: "violet", matches: (t: string) => /O\(n log/.test(t) },
-              { label: "O(n²) or worse", color: "amber", darkColor: "amber", matches: (t: string) => /O\(n.{0,3}[²2]\)|O\(N!\)|O\(2\^n\)/.test(t) },
-            ];
-            const groupCounts = complexityGroups.map(g => ({
-              ...g,
-              count: algorithms.filter(a => g.matches(a.timeComplexity || "")).length,
-            }));
-            const maxCount = Math.max(...groupCounts.map(g => g.count), 1);
-            const langCoverage = [
-              { lang: "Python", key: "codePython", dot: "bg-blue-500" },
-              { lang: "Java", key: "codeJava", dot: "bg-orange-500" },
-              { lang: "C++", key: "codeCpp", dot: "bg-violet-500" },
-            ];
-            const featured = featuredAlgo;
+            {/* Conditionally rendered row 2 */}
+            {algorithms.length > 0 && featuredAlgo && (() => {
+              const complexityGroups = [
+                { label: "O(1) / O(log n)", color: "emerald", darkColor: "emerald", matches: (t: string) => /O\(1\)|O\(log/.test(t) },
+                { label: "O(n)", color: "blue", darkColor: "blue", matches: (t: string) => /^O\(n\)$/.test(t.trim()) },
+                { label: "O(n log n)", color: "violet", darkColor: "violet", matches: (t: string) => /O\(n log/.test(t) },
+                { label: "O(n²) or worse", color: "amber", darkColor: "amber", matches: (t: string) => /O\(n.{0,3}[²2]\)|O\(N!\)|O\(2\^n\)/.test(t) },
+              ];
+              const groupCounts = complexityGroups.map(g => ({
+                ...g,
+                count: algorithms.filter(a => g.matches(a.timeComplexity || "")).length,
+              }));
+              const maxCount = Math.max(...groupCounts.map(g => g.count), 1);
+              const langCoverage = [
+                { lang: "Python", key: "codePython", dot: "bg-blue-500" },
+                { lang: "Java", key: "codeJava", dot: "bg-orange-500" },
+                { lang: "C++", key: "codeCpp", dot: "bg-violet-500" },
+              ];
+              const featured = featuredAlgo;
 
-            return (
-              <motion.section
-                initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.2 }}
-                className="mb-6 sm:mb-8 grid grid-cols-1 lg:grid-cols-12 gap-4"
-              >
-                {/* ── Left: Complexity Distribution ── */}
-                <div className="lg:col-span-5 rounded-[1.5rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-6 flex flex-col gap-5 shadow-[0_6px_30px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-blue-50 dark:from-blue-600/[0.06] to-transparent pointer-events-none rounded-[1.5rem]" />
-                  <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-1">Live Analysis</p>
-                      <h2 className="text-sm font-bold text-slate-700 dark:text-zinc-200 flex items-center gap-2">
-                        <TrendingUp size={15} className="text-blue-500" /> Complexity Distribution
-                      </h2>
+              return (
+                <>
+                  {/* 3. Complexity Distribution */}
+                  <div className="col-span-1 lg:col-span-5 rounded-[1.25rem] lg:rounded-[1.5rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-4 lg:p-6 flex flex-col gap-1 lg:gap-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] lg:shadow-[0_6px_30px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_4px_20px_rgba(0,0,0,0.15)] lg:dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] relative overflow-hidden min-h-[160px] lg:min-h-auto">
+                    <div className="absolute top-0 right-0 w-32 lg:w-48 h-32 lg:h-48 bg-gradient-to-bl from-blue-50 dark:from-blue-600/[0.06] to-transparent pointer-events-none rounded-[1.5rem]" />
+                    <div className="relative z-10 flex items-center justify-between mb-2 lg:mb-0">
+                      <div className="flex flex-col lg:block">
+                        <p className="text-[8px] lg:text-[10px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-0.5 lg:mb-1 truncate">Live Analysis</p>
+                        <h2 className="text-[10px] lg:text-sm font-bold text-slate-700 dark:text-zinc-200 flex items-center gap-1.5 lg:gap-2 truncate">
+                          <TrendingUp className="w-3 h-3 lg:w-[15px] lg:h-[15px] text-blue-500 shrink-0" />
+                          <span className="lg:hidden">Complexity</span>
+                          <span className="hidden lg:inline">Complexity Distribution</span>
+                        </h2>
+                      </div>
+                      <span className="hidden lg:inline-block text-[10px] font-mono px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 font-bold">{algorithms.length} algos</span>
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 font-bold">{algorithms.length} algos</span>
-                  </div>
-                  <div className="relative z-10 flex flex-col gap-3">
-                    {groupCounts.map(g => {
-                      const pct = Math.round((g.count / maxCount) * 100);
-                      const barColor: Record<string, string> = {
-                        emerald: "bg-emerald-400 dark:bg-emerald-500",
-                        blue: "bg-blue-400 dark:bg-blue-500",
-                        violet: "bg-violet-400 dark:bg-violet-500",
-                        amber: "bg-amber-400 dark:bg-amber-500",
-                      };
-                      const textColor: Record<string, string> = {
-                        emerald: "text-emerald-600 dark:text-emerald-400",
-                        blue: "text-blue-600 dark:text-blue-400",
-                        violet: "text-violet-600 dark:text-violet-400",
-                        amber: "text-amber-600 dark:text-amber-400",
-                      };
-                      return (
-                        <div key={g.label} className="flex items-center gap-3">
-                          <span className="text-[11px] text-slate-500 dark:text-zinc-400 w-28 shrink-0 font-mono">{g.label}</span>
-                          <div className="flex-1 h-2 rounded-full bg-slate-100 dark:bg-white/[0.05] overflow-hidden">
-                            <motion.div
-                              initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                              transition={{ duration: 0.9, delay: 0.3, ease: "easeOut" }}
-                              className={`h-full rounded-full ${barColor[g.color]}`}
-                            />
-                          </div>
-                          <span className={`text-[11px] font-bold w-6 text-right tabular-nums ${textColor[g.color]}`}>{g.count}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Language coverage pills */}
-                  <div className="relative z-10 flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-white/[0.05]">
-                    <span className="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Languages</span>
-                    <div className="flex gap-2 flex-wrap">
-                      {langCoverage.map(l => {
-                        const covered = algorithms.filter(a => (a as any)[l.key]).length;
-                        const pct = algorithms.length > 0 ? Math.round((covered / algorithms.length) * 100) : 0;
+                    
+                    <div className="relative z-10 flex flex-col gap-1 lg:gap-3 mb-2 lg:mb-0">
+                      {groupCounts.map(g => {
+                        const pct = Math.round((g.count / maxCount) * 100);
+                        const barColor: Record<string, string> = { emerald: "bg-emerald-400 dark:bg-emerald-500", blue: "bg-blue-400 dark:bg-blue-500", violet: "bg-violet-400 dark:bg-violet-500", amber: "bg-amber-400 dark:bg-amber-500" };
+                        const textColor: Record<string, string> = { emerald: "text-emerald-600 dark:text-emerald-400", blue: "text-blue-600 dark:text-blue-400", violet: "text-violet-600 dark:text-violet-400", amber: "text-amber-600 dark:text-amber-400" };
                         return (
-                          <span key={l.lang} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-zinc-300 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.07] px-2.5 py-1 rounded-lg">
-                            <span className={`w-1.5 h-1.5 rounded-full ${l.dot}`} />
-                            {l.lang} <span className="opacity-60 font-normal">{pct}%</span>
-                          </span>
+                          <div key={g.label} className="flex flex-col lg:flex-row lg:items-center gap-0.5 lg:gap-3">
+                            <div className="flex items-center justify-between w-full lg:w-auto">
+                              <span className="text-[8px] lg:text-[11px] text-slate-500 dark:text-zinc-400 w-20 lg:w-28 shrink-0 font-mono truncate">{g.label}</span>
+                              <span className={`text-[8px] font-bold lg:hidden tabular-nums ${textColor[g.color]}`}>{g.count}</span>
+                            </div>
+                            <div className="flex-1 flex items-center gap-2">
+                              <div className="flex-1 h-1.5 lg:h-2 rounded-full bg-slate-100 dark:bg-white/[0.05] overflow-hidden">
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.9, delay: 0.3, ease: "easeOut" }} className={`h-full rounded-full ${barColor[g.color]}`} />
+                              </div>
+                              <span className={`hidden lg:block text-[9px] lg:text-[11px] font-bold w-4 lg:w-6 text-right tabular-nums ${textColor[g.color]}`}>{g.count}</span>
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
-                  </div>
-                </div>
-
-                {/* ── Right: Algorithm of the Moment ── */}
-                <motion.div
-                  whileHover={{ scale: 1.012 }}
-                  onClick={() => navigate(`/view/${featured.id}`)}
-                  className="lg:col-span-7 rounded-[1.5rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-6 sm:p-8 flex flex-col justify-between cursor-pointer shadow-[0_6px_30px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] relative overflow-hidden group"
-                >
-                  {/* Background code watermark */}
-                  <div className="absolute inset-0 flex items-center justify-end pr-6 pointer-events-none opacity-[0.035] dark:opacity-[0.07] select-none overflow-hidden">
-                    <pre className="text-[9px] leading-4 font-mono text-slate-900 dark:text-white text-right max-h-full overflow-hidden">
-                      {(featured.codePython || featured.codeJava || "").slice(0, 320)}
-                    </pre>
-                  </div>
-                  <div className="absolute top-0 left-0 w-60 h-60 bg-gradient-to-br from-indigo-50/80 dark:from-indigo-600/[0.06] to-transparent pointer-events-none rounded-[1.5rem]" />
-
-                  <div className="relative z-10 flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                        <Sparkles size={14} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">Algorithm of the Moment</p>
-                        <p className="text-[10px] text-slate-400 dark:text-zinc-600">Rotates daily · click to explore</p>
+                    {/* Language coverage pills */}
+                    <div className="relative z-10 flex items-center gap-1.5 lg:gap-3 pt-2.5 lg:pt-4 border-t border-slate-100 dark:border-white/[0.05] mt-auto lg:mt-0">
+                      <span className="hidden lg:inline text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Languages</span>
+                      <div className="flex gap-1.5 lg:gap-2 flex-wrap">
+                        {langCoverage.map(l => {
+                          const covered = algorithms.filter(a => (a as any)[l.key]).length;
+                          const pct = algorithms.length > 0 ? Math.round((covered / algorithms.length) * 100) : 0;
+                          return (
+                            <span key={l.lang} className="flex items-center gap-1 lg:gap-1.5 text-[8px] lg:text-[11px] font-semibold text-slate-600 dark:text-zinc-300 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.07] px-1.5 lg:px-2.5 py-0.5 lg:py-1 rounded-md lg:rounded-lg">
+                              <span className={`w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full ${l.dot}`} />
+                              {l.lang}
+                              <span className="hidden lg:inline opacity-60 font-normal">{pct}%</span>
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
-                    <ChevronRight size={18} className="text-slate-300 dark:text-zinc-600 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors mt-1 shrink-0" />
                   </div>
 
-                  <div className="relative z-10 mt-5">
-                    <span className="text-[10px] font-mono font-bold tracking-widest text-slate-400 dark:text-zinc-500 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.07] px-2.5 py-1 rounded-md uppercase mb-3 inline-block">
-                      {featured.category}
-                    </span>
-                    <h3 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tracking-tight leading-tight mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
-                      {featured.title}
-                    </h3>
-                    <p className="text-sm text-slate-500 dark:text-zinc-400 leading-relaxed line-clamp-2 max-w-lg font-light">
-                      {featured.description}
-                    </p>
-                  </div>
+                  {/* 4. Algorithm of the Moment */}
+                  <motion.div
+                    whileHover={{ scale: 1.012 }}
+                    onClick={() => navigate(`/view/${featured.id}`)}
+                    className="col-span-2 lg:col-span-7 rounded-[1.5rem] lg:rounded-[1.75rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-6 lg:p-8 flex flex-col lg:flex-row justify-between cursor-pointer shadow-[0_6px_30px_rgba(0,0,0,0.04)] lg:shadow-[0_6px_30px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] lg:dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] relative overflow-hidden group gap-6 lg:gap-0"
+                  >
+                    {/* Background code watermark */}
+                    <div className="absolute inset-0 flex items-center justify-end pr-6 pointer-events-none opacity-[0.035] dark:opacity-[0.07] select-none overflow-hidden">
+                      <pre className="text-[9px] leading-4 font-mono text-slate-900 dark:text-white text-right max-h-full overflow-hidden">
+                        {(featured.codePython || featured.codeJava || "").slice(0, 320)}
+                      </pre>
+                    </div>
+                    <div className="absolute top-0 left-0 w-60 h-60 bg-gradient-to-br from-indigo-50/80 dark:from-indigo-600/[0.06] to-transparent pointer-events-none rounded-[1.5rem]" />
 
-                  <div className="relative z-10 mt-6 flex flex-wrap items-center gap-3">
-                    {[
-                      { icon: Zap, label: "Time", val: featured.timeComplexity, c: "blue" },
-                      { icon: Database, label: "Space", val: featured.spaceComplexity, c: "emerald" },
-                    ].map(item => {
-                      const chipColor: Record<string, string> = {
-                        blue: "bg-blue-50 dark:bg-blue-500/[0.08] border-blue-100 dark:border-blue-500/20 text-blue-700 dark:text-blue-300",
-                        emerald: "bg-emerald-50 dark:bg-emerald-500/[0.08] border-emerald-100 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300",
-                      };
-                      return item.val ? (
-                        <span key={item.label} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold font-mono ${chipColor[item.c]}`}>
-                          <item.icon size={11} /> {item.label}: {item.val}
+                    <div className="relative z-10 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                            <Sparkles size={14} className="text-white" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">Algorithm of the Moment</p>
+                            <p className="text-[10px] text-slate-400 dark:text-zinc-600">Rotates daily · click to explore</p>
+                          </div>
+                        </div>
+                        <ChevronRight size={18} className="text-slate-300 dark:text-zinc-600 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors mt-1 shrink-0 block lg:hidden" />
+                      </div>
+
+                      <div className="mt-5">
+                        <span className="text-[10px] font-mono font-bold tracking-widest text-slate-400 dark:text-zinc-500 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.07] px-2.5 py-1 rounded-md uppercase mb-3 inline-block">
+                          {featured.category}
                         </span>
-                      ) : null;
-                    })}
-                    {(featured.tags || []).slice(0, 2).map(tag => (
-                      <span key={tag} className="text-[11px] px-2.5 py-1 rounded-lg text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] font-medium">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </motion.div>
-              </motion.section>
-            );
-          })()}
+                        <h3 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tracking-tight leading-tight mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
+                          {featured.title}
+                        </h3>
+                        <p className="text-sm text-slate-500 dark:text-zinc-400 leading-relaxed line-clamp-2 max-w-lg font-light">
+                          {featured.description}
+                        </p>
+                      </div>
+
+                      <div className="mt-5 sm:mt-6 grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3">
+                        {[
+                          { icon: Zap, label: "Time", val: featured.timeComplexity, c: "blue" },
+                          { icon: Database, label: "Space", val: featured.spaceComplexity, c: "emerald" },
+                        ].map(item => {
+                          const chipColor: Record<string, string> = { blue: "bg-blue-50 dark:bg-blue-500/[0.08] border-blue-100 dark:border-blue-500/20 text-blue-700 dark:text-blue-300", emerald: "bg-emerald-50 dark:bg-emerald-500/[0.08] border-emerald-100 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300" };
+                          return item.val ? (
+                            <span key={item.label} className={`flex items-center justify-center sm:justify-start gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl border text-[10px] sm:text-xs font-bold font-mono truncate ${chipColor[item.c]}`}>
+                              <item.icon size={11} className="shrink-0" /> <span className="truncate">{item.label}: {item.val}</span>
+                            </span>
+                          ) : null;
+                        })}
+                        <div className="col-span-2 flex flex-wrap gap-2 mt-1 sm:mt-0">
+                          {(featured.tags || []).slice(0, 2).map(tag => (
+                            <span key={tag} className="text-[10px] sm:text-[11px] px-2 sm:px-2.5 py-1 rounded-lg text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] font-medium">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="hidden lg:flex items-center justify-center shrink-0 pl-4">
+                       <ChevronRight size={32} className="text-slate-200 dark:text-white/[0.05] group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
+                    </div>
+                  </motion.div>
+                </>
+              );
+            })()}
+          </section>
 
           {/* STICKY GLASS SEARCH COMMAND TRIGGER & VERTICAL FILTERS */}
           <section className="mb-6 sm:mb-8 flex flex-col md:flex-row gap-4 sm:gap-5 items-start md:items-center justify-between sticky top-[90px] sm:top-[100px] z-30 bg-white/40 dark:bg-[#09090B]/80 backdrop-blur-3xl py-3 sm:py-4 border-b border-slate-200/60 dark:border-white/[0.05] shadow-sm dark:shadow-[0_10px_30px_rgba(0,0,0,0.4)] -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -619,7 +616,7 @@ const Index = () => {
           </section>
 
           <section className="min-h-[400px]">
-            <motion.div layout="position" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+            <motion.div layout="position" className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
               <AnimatePresence mode="popLayout">
                 {filteredAlgorithms.length > 0 ? (
                   filteredAlgorithms.slice(0, visibleCount).map((algo, index) => (

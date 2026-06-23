@@ -112,6 +112,7 @@ const FooterCTA: React.FC<FooterCTAProps> = ({ onGetStarted }) => {
   const inView = useInView(ref, { once: true, margin: "-80px" });
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(3);
 
   useEffect(() => {
     fetch("/.netlify/functions/get-testimonials?landing=true")
@@ -176,15 +177,28 @@ const FooterCTA: React.FC<FooterCTAProps> = ({ onGetStarted }) => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start w-full px-2">
-              {/* Col 1 */}
-              <div className="flex flex-col gap-4 md:gap-6">
+              {/* Mobile View (1 Column, Load More) */}
+              <div className="flex md:hidden flex-col gap-4">
+                {testimonials.slice(0, visibleCount).map((item, i) => <TestimonialCard key={`mob-${i}`} item={item} i={i} />)}
+                {visibleCount < testimonials.length && (
+                  <button 
+                    onClick={() => setVisibleCount(v => Math.min(v + 3, testimonials.length))} 
+                    className="mt-2 mx-auto inline-flex items-center justify-center px-6 py-3 rounded-full bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-white/70 hover:text-indigo-600 dark:hover:text-white hover:border-indigo-200 dark:hover:bg-white/[0.08] font-bold text-[13px] transition-all shadow-sm dark:shadow-none font-nunito"
+                  >
+                    Load More
+                  </button>
+                )}
+              </div>
+
+              {/* Desktop / Tablet Col 1 */}
+              <div className="hidden md:flex flex-col gap-4 md:gap-6">
                 {col1.map((item, i) => <TestimonialCard key={`col1-${i}`} item={item} i={i} />)}
               </div>
-              {/* Col 2 */}
+              {/* Desktop / Tablet Col 2 */}
               <div className="hidden md:flex flex-col gap-4 md:gap-6 mt-10">
                 {col2.map((item, i) => <TestimonialCard key={`col2-${i}`} item={item} i={i + col1.length} />)}
               </div>
-              {/* Col 3 */}
+              {/* Desktop Col 3 */}
               <div className="hidden lg:flex flex-col gap-4 md:gap-6 mt-5">
                 {col3.map((item, i) => <TestimonialCard key={`col3-${i}`} item={item} i={i + col1.length + col2.length} />)}
               </div>
