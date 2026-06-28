@@ -312,16 +312,8 @@ export default function Compiler() {
   useEffect(() => {
     if (!roomId || !roomState) return;
 
-    // Viewers strictly follow host's language
-    if (role === 'viewer' && roomState.languageId && roomState.languageId !== activeLang.id) {
-      const targetLang = LANGUAGES.find(l => l.id === roomState.languageId);
-      if (targetLang) {
-        setActiveLang(targetLang);
-        if (!openTabs.find(t => t.id === targetLang.id)) {
-          setOpenTabs(prev => [...prev, targetLang]);
-        }
-      }
-    }
+    // Viewers can switch tabs independently now, but code will still sync for the host's active tab.
+    // Removed strict tab locking.
 
     // Sync code content
     if (roomState.code !== undefined && roomState.code !== code) {
@@ -630,8 +622,16 @@ export default function Compiler() {
         }
       }
     } catch (e: any) {
-      if (e.name === 'AbortError' || abortRef.current) setOutput('Process killed by user (SIGINT)');
-      else { setOutput(e.message); highlightErrorIfAny(e.message); }
+      if (e.name === 'AbortError' || abortRef.current) {
+         setOutput('Process killed by user (SIGINT)');
+      } else if (e.message.includes('Failed to fetch') || e.message.includes('Offline') || e.message.includes('503') || e.message.includes('504')) {
+         const msg = '🚨 Execution Engine Offline or Waking Up.\n\nThe free tier cluster takes ~1-2 minutes to wake up from sleep. Please wait a moment and try running again!';
+         setOutput(msg);
+         toast.error("Execution Engine Offline", { description: "The backend is currently waking up. Please try again in 1-2 minutes." });
+      } else { 
+         setOutput(e.message); 
+         highlightErrorIfAny(e.message); 
+      }
       setExecutionStatus('error');
     } finally {
       setIsRunning(false);

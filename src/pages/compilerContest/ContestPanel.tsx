@@ -922,7 +922,12 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       }
 
     } catch (error: any) {
-      addLog('error', `Cluster transaction pipeline timed out or dropped package execution thread: ${error.message}`);
+      if (error.message.includes('Failed to fetch') || error.message.includes('Offline') || error.message.includes('503') || error.message.includes('504')) {
+         addLog('error', `🚨 Execution Engine Offline or Waking Up.\n\nThe free tier cluster takes ~1-2 minutes to wake up from sleep. Please wait a moment and try running again!`);
+         toast.error("Execution Engine Offline", { description: "The backend is currently waking up. Please try again in 1-2 minutes." });
+      } else {
+         addLog('error', `Cluster transaction pipeline timed out or dropped package execution thread: ${error.message}`);
+      }
       setSubmissionPhase('idle');
       
       // Update pending submission to show failure if crashed

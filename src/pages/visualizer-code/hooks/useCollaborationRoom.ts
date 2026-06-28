@@ -141,8 +141,7 @@ export function useCollaborationRoom(options?: UseCollaborationRoomOptions) {
 
       } else {
         // Room was deleted
-        if (role === 'viewer') {
-          toast.info("The host has ended this session.");
+        if (role === 'viewer' || role === 'host') {
           leaveRoom();
         }
       }
