@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Github, Zap, Mail, Lock, Loader2 } from "lucide-react";
+import { X, Github, Zap, Mail, Lock, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
 import { executeGoogleSignIn, executeGithubSignIn } from "@/contexts/AuthContext";
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
@@ -190,7 +190,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setAttempts(newAttempts);
     localStorage.setItem('auth_attempts', newAttempts.toString());
     
-    if (newAttempts >= 5) {
+    if (newAttempts >= 3) {
       const lockTime = Date.now() + 15 * 60 * 1000; // 15 mins
       setLockoutUntil(lockTime);
       localStorage.setItem('auth_lockout', lockTime.toString());
@@ -217,11 +217,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     
     setLoading(true);
     try {
+      const formattedEmail = email.trim();
+      const formattedPassword = password.trim();
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(auth, formattedEmail, formattedPassword);
         toast.success("Successfully logged in!");
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        await createUserWithEmailAndPassword(auth, formattedEmail, formattedPassword);
         toast.success("Account created successfully!");
       }
       onClose();
@@ -332,26 +334,38 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     />
                   </div>
                   
-                  {/* Canvas CAPTCHA */}
-                  <div className="flex flex-col gap-2 mt-1">
-                    <div className="flex gap-2">
-                       <canvas 
-                          ref={canvasRef} 
-                          width={140} 
-                          height={44} 
-                          className="rounded-xl border-2 border-slate-200 dark:border-white/10 bg-white dark:bg-black/40 flex-shrink-0 cursor-pointer"
-                          title="Click to refresh CAPTCHA"
-                          onClick={generateCaptcha}
-                       />
-                       <input
-                         type="text"
-                         placeholder="Enter CAPTCHA"
-                         value={captchaInput}
-                         onChange={(e) => setCaptchaInput(e.target.value)}
-                         disabled={!!(lockoutUntil && Date.now() < lockoutUntil)}
-                         className="flex-1 h-11 px-4 rounded-xl bg-slate-50 dark:bg-black/20 border-2 border-slate-100 dark:border-white/10 text-slate-800 dark:text-white text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400 font-nunito disabled:opacity-50"
-                         required
-                       />
+                  {/* Enhanced Canvas CAPTCHA */}
+                  <div className="flex flex-col gap-2 mt-2">
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider pl-1">Security Check</label>
+                    <div className="flex items-center gap-3">
+                       <div className="relative group">
+                         <canvas 
+                            ref={canvasRef} 
+                            width={140} 
+                            height={48} 
+                            className="rounded-xl border-2 border-slate-200 dark:border-white/10 bg-white dark:bg-black/40 flex-shrink-0 cursor-pointer transition-all group-hover:border-indigo-400 dark:group-hover:border-indigo-500/50"
+                            title="Click to refresh CAPTCHA"
+                            onClick={generateCaptcha}
+                         />
+                         <div 
+                            className="absolute -top-2 -right-2 bg-indigo-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-lg"
+                            onClick={generateCaptcha}
+                         >
+                            <RefreshCw className="w-3 h-3" />
+                         </div>
+                       </div>
+                       <div className="relative flex-1">
+                         <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                         <input
+                           type="text"
+                           placeholder="Type the code..."
+                           value={captchaInput}
+                           onChange={(e) => setCaptchaInput(e.target.value)}
+                           disabled={!!(lockoutUntil && Date.now() < lockoutUntil)}
+                           className="w-full h-12 pl-10 pr-4 rounded-xl bg-slate-50 dark:bg-black/20 border-2 border-slate-100 dark:border-white/10 text-slate-800 dark:text-white text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400 font-nunito disabled:opacity-50"
+                           required
+                         />
+                       </div>
                     </div>
                   </div>
 

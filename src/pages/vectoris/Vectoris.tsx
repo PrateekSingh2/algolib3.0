@@ -14,6 +14,7 @@ import { firestoreDB as db } from "@/lib/firebase";
 import { doc, onSnapshot, collection, addDoc, updateDoc, serverTimestamp, query, orderBy, deleteDoc, getDoc } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useParams, useNavigate } from 'react-router-dom';
+import Navbar from "@/components/Navbar";
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import TerminalCode from "./TerminalCode";
@@ -491,7 +492,8 @@ export default function Analyzer() {
   const formatYAxis = (num: number) => Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
 
   return (
-    <div className="flex h-[100dvh] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-100 via-slate-50 to-slate-50 dark:from-[#1e1e28] dark:via-[#121216] dark:to-[#121216] text-slate-800 dark:text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30 relative">
+    <div className="flex h-[100dvh] pt-[72px] md:pt-[60px] lg:pt-[72px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-100 via-slate-50 to-slate-50 dark:from-[#1e1e28] dark:via-[#121216] dark:to-[#121216] text-slate-800 dark:text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30 relative">
+      <Navbar />
       {/* Dynamic Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/10 dark:bg-blue-600/10 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
@@ -664,7 +666,7 @@ export default function Analyzer() {
 
       <main className="flex-1 flex flex-col h-full relative min-w-0 bg-transparent">
 
-        <header className="flex items-center justify-between p-4 absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-slate-50 via-slate-50/80 to-transparent dark:from-[#0c0c0e] dark:via-[#0c0c0e]/80 pointer-events-none">
+        <header className="flex items-center justify-between p-4 absolute top-0 left-0 right-0 z-40 pointer-events-none">
           <div className="flex items-center gap-3 pointer-events-auto">
             {!isSidebarOpen && (
               <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-slate-200 dark:hover:bg-white/10 rounded-full text-slate-500 dark:text-zinc-400 transition-colors">
@@ -869,14 +871,14 @@ export default function Analyzer() {
 
         <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-slate-50 via-slate-50/90 dark:from-[#09090b] dark:via-[#09090b]/90 to-transparent pt-12 pb-6 md:pb-8 pointer-events-none z-40">
           <div className="max-w-4xl mx-auto w-full px-4 md:px-8 pointer-events-auto">
-            <div className="relative flex flex-col bg-white/80 dark:bg-[#1a1a24]/60 backdrop-blur-3xl rounded-[2rem] p-2 pr-3 border border-slate-200/50 dark:border-white/10 focus-within:bg-white focus-within:border-blue-300 dark:focus-within:bg-[#1a1a24]/80 dark:focus-within:border-white/20 transition-all shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)]">
+            <div className="relative flex flex-col bg-white/80 dark:bg-[#1a1a24]/60 backdrop-blur-3xl rounded-[2rem] p-1.5 pr-2 border border-slate-200/50 dark:border-white/10 focus-within:bg-white focus-within:border-blue-300 dark:focus-within:bg-[#1a1a24]/80 dark:focus-within:border-white/20 transition-all shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)]">
               <div className="flex items-end">
                 <button
                   onClick={handleAttachmentClick}
-                  className="p-3.5 mb-[2px] text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/10 rounded-full transition-colors shrink-0 hidden sm:block"
+                  className="p-2.5 mb-1 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/10 rounded-full transition-colors shrink-0 hidden sm:block"
                   title="Add attachment"
                 >
-                  <Plus size={22} />
+                  <Plus size={20} />
                 </button>
                 <textarea
                   ref={textareaRef}
@@ -884,14 +886,14 @@ export default function Analyzer() {
                   onChange={handleInput}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask Vectoris..."
-                  className="flex-1 max-h-[200px] bg-transparent text-slate-900 dark:text-white resize-none outline-none py-2.5 sm:py-4 px-3 sm:px-2 text-[15px] md:text-base custom-scrollbar placeholder:text-slate-400 dark:placeholder:text-zinc-500 leading-relaxed font-medium"
+                  className="flex-1 max-h-[100px] bg-transparent text-slate-900 dark:text-white resize-none outline-none py-1.5 sm:py-2 px-3 sm:px-2 text-[15px] md:text-base custom-scrollbar placeholder:text-slate-400 dark:placeholder:text-zinc-500 leading-relaxed font-medium"
                   rows={1}
                   disabled={isAnalyzing}
                 />
-                <div className="relative mx-2 self-end mb-2">
+                <div className="relative mx-2 self-end mb-1">
                   <button
                     onClick={() => setShowModeMenu(!showModeMenu)}
-                    className="flex items-center gap-1.5 bg-slate-100/50 dark:bg-white/5 hover:bg-slate-200/50 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors border border-slate-200/50 dark:border-white/5"
+                    className="flex items-center gap-1.5 bg-slate-100/50 dark:bg-white/5 hover:bg-slate-200/50 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 px-2.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border border-slate-200/50 dark:border-white/5"
                     title="Select AI Mode"
                   >
                     <Zap size={14} className={selectedMode !== 'auto' ? "text-[#4facfe] fill-[#4facfe]" : "text-slate-400 dark:text-zinc-500"} />
@@ -929,12 +931,12 @@ export default function Analyzer() {
                 <button
                   onClick={handleAnalyze}
                   disabled={!inputCode.trim() || isAnalyzing}
-                  className={`p-3.5 mb-[2px] rounded-full transition-all shrink-0 relative overflow-hidden ${inputCode.trim() && !isAnalyzing
+                  className={`p-2.5 mb-1 rounded-full transition-all shrink-0 relative overflow-hidden ${inputCode.trim() && !isAnalyzing
                     ? 'text-white bg-[#4facfe] dark:text-[#1a1a24] dark:bg-white hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(79,172,254,0.4)] dark:shadow-[0_0_25px_rgba(255,255,255,0.4)]'
                     : 'text-slate-400 bg-slate-100/80 dark:text-zinc-600 dark:bg-white/5 cursor-not-allowed'
                     }`}
                 >
-                  {isAnalyzing ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="ml-0.5" />}
+                  {isAnalyzing ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="ml-0.5" />}
                 </button>
               </div>
             </div>
