@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, get, set, runTransaction } from "firebase/database";
+import { getDatabase, ref, get, set, runTransaction, increment, update } from "firebase/database";
 // NEW: Import Auth and Firestore
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
@@ -47,6 +47,6 @@ const logout = async () => {
 // Export both the old counter tools and the new community tools
 export const rtdb = getDatabase(app);
 export { 
-  db, ref, get, set, runTransaction, 
+  db, ref, get, set, runTransaction, increment, update,
   auth, googleProvider, firestoreDB, loginWithGoogle, logout 
 };

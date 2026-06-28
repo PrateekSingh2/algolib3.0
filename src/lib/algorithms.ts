@@ -1,4 +1,4 @@
-import { db, ref, get, set, runTransaction } from "./firebase";
+import { db, ref, get, set, runTransaction, increment, update } from "./firebase";
 
 // ============================================================================
 // 2. ALGORITHM INTERFACES & FETCHING (GIST)
@@ -252,12 +252,15 @@ export const getVisitCount = async (): Promise<number> => {
  * Safe for concurrent users.
  */
 export const incrementVisitCount = async (): Promise<number> => {
-  const countRef = ref(db, DB_PATH);
+  // Use a reference to the parent 'site_stats' to update the 'visits' child
+  const statsRef = ref(db, 'site_stats');
   try {
-    const result = await runTransaction(countRef, (currentValue) => {
-      return (currentValue || 0) + 1;
+    // Atomic increment happens entirely on the server side.
+    // This BYPASSES the need for client-side read permission!
+    await update(statsRef, {
+      visits: increment(1)
     });
-    return result.snapshot.val();
+    return 0; // We cannot read the new value securely, so return 0
   } catch (error) {
     console.error("Error incrementing views:", error);
     return 0;
