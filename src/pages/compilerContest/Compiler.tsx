@@ -569,7 +569,10 @@ export default function Compiler() {
         signal: abortControllerRef.current.signal
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Engine Node Offline.`);
+      if (!res.ok) {
+         const errText = await res.text().catch(() => 'Unknown Error');
+         throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
       const { jobId } = await res.json();
       
       let isFinished = false;
@@ -624,7 +627,7 @@ export default function Compiler() {
     } catch (e: any) {
       if (e.name === 'AbortError' || abortRef.current) {
          setOutput('Process killed by user (SIGINT)');
-      } else if (e.message.includes('Failed to fetch') || e.message.includes('Offline') || e.message.includes('503') || e.message.includes('504')) {
+      } else if (e.message === 'Failed to fetch' || e.message.includes('503') || e.message.includes('504')) {
          const msg = '🚨 Execution Engine Offline or Waking Up.\n\nThe free tier cluster takes ~1-2 minutes to wake up from sleep. Please wait a moment and try running again!';
          setOutput(msg);
          toast.error("Execution Engine Offline", { description: "The backend is currently waking up. Please try again in 1-2 minutes." });

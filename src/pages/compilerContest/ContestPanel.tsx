@@ -694,7 +694,10 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
         body: JSON.stringify({ language: lang, code: source, testCases: mappedPayloadCases })
       });
 
-      if (!res.ok) throw new Error(`Engine Cluster Instance Offline [HTTP ${res.status}]`);
+      if (!res.ok) {
+         const errText = await res.text().catch(() => 'Unknown Error');
+         throw new Error(`HTTP ${res.status}: ${errText}`);
+      }
       const { jobId } = await res.json();
 
       // Poll matching execution space cluster for batch job resolution
@@ -922,7 +925,7 @@ export default function ContestPanel({ user, onLoginRequest }: { user: any, onLo
       }
 
     } catch (error: any) {
-      if (error.message.includes('Failed to fetch') || error.message.includes('Offline') || error.message.includes('503') || error.message.includes('504')) {
+      if (error.message === 'Failed to fetch' || error.message.includes('503') || error.message.includes('504')) {
          addLog('error', `🚨 Execution Engine Offline or Waking Up.\n\nThe free tier cluster takes ~1-2 minutes to wake up from sleep. Please wait a moment and try running again!`);
          toast.error("Execution Engine Offline", { description: "The backend is currently waking up. Please try again in 1-2 minutes." });
       } else {
