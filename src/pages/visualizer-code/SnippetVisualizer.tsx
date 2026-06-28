@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Code2, ArrowRightLeft, Play, RefreshCw } from 'lucide-react';
+import { Code2, ArrowRightLeft, Play, RefreshCw, ChevronDown } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { Link } from 'react-router-dom';
 
@@ -36,6 +36,7 @@ export default function SnippetVisualizer() {
   const [customInput, setCustomInput] = useState<string>('');
   const [showInput, setShowInput] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
   const {
     isProcessing,
@@ -141,40 +142,83 @@ export default function SnippetVisualizer() {
       <div className="relative z-10 flex flex-col h-full">
         <Navbar />
 
-        <main className="flex-1 w-full flex flex-col pt-20 pb-4 px-4 overflow-hidden relative z-20">
+        <main className="flex-1 w-full flex flex-col pt-24 sm:pt-24 pb-4 px-2 sm:px-4 overflow-hidden relative z-20">
           
           {/* Compact Toolbar */}
-          <div className="relative z-[100] flex flex-wrap items-center justify-between w-full mb-4 shrink-0 bg-white/50 dark:bg-[#111116]/50 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-2 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+          <div className="relative z-[100] flex flex-row items-center justify-between w-full mb-4 shrink-0 bg-white/50 dark:bg-[#111116]/50 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl p-2 sm:p-3 shadow-sm gap-2">
+            
+            {/* Left side: Back Button & Language Controls */}
+            <div className="flex items-center gap-2">
               <Link to="/visualizer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-200/50 dark:bg-zinc-800/50 hover:bg-slate-200 dark:hover:bg-zinc-800 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-zinc-400 transition-all shrink-0">
-                <ArrowRightLeft size={14} className="rotate-180" /> Back
+                <ArrowRightLeft size={14} className="rotate-180" /> <span className="hidden sm:inline">Back</span>
               </Link>
-              <div className="hidden sm:block h-4 w-px bg-slate-300 dark:bg-zinc-700 shrink-0" />
-              <div className="flex items-center gap-1">
-                {LANGUAGES.map((lang) => (
-                  <button
-                    key={lang.id}
-                    onClick={() => handleLangChange(lang.id)}
-                    className={`relative px-3 sm:px-4 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition-colors duration-300 whitespace-nowrap ${
-                      selectedLang.id === lang.id
-                        ? 'text-black'
-                        : 'text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'
-                    }`}
-                  >
-                    {selectedLang.id === lang.id && (
-                      <motion.div
-                        layoutId="activeLangTab"
-                        className="absolute inset-0 bg-blue-400 border border-blue-500 shadow-[0_0_10px_rgba(96,165,250,0.3)] rounded-lg -z-10 dark:border-blue-500/50"
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      />
-                    )}
-                    <span className="relative z-10">{lang.name}</span>
-                  </button>
-                ))}
+
+              <div className="hidden lg:block h-4 w-px bg-slate-300 dark:bg-zinc-700 shrink-0 mx-2" />
+
+              {/* Mobile Language Dropdown */}
+              <div className="lg:hidden relative shrink-0">
+                 <button 
+                   onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                   className="flex items-center gap-2 px-3 py-1.5 bg-white/80 dark:bg-[#1c1c24]/80 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-bold text-slate-700 dark:text-zinc-300 shadow-sm transition-all hover:bg-white dark:hover:bg-[#1c1c24]"
+                 >
+                   <span>{selectedLang.name}</span>
+                   <ChevronDown size={14} className={`transition-transform duration-200 ${isLangMenuOpen ? 'rotate-180' : ''}`} />
+                 </button>
+                 
+                 <AnimatePresence>
+                   {isLangMenuOpen && (
+                     <motion.div 
+                       initial={{ opacity: 0, y: -5, scale: 0.95 }}
+                       animate={{ opacity: 1, y: 0, scale: 1 }}
+                       exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                       transition={{ duration: 0.15 }}
+                       className="absolute top-[calc(100%+4px)] left-0 w-32 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-lg shadow-xl z-[200] overflow-hidden flex flex-col"
+                     >
+                       {LANGUAGES.map(lang => (
+                         <button
+                           key={lang.id}
+                           onClick={() => { handleLangChange(lang.id); setIsLangMenuOpen(false); }}
+                           className={`w-full text-left px-3 py-2 text-xs font-bold transition-colors ${
+                             selectedLang.id === lang.id 
+                               ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400' 
+                               : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-800'
+                           }`}
+                         >
+                           {lang.name}
+                         </button>
+                       ))}
+                     </motion.div>
+                   )}
+                 </AnimatePresence>
+              </div>
+
+              {/* Desktop Language Tabs */}
+              <div className="hidden lg:flex items-center gap-1 w-auto overflow-x-auto scrollbar-hide">
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.id}
+                      onClick={() => handleLangChange(lang.id)}
+                      className={`relative px-4 py-1.5 rounded-lg text-xs font-bold transition-colors duration-300 whitespace-nowrap ${
+                        selectedLang.id === lang.id
+                          ? 'text-black'
+                          : 'text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'
+                      }`}
+                    >
+                      {selectedLang.id === lang.id && (
+                        <motion.div
+                          layoutId="activeLangTab"
+                          className="absolute inset-0 bg-blue-400 border border-blue-500 shadow-[0_0_10px_rgba(96,165,250,0.3)] rounded-lg -z-10 dark:border-blue-500/50"
+                          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                        />
+                      )}
+                      <span className="relative z-10">{lang.name}</span>
+                    </button>
+                  ))}
               </div>
             </div>
-            
-            <div className="hidden lg:flex items-center gap-3 pr-2 shrink-0">
+
+            {/* Right side: Collaboration Controls */}
+            <div className="flex items-center gap-3 shrink-0 pr-1">
                <CollaborationControls 
                  roomId={roomId}
                  role={role}
@@ -194,18 +238,14 @@ export default function SnippetVisualizer() {
                  participants={participants}
                  onKickParticipant={kickParticipant}
                />
-               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-zinc-300 text-[10px] font-bold uppercase tracking-widest">
-                <Code2 size={12} className="text-emerald-500 dark:text-emerald-400" />
-                Native Trace Engine (v2)
-              </div>
             </div>
           </div>
 
           {/* Split Screen Grid Layout */}
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0 relative z-20">
+          <div className="flex-1 flex flex-col lg:grid lg:grid-cols-2 gap-4 min-h-0 relative z-20 lg:overflow-hidden overflow-y-auto custom-scrollbar pb-6 lg:pb-0">
             
             {/* Editor Column */}
-            <div className="h-full flex flex-col bg-[#dcd0c0] dark:bg-[#0a0a0f] rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-xl relative group min-h-0">
+            <div className="min-h-[60vh] lg:min-h-0 lg:h-full flex flex-col bg-[#dcd0c0] dark:bg-[#0a0a0f] rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-xl relative group shrink-0 lg:shrink">
               
               {/* Dynamic Island Notch - Editor */}
               <div className="absolute top-0 left-0 sm:left-1/2 sm:-translate-x-1/2 bg-slate-100 dark:bg-[#1c1c24] px-4 sm:px-6 py-2 rounded-br-2xl sm:rounded-b-2xl sm:rounded-br-none border-r sm:border-x border-b border-slate-200 dark:border-white/10 z-30 flex items-center gap-2 sm:gap-3 shadow-md dark:shadow-xl backdrop-blur-md">
@@ -256,8 +296,9 @@ export default function SnippetVisualizer() {
                 </AnimatePresence>
               </div>
 
-              {/* Top Right Action Button */}
-              <div className="absolute top-3 right-3 z-40 flex items-center gap-2">
+              {/* Floating Action Buttons */}
+              <div className="absolute bottom-3 lg:top-3 right-3 lg:bottom-auto z-40 flex items-center gap-2 pointer-events-none">
+                <div className="pointer-events-auto flex items-center gap-2 flex-wrap justify-end">
                 {totalSteps > 0 && (
                   <button
                     onClick={clearTrace}
@@ -291,6 +332,7 @@ export default function SnippetVisualizer() {
                   )}
                   <span>Trace</span>
                 </button>
+                </div>
               </div>
             </div>
 
@@ -299,7 +341,7 @@ export default function SnippetVisualizer() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="h-full flex flex-col gap-4 min-h-0"
+              className="min-h-[60vh] lg:min-h-0 lg:h-full flex flex-col gap-4 shrink-0 lg:shrink"
             >
               {totalSteps > 0 ? (
                 <>

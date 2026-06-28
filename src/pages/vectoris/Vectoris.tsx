@@ -65,17 +65,15 @@ const sanitizeLatex = (text: string) => {
     .replace(/\x0D/g, '\\r') // Carriage return -> \r (\right)
     .replace(/\x0B/g, '\\v'); // Vertical tab -> \v (\vec)
 
-  // 2. Fix commonly hallucinated missing backslashes
+  // 2. Fix commonly hallucinated missing backslashes (Removed dangerous globally applied int/left/right replacements that corrupt code)
   clean = clean
-    .replace(/\bint\b/g, '\\int')
-    .replace(/\bleft\b/g, '\\left')
-    .replace(/\bight\b/g, '\\right')
     .replace(/\bcdot\b/g, '\\cdot')
     .replace(/an\^\{-1\}/g, '\\tan^{-1}')
     .replace(/cot\^\{-1\}/g, '\\cot^{-1}');
 
   // 3. Convert backtick-wrapped math into proper inline Katex ($...$)
-  clean = clean.replace(/`([^`]*?(?:\\[a-zA-Z]+|\^\{|_\{)[^`]*?)`/g, (match, p1) => {
+  // We restrict this to INLINE code (no newlines) to prevent destroying multiline code blocks
+  clean = clean.replace(/`([^`\n]*?(?:\\[a-zA-Z]+|\^\{|_\{)[^`\n]*?)`/g, (match, p1) => {
     return `$ ${p1.trim()} $`;
   });
 
@@ -96,9 +94,13 @@ const sanitizeLatex = (text: string) => {
     }
 
     if (processedLine.includes('$') || processedLine.includes('\\[') || processedLine.includes('\\(')) return processedLine;
-    const trimmed = processedLine.trim();
-    if (trimmed.startsWith('\\int') || trimmed.startsWith('-\\int') || trimmed.startsWith('\\frac') || trimmed.startsWith('-\\frac') || trimmed.startsWith('\\cot') || trimmed.startsWith('-\\cot') || trimmed.startsWith('\\tan')) {
-      return `$$${trimmed}$$`;
+    
+    // Only wrap math block equations if we are NOT inside a code block
+    if (!inCodeBlock) {
+      const trimmed = processedLine.trim();
+      if (trimmed.startsWith('\\int') || trimmed.startsWith('-\\int') || trimmed.startsWith('\\frac') || trimmed.startsWith('-\\frac') || trimmed.startsWith('\\cot') || trimmed.startsWith('-\\cot') || trimmed.startsWith('\\tan')) {
+        return `$$${trimmed}$$`;
+      }
     }
     return processedLine;
   });

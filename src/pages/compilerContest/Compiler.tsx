@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import Editor, { useMonaco, loader } from '@monaco-editor/react';
 
-// Configure Monaco Editor to use UNPKG instead of jsDelivr to bypass adblockers
-loader.config({ paths: { vs: 'https://unpkg.com/monaco-editor@0.44.0/min/vs' } });
+// Let Monaco Editor use its default jsdelivr CDN which is more reliable
 import { 
   Play, X, Trash2, Moon, Sun, Maximize2, Minimize, Copy, Save, Zap, 
   Settings, Terminal, CheckCircle2, Code2, Clock, Activity, ChevronRight, 
