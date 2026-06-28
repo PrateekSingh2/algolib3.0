@@ -84,6 +84,7 @@
         "npm:react-dom@^18.3.1",
         "npm:react-helmet-async@3",
         "npm:react-hook-form@^7.61.1",
+        "npm:react-live@^4.1.8",
         "npm:react-markdown@^10.1.0",
         "npm:react-resizable-panels@^2.1.9",
         "npm:react-router-dom@^6.30.1",
