@@ -5,6 +5,7 @@ import {
   BarChart3, Layers, Terminal, Activity, 
   Gauge, Maximize2, Minimize2, Database, Zap, ArrowRight
 } from 'lucide-react';
+import { useCollaboration } from '@/contexts/CollaborationContext';
 
 // --- TYPES & GAME STATE ---
 type AlgorithmType = 'bubble' | 'selection' | 'insertion' | 'merge' | 'quick' | 'heap';
@@ -98,6 +99,39 @@ const SortingVisualizer = () => {
   const stepTrigger = useRef<() => void>(() => {});
   const interpreterEndRef = useRef<HTMLDivElement>(null);
   const outputEndRef = useRef<HTMLDivElement>(null);
+
+  // --- COLLABORATION HOOK ---
+  const { role, roomState, broadcastState } = useCollaboration();
+
+  // Host Broadcasts State
+  useEffect(() => {
+    if (role === 'host') {
+      broadcastState({
+        array, algo, isSorting, isPaused, speed, arraySize,
+        activeIndices, sortedIndices, pivotIndex, opType,
+        message, codeLines, outputLog
+      });
+    }
+  }, [array, algo, isSorting, isPaused, speed, arraySize, activeIndices, sortedIndices, pivotIndex, opType, message, codeLines, outputLog, role, broadcastState]);
+
+  // Viewer Receives State
+  useEffect(() => {
+    if (role === 'viewer' && roomState) {
+      if (roomState.array !== undefined) setArray(roomState.array);
+      if (roomState.algo !== undefined) setAlgo(roomState.algo);
+      if (roomState.isSorting !== undefined) setIsSorting(roomState.isSorting);
+      if (roomState.isPaused !== undefined) setIsPaused(roomState.isPaused);
+      if (roomState.speed !== undefined) setSpeed(roomState.speed);
+      if (roomState.arraySize !== undefined) setArraySize(roomState.arraySize);
+      if (roomState.activeIndices !== undefined) setActiveIndices(roomState.activeIndices);
+      if (roomState.sortedIndices !== undefined) setSortedIndices(roomState.sortedIndices);
+      if (roomState.pivotIndex !== undefined) setPivotIndex(roomState.pivotIndex);
+      if (roomState.opType !== undefined) setOpType(roomState.opType);
+      if (roomState.message !== undefined) setMessage(roomState.message);
+      if (roomState.codeLines !== undefined) setCodeLines(roomState.codeLines);
+      if (roomState.outputLog !== undefined) setOutputLog(roomState.outputLog);
+    }
+  }, [role, roomState]);
 
   // --- INIT & LIFECYCLE ---
   useEffect(() => { resetArray(); return () => { sortingRef.current = false; }; }, []);
@@ -399,7 +433,7 @@ const SortingVisualizer = () => {
                </label>
                <div className="grid grid-cols-2 gap-2">
                   {(Object.keys(ALGO_INFO) as AlgorithmType[]).map(key => (
-                     <button key={key} onClick={() => { setAlgo(key); resetArray(); }} disabled={isSorting}
+                     <button key={key} onClick={() => { setAlgo(key); resetArray(); }} disabled={isSorting || role === 'viewer'}
                          className={`py-2 px-1 rounded text-[10px] font-bold uppercase border transition-all disabled:opacity-50 ${
                              algo === key 
                              ? 'bg-blue-400 text-black border-blue-500 shadow-[0_0_15px_rgba(96,165,250,0.4)]' 
@@ -427,7 +461,7 @@ const SortingVisualizer = () => {
                      <span className="flex items-center gap-1"><Database size={10} /> ARRAY_CAPACITY</span>
                      <span className="text-blue-800 dark:text-blue-400">{arraySize} Blocks</span>
                   </div>
-                  <input type="range" min="10" max="150" value={arraySize} onChange={(e) => setArraySize(Number(e.target.value))} disabled={isSorting}
+                  <input type="range" min="10" max="150" value={arraySize} onChange={(e) => setArraySize(Number(e.target.value))} disabled={isSorting || role === 'viewer'}
                      className="w-full h-1 bg-slate-400 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
                </div>
@@ -436,7 +470,7 @@ const SortingVisualizer = () => {
                      <span className="flex items-center gap-1"><Gauge size={10} /> ENGINE_SPEED</span>
                      <span className="text-blue-800 dark:text-blue-400">{speed}%</span>
                   </div>
-                  <input type="range" min="1" max="100" value={speed} onChange={(e) => setSpeed(Number(e.target.value))}
+                  <input type="range" min="1" max="100" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} disabled={role === 'viewer'}
                      className="w-full h-1 bg-slate-400 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
                </div>
@@ -444,8 +478,8 @@ const SortingVisualizer = () => {
 
             {/* Controls */}
             <div className="grid grid-cols-2 gap-2 shrink-0">
-               <button onClick={startSort}
-                  className={`py-3 rounded-xl font-black text-[10px] lg:text-xs flex items-center justify-center gap-2 transition-all ${
+               <button onClick={startSort} disabled={role === 'viewer'}
+                  className={`py-3 rounded-xl font-black text-[10px] lg:text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
                      isSorting && !isPaused
                      ? 'bg-orange-400 text-black border border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]' 
                      : 'bg-green-400 text-black border border-green-500 shadow-[0_0_15px_rgba(74,222,128,0.4)] hover:scale-[1.02]'
@@ -455,14 +489,14 @@ const SortingVisualizer = () => {
                   {isSorting && !isPaused ? 'START' : isSorting ? 'RESUME' : 'INITIATE'}
                </button>
                
-               <button onClick={resolveStep} disabled={!isPaused || !isSorting}
+               <button onClick={resolveStep} disabled={!isPaused || !isSorting || role === 'viewer'}
                   className="py-3 bg-blue-400 dark:bg-blue-500/20 border border-blue-500 dark:border-blue-500/50 hover:bg-blue-500 dark:hover:bg-blue-500/30 text-black dark:text-blue-400 rounded-xl font-bold text-[10px] lg:text-xs flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                >
                   <StepForward size={14} /> STEP
                </button>
             </div>
             
-            <button onClick={resetArray} className="w-full py-2 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-900 dark:text-gray-500 hover:text-orange-500 dark:hover:text-orange-400 transition-colors shrink-0">
+            <button onClick={resetArray} disabled={role === 'viewer'} className="w-full py-2 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-900 dark:text-gray-500 hover:text-orange-500 dark:hover:text-orange-400 transition-colors shrink-0 disabled:opacity-50">
                <RotateCcw size={12}/> REGENERATE ARRAY
             </button>
 

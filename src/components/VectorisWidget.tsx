@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Zap, X, Send, Loader2, MessageSquare, Minimize2, Maximize2, AlertCircle,
-  ChevronDown
+  ChevronDown, ChevronUp
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -27,50 +27,56 @@ interface WidgetMessage {
 // ─── Math & String Sanitizer ────────────────────────────────────────────────
 const sanitizeLatex = (text: string) => {
   if (!text) return "";
-  let clean = text
-    .replace(/\x0C/g, '\\f')
-    .replace(/\x08/g, '\\b')
-    .replace(/\x09/g, '\\t')
-    .replace(/\x0D/g, '\\r')
-    .replace(/\x0B/g, '\\v');
 
-  clean = clean
-    .replace(/\bint\b/g, '\\int')
-    .replace(/\bleft\b/g, '\\left')
-    .replace(/\bight\b/g, '\\right')
-    .replace(/\bcdot\b/g, '\\cdot')
-    .replace(/an\^\{-1\}/g, '\\tan^{-1}')
-    .replace(/cot\^\{-1\}/g, '\\cot^{-1}');
+  // Fix malformed LLM code blocks
+  let preClean = text.replace(/``\$\s*(\w+)/g, '```$1');
+  preClean = preClean.replace(/(?<!`)``(?!`)/g, '```');
 
-  clean = clean.replace(/`([^`]*?(?:\\[a-zA-Z]+|\^\{|_\{)[^`]*?)`/g, (match, p1) => {
-    return `$ ${p1.trim()} $`;
-  });
+  // Split the text into code blocks (multi-line and inline) and regular text
+  const parts = preClean.split(/(```[\s\S]*?```|`[^`]+`)/g);
 
-  let inCodeBlock = false;
-  const lines = clean.split('\n');
-  const processedLines = lines.map(line => {
-    if (line.trim().startsWith('```')) {
-      inCodeBlock = !inCodeBlock;
-      return line;
+  const processedParts = parts.map((part, index) => {
+    // Odd indices are the captured code blocks, return them untouched
+    if (index % 2 !== 0) {
+      return part;
     }
 
-    let processedLine = line;
-    if (!inCodeBlock) {
+    // Even indices are regular text, apply math sanitization
+    let clean = part
+      .replace(/\x0C/g, '\\f')
+      .replace(/\x08/g, '\\b')
+      .replace(/\x09/g, '\\t')
+      .replace(/\x0D/g, '\\r')
+      .replace(/\x0B/g, '\\v');
+
+    clean = clean
+      .replace(/\bint\b/g, '\\int')
+      .replace(/\bleft\b/g, '\\left')
+      .replace(/\bight\b/g, '\\right')
+      .replace(/\bcdot\b/g, '\\cdot')
+      .replace(/an\^\{-1\}/g, '\\tan^{-1}')
+      .replace(/cot\^\{-1\}/g, '\\cot^{-1}');
+
+    const lines = clean.split('\n');
+    const processedLines = lines.map(line => {
+      let processedLine = line;
       // Prevent markdown from treating indented text as code blocks, but keep small indents
       processedLine = processedLine.replace(/^[ \t]+/, (match) => {
         return match.includes('\t') || match.length >= 4 ? '  ' : match;
       });
-    }
 
-    if (processedLine.includes('$') || processedLine.includes('\\[') || processedLine.includes('\\(')) return processedLine;
-    const trimmed = processedLine.trim();
-    if (trimmed.startsWith('\\int') || trimmed.startsWith('-\\int') || trimmed.startsWith('\\frac') || trimmed.startsWith('-\\frac') || trimmed.startsWith('\\cot') || trimmed.startsWith('-\\cot') || trimmed.startsWith('\\tan')) {
-      return `$$${trimmed}$$`;
-    }
-    return processedLine;
+      if (processedLine.includes('$') || processedLine.includes('\\[') || processedLine.includes('\\(')) return processedLine;
+      const trimmed = processedLine.trim();
+      if (trimmed.startsWith('\\int') || trimmed.startsWith('-\\int') || trimmed.startsWith('\\frac') || trimmed.startsWith('-\\frac') || trimmed.startsWith('\\cot') || trimmed.startsWith('-\\cot') || trimmed.startsWith('\\tan')) {
+        return `$$${trimmed}$$`;
+      }
+      return processedLine;
+    });
+
+    return processedLines.join('\n');
   });
 
-  return processedLines.join('\n');
+  return processedParts.join('');
 };
 
 // ─── Inline display of AI markdown ──────────
@@ -82,11 +88,16 @@ const WidgetMarkdown = ({ content }: { content: string }) => (
       p: ({ ...props }) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
       strong: ({ ...props }) => <strong className="font-semibold text-slate-900 dark:text-white" {...props} />,
       pre: ({ children, ...props }) => (
-        <pre className="overflow-x-auto max-w-full custom-scrollbar my-2" {...props}>{children}</pre>
+        <pre className="overflow-x-auto max-w-full scrollbar-thin scrollbar-thumb-slate-600 my-3 bg-slate-800 dark:bg-black/60 border border-slate-700 dark:border-white/10 rounded-xl p-3 shadow-inner" {...props}>{children}</pre>
       ),
-      code: ({ children, ...props }) => (
-        <code className="bg-slate-100 dark:bg-white/10 px-1 py-0.5 rounded text-blue-600 dark:text-[#4facfe] font-mono text-[12px] whitespace-pre-wrap break-words" {...props}>{children}</code>
-      ),
+      code: ({ node, inline, className, children, ...props }: any) => {
+        if (!inline) {
+          // Block code
+          return <code className={`font-mono text-[12px] text-slate-200 dark:text-slate-300 ${className || ""}`} {...props}>{children}</code>
+        }
+        // Inline code
+        return <code className="bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 rounded-md text-indigo-600 dark:text-[#4facfe] font-mono text-[11px] break-words" {...props}>{children}</code>
+      },
       ul: ({ ...props }) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
       li: ({ ...props }) => <li className="text-[13px]" {...props} />,
     }}
@@ -94,6 +105,30 @@ const WidgetMarkdown = ({ content }: { content: string }) => (
     {content}
   </ReactMarkdown>
 );
+
+const CollapsibleUserMessage = ({ content }: { content: string }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLarge = content.length > 200 || content.split('\n').length > 4;
+  const displayContent = !isLarge || isExpanded ? content : content.substring(0, 200) + '...';
+
+  return (
+    <div className="flex flex-col items-start w-full">
+      <p className="whitespace-pre-wrap font-medium break-words w-full">{displayContent}</p>
+      {isLarge && (
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="mt-1.5 text-[11px] font-medium text-white/80 hover:text-white flex items-center gap-0.5 transition-colors"
+        >
+          {isExpanded ? (
+            <>Show less <ChevronUp size={14} /></>
+          ) : (
+            <>Show more <ChevronDown size={14} /></>
+          )}
+        </button>
+      )}
+    </div>
+  );
+};
 
 // ─── Main Widget ──────────────────────────────────────────────────────────────
 const VectorisWidget: React.FC = () => {
@@ -112,6 +147,8 @@ const VectorisWidget: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [unread, setUnread] = useState(0);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<string>('auto');
+  const [showModeMenu, setShowModeMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -196,13 +233,21 @@ const VectorisWidget: React.FC = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ code: text, action: "analyze", history }),
+        body: JSON.stringify({ 
+          code: text, 
+          action: "analyze", 
+          history,
+          mode: selectedMode === 'auto' ? undefined : selectedMode 
+        }),
       });
 
       if (!res.ok) {
-        if (res.status === 403 || res.status === 429)
-          throw new Error("Credits finished. Renews after 3 hrs.");
-        throw new Error("Something went wrong. Please try again.");
+        let errorMsg = "Something went wrong. Please try again.";
+        try {
+          const errData = await res.json();
+          if (errData.error) errorMsg = errData.error;
+        } catch (e) {}
+        throw new Error(errorMsg);
       }
 
       const data = await res.json();
@@ -428,7 +473,7 @@ const VectorisWidget: React.FC = () => {
                           : "bg-slate-50 dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.07] text-slate-700 dark:text-zinc-300 rounded-tl-sm"
                       }`}>
                       {msg.role === "user" ? (
-                        <p className="whitespace-pre-wrap font-medium">{msg.content}</p>
+                        <CollapsibleUserMessage content={msg.content} />
                       ) : msg.isError ? (
                         <><AlertCircle size={14} className="shrink-0" />{msg.content}</>
                       ) : (
@@ -473,6 +518,44 @@ const VectorisWidget: React.FC = () => {
                   className="flex-1 bg-transparent text-[13px] text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 outline-none resize-none leading-relaxed py-1 max-h-[100px]"
                   style={{ scrollbarWidth: "none" }}
                 />
+                <div className="relative mx-1 self-end mb-[1px]">
+                  <button
+                    onClick={() => setShowModeMenu(!showModeMenu)}
+                    className="flex items-center gap-1 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 px-2.5 py-1.5 rounded-xl text-[12px] font-medium transition-colors border border-slate-200 dark:border-white/5 h-[34px]"
+                    title="Select AI Mode"
+                  >
+                    <Zap size={12} className={selectedMode !== 'auto' ? "text-[#4facfe] fill-[#4facfe]" : "text-slate-400 dark:text-zinc-500"} />
+                    <span className="capitalize">{selectedMode}</span>
+                  </button>
+                  <AnimatePresence>
+                    {showModeMenu && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowModeMenu(false)} />
+                        <motion.div 
+                          initial={{ opacity: 0, y: 5, scale: 0.95 }} 
+                          animate={{ opacity: 1, y: 0, scale: 1 }} 
+                          exit={{ opacity: 0, y: 5, scale: 0.95 }} 
+                          transition={{ duration: 0.15 }}
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[110px] bg-white/95 dark:bg-[#1a1a24]/95 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl overflow-hidden py-1 z-50"
+                        >
+                          <div className="px-3 py-1.5 text-[9px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
+                            AI Engine
+                          </div>
+                          {['auto', 'deterministic', 'balanced', 'creative'].map(mode => (
+                            <button 
+                              key={mode} 
+                              onClick={() => { setSelectedMode(mode); setShowModeMenu(false); }} 
+                              className={`w-full text-left px-3 py-2 text-[12px] transition-colors flex items-center justify-between ${selectedMode === mode ? 'text-[#4facfe] bg-blue-50/80 dark:bg-[#4facfe]/10 font-semibold' : 'text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'}`}
+                            >
+                              <span className="capitalize">{mode}</span>
+                              {selectedMode === mode && <span className="w-1.5 h-1.5 rounded-full bg-[#4facfe]"></span>}
+                            </button>
+                          ))}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
                 <button
                   onClick={() => sendMessage()}
                   disabled={!input.trim() || isLoading}

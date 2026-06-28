@@ -78,6 +78,13 @@ const Navbar = () => {
   const [lastReadTime,     setLastReadTime]     = useState<number>(
     parseInt(localStorage.getItem("algoLib_lastRead") || Date.now().toString())
   );
+  const [isScrolled,       setIsScrolled]       = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const navRef         = useRef<HTMLDivElement>(null);
   const profileRef     = useRef<HTMLDivElement>(null);
@@ -207,7 +214,6 @@ const Navbar = () => {
 
           <div className="flex flex-col gap-0.5">
             <Link to={profile?.username ? `/user/${profile.username}` : "/profile"} className="menu-item"><UserCircle2 size={15} className="menu-icon" /> View Profile</Link>
-            <Link to="/edit-profile" className="menu-item"><UserPen     size={15} className="menu-icon" /> Edit Profile</Link>
             <Link to="/settings" className="menu-item"><Settings size={15} className="menu-icon" /> Settings</Link>
             <div className="h-[2px] bg-slate-100 dark:bg-white/[0.05] my-1 mx-2 rounded-full" />
             <button onClick={logout} className="menu-item w-full text-slate-500 hover:text-red-500 hover:bg-red-50 dark:text-zinc-400 dark:hover:text-red-400 dark:hover:bg-red-500/10 transition-colors">
@@ -298,20 +304,25 @@ const Navbar = () => {
   return (
     <>
       {/* ── DESKTOP ─────────────────────────────────────────────────────────── */}
-      <nav className="fixed top-5 inset-x-0 z-50 pointer-events-none hidden md:flex justify-center">
+      <nav className={`fixed inset-x-0 z-[100] pointer-events-none hidden md:flex justify-center transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isScrolled ? 'top-4' : 'top-0'}`}>
         <motion.div
+          layout
           ref={navRef}
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="pointer-events-auto flex items-center p-1.5 rounded-full bg-white/70 dark:bg-[#050505]/40 backdrop-blur-2xl border border-slate-200/50 dark:border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+          initial={{ y: -50, opacity: 0, borderRadius: 9999 }}
+          animate={{ y: 0, opacity: 1, borderRadius: isScrolled ? 9999 : 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className={`pointer-events-auto flex items-center justify-between bg-white/80 dark:bg-[#050505]/70 backdrop-blur-2xl border-slate-200/50 dark:border-white/[0.08] ${isScrolled ? 'p-1.5 border shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3)] gap-2' : 'w-full px-6 lg:px-10 py-2.5 border-b shadow-none gap-4'}`}
         >
-          <Link to="/" className="flex items-center gap-2 pl-4 pr-3 py-1.5 mr-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors group">
-            <Zap className="w-[17px] h-[17px] text-slate-800 dark:text-zinc-100 group-hover:text-indigo-500 dark:group-hover:text-blue-400 transition-colors" fill="currentColor" />
-            <span className="font-extrabold text-slate-800 dark:text-white text-[14px] tracking-tight font-nunito">ALGO<span className="text-indigo-500 dark:text-zinc-500 font-semibold">LIB</span></span>
-          </Link>
+          {/* ── LEFT: Logo ── */}
+          <div className={`flex items-center flex-shrink-0 transition-transform duration-500 ${isScrolled ? 'pl-2' : ''}`}>
+            <Link to="/" className="flex items-center gap-2 py-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors group">
+              <Zap className="w-[17px] h-[17px] text-slate-800 dark:text-zinc-100 group-hover:text-indigo-500 dark:group-hover:text-blue-400 transition-colors" fill="currentColor" />
+              <span className="font-extrabold text-slate-800 dark:text-white text-[14px] tracking-tight font-nunito">ALGO<span className="text-indigo-500 dark:text-zinc-500 font-semibold">LIB</span></span>
+            </Link>
+          </div>
 
-          <div className="flex items-center gap-0.5">
+          {/* ── CENTER: Tabs ── */}
+          <div className={`flex items-center flex-shrink-0 transition-all duration-500 ${isScrolled ? 'gap-0.5' : 'gap-1 lg:gap-3'}`}>
             {NAV_LINKS.map((tab) => {
               const isActive = tab.path === "/" 
                 ? location.pathname === "/" 
@@ -364,65 +375,68 @@ const Navbar = () => {
             })}
           </div>
 
-          <div className="w-[2px] h-5 bg-slate-200 dark:bg-white/[0.08] mx-3 rounded-full" />
+          {/* ── RIGHT: Utilities ── */}
+          <div className="flex items-center flex-shrink-0 transition-transform duration-500">
+            <div className={`w-[2px] bg-slate-200 dark:bg-white/[0.08] rounded-full overflow-hidden transition-all duration-500 ${isScrolled ? 'h-5 opacity-100 mx-2' : 'h-0 opacity-0 mx-0 w-0'}`} />
 
-          <div className="flex items-center gap-1 pr-1.5">
-            <a 
-              href={DEVELOPER_EXTERNAL_URL} 
-              rel="noopener noreferrer"
-              title="Developer"
-              className={`p-2 rounded-full font-mono font-bold text-[13px] leading-none flex items-center justify-center transition-colors ${isDevActive ? "text-slate-800 bg-slate-100 dark:text-white dark:bg-white/[0.08]" : "text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06]"}`}
-            >
-              {"</>"}
-            </a>
-
-            {/* THEME TOGGLE ADDED TO MAIN NAVBAR ALSO */}
-            <button
-              onClick={toggleTheme}
-              aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-              title="Toggle Theme"
-              className="p-2 rounded-full flex items-center justify-center transition-colors text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06]"
-            >
-              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-
-            {user && profile?.is_profile_complete && (
-              <div className="relative" ref={notifDeskRef}>
-                <button onClick={handleNotifOpen}
-                  aria-label="Open notifications"
-                  aria-expanded={isNotifOpen}
-                  className={`p-2 rounded-full relative transition-colors ${isNotifOpen ? "bg-slate-100 text-slate-800 dark:bg-white/[0.08] dark:text-white" : "text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06]"}`}>
-                  <Bell className="w-4 h-4" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-2 right-2 flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 dark:bg-blue-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500 dark:bg-blue-500 border border-white dark:border-[#09090b]" />
-                    </span>
-                  )}
-                </button>
-                <NotifPanel />
-              </div>
-            )}
-
-            {user ? (
-              <div className="relative ml-1" ref={profileRef}>
-                <button onClick={() => { setIsProfileOpen(p => !p); setIsNotifOpen(false); }}
-                  aria-label="Open profile menu"
-                  aria-expanded={isProfileOpen}
-                  className={`flex items-center gap-1.5 rounded-full pl-1.5 pr-2.5 py-1.5 border transition-all ${isProfileOpen ? "bg-slate-100 border-slate-200 dark:bg-white/[0.08] dark:border-white/[0.08]" : "border-transparent hover:bg-slate-100 dark:hover:bg-white/[0.06]"}`}>
-                  <img src={avatarSrc} alt="avatar" className="w-6 h-6 rounded-full object-cover ring-1 ring-slate-200 dark:ring-white/10" />
-                  <ChevronDown size={13} className={isProfileOpen ? "text-slate-700 dark:text-zinc-300" : "text-slate-400 dark:text-zinc-500"} />
-                </button>
-                <ProfileDropdown />
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="ml-1 px-5 py-2 rounded-full bg-indigo-500 text-white dark:bg-white dark:text-black text-[13px] font-bold hover:bg-indigo-600 dark:hover:bg-zinc-200 transition-colors shadow-[0_4px_12px_rgba(99,102,241,0.2)] dark:shadow-md flex items-center gap-1.5 font-nunito"
+            <div className={`flex items-center gap-1 transition-transform duration-500 ${isScrolled ? 'pr-1' : ''}`}>
+              <a 
+                href={DEVELOPER_EXTERNAL_URL} 
+                rel="noopener noreferrer"
+                title="Developer"
+                className={`p-2 rounded-full font-mono font-bold text-[13px] leading-none flex items-center justify-center transition-colors ${isDevActive ? "text-slate-800 bg-slate-100 dark:text-white dark:bg-white/[0.08]" : "text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06]"}`}
               >
-                <Sparkles size={13} /> Sign In
+                {"</>"}
+              </a>
+
+              {/* THEME TOGGLE ADDED TO MAIN NAVBAR ALSO */}
+              <button
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+                title="Toggle Theme"
+                className="p-2 rounded-full flex items-center justify-center transition-colors text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06]"
+              >
+                {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
               </button>
-            )}
+
+              {user && profile?.is_profile_complete && (
+                <div className="relative" ref={notifDeskRef}>
+                  <button onClick={handleNotifOpen}
+                    aria-label="Open notifications"
+                    aria-expanded={isNotifOpen}
+                    className={`p-2 rounded-full relative transition-colors ${isNotifOpen ? "bg-slate-100 text-slate-800 dark:bg-white/[0.08] dark:text-white" : "text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06]"}`}>
+                    <Bell className="w-4 h-4" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-2 right-2 flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 dark:bg-blue-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500 dark:bg-blue-500 border border-white dark:border-[#09090b]" />
+                      </span>
+                    )}
+                  </button>
+                  <NotifPanel />
+                </div>
+              )}
+
+              {user ? (
+                <div className="relative ml-1" ref={profileRef}>
+                  <button onClick={() => { setIsProfileOpen(p => !p); setIsNotifOpen(false); }}
+                    aria-label="Open profile menu"
+                    aria-expanded={isProfileOpen}
+                    className={`flex items-center gap-1.5 rounded-full pl-1.5 pr-2.5 py-1.5 border transition-all ${isProfileOpen ? "bg-slate-100 border-slate-200 dark:bg-white/[0.08] dark:border-white/[0.08]" : "border-transparent hover:bg-slate-100 dark:hover:bg-white/[0.06]"}`}>
+                    <img src={avatarSrc} alt="avatar" className="w-6 h-6 rounded-full object-cover ring-1 ring-slate-200 dark:ring-white/10" />
+                    <ChevronDown size={13} className={isProfileOpen ? "text-slate-700 dark:text-zinc-300" : "text-slate-400 dark:text-zinc-500"} />
+                  </button>
+                  <ProfileDropdown />
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="ml-1 px-5 py-2 rounded-full bg-indigo-500 text-white dark:bg-white dark:text-black text-[13px] font-bold hover:bg-indigo-600 dark:hover:bg-zinc-200 transition-colors shadow-[0_4px_12px_rgba(99,102,241,0.2)] dark:shadow-md flex items-center gap-1.5 font-nunito"
+                >
+                  <Sparkles size={13} /> Sign In
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
       </nav>

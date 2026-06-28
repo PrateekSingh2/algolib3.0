@@ -1,6 +1,29 @@
 const { admin, db } = require('./utils/firebase-admin');
 const { rateLimit } = require('./utils/rate-limit');
 
+// Utility function to determine dynamic temperature
+function determineTemperature(userPrompt, selectedMode) {
+  if (selectedMode === 'deterministic') return 0.1;
+  if (selectedMode === 'balanced') return 0.5;
+  if (selectedMode === 'creative') return 0.9;
+
+  if (!userPrompt || typeof userPrompt !== 'string') return 0.5;
+
+  const text = userPrompt.toLowerCase();
+  
+  const techKeywords = ['code', 'optimize', 'c++', 'dijkstra', 'compile', 'complexity'];
+  const creativeKeywords = ['brainstorm', 'ideate', 'visualize', 'ui', 'ux'];
+
+  if (techKeywords.some(kw => text.includes(kw))) {
+    return 0.1;
+  }
+  if (creativeKeywords.some(kw => text.includes(kw))) {
+    return 0.9;
+  }
+
+  return 0.5;
+}
+
 exports.handler = async (event, context) => {
   // 1. CORS Headers
   const headers = {
@@ -13,7 +36,15 @@ exports.handler = async (event, context) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
 
   try {
-    rateLimit(event, 10, 60000); // 10 requests per minute
+    try {
+      rateLimit(event, 10, 60000); // 10 requests per minute
+    } catch (e) {
+      if (e.message.includes('Rate limit exceeded')) {
+        return { statusCode: 429, headers, body: JSON.stringify({ error: 'Rate limit exceeded. Please wait a moment and try again.' }) };
+      }
+      throw e;
+    }
+
     // 2. Authentication Verification
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -25,7 +56,7 @@ exports.handler = async (event, context) => {
     try {
       decodedToken = await admin.auth().verifyIdToken(idToken);
     } catch (err) {
-      return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized: Invalid token' }) };
+      return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized: Token expired or invalid' }) };
     }
 
     const uid = decodedToken.uid;
@@ -35,7 +66,7 @@ exports.handler = async (event, context) => {
     try { bodyData = JSON.parse(event.body || '{}'); } 
     catch (e) { return { statusCode: 400, headers, body: JSON.stringify({ error: 'Malformed JSON payload' }) }; }
 
-    const { code, history = [], action = 'analyze', targetLanguage = 'another language' } = bodyData;
+    const { code, history = [], action = 'analyze', targetLanguage = 'another language', mode } = bodyData;
     if (!code) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Input required' }) };
 
     // 4. User Credit Management (Transaction)
@@ -82,16 +113,19 @@ exports.handler = async (event, context) => {
     - Use bullet points (-) extensively to list steps, features, or breakdowns.
     - Use **bold text** to highlight key terms and make your response highly scannable.
     
+    CRITICAL MARKDOWN & CODE FORMATTING RULE:
+    - You MUST enforce standard markdown formatting.
+    - Code snippets MUST be wrapped in triple backticks (\`\`\`) with the appropriate language specified on the same line as the opening backticks.
+    - The triple backticks MUST be on their own separate lines. NEVER put code on the same line as the backticks.
+
     CRITICAL MATH FORMATTING RULE:
-    You MUST format ALL mathematical expressions and complexities using standard LaTeX.
-    - Use a single '$' for inline math (e.g., $O(n \\log n)$, $x = 5$).
-    - Use double '$$' for block/display math.
+    - You MUST format ALL Big-O notations, mathematical formulas, and expressions using standard LaTeX delimiters.
+    - Use a single '$' for inline math (e.g., $O(n \\log n)$, $x = 5$). There MUST be NO spaces between the delimiter and the equation.
+    - Use double '$$' for block/display math. There MUST be NO spaces between the delimiter and the equation.
     - Never use plain text for math formulas like O(n^2). Always use LaTeX.
 
-    CRITICAL CODE BLOCK RULE:
-    When providing code snippets, you MUST use standard markdown code blocks.
-    The triple backticks (\`\`\`) MUST be on their own separate lines. 
-    NEVER put code on the same line as the backticks.
+    CRITICAL VISUALS & DIAGRAMS RULE:
+    - If you need to explain an architectural concept, data structure, or flow, you MUST generate ASCII art diagrams, Markdown tables, or Mermaid.js code blocks instead of relying purely on text walls.
     
     CRITICAL JSON RULE:
     Respond ONLY with a valid JSON object. All values MUST be plain strings containing your beautifully formatted markdown.`;
@@ -131,6 +165,9 @@ exports.handler = async (event, context) => {
       Schema: {"type": "translation", "code": "<Translated code string>", "explanation": "<Explanation of language-specific idioms used, broken into short paragraphs>"}`;
     }
 
+    // Determine dynamic temperature based on mode or keywords
+    const dynamicTemperature = determineTemperature(code, mode);
+
     // 7. Payload Optimization
     const apiKey = process.env.GROQ_API_KEY;
     const apiPayload = {
@@ -143,7 +180,7 @@ exports.handler = async (event, context) => {
             content: `User Input:\n${code}\n\nRemember: Deliver a highly detailed response. Format all math/complexities with LaTeX ($). Use short paragraphs (\\n\\n) and bullet points. Return ONLY the requested JSON format.` 
           }
         ],
-        temperature: 0.3,
+        temperature: dynamicTemperature,
         top_p: 0.9,
         max_tokens: 4096,
         response_format: { type: "json_object" }
@@ -157,8 +194,16 @@ exports.handler = async (event, context) => {
     });
 
     if (!response.ok) {
+      if (!isFreeAction) {
+        try {
+          await userRef.update({ credits: admin.firestore.FieldValue.increment(1) });
+        } catch (err) {
+          console.error("Failed to refund credit:", err);
+        }
+      }
       const errText = await response.text();
-      throw new Error(`HTTP ${response.status}: Groq API Failed. ${errText}`);
+      console.error(`Groq API Error (${response.status}):`, errText);
+      return { statusCode: response.status, headers, body: JSON.stringify({ error: `AI Provider Error: ${response.status} - Rate Limit or Server Overload. Your credit has been refunded.` }) };
     }
     
     const data = await response.json();

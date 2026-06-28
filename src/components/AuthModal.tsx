@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Github, Zap, Mail, Lock, Loader2 } from "lucide-react";
@@ -25,7 +25,7 @@ const AnimatedScribblePanel = () => {
       >
         <svg width="100%" height="100%" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
           {/* Subtle background glow */}
-          <circle cx="120" cy="120" r="100" fill="url(#glowGradient)" opacity="0.4" className="dark:opacity-20" />
+          <circle cx="60" cy="100" r="14" fill="url(#glowGradient)" opacity="0.4" className="dark:opacity-20" />
           
           {/* Edges */}
           <motion.path 
@@ -97,6 +97,83 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // Rate Limiting & CAPTCHA State
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [captchaExpected, setCaptchaExpected] = useState("");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  const [attempts, setAttempts] = useState(0);
+  const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
+
+  // Load rate limit state
+  useEffect(() => {
+    if (isOpen) {
+      const savedAttempts = parseInt(localStorage.getItem('auth_attempts') || '0', 10);
+      const savedLockout = parseInt(localStorage.getItem('auth_lockout') || '0', 10);
+      
+      if (savedLockout && Date.now() < savedLockout) {
+        setLockoutUntil(savedLockout);
+      } else if (savedLockout) {
+        localStorage.removeItem('auth_attempts');
+        localStorage.removeItem('auth_lockout');
+        setAttempts(0);
+        setLockoutUntil(null);
+      } else {
+        setAttempts(savedAttempts);
+      }
+    }
+  }, [isOpen]);
+
+  const generateCaptcha = useCallback(() => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    let text = "";
+    for (let i = 0; i < 6; i++) {
+      text += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaExpected(text);
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Background noise
+    for (let i = 0; i < 60; i++) {
+      ctx.fillStyle = `rgba(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255}, 0.15)`;
+      ctx.beginPath();
+      ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Lines noise
+    for (let i = 0; i < 7; i++) {
+      ctx.strokeStyle = `rgba(${Math.random()*255}, ${Math.random()*255}, ${Math.random()*255}, 0.25)`;
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      ctx.stroke();
+    }
+    
+    // Draw text with rotation and distortion
+    ctx.font = 'bold 22px monospace';
+    ctx.textBaseline = 'middle';
+    
+    for (let i = 0; i < text.length; i++) {
+      ctx.save();
+      const x = 15 + i * 20;
+      const y = canvas.height / 2 + (Math.random() * 8 - 4);
+      const angle = (Math.random() * 0.4 - 0.2); // slight rotation
+      
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.fillStyle = `hsl(${Math.random() * 360}, 70%, 40%)`;
+      ctx.fillText(text[i], 0, 0);
+      ctx.restore();
+    }
+  }, []);
 
   const handleGoogle = () => {
     onClose();
@@ -107,10 +184,37 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     onClose();
     executeGithubSignIn();
   };
+  
+  const recordFailedAttempt = () => {
+    const newAttempts = attempts + 1;
+    setAttempts(newAttempts);
+    localStorage.setItem('auth_attempts', newAttempts.toString());
+    
+    if (newAttempts >= 5) {
+      const lockTime = Date.now() + 15 * 60 * 1000; // 15 mins
+      setLockoutUntil(lockTime);
+      localStorage.setItem('auth_lockout', lockTime.toString());
+      toast.error("Too many failed attempts. Locked out for 15 minutes.");
+    }
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return toast.error("Please fill in all fields");
+    if (lockoutUntil && Date.now() < lockoutUntil) {
+      const mins = Math.ceil((lockoutUntil - Date.now()) / 60000);
+      return toast.error(`Too many attempts. Please try again in ${mins} minutes.`);
+    }
+    
+    if (!email || !password || !captchaInput) return toast.error("Please fill in all fields");
+    
+    if (captchaInput.toLowerCase() !== captchaExpected.toLowerCase()) {
+      toast.error("Invalid CAPTCHA.");
+      recordFailedAttempt();
+      generateCaptcha();
+      setCaptchaInput("");
+      return;
+    }
+    
     setLoading(true);
     try {
       if (isLogin) {
@@ -121,24 +225,34 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         toast.success("Account created successfully!");
       }
       onClose();
+      // Reset rate limit on success
+      localStorage.removeItem('auth_attempts');
+      setAttempts(0);
     } catch (error: any) {
       console.error("Auth error:", error);
       toast.error(error.message || "Authentication failed");
+      recordFailedAttempt();
+      generateCaptcha();
+      setCaptchaInput("");
     } finally {
       setLoading(false);
     }
   };
 
-  // Reset state when closed
+  // Reset state when closed or opened
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      // Small delay to ensure canvas is mounted before drawing
+      setTimeout(generateCaptcha, 100);
+    } else {
       setTimeout(() => {
         setIsLogin(true);
         setEmail("");
         setPassword("");
+        setCaptchaInput("");
       }, 300);
     }
-  }, [isOpen]);
+  }, [isOpen, generateCaptcha, isLogin]);
 
   return (
     <AnimatePresence>
@@ -188,6 +302,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
                 {/* Email Form */}
                 <form onSubmit={handleEmailAuth} className="flex flex-col gap-3 mb-6">
+                  {lockoutUntil && Date.now() < lockoutUntil && (
+                     <div className="p-3 mb-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 border-2 border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold text-center">
+                        Too many attempts. Try again later.
+                     </div>
+                  )}
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
@@ -195,7 +314,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       placeholder="Email address"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full h-12 pl-10 pr-4 rounded-2xl bg-slate-50 dark:bg-black/20 border-2 border-slate-100 dark:border-white/10 text-slate-800 dark:text-white text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400 font-nunito"
+                      disabled={!!(lockoutUntil && Date.now() < lockoutUntil)}
+                      className="w-full h-12 pl-10 pr-4 rounded-2xl bg-slate-50 dark:bg-black/20 border-2 border-slate-100 dark:border-white/10 text-slate-800 dark:text-white text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400 font-nunito disabled:opacity-50"
                       required
                     />
                   </div>
@@ -206,10 +326,35 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       placeholder="Password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full h-12 pl-10 pr-4 rounded-2xl bg-slate-50 dark:bg-black/20 border-2 border-slate-100 dark:border-white/10 text-slate-800 dark:text-white text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400 font-nunito"
+                      disabled={!!(lockoutUntil && Date.now() < lockoutUntil)}
+                      className="w-full h-12 pl-10 pr-4 rounded-2xl bg-slate-50 dark:bg-black/20 border-2 border-slate-100 dark:border-white/10 text-slate-800 dark:text-white text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400 font-nunito disabled:opacity-50"
                       required
                     />
                   </div>
+                  
+                  {/* Canvas CAPTCHA */}
+                  <div className="flex flex-col gap-2 mt-1">
+                    <div className="flex gap-2">
+                       <canvas 
+                          ref={canvasRef} 
+                          width={140} 
+                          height={44} 
+                          className="rounded-xl border-2 border-slate-200 dark:border-white/10 bg-white dark:bg-black/40 flex-shrink-0 cursor-pointer"
+                          title="Click to refresh CAPTCHA"
+                          onClick={generateCaptcha}
+                       />
+                       <input
+                         type="text"
+                         placeholder="Enter CAPTCHA"
+                         value={captchaInput}
+                         onChange={(e) => setCaptchaInput(e.target.value)}
+                         disabled={!!(lockoutUntil && Date.now() < lockoutUntil)}
+                         className="flex-1 h-11 px-4 rounded-xl bg-slate-50 dark:bg-black/20 border-2 border-slate-100 dark:border-white/10 text-slate-800 dark:text-white text-sm font-semibold focus:outline-none focus:border-indigo-500 focus:bg-white transition-all placeholder:text-slate-400 font-nunito disabled:opacity-50"
+                         required
+                       />
+                    </div>
+                  </div>
+
                   <button
                     type="submit"
                     disabled={loading}

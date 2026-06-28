@@ -53,7 +53,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
     return () => clearTimeout(timeout);
   }, [wi]);
 
-  const stats = [["1.2K+","Users"],["5","Languages"],["7","Visualizers"],["Live","Contests"]];
+  const stats = [["1.5K+","Users"],["4.8","Rating"],["5","Languages"],["7","Visualizers"]];
 
   return (
     <section className="relative min-h-screen lg:min-h-[85vh] flex flex-col lg:flex-row items-center overflow-hidden bg-transparent">

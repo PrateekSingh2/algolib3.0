@@ -30,7 +30,12 @@ import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/fi
 // ─── Math & String Sanitizer ────────────────────────────────────────────────
 const sanitizeLatex = (text: string) => {
   if (!text) return "";
-  let clean = text
+
+  // Fix malformed LLM code blocks
+  let clean = text.replace(/``\$\s*(\w+)/g, '```$1');
+  clean = clean.replace(/(?<!`)``(?!`)/g, '```');
+
+  clean = clean
     .replace(/\x0C/g, '\\f')
     .replace(/\x08/g, '\\b')
     .replace(/\x09/g, '\\t')

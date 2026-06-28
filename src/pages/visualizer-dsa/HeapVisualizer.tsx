@@ -6,6 +6,7 @@ import {
   Terminal, Activity, Box, Maximize2, Minimize2, Settings2, Database,
   ArrowDownToLine
 } from 'lucide-react';
+import { useCollaboration } from '@/contexts/CollaborationContext';
 
 // --- TYPES & GAME STATE ---
 type HeapNode = {
@@ -114,6 +115,43 @@ const HeapVisualizer = () => {
     }
   }, [outputLog]);
 
+  // --- COLLABORATION HOOK ---
+  const { role, roomState, broadcastState } = useCollaboration();
+
+  // Host Broadcasts State
+  useEffect(() => {
+    if (role === 'host') {
+      broadcastState({
+        heap, heapMode, isPaused, isAnimating,
+        frames, frameIdx, message, codeLines, variables,
+        phantom, highlightIndices, comparingIndices, swappingIndices,
+        outputLog, outputTitle, inputValue
+      });
+    }
+  }, [heap, heapMode, isPaused, isAnimating, frames, frameIdx, message, codeLines, variables, phantom, highlightIndices, comparingIndices, swappingIndices, outputLog, outputTitle, inputValue, role, broadcastState]);
+
+  // Viewer Receives State
+  useEffect(() => {
+    if (role === 'viewer' && roomState) {
+        if (roomState.heap !== undefined) setHeap(roomState.heap || []);
+        if (roomState.heapMode !== undefined) setHeapMode(roomState.heapMode);
+        if (roomState.isPaused !== undefined) setIsPaused(roomState.isPaused);
+        if (roomState.isAnimating !== undefined) setIsAnimating(roomState.isAnimating);
+        if (roomState.frames !== undefined) setFrames(roomState.frames || []);
+        if (roomState.frameIdx !== undefined) setFrameIdx(roomState.frameIdx);
+        if (roomState.message !== undefined) setMessage(roomState.message);
+        if (roomState.codeLines !== undefined) setCodeLines(roomState.codeLines || []);
+        if (roomState.variables !== undefined) setVariables(roomState.variables || []);
+        if (roomState.phantom !== undefined) setPhantom(roomState.phantom || null);
+        if (roomState.highlightIndices !== undefined) setHighlightIndices(roomState.highlightIndices || []);
+        if (roomState.comparingIndices !== undefined) setComparingIndices(roomState.comparingIndices || []);
+        if (roomState.swappingIndices !== undefined) setSwappingIndices(roomState.swappingIndices || []);
+        if (roomState.outputLog !== undefined) setOutputLog(roomState.outputLog || []);
+        if (roomState.outputTitle !== undefined) setOutputTitle(roomState.outputTitle);
+        if (roomState.inputValue !== undefined) setInputValue(roomState.inputValue);
+    }
+  }, [role, roomState]);
+
   // Sync visual components to the active frame
   useEffect(() => {
     if (frames.length > 0 && frameIdx >= 0 && frameIdx < frames.length) {
@@ -149,13 +187,13 @@ const HeapVisualizer = () => {
   // Autoplay engine
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (!isPaused && isAnimating && frames.length > 0 && frameIdx < frames.length - 1) {
+    if (role !== 'viewer' && !isPaused && isAnimating && frames.length > 0 && frameIdx < frames.length - 1) {
         timer = setTimeout(() => {
             setFrameIdx(prev => prev + 1);
         }, 1300); 
     }
     return () => clearTimeout(timer);
-  }, [isPaused, isAnimating, frameIdx, frames]);
+  }, [isPaused, isAnimating, frameIdx, frames, role]);
 
   const centerWorkspace = () => {
     if (scrollContainerRef.current) {
@@ -446,7 +484,7 @@ const HeapVisualizer = () => {
                 </div>
                 <button 
                     onClick={() => { setHeapMode(heapMode === 'max' ? 'min' : 'max'); setHeap([]); setOutputLog([]); setTimeout(centerWorkspace, 100); }}
-                    disabled={isAnimating}
+                    disabled={isAnimating || role === 'viewer'}
                     className="px-3 py-1.5 bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-black/50 border border-slate-300 dark:border-white/20 rounded hover:border-slate-400 dark:hover:border-white/50 text-[9px] font-black text-slate-900 dark:text-white uppercase transition-all disabled:opacity-30 shadow-sm dark:shadow-none"
                 >
                     Switch
@@ -462,19 +500,19 @@ const HeapVisualizer = () => {
                 </span>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-blue-400 dark:bg-blue-500/20 backdrop-blur-xl border border-blue-500 dark:border-blue-500/50 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-blue-500 dark:hover:bg-blue-500/30 transition-all text-black dark:text-blue-400">
+                <button disabled={role === 'viewer'} onClick={() => setIsPaused(!isPaused)} className="flex-1 py-2 bg-blue-400 dark:bg-blue-500/20 backdrop-blur-xl border border-blue-500 dark:border-blue-500/50 rounded flex items-center justify-center gap-2 text-xs font-bold hover:bg-blue-500 dark:hover:bg-blue-500/30 transition-all text-black dark:text-blue-400 disabled:opacity-50">
                   {isPaused ? <Play size={14}/> : <Pause size={14}/>} {isPaused ? 'AUTOPLAY' : 'MANUAL'}
                 </button>
                 <div className="flex flex-1 gap-1">
                     <button 
-                      disabled={!isPaused || !isAnimating || frameIdx <= 0} 
+                      disabled={!isPaused || !isAnimating || frameIdx <= 0 || role === 'viewer'} 
                       onClick={() => setFrameIdx(f => Math.max(0, f - 1))} 
                       className="flex-1 py-2 bg-cyan-600 text-white rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-cyan-500 disabled:opacity-30 disabled:grayscale transition-all"
                     >
                       <StepBack size={14} /> PREV
                     </button>
                     <button 
-                      disabled={!isPaused || !isAnimating || frameIdx >= frames.length - 1} 
+                      disabled={!isPaused || !isAnimating || frameIdx >= frames.length - 1 || role === 'viewer'} 
                       onClick={() => setFrameIdx(f => Math.min(frames.length - 1, f + 1))} 
                       className="flex-1 py-2 bg-cyan-500 text-black rounded flex items-center justify-center gap-1 text-[10px] sm:text-xs font-black hover:bg-cyan-400 disabled:opacity-30 disabled:grayscale transition-all"
                     >
@@ -490,23 +528,23 @@ const HeapVisualizer = () => {
                   <div className="flex-1">
                       <label className="text-[9px] text-slate-700 dark:text-gray-500 uppercase font-bold">Node Payload</label>
                       <div className="flex gap-1 mt-1">
-                          <input type="number" value={inputValue} onChange={(e) => setInputValue(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-black/50 border border-slate-300 dark:border-white/10 rounded px-3 py-2 text-cyan-600 dark:text-cyan-400 outline-none font-mono text-sm dark:text-white" />
-                          <button onClick={generateRandom} className="px-3 bg-blue-400 dark:bg-blue-500/20 rounded border border-blue-500 dark:border-blue-500/50 hover:bg-blue-500 dark:hover:bg-blue-500/30 text-black dark:text-blue-400 font-bold transition-all"><RotateCcw size={14}/></button>
+                          <input disabled={role === 'viewer'} type="number" value={inputValue} onChange={(e) => setInputValue(e.target.value === '' ? '' : Number(e.target.value))} className="w-full bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-black/50 border border-slate-300 dark:border-white/10 rounded px-3 py-2 text-cyan-600 dark:text-cyan-400 outline-none font-mono text-sm dark:text-white disabled:opacity-50" />
+                          <button disabled={role === 'viewer'} onClick={generateRandom} className="px-3 bg-blue-400 dark:bg-blue-500/20 rounded border border-blue-500 dark:border-blue-500/50 hover:bg-blue-500 dark:hover:bg-blue-500/30 text-black dark:text-blue-400 font-bold transition-all disabled:opacity-50"><RotateCcw size={14}/></button>
                       </div>
                   </div>
                </div>
                
                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <button onClick={handleInsert} disabled={isAnimating} className="p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
+                  <button onClick={handleInsert} disabled={isAnimating || role === 'viewer'} className="p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                      <Plus size={16}/> INSERT
                   </button>
-                  <button onClick={handleExtract} disabled={isAnimating || heap.length === 0} className="p-3 bg-orange-400 dark:bg-orange-500/20 border border-orange-500 dark:border-orange-500/50 text-black dark:text-orange-400 rounded hover:bg-orange-500 dark:hover:bg-orange-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
+                  <button onClick={handleExtract} disabled={isAnimating || heap.length === 0 || role === 'viewer'} className="p-3 bg-orange-400 dark:bg-orange-500/20 border border-orange-500 dark:border-orange-500/50 text-black dark:text-orange-400 rounded hover:bg-orange-500 dark:hover:bg-orange-500/30 text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                      <ArrowDownToLine size={16}/> EXTRACT ROOT
                   </button>
                </div>
             </div>
 
-            <button onClick={() => { setHeap([]); setOutputLog([]); setTimeout(centerWorkspace, 50); }} disabled={isAnimating} className="w-full py-2 shrink-0 bg-orange-400 dark:bg-orange-500/20 hover:bg-orange-500 dark:hover:bg-orange-500/30 hover:text-black dark:hover:text-orange-400 border border-orange-500 dark:border-orange-500/50 rounded text-[10px] font-bold text-black dark:text-orange-400 transition-all flex items-center justify-center gap-2">
+            <button onClick={() => { if(role !== 'viewer') { setHeap([]); setOutputLog([]); setTimeout(centerWorkspace, 50); } }} disabled={isAnimating || role === 'viewer'} className="w-full py-2 shrink-0 bg-orange-400 dark:bg-orange-500/20 hover:bg-orange-500 dark:hover:bg-orange-500/30 hover:text-black dark:hover:text-orange-400 border border-orange-500 dark:border-orange-500/50 rounded text-[10px] font-bold text-black dark:text-orange-400 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                   <Trash2 size={14}/> FLUSH HEAP MEMORY
             </button>
 

@@ -5,6 +5,7 @@ import {
   MousePointer2, Move, Share2, Zap, Trash2, Terminal, 
   Activity, Maximize2, Minimize2, Map, Navigation, Square, ShieldAlert, Crosshair, ArrowRight
 } from 'lucide-react';
+import { useCollaboration } from '@/contexts/CollaborationContext';
 
 // --- TYPES & GAME STATE ---
 type GraphNode = { id: string; x: number; y: number };
@@ -118,6 +119,44 @@ const GraphVisualizer = () => {
 
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // --- COLLABORATION HOOK ---
+  const { role, roomState, broadcastState } = useCollaboration();
+
+  // Host Broadcasts State
+  useEffect(() => {
+    if (role === 'host') {
+      broadcastState({
+        nodes, edges, startNodeId, targetNodeId, engineMode, isPaused, isAnimating,
+        frames: frames.map(f => ({ ...f, visited: Array.from(f.visited) })),
+        frameIdx, codeLines, outputLog, message,
+        visited: Array.from(visited), path, activeEdge, activeNode, nodeDistances
+      });
+    }
+  }, [nodes, edges, startNodeId, targetNodeId, engineMode, isPaused, isAnimating, frames, frameIdx, codeLines, outputLog, message, visited, path, activeEdge, activeNode, nodeDistances, role, broadcastState]);
+
+  // Viewer Receives State
+  useEffect(() => {
+    if (role === 'viewer' && roomState) {
+        if (roomState.nodes !== undefined) setNodes(roomState.nodes || []);
+        if (roomState.edges !== undefined) setEdges(roomState.edges || []);
+        if (roomState.startNodeId !== undefined) setStartNodeId(roomState.startNodeId);
+        if (roomState.targetNodeId !== undefined) setTargetNodeId(roomState.targetNodeId);
+        if (roomState.engineMode !== undefined) setEngineMode(roomState.engineMode);
+        if (roomState.isPaused !== undefined) setIsPaused(roomState.isPaused);
+        if (roomState.isAnimating !== undefined) setIsAnimating(roomState.isAnimating);
+        if (roomState.frames !== undefined) setFrames((roomState.frames || []).map((f: any) => ({ ...f, visited: new Set(f.visited || []) })));
+        if (roomState.frameIdx !== undefined) setFrameIdx(roomState.frameIdx);
+        if (roomState.codeLines !== undefined) setCodeLines(roomState.codeLines || []);
+        if (roomState.outputLog !== undefined) setOutputLog(roomState.outputLog || []);
+        if (roomState.message !== undefined) setMessage(roomState.message);
+        if (roomState.visited !== undefined) setVisited(new Set(roomState.visited || []));
+        if (roomState.path !== undefined) setPath(roomState.path || []);
+        if (roomState.activeEdge !== undefined) setActiveEdge(roomState.activeEdge || null);
+        if (roomState.activeNode !== undefined) setActiveNode(roomState.activeNode || null);
+        if (roomState.nodeDistances !== undefined) setNodeDistances(roomState.nodeDistances || {});
+    }
+  }, [role, roomState]);
+
   useEffect(() => {
     setIsDarkMode(document.documentElement.classList.contains('dark'));
     const observer = new MutationObserver(() => {
@@ -163,13 +202,13 @@ const GraphVisualizer = () => {
   // Autoplay engine
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (!isPaused && engineMode === 'AUTO' && isAnimating && frames.length > 0 && frameIdx < frames.length - 1) {
+    if (role !== 'viewer' && !isPaused && engineMode === 'AUTO' && isAnimating && frames.length > 0 && frameIdx < frames.length - 1) {
         timer = setTimeout(() => {
             setFrameIdx(prev => prev + 1);
         }, 1200);
     }
     return () => clearTimeout(timer);
-  }, [isPaused, engineMode, isAnimating, frameIdx, frames]);
+  }, [isPaused, engineMode, isAnimating, frameIdx, frames, role]);
 
   const generateNodeId = (): string => {
       let index = 0;
@@ -183,6 +222,7 @@ const GraphVisualizer = () => {
 
   // --- INTERACTION HANDLERS ---
   const handleCanvasClick = (e: React.MouseEvent) => {
+      if (role === 'viewer') return;
       if (mode === 'addNode' && canvasRef.current && !isAnimating) {
           const rect = canvasRef.current.getBoundingClientRect();
           const x = e.clientX - rect.left;
@@ -214,7 +254,7 @@ const GraphVisualizer = () => {
   const handleNodeMouseDown = (e: React.MouseEvent, id: string) => {
       e.stopPropagation();
       e.preventDefault(); 
-      if (isAnimating) return;
+      if (isAnimating || role === 'viewer') return;
       if (mode === 'move') setDraggingNode(id);
       else if (mode === 'addEdge') setDragStartNode(id);
   };
@@ -222,6 +262,7 @@ const GraphVisualizer = () => {
   const handleNodeMouseUp = (e: React.MouseEvent, targetId: string) => {
       e.stopPropagation();
       e.preventDefault();
+      if (role === 'viewer') return;
       if (mode === 'move') {
           setDraggingNode(null);
       } 
@@ -672,7 +713,7 @@ const GraphVisualizer = () => {
                         { id: 'addNode', icon: Plus, label: 'Node' },
                         { id: 'addEdge', icon: Share2, label: 'Link' }
                     ].map((m) => (
-                        <button key={m.id} onClick={() => setMode(m.id as Mode)} disabled={isAnimating || frames.length > 0}
+                        <button key={m.id} onClick={() => setMode(m.id as Mode)} disabled={isAnimating || frames.length > 0 || role === 'viewer'}
                             className={`flex flex-col items-center justify-center gap-1 py-2 sm:py-3 rounded-lg transition-all duration-300 disabled:opacity-30 ${
                                 mode === m.id 
                                 ? 'bg-blue-400 text-black border border-blue-500 shadow-[0_0_15px_rgba(96,165,250,0.4)]' 
@@ -691,22 +732,22 @@ const GraphVisualizer = () => {
               <div className="flex justify-between items-center">
                 <span className="text-[9px] sm:text-[10px] font-bold text-slate-700 dark:text-gray-400 uppercase">Engine State</span>
                 <div className="flex bg-slate-200 dark:bg-black/50 rounded-lg p-0.5 border border-slate-300 dark:border-white/10">
-                    <button onClick={() => setEngineMode('AUTO')} className={`px-2 py-1 text-[8px] sm:text-[9px] font-black rounded ${engineMode === 'AUTO' ? 'bg-blue-400 text-black' : 'text-slate-700 dark:text-gray-500'}`}>AUTO</button>
-                    <button onClick={() => setEngineMode('MANUAL')} className={`px-2 py-1 text-[8px] sm:text-[9px] font-black rounded ${engineMode === 'MANUAL' ? 'bg-orange-400 text-black' : 'text-slate-700 dark:text-gray-500'}`}>MANUAL</button>
+                    <button disabled={role === 'viewer'} onClick={() => setEngineMode('AUTO')} className={`px-2 py-1 text-[8px] sm:text-[9px] font-black rounded ${engineMode === 'AUTO' ? 'bg-blue-400 text-black' : 'text-slate-700 dark:text-gray-500'} disabled:opacity-50`}>AUTO</button>
+                    <button disabled={role === 'viewer'} onClick={() => setEngineMode('MANUAL')} className={`px-2 py-1 text-[8px] sm:text-[9px] font-black rounded ${engineMode === 'MANUAL' ? 'bg-orange-400 text-black' : 'text-slate-700 dark:text-gray-500'} disabled:opacity-50`}>MANUAL</button>
                 </div>
               </div>
               
               <div className="flex gap-2">
                 <button 
                    onClick={() => setIsPaused(!isPaused)} 
-                   disabled={engineMode === 'MANUAL'} 
+                   disabled={engineMode === 'MANUAL' || role === 'viewer'} 
                    className="flex-1 py-1.5 sm:py-2 bg-blue-400 dark:bg-blue-500/20 border border-blue-500 dark:border-blue-500/50 rounded flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold hover:bg-blue-500 dark:hover:bg-blue-500/30 transition-all disabled:opacity-30 text-black dark:text-blue-400"
                 >
                   {isPaused ? <Play size={12} className="sm:w-3.5 sm:h-3.5"/> : <Pause size={12} className="sm:w-3.5 sm:h-3.5"/>} {isPaused ? 'RESUME' : 'PAUSE'}
                 </button>
                 <div className="flex flex-1 gap-1">
                     <button 
-                      disabled={(engineMode === 'AUTO' && !isPaused) || frames.length === 0 || frameIdx <= 0} 
+                      disabled={(engineMode === 'AUTO' && !isPaused) || frames.length === 0 || frameIdx <= 0 || role === 'viewer'} 
                       onClick={() => setFrameIdx(f => Math.max(0, f - 1))} 
                       className="flex-1 py-1.5 sm:py-2 bg-blue-400 border border-blue-500 dark:bg-blue-500/20 dark:border-blue-500/50 text-black dark:text-blue-400 rounded flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-black hover:bg-blue-500 dark:hover:bg-blue-500/30 disabled:opacity-30 disabled:grayscale transition-all"
                     >
@@ -714,7 +755,7 @@ const GraphVisualizer = () => {
                     </button>
                     <button 
                        onClick={() => setFrameIdx(f => Math.min(frames.length - 1, f + 1))} 
-                       disabled={(engineMode === 'AUTO' && !isPaused) || frames.length === 0 || frameIdx >= frames.length - 1} 
+                       disabled={(engineMode === 'AUTO' && !isPaused) || frames.length === 0 || frameIdx >= frames.length - 1 || role === 'viewer'} 
                        className="flex-1 py-1.5 sm:py-2 bg-blue-400 border border-blue-500 dark:bg-blue-500/20 dark:border-blue-500/50 text-black dark:text-blue-400 rounded flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-black hover:bg-blue-500 dark:hover:bg-blue-500/30 disabled:opacity-30 disabled:grayscale transition-all"
                     >
                       NEXT <StepForward size={12} className="sm:w-3.5 sm:h-3.5" />
@@ -725,7 +766,7 @@ const GraphVisualizer = () => {
               {/* THE KILL SWITCH */}
               <button 
                   onClick={handleStop} 
-                  disabled={frames.length === 0}
+                  disabled={frames.length === 0 || role === 'viewer'}
                   className="w-full py-1.5 sm:py-2 mt-2 bg-orange-400 dark:bg-orange-500/20 border border-orange-500 dark:border-orange-500/50 text-black dark:text-orange-400 hover:bg-orange-500 dark:hover:bg-orange-500/30 rounded flex items-center justify-center gap-2 text-[9px] sm:text-[10px] font-black uppercase transition-all disabled:opacity-30"
               >
                   <Square size={12} fill="currentColor" /> ABORT OPERATION
@@ -741,16 +782,16 @@ const GraphVisualizer = () => {
                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                    <div className="space-y-1">
                         <span className="text-[8px] sm:text-[9px] text-slate-700 dark:text-gray-500 font-mono uppercase">Start Sector</span>
-                        <select value={startNodeId} onChange={(e) => setStartNodeId(e.target.value)} disabled={isAnimating || frames.length > 0}
-                           className="w-full bg-slate-100 dark:bg-[#050510] border border-slate-200 dark:border-white/10 rounded-lg p-1.5 sm:p-2 text-[10px] sm:text-xs font-mono text-purple-600 dark:text-purple-400 outline-none focus:border-purple-500"
+                        <select value={startNodeId} onChange={(e) => setStartNodeId(e.target.value)} disabled={isAnimating || frames.length > 0 || role === 'viewer'}
+                           className="w-full bg-slate-100 dark:bg-[#050510] border border-slate-200 dark:border-white/10 rounded-lg p-1.5 sm:p-2 text-[10px] sm:text-xs font-mono text-purple-600 dark:text-purple-400 outline-none focus:border-purple-500 disabled:opacity-50"
                         >
                            {nodes.map(n => <option key={n.id} value={n.id}>{n.id}</option>)}
                         </select>
                    </div>
                    <div className="space-y-1">
                         <span className="text-[8px] sm:text-[9px] text-slate-700 dark:text-gray-500 font-mono uppercase">Target Sector</span>
-                        <select value={targetNodeId} onChange={(e) => setTargetNodeId(e.target.value)} disabled={isAnimating || frames.length > 0}
-                           className="w-full bg-slate-100 dark:bg-[#050510] border border-slate-200 dark:border-white/10 rounded-lg p-1.5 sm:p-2 text-[10px] sm:text-xs font-mono text-cyan-600 dark:text-cyan-400 outline-none focus:border-cyan-500"
+                        <select value={targetNodeId} onChange={(e) => setTargetNodeId(e.target.value)} disabled={isAnimating || frames.length > 0 || role === 'viewer'}
+                           className="w-full bg-slate-100 dark:bg-[#050510] border border-slate-200 dark:border-white/10 rounded-lg p-1.5 sm:p-2 text-[10px] sm:text-xs font-mono text-cyan-600 dark:text-cyan-400 outline-none focus:border-cyan-500 disabled:opacity-50"
                         >
                            {nodes.map(n => <option key={n.id} value={n.id}>{n.id}</option>)}
                         </select>
@@ -759,23 +800,23 @@ const GraphVisualizer = () => {
                
                {/* Algorithm Grid */}
                <div className="grid grid-cols-2 gap-1.5 sm:gap-2 mt-2">
-                  <button onClick={runBFS} disabled={isAnimating || frames.length > 0} className="p-2 sm:p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
+                  <button onClick={runBFS} disabled={isAnimating || frames.length > 0 || role === 'viewer'} className="p-2 sm:p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                      <Map size={14} className="sm:w-4 sm:h-4"/> BFS
                   </button>
-                  <button onClick={runDFS} disabled={isAnimating || frames.length > 0} className="p-2 sm:p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
+                  <button onClick={runDFS} disabled={isAnimating || frames.length > 0 || role === 'viewer'} className="p-2 sm:p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                      <ShieldAlert size={14} className="sm:w-4 sm:h-4"/> DFS
                   </button>
-                  <button onClick={runDijkstra} disabled={isAnimating || frames.length > 0} className="p-2 sm:p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
+                  <button onClick={runDijkstra} disabled={isAnimating || frames.length > 0 || role === 'viewer'} className="p-2 sm:p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                      <Zap size={14} className="sm:w-4 sm:h-4"/> Dijkstra
                   </button>
-                  <button onClick={runAStar} disabled={isAnimating || frames.length > 0} className="p-2 sm:p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
+                  <button onClick={runAStar} disabled={isAnimating || frames.length > 0 || role === 'viewer'} className="p-2 sm:p-3 bg-green-400 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 text-black dark:text-green-400 rounded hover:bg-green-500 dark:hover:bg-green-500/30 text-[9px] sm:text-[10px] font-black uppercase flex flex-col items-center gap-1 disabled:opacity-50 transition-all">
                      <Crosshair size={14} className="sm:w-4 sm:h-4"/> A* (A-Star)
                   </button>
                </div>
             </div>
 
             {/* Outputs */}
-            <button onClick={() => { setNodes([]); setEdges([]); resetVisuals(); setOutputLog(['> Memory Wiped.']); }} disabled={isAnimating} className="w-full py-2 bg-orange-400 dark:bg-orange-500/20 hover:bg-orange-500 dark:hover:bg-orange-500/30 hover:text-black dark:hover:text-orange-400 border border-orange-500 dark:border-orange-500/50 rounded text-[9px] sm:text-[10px] font-bold text-black dark:text-orange-400 transition-all flex items-center justify-center gap-2 mt-4 shrink-0">
+            <button onClick={() => { if (role !== 'viewer') { setNodes([]); setEdges([]); resetVisuals(); setOutputLog(['> Memory Wiped.']); } }} disabled={isAnimating || role === 'viewer'} className="w-full py-2 bg-orange-400 dark:bg-orange-500/20 hover:bg-orange-500 dark:hover:bg-orange-500/30 hover:text-black dark:hover:text-orange-400 border border-orange-500 dark:border-orange-500/50 rounded text-[9px] sm:text-[10px] font-bold text-black dark:text-orange-400 transition-all flex items-center justify-center gap-2 mt-4 shrink-0 disabled:opacity-50">
                <Trash2 size={12} className="sm:w-3.5 sm:h-3.5"/> FORMAT GRAPH
             </button>
 

@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { 
-  Zap, AlertCircle, Send, Loader2, Code2, ArrowRightLeft, 
-  Plus, MessageSquare, Maximize2, X, Activity, ChevronLeft, Menu, Trash2, Info
+import {
+  Zap, AlertCircle, Send, Loader2, Code2, ArrowRightLeft,
+  Plus, MessageSquare, Maximize2, X, Activity, ChevronLeft, Menu, Trash2, Info,
+  ChevronDown,
+  ChevronUp,
+  Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,7 +16,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useParams, useNavigate } from 'react-router-dom';
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import Navbar from "@/components/Navbar"; 
 import TerminalCode from "./TerminalCode";
 
 // ─── MATH RENDERING IMPORTS ──────────────────────────────────────────────────
@@ -25,8 +27,8 @@ import 'katex/dist/katex.min.css';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface AnalysisResult {
-  type: 'analysis' | 'optimization' | 'translation' | 'chat'; 
-  timeComplexity?: string; 
+  type: 'analysis' | 'optimization' | 'translation' | 'chat';
+  timeComplexity?: string;
   spaceComplexity?: string;
   explanation?: string;
   code?: string;
@@ -50,9 +52,13 @@ interface HistoryItem {
 // ─── Math & String Sanitizer ────────────────────────────────────────────────
 const sanitizeLatex = (text: string) => {
   if (!text) return "";
-  
+
+  // Fix malformed LLM code blocks (e.g., ``$ go or `` instead of ```)
+  let clean = text.replace(/``\$\s*(\w+)/g, '```$1');
+  clean = clean.replace(/(?<!`)``(?!`)/g, '```');
+
   // 1. Recover JSON-mangled escape sequences to stop KaTeX ParseErrors (Red Text)
-  let clean = text
+  clean = clean
     .replace(/\x0C/g, '\\f') // Form feed -> \f (\frac)
     .replace(/\x08/g, '\\b') // Backspace -> \b (\boxed)
     .replace(/\x09/g, '\\t') // Tab -> \t (\tan)
@@ -103,18 +109,18 @@ const sanitizeLatex = (text: string) => {
 // ─── Dynamic Graph Parsing Logic (Strict Mathematical Plotter) ──────────────────────
 const parseComplexity = (str?: string) => {
   const s = (str || '').toLowerCase();
-  
+
   let cleanStr = s.replace(/\\(?:mathrm|text|operatorname|mathit|mathbf|mathcal|mathsf)\{([^}]+)\}/g, '$1');
   cleanStr = cleanStr.replace(/\\[a-zA-Z]+/g, (match) => {
     if (match === '\\sqrt' || match === '\\log' || match === '\\ln') return match;
-    return ''; 
+    return '';
   });
 
   const oMatch = cleanStr.match(/o\s*\((.*)\)/);
   const coreExpr = oMatch ? oMatch[1] : cleanStr;
 
   if (coreExpr.includes('!')) {
-    return { name: 'Factorial', fn: (n: number) => { let r=1; for(let i=1;i<=n;i++)r*=i; return r; }, color: '#f43f5e' }; 
+    return { name: 'Factorial', fn: (n: number) => { let r = 1; for (let i = 1; i <= n; i++)r *= i; return r; }, color: '#f43f5e' };
   }
   if (coreExpr.includes('2^') || coreExpr.includes('e^') || coreExpr.includes('3^') || coreExpr.includes('c^')) {
     return { name: 'Exponential', fn: (n: number) => Math.pow(2, n), color: '#c084fc' };
@@ -125,7 +131,7 @@ const parseComplexity = (str?: string) => {
   if (coreExpr.includes('^2') || ((coreExpr.match(/n/g) || []).length === 2 && coreExpr.includes('*'))) {
     return { name: 'Quadratic', fn: (n: number) => Math.pow(n, 2), color: '#f87171' };
   }
-  
+
   const hasN = coreExpr.includes('n') || coreExpr.includes('m') || coreExpr.includes('v') || coreExpr.includes('e');
   const hasLog = coreExpr.includes('log') || coreExpr.includes('ln');
   const hasRoot = coreExpr.includes('sqrt') || coreExpr.includes('1/2');
@@ -134,7 +140,7 @@ const parseComplexity = (str?: string) => {
     const nIdx = Math.max(coreExpr.indexOf('n'), coreExpr.indexOf('m'));
     const logIdx = coreExpr.indexOf('log') !== -1 ? coreExpr.indexOf('log') : coreExpr.indexOf('ln');
     if (nIdx < logIdx || coreExpr.includes('*')) {
-       return { name: 'Linearithmic', fn: (n: number) => n * Math.log2(n + 1), color: '#fb923c' };
+      return { name: 'Linearithmic', fn: (n: number) => n * Math.log2(n + 1), color: '#fb923c' };
     }
   }
   if (hasRoot) return { name: 'Square Root', fn: (n: number) => Math.sqrt(n), color: '#a3e635' };
@@ -148,12 +154,12 @@ const parseComplexity = (str?: string) => {
 const FormattedComplexity = ({ text, color, className }: { text?: string, color?: string, className?: string }) => {
   if (!text) return null;
   const content = text.includes('$') ? text : `$${text}$`;
-  
+
   return (
     <div style={{ color }} className={`inline-block ${className || ''}`}>
-      <ReactMarkdown 
-        remarkPlugins={[remarkMath]} 
-        rehypePlugins={[[rehypeKatex, { strict: false }]]} 
+      <ReactMarkdown
+        remarkPlugins={[remarkMath]}
+        rehypePlugins={[[rehypeKatex, { strict: false }]]}
         components={{ p: React.Fragment }}
       >
         {content}
@@ -165,10 +171,10 @@ const FormattedComplexity = ({ text, color, className }: { text?: string, color?
 // ─── Constants & Utils ───────────────────────────────────────────────────────
 const TRANSLATE_LANGS = ["Python", "Java", "C++", "JavaScript", "Go", "Rust"];
 const SUGGESTIONS = [
-  { icon: <Zap size={18}/>, text: "Optimize sorting algorithm" },
-  { icon: <Code2 size={18}/>, text: "Explain dynamic programming" },
-  { icon: <ArrowRightLeft size={18}/>, text: "Translate Python to C++" },
-  { icon: <AlertCircle size={18}/>, text: "Find memory leaks" },
+  { icon: <Zap size={18} />, text: "Optimize sorting algorithm" },
+  { icon: <Code2 size={18} />, text: "Explain dynamic programming" },
+  { icon: <ArrowRightLeft size={18} />, text: "Translate Python to C++" },
+  { icon: <AlertCircle size={18} />, text: "Find memory leaks" },
 ];
 
 const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
@@ -180,10 +186,43 @@ const safeStringify = (data: any): string => {
   try { return JSON.stringify(data, null, 2); } catch (e) { return String(data); }
 };
 
+const CollapsibleUserMessage = ({ content }: { content: string }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLarge = content.length > 300 || content.split('\n').length > 5;
+  const displayContent = !isLarge || isExpanded ? content : content.substring(0, 300) + '...';
+
+  const lines = content.split('\n');
+  const isCode = lines.length > 2 && (content.includes(';') || content.includes('{') || content.includes('def ') || content.includes('function'));
+
+  return (
+    <div className="flex flex-col items-start w-full">
+      {isCode ? (
+        <div className="w-full relative mt-2 -mb-4">
+          <TerminalCode code={displayContent} language="CODE" />
+        </div>
+      ) : (
+        <pre className="whitespace-pre-wrap font-sans font-medium break-words w-full">{displayContent}</pre>
+      )}
+      {isLarge && (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="mt-2 text-[12px] font-medium text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 flex items-center gap-1 transition-colors bg-transparent border-none p-0"
+        >
+          {isExpanded ? (
+            <>Show less <ChevronUp size={14} /></>
+          ) : (
+            <>Show more <ChevronDown size={14} /></>
+          )}
+        </button>
+      )}
+    </div>
+  );
+};
+
 export default function Analyzer() {
-  const { user, profile, refreshProfile } = useAuth(); 
+  const { user, profile, refreshProfile } = useAuth();
   const [credits, setCredits] = useState<number | null>(null);
-  
+
   const { id: routeId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -193,14 +232,16 @@ export default function Analyzer() {
   const [inputCode, setInputCode] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<string>('auto');
+  const [showModeMenu, setShowModeMenu] = useState(false);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showLangMenuForIdx, setShowLangMenuForIdx] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  
+
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const chatIdRef = useRef<string | null>(null); 
+  const chatIdRef = useRef<string | null>(null);
   const [activeAnalysis, setActiveAnalysis] = useState<AnalysisResult | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -241,7 +282,9 @@ export default function Analyzer() {
   }, [routeId, user, navigate]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 0 || isAnalyzing) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages, isAnalyzing]);
 
   useEffect(() => {
@@ -258,7 +301,7 @@ export default function Analyzer() {
 
   const handleNewAnalysis = () => {
     navigate('/vectoris');
-    if (window.innerWidth < 768) setIsSidebarOpen(false); 
+    if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
   const handleSuggestionClick = (text: string) => {
@@ -292,7 +335,7 @@ export default function Analyzer() {
 
       unsubscribeCredits = onSnapshot(doc(db, 'user_credits', user.uid), (docSnap) => {
         if (docSnap.exists()) setCredits(docSnap.data().credits);
-        else setCredits(7); 
+        else setCredits(7);
       });
 
       const historyQ = query(collection(db, 'users', user.uid, 'analysis_history'), orderBy('updatedAt', 'desc'));
@@ -304,10 +347,10 @@ export default function Analyzer() {
       setHistory([]);
     }
 
-    return () => { 
-      if (unsubscribeCredits) unsubscribeCredits(); 
-      if (unsubscribeHistory) unsubscribeHistory(); 
-    }; 
+    return () => {
+      if (unsubscribeCredits) unsubscribeCredits();
+      if (unsubscribeHistory) unsubscribeHistory();
+    };
   }, [user]);
 
   const saveChatToFirebase = async (chatMessages: ChatMessage[]) => {
@@ -340,17 +383,27 @@ export default function Analyzer() {
       const response = await fetch('/.netlify/functions/ask-groq', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ code, action, targetLanguage, history: recentHistory })
+        body: JSON.stringify({
+          code,
+          action,
+          targetLanguage,
+          history: recentHistory,
+          mode: selectedMode === 'auto' ? undefined : selectedMode
+        })
       });
 
       if (!response.ok) {
-        if (response.status === 403 || response.status === 429) throw new Error("Credits finished. Credits renews after 3hr.");
-        throw new Error(`Something went wrong (Error ${response.status}). Please try again.`);
+        let errorMsg = `Something went wrong (Error ${response.status}). Please try again.`;
+        try {
+          const errData = await response.json();
+          if (errData.error) errorMsg = errData.error;
+        } catch (e) { }
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
       const aiResult = JSON.parse(data.choices[0].message.content) as AnalysisResult & { error?: string };
-      
+
       if (aiResult.error) throw new Error(aiResult.error);
 
       const finalMessages: ChatMessage[] = [...currentMessages, { role: 'ai', content: '', result: aiResult }];
@@ -402,7 +455,7 @@ export default function Analyzer() {
     if (!user) return;
     try {
       await deleteDoc(doc(db, 'users', user.uid, 'analysis_history', id));
-      if (routeId === id) handleNewAnalysis(); 
+      if (routeId === id) handleNewAnalysis();
     } catch (err) { console.error(err); }
   };
 
@@ -429,19 +482,35 @@ export default function Analyzer() {
     else if (activeParsedComplexity.name === 'Exponential') maxN = 15;
   }
 
-  const dynamicChartData = activeParsedComplexity 
+  const dynamicChartData = activeParsedComplexity
     ? Array.from({ length: maxN }, (_, i) => ({ n: i + 1, value: activeParsedComplexity.fn(i + 1) }))
     : [];
 
   const formatYAxis = (num: number) => Intl.NumberFormat('en-US', { notation: "compact", maximumFractionDigits: 1 }).format(num);
 
   return (
-    <div className="flex h-[100dvh] bg-slate-50 dark:bg-[#0c0c0e] text-slate-800 dark:text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30">
+    <div className="flex h-[100dvh] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-100 via-slate-50 to-slate-50 dark:from-[#1e1e28] dark:via-[#121216] dark:to-[#121216] text-slate-800 dark:text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30 relative">
+      {/* Dynamic Animated Background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/10 dark:bg-blue-600/10 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[#4facfe]/10 dark:bg-[#00f2fe]/10 blur-[120px] animate-pulse" style={{ animationDuration: '12s' }} />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_20%,transparent_100%)]" />
+        
+        {/* Vectoris Mascot Side Background */}
+        {isHomeState && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 0.5, x: 0 }} transition={{ duration: 1 }}
+            className="absolute -right-10 md:right-[2%] top-[15%] md:top-[10%] w-[350px] md:w-[500px] pointer-events-none mix-blend-multiply invert hue-rotate-180 dark:mix-blend-screen dark:invert-0 dark:hue-rotate-0"
+          >
+            <img src="/vectoris_mascot.png" alt="Vectoris Mascot" className="w-full h-auto drop-shadow-[0_0_30px_rgba(79,172,254,0.4)]" />
+          </motion.div>
+        )}
+      </div>
       <Helmet><title>Vectoris | AlgoLib's AI</title></Helmet>
 
       <AnimatePresence>
         {toastMessage && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
@@ -456,28 +525,28 @@ export default function Analyzer() {
       <AnimatePresence>
         {activeAnalysis && activeParsedComplexity && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-8">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setActiveAnalysis(null)}
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
               className="relative w-full max-w-5xl bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
               <div className="flex items-center justify-between p-6 border-b border-white/10 bg-white/5">
                 <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
-                     <Activity size={20} className="text-blue-400" />
-                   </div>
-                   <div>
-                     <h2 className="text-lg font-bold text-white leading-tight">Complexity Analysis</h2>
-                     <p className="text-xs text-zinc-400 font-medium tracking-wide">DYNAMIC GROWTH VISUALIZATION</p>
-                   </div>
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+                    <Activity size={20} className="text-blue-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white leading-tight">Complexity Analysis</h2>
+                    <p className="text-xs text-zinc-400 font-medium tracking-wide">DYNAMIC GROWTH VISUALIZATION</p>
+                  </div>
                 </div>
                 <button onClick={() => setActiveAnalysis(null)} className="p-2 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
-                   <X size={24} />
+                  <X size={24} />
                 </button>
               </div>
 
@@ -492,7 +561,7 @@ export default function Analyzer() {
                     <FormattedComplexity text={activeAnalysis.spaceComplexity} color={parseComplexity(activeAnalysis.spaceComplexity).color} className="text-4xl md:text-5xl font-extrabold drop-shadow-md" />
                   </div>
                 </div>
-                
+
                 <div className="h-[300px] md:h-[400px] w-full p-6 rounded-3xl bg-black/20 border border-white/5 shadow-inner relative">
                   <div className="absolute top-8 left-8 text-[11px] font-bold text-zinc-500 uppercase tracking-widest z-10">
                     Behavior: <span style={{ color: activeParsedComplexity.color }}>{activeParsedComplexity.name}</span>
@@ -501,8 +570,8 @@ export default function Analyzer() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={dynamicChartData} margin={{ top: 40, right: 20, left: 10, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="4 4" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                      <XAxis dataKey="n" stroke="#52525b" tick={{fill: '#71717a', fontSize: 11}} axisLine={false} tickLine={false} minTickGap={15} />
-                      <YAxis stroke="#52525b" tick={{fill: '#71717a', fontSize: 11}} axisLine={false} tickLine={false} tickFormatter={formatYAxis} width={40} />
+                      <XAxis dataKey="n" stroke="#52525b" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={15} />
+                      <YAxis stroke="#52525b" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={formatYAxis} width={40} />
                       <Tooltip contentStyle={{ backgroundColor: 'rgba(20,20,22,0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }} labelFormatter={(label) => `Input Size (N): ${label}`} formatter={(val: number) => [formatYAxis(val), 'Operations']} />
                       <Line type="monotone" dataKey="value" stroke={activeParsedComplexity.color} strokeWidth={3} dot={false} style={{ filter: `drop-shadow(0 0 10px ${activeParsedComplexity.color}80)` }} />
                     </LineChart>
@@ -514,14 +583,14 @@ export default function Analyzer() {
         )}
       </AnimatePresence>
 
-      <aside 
-        className={`absolute md:relative z-[60] h-full flex flex-col bg-white/80 dark:bg-white/5 backdrop-blur-2xl transition-all duration-300 ease-in-out shrink-0 border-r border-slate-200 dark:border-white/10
+      <aside
+        className={`absolute md:relative z-[60] h-full flex flex-col bg-white/80 dark:bg-[#0c0c0e]/80 backdrop-blur-3xl transition-all duration-300 ease-in-out shrink-0 border-r border-slate-200/50 dark:border-white/[0.05]
         ${isSidebarOpen ? 'w-[280px] translate-x-0' : 'w-[280px] -translate-x-full md:translate-x-0 md:w-0'} overflow-hidden shadow-[4px_0_24px_rgba(0,0,0,0.05)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.5)] md:shadow-none`}
       >
         <div className="p-4 flex items-center justify-between min-w-[280px] h-[72px]">
           <div className="flex items-center gap-2 cursor-pointer transition-transform hover:scale-[1.02]">
             <div className="w-7 h-7 rounded-[8px] bg-gradient-to-br from-[#4facfe] to-[#00f2fe] flex items-center justify-center shadow-[0_2px_10px_rgba(79,172,254,0.4)]">
-               <Zap size={16} className="text-white fill-white" />
+              <Zap size={16} className="text-white fill-white" />
             </div>
             <span className="text-[20px] font-medium text-slate-900 dark:text-white tracking-tight leading-none">Vectoris</span>
           </div>
@@ -529,10 +598,10 @@ export default function Analyzer() {
             <ChevronLeft size={20} />
           </button>
         </div>
-        
+
         <div className="px-3 pb-4 pt-2 min-w-[280px] flex flex-col gap-1">
-          <button onClick={handleNewAnalysis} className="w-full flex items-center gap-3 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/5 rounded-xl text-sm font-medium transition-all text-slate-700 dark:text-zinc-200">
-            <Plus size={18} className="text-zinc-400" /> New analysis
+          <button onClick={handleNewAnalysis} className="group w-full flex items-center gap-3 px-4 py-3 bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200/50 dark:bg-white/[0.03] dark:hover:bg-white/[0.08] dark:border-white/[0.05] rounded-xl text-sm font-bold transition-all text-blue-600 dark:text-zinc-200 shadow-sm">
+            <Plus size={18} className="text-blue-500 dark:text-zinc-400 group-hover:scale-110 transition-transform" /> New chat
           </button>
         </div>
 
@@ -542,9 +611,9 @@ export default function Analyzer() {
             <p className="text-sm text-slate-500 dark:text-zinc-600 px-2 italic">No recent history.</p>
           ) : (
             history.map(item => (
-              <div 
-                key={item.id} 
-                onClick={() => loadHistoryItem(item)} 
+              <div
+                key={item.id}
+                onClick={() => loadHistoryItem(item)}
                 className={`group flex items-center justify-between px-3 py-2.5 text-sm rounded-xl cursor-pointer transition-colors
                   ${currentChatId === item.id ? 'bg-blue-50 text-blue-600 border border-blue-200 dark:bg-white/15 dark:text-white font-medium dark:border-white/10' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/10 border border-transparent'}`}
               >
@@ -552,8 +621,8 @@ export default function Analyzer() {
                   <MessageSquare size={14} className="shrink-0 text-slate-400 group-hover:text-slate-500 dark:text-zinc-500 dark:group-hover:text-zinc-400" />
                   <span className="truncate">{item.title}</span>
                 </div>
-                <button 
-                  onClick={(e) => handleDeleteHistory(e, item.id)} 
+                <button
+                  onClick={(e) => handleDeleteHistory(e, item.id)}
                   className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400 p-1 shrink-0 transition-opacity"
                 >
                   <Trash2 size={14} />
@@ -564,28 +633,35 @@ export default function Analyzer() {
         </div>
 
         <div className="mt-auto p-4 border-t border-slate-200 dark:border-white/10 min-w-[280px] bg-slate-50/50 dark:bg-black/20">
-           <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer group">
-              {currentUser?.photoURL ? (
-                 <img src={currentUser.photoURL} alt="Profile" className="w-10 h-10 rounded-full object-cover shadow-inner border border-white/20 group-hover:border-white/40 transition-colors" />
-              ) : (
-                 <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-inner group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-shadow">
-                    {userName?.charAt(0).toUpperCase()}
-                 </div>
-              )}
-              <div className="flex flex-col flex-1 overflow-hidden">
-                 <span className="text-sm font-semibold text-slate-800 dark:text-zinc-200 truncate">{userName}</span>
-                 <span className="text-xs font-medium text-zinc-500 flex items-center gap-1.5 mt-0.5">
-                    <Zap size={12} className="text-yellow-500 fill-yellow-500" /> {credits !== null ? credits : '-'} Credits left
-                 </span>
+          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer group">
+            {currentUser?.photoURL ? (
+              <img src={currentUser.photoURL} alt="Profile" className="w-10 h-10 rounded-full object-cover shadow-inner border border-white/20 group-hover:border-white/40 transition-colors" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-inner group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-shadow">
+                {userName?.charAt(0).toUpperCase()}
               </div>
-           </div>
+            )}
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <span className="text-sm font-semibold text-slate-800 dark:text-zinc-200 truncate">{userName}</span>
+              <span className="text-xs font-medium text-zinc-500 flex items-center gap-1.5 mt-0.5">
+                <Zap size={12} className="text-yellow-500 fill-yellow-500" /> {credits !== null ? credits : '-'} Credits left
+              </span>
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate('/settings/vectoris'); }}
+              className="p-2 ml-auto text-slate-400 hover:text-slate-600 hover:bg-slate-200 dark:text-zinc-500 dark:hover:text-white dark:hover:bg-white/10 rounded-lg transition-colors shrink-0"
+              title="Vectoris Settings"
+            >
+              <Settings size={18} />
+            </button>
+          </div>
         </div>
       </aside>
 
       {isSidebarOpen && <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm md:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
-      <main className="flex-1 flex flex-col h-full relative min-w-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-100 via-slate-50 to-slate-50 dark:from-[#1a1a24] dark:via-[#0c0c0e] dark:to-[#0c0c0e]">
-        
+      <main className="flex-1 flex flex-col h-full relative min-w-0 bg-transparent">
+
         <header className="flex items-center justify-between p-4 absolute top-0 left-0 right-0 z-40 bg-gradient-to-b from-slate-50 via-slate-50/80 to-transparent dark:from-[#0c0c0e] dark:via-[#0c0c0e]/80 pointer-events-none">
           <div className="flex items-center gap-3 pointer-events-auto">
             {!isSidebarOpen && (
@@ -594,29 +670,30 @@ export default function Analyzer() {
               </button>
             )}
           </div>
-          <div className="hidden md:flex pointer-events-auto">
-             <Navbar />
-          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar pt-20 pb-0">
           <div className="max-w-4xl mx-auto px-4 md:px-8 h-full flex flex-col">
-            
+
             {isHomeState && (
-              <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex flex-col items-center justify-center flex-1 py-10">
-                <motion.h1 variants={itemVariants} className="text-4xl md:text-6xl font-semibold text-slate-900 dark:text-white tracking-tight text-center mb-12 drop-shadow-lg">
-                  Hello, <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4facfe] to-[#00f2fe]">{userName}</span>
+              <motion.div variants={containerVariants} initial="hidden" animate="show" className="flex flex-col items-center justify-center flex-1 py-10 z-10">
+                <motion.h1 variants={itemVariants} className="text-4xl md:text-6xl font-extrabold text-slate-900 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-br dark:from-white dark:to-zinc-500 tracking-tight text-center mb-4 drop-shadow-sm mt-8 md:mt-12">
+                  How can I help you, <span className="text-[#4facfe] dark:text-white">{userName}</span>?
                 </motion.h1>
-                <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl">
+                <motion.p variants={itemVariants} className="text-base md:text-lg text-slate-500 dark:text-zinc-400 mb-12 max-w-xl text-center font-medium">
+                  Your personal AI partner. Learn, create, and code with her.
+                </motion.p>
+                <motion.div variants={containerVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 w-full max-w-4xl px-2 md:px-0">
                   {SUGGESTIONS.map((sug, idx) => (
-                    <motion.button 
+                    <motion.button
                       variants={itemVariants} key={idx} onClick={() => handleSuggestionClick(sug.text)}
-                      className="group flex flex-col gap-4 p-5 rounded-3xl bg-white/60 dark:bg-white/5 backdrop-blur-md hover:bg-white dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300 transition-all duration-300 border border-slate-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-white/20 text-left h-[120px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-lg hover:-translate-y-1"
+                      className="relative group flex flex-col gap-2 md:gap-3 p-4 md:p-5 rounded-3xl md:rounded-[2rem] bg-white/60 dark:bg-[#1a1a24]/40 backdrop-blur-xl hover:bg-white dark:hover:bg-[#1a1a24]/80 text-slate-700 dark:text-zinc-200 transition-all duration-300 border border-slate-200 dark:border-white/5 hover:border-blue-300 dark:hover:border-white/20 text-left h-[110px] md:h-[130px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-xl dark:shadow-none hover:-translate-y-1 overflow-hidden"
                     >
-                      <div className="p-2 bg-blue-50 dark:bg-white/10 w-fit rounded-xl group-hover:bg-blue-100 dark:group-hover:bg-[#4facfe]/20 transition-colors border border-slate-200 dark:border-white/5">
-                        <span className="text-[#4facfe] group-hover:text-[#00f2fe] drop-shadow-md">{sug.icon}</span> 
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#4facfe]/0 to-[#00f2fe]/0 group-hover:from-[#4facfe]/5 group-hover:to-[#00f2fe]/5 transition-colors z-0" />
+                      <div className="relative z-10 p-2.5 md:p-3 bg-blue-50 dark:bg-white/5 w-fit rounded-xl md:rounded-2xl group-hover:bg-blue-100 dark:group-hover:bg-white/10 transition-colors border border-blue-100/50 dark:border-white/5 shadow-sm group-hover:scale-110">
+                        <span className="text-[#4facfe] drop-shadow-sm scale-90 md:scale-100 block">{sug.icon}</span>
                       </div>
-                      <span className="text-sm font-medium leading-snug">{sug.text}</span>
+                      <span className="relative z-10 text-xs md:text-sm font-semibold leading-snug line-clamp-2 md:line-clamp-none">{sug.text}</span>
                     </motion.button>
                   ))}
                 </motion.div>
@@ -624,22 +701,22 @@ export default function Analyzer() {
             )}
 
             {!isHomeState && (
-              <div className="flex flex-col gap-8 mt-4 pb-4 w-full max-w-full">
+              <div className="flex flex-col gap-8 mt-4 pb-4 w-full max-w-full z-10">
                 {messages.map((msg, idx) => {
                   const originalCodeMsg = messages.slice(0, idx).reverse().find(m => m.role === 'user');
-                  
+
                   // Run Sanitization Layer BEFORE ReactMarkdown encounters it
                   let displayContent = msg.result?.explanation || "";
                   if (msg.result?.code) {
                     if (displayContent === "") {
-                      displayContent = /```|\*\*|###|\$\w+/.test(msg.result.code) 
-                        ? msg.result.code 
+                      displayContent = /```|\*\*|###|\$\w+/.test(msg.result.code)
+                        ? msg.result.code
                         : `\`\`\`code\n${msg.result.code}\n\`\`\``;
                     } else if (!displayContent.includes(msg.result.code)) {
                       displayContent += `\n\n\`\`\`code\n${msg.result.code}\n\`\`\``;
                     }
                   }
-                  
+
                   // Inject the strict sanitization to rescue mangled LaTeX here
                   displayContent = sanitizeLatex(displayContent);
 
@@ -647,48 +724,50 @@ export default function Analyzer() {
                     <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="w-full">
                       {msg.role === 'user' ? (
                         <div className="flex justify-end w-full mb-2">
-                          <div className="bg-white dark:bg-white/10 backdrop-blur-md px-5 py-4 rounded-3xl max-w-[90%] md:max-w-[80%] text-slate-800 dark:text-zinc-100 text-[15px] leading-relaxed font-sans shadow-sm dark:shadow-lg border border-slate-200 dark:border-white/10 overflow-hidden break-words">
-                            <pre className="whitespace-pre-wrap font-sans font-medium break-words">{msg.content}</pre>
+                          <div className="bg-gradient-to-tr from-slate-100 to-white dark:from-white/5 dark:to-white/10 backdrop-blur-xl px-5 py-4 rounded-3xl max-w-[90%] md:max-w-[80%] text-slate-800 dark:text-zinc-100 text-[15px] leading-relaxed font-sans shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] border border-slate-200/50 dark:border-white/10 overflow-hidden break-words relative group">
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-purple-500/0 dark:group-hover:from-blue-500/5 dark:group-hover:to-purple-500/5 transition-colors z-0" />
+                            <div className="relative z-10"><CollapsibleUserMessage content={msg.content} /></div>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex gap-4 w-full max-w-full overflow-hidden">
-                          <div className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-[#00f2fe] mt-1 shadow-md dark:shadow-blue-500/20 border border-slate-200 dark:border-white/10">
-                             <Zap size={18} className="text-white fill-white" />
+                        <div className="flex gap-4 w-full max-w-full overflow-hidden group">
+                          <div className="w-9 h-9 rounded-[0.9rem] flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-[#00f2fe] mt-1 shadow-[0_0_15px_rgba(79,172,254,0.3)] border border-white/20 relative">
+                            <div className="absolute inset-0 rounded-[0.9rem] bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Zap size={18} className="text-white fill-white relative z-10" />
                           </div>
-                          
+
                           <div className="flex-1 min-w-0 text-[15px] leading-relaxed text-slate-800 dark:text-zinc-200 pt-1 overflow-hidden">
-                            
+
                             {msg.isError ? (
-                               <div className="p-4 rounded-2xl border border-red-500/30 bg-red-500/10 backdrop-blur-md text-red-200 flex items-center gap-3">
-                                 <AlertCircle size={18} className="text-red-400" /> {msg.content}
-                               </div>
+                              <div className="p-4 rounded-2xl border border-red-500/30 bg-red-500/10 backdrop-blur-md text-red-200 flex items-center gap-3">
+                                <AlertCircle size={18} className="text-red-400" /> {msg.content}
+                              </div>
                             ) : msg.result ? (
                               <div className="space-y-6 w-full max-w-full">
-                                
+
                                 {displayContent && (
                                   <div className="w-full max-w-full break-words">
-                                    <ReactMarkdown 
-                                      remarkPlugins={[remarkMath, remarkGfm]} 
+                                    <ReactMarkdown
+                                      remarkPlugins={[remarkMath, remarkGfm]}
                                       // Tell KaTeX NOT to crash on mild errors anymore, just in case
                                       rehypePlugins={[[rehypeKatex, { strict: false }]]}
                                       components={{
-                                        p: ({node, ...props}) => <p className="mb-4 leading-relaxed whitespace-pre-wrap break-words text-slate-700 dark:text-zinc-200" {...props} />,
-                                        strong: ({node, ...props}) => <strong className="font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-white/5 px-1 rounded-sm" {...props} />,
-                                        em: ({node, ...props}) => <em className="italic text-slate-600 dark:text-zinc-300" {...props} />,
-                                        ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-2 text-slate-700 dark:text-zinc-200 marker:text-slate-400 dark:marker:text-zinc-500" {...props} />,
-                                        ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-2 text-slate-700 dark:text-zinc-200 marker:text-slate-400 dark:marker:text-zinc-500" {...props} />,
-                                        li: ({node, ...props}) => <li className="break-words pl-1" {...props} />,
-                                        h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-6 break-words" {...props} />,
-                                        h2: ({node, ...props}) => <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-3 mt-5 break-words" {...props} />,
-                                        h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3 mt-4 break-words" {...props} />,
-                                        a: ({node, ...props}) => <a className="text-blue-600 dark:text-[#4facfe] hover:text-blue-500 dark:hover:text-[#00f2fe] underline underline-offset-2 break-words" {...props} />,
+                                        p: ({ node, ...props }) => <p className="mb-4 leading-relaxed whitespace-pre-wrap break-words text-slate-700 dark:text-zinc-200" {...props} />,
+                                        strong: ({ node, ...props }) => <strong className="font-semibold text-slate-900 dark:text-white bg-slate-100 dark:bg-white/5 px-1 rounded-sm" {...props} />,
+                                        em: ({ node, ...props }) => <em className="italic text-slate-600 dark:text-zinc-300" {...props} />,
+                                        ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4 space-y-2 text-slate-700 dark:text-zinc-200 marker:text-slate-400 dark:marker:text-zinc-500" {...props} />,
+                                        ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2 text-slate-700 dark:text-zinc-200 marker:text-slate-400 dark:marker:text-zinc-500" {...props} />,
+                                        li: ({ node, ...props }) => <li className="break-words pl-1" {...props} />,
+                                        h1: ({ node, ...props }) => <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-4 mt-6 break-words" {...props} />,
+                                        h2: ({ node, ...props }) => <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-3 mt-5 break-words" {...props} />,
+                                        h3: ({ node, ...props }) => <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3 mt-4 break-words" {...props} />,
+                                        a: ({ node, ...props }) => <a className="text-blue-600 dark:text-[#4facfe] hover:text-blue-500 dark:hover:text-[#00f2fe] underline underline-offset-2 break-words" {...props} />,
                                         code(props) {
-                                          const {children, className, node, ...rest} = props;
+                                          const { children, className, node, ...rest } = props;
                                           const match = /language-(\w+)/.exec(className || '');
                                           const contentString = String(children).replace(/\n$/, '');
                                           const isBlock = match || contentString.includes('\n');
-                                          
+
                                           if (isBlock) {
                                             return <TerminalCode code={contentString} language={match ? match[1].toUpperCase() : 'CODE'} />;
                                           }
@@ -703,30 +782,30 @@ export default function Analyzer() {
 
                                 {/* ─── INLINE GRAPH PREVIEW ─── */}
                                 {msg.result.type === 'analysis' && (
-                                  <div 
+                                  <div
                                     onClick={() => setActiveAnalysis(msg.result as AnalysisResult)}
                                     className="mt-6 rounded-2xl bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 cursor-pointer hover:border-blue-400 dark:hover:border-[#4facfe]/50 transition-all shadow-sm dark:shadow-lg overflow-hidden group"
                                   >
                                     <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/5">
-                                       <div className="flex items-center gap-3">
-                                          <Activity size={18} className="text-[#4facfe]" />
-                                          <h4 className="text-[14px] font-bold text-slate-900 dark:text-white tracking-wide">Execution Matrix</h4>
-                                       </div>
-                                       <div className="flex items-center gap-2 text-xs font-semibold text-[#4facfe] bg-[#4facfe]/10 px-3 py-1 rounded-full group-hover:bg-[#4facfe]/20 transition-colors border border-[#4facfe]/20">
-                                         Tap to expand <Maximize2 size={12} />
-                                       </div>
+                                      <div className="flex items-center gap-3">
+                                        <Activity size={18} className="text-[#4facfe]" />
+                                        <h4 className="text-[14px] font-bold text-slate-900 dark:text-white tracking-wide">Execution Matrix</h4>
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs font-semibold text-[#4facfe] bg-[#4facfe]/10 px-3 py-1 rounded-full group-hover:bg-[#4facfe]/20 transition-colors border border-[#4facfe]/20">
+                                        Tap to expand <Maximize2 size={12} />
+                                      </div>
                                     </div>
-                                    
+
                                     <div className="p-5 flex items-center justify-between bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-transparent dark:to-[#ffffff03]">
-                                       <div className="flex flex-col gap-2">
-                                         <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Time Complexity</div>
-                                         <FormattedComplexity text={msg.result.timeComplexity} color={parseComplexity(msg.result.timeComplexity).color} className="text-2xl font-black drop-shadow-md" />
-                                       </div>
-                                       <div className="h-12 w-[1px] bg-slate-200 dark:bg-white/10 mx-4"></div>
-                                       <div className="flex flex-col gap-2 text-right">
-                                         <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Space Complexity</div>
-                                         <FormattedComplexity text={msg.result.spaceComplexity} color={parseComplexity(msg.result.spaceComplexity).color} className="text-2xl font-black drop-shadow-md" />
-                                       </div>
+                                      <div className="flex flex-col gap-2">
+                                        <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Time Complexity</div>
+                                        <FormattedComplexity text={msg.result.timeComplexity} color={parseComplexity(msg.result.timeComplexity).color} className="text-2xl font-black drop-shadow-md" />
+                                      </div>
+                                      <div className="h-12 w-[1px] bg-slate-200 dark:bg-white/10 mx-4"></div>
+                                      <div className="flex flex-col gap-2 text-right">
+                                        <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Space Complexity</div>
+                                        <FormattedComplexity text={msg.result.spaceComplexity} color={parseComplexity(msg.result.spaceComplexity).color} className="text-2xl font-black drop-shadow-md" />
+                                      </div>
                                     </div>
                                   </div>
                                 )}
@@ -735,15 +814,15 @@ export default function Analyzer() {
                                 {msg.result.type === 'analysis' && (
                                   <div className="flex flex-wrap gap-3 mt-2">
                                     <button onClick={() => handleOptimize(originalCodeMsg?.content || '')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white dark:bg-white/5 backdrop-blur-md hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-sm font-semibold text-slate-700 dark:text-zinc-200 transition-all shadow-sm dark:shadow-md">
-                                      <Code2 size={16} className="text-emerald-400"/> Optimize Code
+                                      <Code2 size={16} className="text-emerald-400" /> Optimize Code
                                     </button>
                                     <div className="relative">
                                       <button onClick={() => setShowLangMenuForIdx(showLangMenuForIdx === idx ? null : idx)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white dark:bg-white/5 backdrop-blur-md hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-sm font-semibold text-slate-700 dark:text-zinc-200 transition-all shadow-sm dark:shadow-md">
-                                        <ArrowRightLeft size={16} className="text-purple-400"/> Translate
+                                        <ArrowRightLeft size={16} className="text-purple-400" /> Translate
                                       </button>
                                       <AnimatePresence>
                                         {showLangMenuForIdx === idx && (
-                                          <motion.div 
+                                          <motion.div
                                             initial={{ opacity: 0, y: 5, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 5, scale: 0.95 }} transition={{ duration: 0.15 }}
                                             className="absolute bottom-full left-0 mb-3 w-[160px] bg-white/95 dark:bg-[#1a1a24]/90 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/20 shadow-xl overflow-hidden py-2 z-50"
                                           >
@@ -766,7 +845,7 @@ export default function Analyzer() {
                     </motion.div>
                   );
                 })}
-                
+
                 {isAnalyzing && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-4 w-full mt-4">
                     <div className="w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center border border-[#4facfe]/30 bg-[#4facfe]/10 shadow-[0_0_15px_rgba(79,172,254,0.2)]">
@@ -779,20 +858,20 @@ export default function Analyzer() {
                 )}
               </div>
             )}
-            
+
             <div className="h-36 md:h-44 shrink-0" />
             <div ref={messagesEndRef} />
-            
+
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-slate-50 via-slate-50/90 dark:from-[#0c0c0e] dark:via-[#0c0c0e]/90 to-transparent pt-12 pb-6 md:pb-8 pointer-events-none">
+        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-slate-50 via-slate-50/90 dark:from-[#09090b] dark:via-[#09090b]/90 to-transparent pt-12 pb-6 md:pb-8 pointer-events-none z-40">
           <div className="max-w-4xl mx-auto w-full px-4 md:px-8 pointer-events-auto">
-            <div className="relative flex flex-col bg-white dark:bg-white/5 backdrop-blur-xl rounded-[32px] p-2 pr-3 border border-slate-300 dark:border-white/20 focus-within:bg-white focus-within:border-blue-400 dark:focus-within:bg-white/10 dark:focus-within:border-white/30 transition-all shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+            <div className="relative flex flex-col bg-white/80 dark:bg-[#1a1a24]/60 backdrop-blur-3xl rounded-[2rem] p-2 pr-3 border border-slate-200/50 dark:border-white/10 focus-within:bg-white focus-within:border-blue-300 dark:focus-within:bg-[#1a1a24]/80 dark:focus-within:border-white/20 transition-all shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)]">
               <div className="flex items-end">
-                <button 
+                <button
                   onClick={handleAttachmentClick}
-                  className="p-3.5 mb-[2px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/10 rounded-full transition-colors shrink-0 hidden sm:block"
+                  className="p-3.5 mb-[2px] text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/10 rounded-full transition-colors shrink-0 hidden sm:block"
                   title="Add attachment"
                 >
                   <Plus size={22} />
@@ -803,31 +882,68 @@ export default function Analyzer() {
                   onChange={handleInput}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask Vectoris..."
-                  className="flex-1 max-h-[200px] bg-transparent text-slate-900 dark:text-white resize-none outline-none py-4 px-3 sm:px-2 text-[15px] md:text-base custom-scrollbar placeholder:text-slate-400 dark:placeholder:text-zinc-500 leading-relaxed font-medium"
+                  className="flex-1 max-h-[200px] bg-transparent text-slate-900 dark:text-white resize-none outline-none py-2.5 sm:py-4 px-3 sm:px-2 text-[15px] md:text-base custom-scrollbar placeholder:text-slate-400 dark:placeholder:text-zinc-500 leading-relaxed font-medium"
                   rows={1}
                   disabled={isAnalyzing}
                 />
+                <div className="relative mx-2 self-end mb-2">
+                  <button
+                    onClick={() => setShowModeMenu(!showModeMenu)}
+                    className="flex items-center gap-1.5 bg-slate-100/50 dark:bg-white/5 hover:bg-slate-200/50 dark:hover:bg-white/10 text-slate-600 dark:text-zinc-300 px-3 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors border border-slate-200/50 dark:border-white/5"
+                    title="Select AI Mode"
+                  >
+                    <Zap size={14} className={selectedMode !== 'auto' ? "text-[#4facfe] fill-[#4facfe]" : "text-slate-400 dark:text-zinc-500"} />
+                    <span className="capitalize">{selectedMode}</span>
+                  </button>
+                  <AnimatePresence>
+                    {showModeMenu && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowModeMenu(false)} />
+                        <motion.div
+                          initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-[130px] bg-white/95 dark:bg-[#1a1a24]/95 backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl overflow-hidden py-1.5 z-50"
+                        >
+                          <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">
+                            AI Engine
+                          </div>
+                          {['auto', 'deterministic', 'balanced', 'creative'].map(mode => (
+                            <button
+                              key={mode}
+                              onClick={() => { setSelectedMode(mode); setShowModeMenu(false); }}
+                              className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${selectedMode === mode ? 'text-[#4facfe] bg-blue-50/80 dark:bg-[#4facfe]/10 font-semibold' : 'text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'}`}
+                            >
+                              <span className="capitalize">{mode}</span>
+                              {selectedMode === mode && <span className="w-1.5 h-1.5 rounded-full bg-[#4facfe]"></span>}
+                            </button>
+                          ))}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
                 <button
                   onClick={handleAnalyze}
                   disabled={!inputCode.trim() || isAnalyzing}
-                  className={`p-3.5 mb-[2px] rounded-full transition-all shrink-0 ${
-                    inputCode.trim() && !isAnalyzing
-                      ? 'text-white bg-blue-600 dark:text-black dark:bg-white hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(37,99,235,0.3)] dark:shadow-[0_0_20px_rgba(255,255,255,0.3)]'
-                      : 'text-slate-400 bg-slate-100 dark:text-zinc-600 dark:bg-transparent cursor-not-allowed'
-                  }`}
+                  className={`p-3.5 mb-[2px] rounded-full transition-all shrink-0 relative overflow-hidden ${inputCode.trim() && !isAnalyzing
+                    ? 'text-white bg-[#4facfe] dark:text-[#1a1a24] dark:bg-white hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(79,172,254,0.4)] dark:shadow-[0_0_25px_rgba(255,255,255,0.4)]'
+                    : 'text-slate-400 bg-slate-100/80 dark:text-zinc-600 dark:bg-white/5 cursor-not-allowed'
+                    }`}
                 >
                   {isAnalyzing ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="ml-0.5" />}
                 </button>
               </div>
             </div>
-            
-            <div className="text-center text-xs font-medium text-slate-500 dark:text-zinc-500 mt-4 flex flex-col sm:flex-row items-center justify-center gap-2 drop-shadow-sm">
-               <span>Vectoris is an AI built for AlgoLib and can make mistakes.</span>
+
+            <div className="text-center text-xs font-medium text-slate-600 dark:text-zinc-400 mt-4 flex flex-col sm:flex-row items-center justify-center gap-2 drop-shadow-sm">
+              <span>Vectoris is an AI built for AlgoLib and can make mistakes.</span>
             </div>
           </div>
         </div>
       </main>
-      
+
       <style>{`
         /* ─── SCROLLBARS ─── */
         .hide-scrollbar::-webkit-scrollbar { display: none; }

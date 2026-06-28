@@ -11,85 +11,89 @@ import {
   Layers, FolderDot, Code2, Activity, Database,
   Plus, Minus, Command, CornerDownLeft,
   TrendingUp, Sparkles,
-  Terminal
+  Terminal, ArrowRight,
+  Users,
+  X
 } from "lucide-react";
 import { fetchAlgorithms, type Algorithm } from "@/lib/algorithms";
+import { useCollaborationRoom } from "@/pages/visualizer-code/hooks/useCollaborationRoom";
+import { toast } from "sonner";
 
 // --- HYPER-GLASS BENTO ALGO CARD ---
 // Must be wrapped with forwardRef — AnimatePresence mode="popLayout" needs
 // a DOM ref on exit animations. Without it framer-motion throws a warning.
 const AlgoDataCard = React.forwardRef<HTMLDivElement, { algo: Algorithm, onClick: () => void, index: number }>(
   ({ algo, onClick, index }, ref) => {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
+    const mouseX = useMotionValue(0);
+    const mouseY = useMotionValue(0);
 
-  const handleMouseMove = ({ currentTarget, clientX, clientY }: React.MouseEvent) => {
-    const { left, top } = currentTarget.getBoundingClientRect();
-    mouseX.set(clientX - left);
-    mouseY.set(clientY - top);
-  };
+    const handleMouseMove = ({ currentTarget, clientX, clientY }: React.MouseEvent) => {
+      const { left, top } = currentTarget.getBoundingClientRect();
+      mouseX.set(clientX - left);
+      mouseY.set(clientY - top);
+    };
 
-  return (
-    <motion.div
-      ref={ref}
-      layout="position"
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.4, delay: (index % 12) * 0.04, ease: "easeOut" }}
-      onClick={onClick}
-      onMouseMove={handleMouseMove}
-      className="group relative flex flex-col p-4 sm:p-5 rounded-[1.25rem] sm:rounded-[1.5rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/60 dark:bg-white/[0.02] backdrop-blur-3xl hover:bg-white/90 dark:hover:bg-white/[0.04] transition-all duration-300 cursor-pointer overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)]"
-    >
+    return (
       <motion.div
-        className="pointer-events-none absolute -inset-px rounded-[1.5rem] opacity-0 transition duration-300 group-hover:opacity-100 hidden sm:block"
-        style={{
-          background: useMotionTemplate`
+        ref={ref}
+        layout="position"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.4, delay: (index % 12) * 0.04, ease: "easeOut" }}
+        onClick={onClick}
+        onMouseMove={handleMouseMove}
+        className="group relative flex flex-col p-4 sm:p-5 rounded-[1.25rem] sm:rounded-[1.5rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/60 dark:bg-white/[0.02] backdrop-blur-3xl hover:bg-white/90 dark:hover:bg-white/[0.04] transition-all duration-300 cursor-pointer overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)]"
+      >
+        <motion.div
+          className="pointer-events-none absolute -inset-px rounded-[1.5rem] opacity-0 transition duration-300 group-hover:opacity-100 hidden sm:block"
+          style={{
+            background: useMotionTemplate`
             radial-gradient(300px circle at ${mouseX}px ${mouseY}px, rgba(59, 131, 246, 0.12), transparent 80%)
           `,
-        }}
-      />
+          }}
+        />
 
-      <div className="relative z-10 flex justify-between items-start mb-3 sm:mb-4">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] flex items-center justify-center shadow-inner group-hover:border-blue-500/40 group-hover:bg-blue-500/10 transition-all duration-300">
-            <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-zinc-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
+        <div className="relative z-10 flex justify-between items-start mb-3 sm:mb-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] flex items-center justify-center shadow-inner group-hover:border-blue-500/40 group-hover:bg-blue-500/10 transition-all duration-300">
+              <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-zinc-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
+            </div>
+            <span className="text-[8px] sm:text-[10px] font-mono font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/[0.08] px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md shadow-sm dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] group-hover:text-slate-800 dark:group-hover:text-zinc-200 group-hover:border-slate-300 dark:group-hover:border-white/[0.15] transition-colors truncate max-w-[80px] sm:max-w-none">
+              {algo.category}
+            </span>
           </div>
-          <span className="text-[8px] sm:text-[10px] font-mono font-bold tracking-widest text-slate-500 dark:text-zinc-400 uppercase bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/[0.08] px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md shadow-sm dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] group-hover:text-slate-800 dark:group-hover:text-zinc-200 group-hover:border-slate-300 dark:group-hover:border-white/[0.15] transition-colors truncate max-w-[80px] sm:max-w-none">
-            {algo.category}
-          </span>
+          <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-white/[0.05] opacity-0 group-hover:opacity-100 transition-all duration-300 sm:-translate-x-2 sm:group-hover:translate-x-0">
+            <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+          </div>
         </div>
-        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-white/[0.05] opacity-0 group-hover:opacity-100 transition-all duration-300 sm:-translate-x-2 sm:group-hover:translate-x-0">
-          <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
-        </div>
-      </div>
 
-      <div className="relative z-10 flex-1">
-        <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-white mb-1.5 sm:mb-2 transition-colors tracking-tight drop-shadow-sm dark:drop-shadow-md line-clamp-1 sm:line-clamp-none">
-          {algo.title}
-        </h3>
-        <p className="text-[11px] sm:text-[13px] text-slate-500 dark:text-zinc-400 line-clamp-2 leading-relaxed font-light group-hover:text-slate-700 dark:group-hover:text-zinc-300 transition-colors">
-          {algo.description}
-        </p>
-      </div>
-
-      {algo.tags && algo.tags.length > 0 && (
-        <div className="relative z-10 flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-200 dark:border-white/[0.04]">
-          {algo.tags.slice(0, 2).map((tag, idx) => (
-            <span key={idx} className="text-[9px] sm:text-[10px] px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.05] font-medium tracking-wide whitespace-nowrap">
-              {tag}
-            </span>
-          ))}
-          {algo.tags.length > 2 && (
-            <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md text-slate-500 dark:text-zinc-500 font-medium border border-transparent whitespace-nowrap">
-              +{algo.tags.length - 2}
-            </span>
-          )}
+        <div className="relative z-10 flex-1">
+          <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-white mb-1.5 sm:mb-2 transition-colors tracking-tight drop-shadow-sm dark:drop-shadow-md line-clamp-1 sm:line-clamp-none">
+            {algo.title}
+          </h3>
+          <p className="text-[11px] sm:text-[13px] text-slate-500 dark:text-zinc-400 line-clamp-2 leading-relaxed font-light group-hover:text-slate-700 dark:group-hover:text-zinc-300 transition-colors">
+            {algo.description}
+          </p>
         </div>
-      )}
-    </motion.div>
-  );
-});
+
+        {algo.tags && algo.tags.length > 0 && (
+          <div className="relative z-10 flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-5 pt-3 sm:pt-4 border-t border-slate-200 dark:border-white/[0.04]">
+            {algo.tags.slice(0, 2).map((tag, idx) => (
+              <span key={idx} className="text-[9px] sm:text-[10px] px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.05] font-medium tracking-wide whitespace-nowrap">
+                {tag}
+              </span>
+            ))}
+            {algo.tags.length > 2 && (
+              <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md text-slate-500 dark:text-zinc-500 font-medium border border-transparent whitespace-nowrap">
+                +{algo.tags.length - 2}
+              </span>
+            )}
+          </div>
+        )}
+      </motion.div>
+    );
+  });
 AlgoDataCard.displayName = "AlgoDataCard";
 
 // --- MAIN DASHBOARD VIEW ---
@@ -108,6 +112,92 @@ const Index = () => {
 
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [showJoinInput, setShowJoinInput] = useState(false);
+  const [showCreateOptions, setShowCreateOptions] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+
+  const [isProcessingRoom, setIsProcessingRoom] = useState(false);
+
+  const handleCreateRoom = async (env: 'dsa' | 'code' | 'compiler') => {
+    if (!user) {
+      toast.error("Please sign in to create a room.");
+      return;
+    }
+    setIsProcessingRoom(true);
+    try {
+      const newRoomId = Math.random().toString(36).substring(2, 7).toUpperCase();
+      const namespace = env === 'compiler' ? 'compiler_rooms' : 'rooms';
+      
+      const initialState = env === 'dsa' ? { activeTab: 'll' } : {};
+      
+      const { ref, set } = await import('firebase/database');
+      const { rtdb } = await import('@/lib/firebase');
+      
+      const roomRef = ref(rtdb, `${namespace}/${newRoomId}`);
+      await set(roomRef, {
+        hostId: user.uid,
+        hostName: user.displayName || 'Unknown',
+        createdAt: Date.now(),
+        state: initialState
+      });
+      
+      sessionStorage.setItem('algolib_collab_roomId', newRoomId);
+      sessionStorage.setItem('algolib_collab_role', 'host');
+      toast.success(`Room created! Code: ${newRoomId}`);
+      
+      if (env === 'dsa') navigate('/visualizer/dsa/ll');
+      else if (env === 'code') navigate('/visualizer/code');
+      else navigate('/compiler');
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create room");
+    } finally {
+      setIsProcessingRoom(false);
+    }
+  };
+
+  const handleJoinSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!joinCode.trim()) return;
+    
+    setIsProcessingRoom(true);
+    try {
+      const code = joinCode.trim().toUpperCase();
+      const { ref, get } = await import('firebase/database');
+      const { rtdb } = await import('@/lib/firebase');
+      
+      // Check visualizer rooms first
+      let snap = await get(ref(rtdb, `rooms/${code}`));
+      if (snap.exists()) {
+        const data = snap.val();
+        sessionStorage.setItem('algolib_collab_roomId', code);
+        sessionStorage.setItem('algolib_collab_role', 'viewer');
+        toast.success("Joined room successfully!");
+        
+        if (data.state?.activeTab) navigate(`/visualizer/dsa/${data.state.activeTab}`);
+        else if (data.state?.code !== undefined || data.state?.languageId) navigate('/visualizer/code');
+        else navigate('/visualizer/dsa/ll');
+        return;
+      }
+
+      // Check compiler rooms
+      snap = await get(ref(rtdb, `compiler_rooms/${code}`));
+      if (snap.exists()) {
+        sessionStorage.setItem('algolib_collab_roomId', code);
+        sessionStorage.setItem('algolib_collab_role', 'viewer');
+        toast.success("Joined room successfully!");
+        navigate('/compiler');
+        return;
+      }
+
+      toast.error("Room not found. Check the code.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to join room");
+    } finally {
+      setIsProcessingRoom(false);
+    }
+  };
 
   // Ribbon Session State
   const [showRibbon, setShowRibbon] = useState(false);
@@ -316,7 +406,7 @@ const Index = () => {
           </div>
         </header>
 
-        <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-10 lg:px-10">
+        <main className="flex-1 w-full max-w-[1400px] mx-auto px-4 sm:px-6 pt-20 pb-4 sm:pt-24 sm:pb-8 lg:pt-24 lg:pb-8 lg:px-8">
 
           {/* ── BENTO DASHBOARD MATRIX ── */}
           <section className="grid grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-5 mb-6 sm:mb-8 mt-2">
@@ -324,26 +414,31 @@ const Index = () => {
             {/* 1. Welcome Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-              className="col-span-2 lg:col-span-8 rounded-[1.5rem] lg:rounded-[1.75rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-6 lg:p-8 flex flex-col justify-between relative overflow-hidden group shadow-[0_8px_40px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)] lg:min-h-[280px]"
+              className="col-span-2 lg:col-span-8 rounded-[1.5rem] lg:rounded-[1.75rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-5 lg:p-6 flex flex-col justify-between relative overflow-hidden group shadow-[0_8px_40px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)] lg:min-h-[220px]"
             >
               {/* Ambient glow */}
               <div className="absolute right-[-8%] top-[-15%] w-[420px] h-[420px] bg-blue-100 dark:bg-blue-600/10 rounded-full blur-[90px] pointer-events-none group-hover:bg-blue-200/80 dark:group-hover:bg-blue-600/18 transition-colors duration-700 hidden sm:block" />
               <div className="absolute left-[-5%] bottom-[-10%] w-[200px] h-[200px] bg-indigo-100/60 dark:bg-indigo-500/5 rounded-full blur-[70px] pointer-events-none hidden sm:block" />
+              
+              {/* Abstract Background Graphic */}
+              <div className="absolute -right-10 -bottom-10 opacity-[0.03] dark:opacity-[0.05] pointer-events-none hidden sm:block transition-transform duration-1000 group-hover:scale-105">
+                <Terminal size={280} strokeWidth={1} />
+              </div>
 
               <div className="relative z-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 mb-4 lg:mb-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 mb-3 lg:mb-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]">
                   <Activity size={13} className="text-blue-500 dark:text-blue-400" />
                   <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-300 uppercase tracking-widest">Active Workspace</span>
                 </div>
 
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-white tracking-tight mb-3 leading-[1.1]">
+                <h1 className="text-2xl sm:text-3xl lg:text-3xl xl:text-4xl font-extrabold text-slate-800 dark:text-white tracking-tight mb-2 lg:mb-3 leading-[1.1]">
                   Welcome back,{" "}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 dark:from-white dark:via-zinc-200 dark:to-white/60">
                     {userName}
                   </span>.
                 </h1>
 
-                <p className="text-slate-500 dark:text-zinc-400 text-sm sm:text-base max-w-lg leading-relaxed font-light">
+                <p className="text-slate-500 dark:text-zinc-400 text-sm sm:text-base lg:text-sm max-w-lg leading-relaxed font-light">
                   The AlgoLib ecosystem is fully synchronized.{" "}
                   <span className="text-slate-800 dark:text-zinc-200 font-semibold">{algorithms.length}</span> optimized algorithm implementations are ready to explore.
                 </p>
@@ -352,13 +447,13 @@ const Index = () => {
               <div className="relative z-10 mt-6 sm:mt-8 grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
                 <button
                   onClick={() => setIsSearchModalOpen(true)}
-                  className="w-full sm:w-auto justify-center px-2 lg:px-5 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-[11px] sm:text-sm font-bold rounded-xl hover:bg-blue-600 dark:hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center gap-1.5 sm:gap-2 shadow-lg whitespace-nowrap"
+                  className="w-full sm:w-auto justify-center px-2 lg:px-5 py-2.5 lg:py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-[11px] sm:text-sm lg:text-[13px] font-bold rounded-xl hover:bg-blue-600 dark:hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center gap-1.5 sm:gap-2 shadow-lg whitespace-nowrap"
                 >
                   <Search size={14} className="sm:w-4 sm:h-4 shrink-0" /> Search Algos
                 </button>
                 <Link
                   to="/compiler"
-                  className="w-full sm:w-auto justify-center px-2 lg:px-5 py-3 bg-white dark:bg-white/[0.05] text-slate-700 dark:text-zinc-300 text-[11px] sm:text-sm font-semibold rounded-xl border border-slate-200 dark:border-white/[0.08] hover:border-blue-400 dark:hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400 active:scale-[0.98] transition-all flex items-center gap-1.5 sm:gap-2 shadow-sm whitespace-nowrap"
+                  className="w-full sm:w-auto justify-center px-2 lg:px-5 py-2.5 lg:py-3 bg-white dark:bg-white/[0.05] text-slate-700 dark:text-zinc-300 text-[11px] sm:text-sm lg:text-[13px] font-semibold rounded-xl border border-slate-200 dark:border-white/[0.08] hover:border-blue-400 dark:hover:border-blue-500/40 hover:text-blue-600 dark:hover:text-blue-400 active:scale-[0.98] transition-all flex items-center gap-1.5 sm:gap-2 shadow-sm whitespace-nowrap"
                 >
                   <Terminal size={14} className="sm:w-4 sm:h-4 shrink-0" /> Open Compiler
                 </Link>
@@ -368,13 +463,18 @@ const Index = () => {
             {/* 2. Total Algorithms Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
-              className="col-span-1 lg:col-span-4 rounded-[1.25rem] lg:rounded-[1.75rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-4 lg:p-7 xl:p-8 flex flex-col justify-between relative overflow-hidden group shadow-[0_4px_20px_rgba(0,0,0,0.04)] lg:shadow-[0_8px_40px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_4px_20px_rgba(0,0,0,0.15)] lg:dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)] min-h-[160px] lg:min-h-[280px]"
+              className="col-span-1 lg:col-span-4 rounded-[1.25rem] lg:rounded-[1.75rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-4 lg:p-5 flex flex-col justify-between relative overflow-hidden group shadow-[0_4px_20px_rgba(0,0,0,0.04)] lg:shadow-[0_8px_40px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_4px_20px_rgba(0,0,0,0.15)] lg:dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),0_8px_30px_rgba(0,0,0,0.2)] min-h-[160px] lg:min-h-[200px]"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/60 dark:from-cyan-500/[0.04] to-transparent pointer-events-none" />
 
+              {/* Abstract Background Graphic */}
+              <div className="absolute -right-10 -bottom-10 opacity-[0.03] dark:opacity-[0.05] pointer-events-none hidden sm:block transition-transform duration-1000 group-hover:scale-105">
+                <Database size={200} strokeWidth={1} />
+              </div>
+
               <div className="relative z-10 flex items-center justify-between mb-2 lg:mb-0">
-                <span className="text-[10px] lg:text-sm font-semibold text-slate-600 dark:text-zinc-300 flex items-center gap-1.5 lg:gap-2">
-                  <Database className="w-3 h-3 lg:w-[15px] lg:h-[15px] text-cyan-500 dark:text-cyan-400 shrink-0" />
+                <span className="text-[10px] lg:text-xs font-semibold text-slate-600 dark:text-zinc-300 flex items-center gap-1.5 lg:gap-2">
+                  <Database className="w-3 h-3 lg:w-[14px] lg:h-[14px] text-cyan-500 dark:text-cyan-400 shrink-0" />
                   <span className="truncate lg:hidden">Total Algos</span>
                   <span className="hidden lg:inline">Total Algorithms</span>
                 </span>
@@ -384,23 +484,23 @@ const Index = () => {
               </div>
 
               <div className="relative z-10 flex flex-col gap-0.5 lg:gap-1 mb-3 lg:mb-0 mt-1 lg:mt-0">
-                <span className="text-4xl lg:text-7xl xl:text-8xl font-black text-slate-800 dark:text-white tracking-tighter tabular-nums leading-none lg:leading-normal">
+                <span className="text-4xl lg:text-5xl xl:text-6xl font-black text-slate-800 dark:text-white tracking-tighter tabular-nums leading-none lg:leading-normal">
                   {algorithms.length > 0 ? algorithms.length : "0"}
                 </span>
                 <div className="flex items-center gap-1.5 lg:gap-2 mt-1 lg:mt-0">
                   <TrendingUp className="w-3 h-3 lg:w-3.5 lg:h-3.5 text-green-500 shrink-0" />
-                  <span className="text-[9px] lg:text-xs text-green-600 dark:text-green-400 font-semibold truncate lg:whitespace-normal">All categories covered</span>
+                  <span className="text-[9px] lg:text-[11px] xl:text-xs text-green-600 dark:text-green-400 font-semibold truncate lg:whitespace-normal">All categories covered</span>
                 </div>
               </div>
 
-              <div className="relative z-10 grid grid-cols-2 gap-2 lg:gap-3 pt-2.5 lg:pt-4 border-t border-slate-100 dark:border-white/[0.05]">
+              <div className="relative z-10 grid grid-cols-2 gap-2 lg:gap-3 pt-2.5 lg:pt-3 xl:pt-4 border-t border-slate-100 dark:border-white/[0.05]">
                 {[
                   { label: "Categories", value: new Set(algorithms.map(a => a.category)).size || "—" },
                   { label: "With Tags", value: algorithms.filter(a => a.tags?.length).length || "—" },
                 ].map(stat => (
-                  <div key={stat.label} className="bg-slate-50 dark:bg-white/[0.03] rounded-lg lg:rounded-xl px-2 lg:px-3 py-1.5 lg:py-2.5 border border-slate-100 dark:border-white/[0.05]">
-                    <p className="text-[8px] lg:text-[10px] text-slate-400 dark:text-zinc-500 font-medium uppercase tracking-wider mb-0.5 lg:mb-1 truncate">{stat.label}</p>
-                    <p className="text-xs lg:text-lg font-bold text-slate-700 dark:text-zinc-200 tabular-nums">{stat.value}</p>
+                  <div key={stat.label} className="bg-slate-50/80 dark:bg-white/[0.02] backdrop-blur-sm rounded-lg lg:rounded-xl px-2 lg:px-3 py-1.5 lg:py-2.5 border border-slate-100 dark:border-white/[0.05]">
+                    <p className="text-[8px] lg:text-[9px] xl:text-[10px] text-slate-500 dark:text-zinc-500 font-medium uppercase tracking-wider mb-0.5 lg:mb-1 truncate">{stat.label}</p>
+                    <p className="text-xs lg:text-base xl:text-lg font-bold text-slate-700 dark:text-zinc-200 tabular-nums">{stat.value}</p>
                   </div>
                 ))}
               </div>
@@ -429,21 +529,27 @@ const Index = () => {
               return (
                 <>
                   {/* 3. Complexity Distribution */}
-                  <div className="col-span-1 lg:col-span-5 rounded-[1.25rem] lg:rounded-[1.5rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-4 lg:p-6 flex flex-col gap-1 lg:gap-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] lg:shadow-[0_6px_30px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_4px_20px_rgba(0,0,0,0.15)] lg:dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] relative overflow-hidden min-h-[160px] lg:min-h-auto">
+                  <div className="col-span-1 lg:col-span-4 rounded-[1.25rem] lg:rounded-[1.5rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-4 lg:p-5 flex flex-col gap-1 lg:gap-4 shadow-[0_4px_20px_rgba(0,0,0,0.04)] lg:shadow-[0_6px_30px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_4px_20px_rgba(0,0,0,0.15)] lg:dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] relative overflow-hidden min-h-[160px] lg:min-h-auto group">
                     <div className="absolute top-0 right-0 w-32 lg:w-48 h-32 lg:h-48 bg-gradient-to-bl from-blue-50 dark:from-blue-600/[0.06] to-transparent pointer-events-none rounded-[1.5rem]" />
+                    
+                    {/* Abstract Background Graphic */}
+                    <div className="absolute -right-10 -bottom-10 opacity-[0.03] dark:opacity-[0.05] pointer-events-none hidden sm:block transition-transform duration-1000 group-hover:scale-105">
+                      <TrendingUp size={200} strokeWidth={1} />
+                    </div>
+
                     <div className="relative z-10 flex items-center justify-between mb-2 lg:mb-0">
                       <div className="flex flex-col lg:block">
-                        <p className="text-[8px] lg:text-[10px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-0.5 lg:mb-1 truncate">Live Analysis</p>
-                        <h2 className="text-[10px] lg:text-sm font-bold text-slate-700 dark:text-zinc-200 flex items-center gap-1.5 lg:gap-2 truncate">
-                          <TrendingUp className="w-3 h-3 lg:w-[15px] lg:h-[15px] text-blue-500 shrink-0" />
+                        <p className="text-[8px] lg:text-[9px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-0.5 lg:mb-1 truncate">Live Analysis</p>
+                        <h2 className="text-[10px] lg:text-xs font-bold text-slate-700 dark:text-zinc-200 flex items-center gap-1.5 lg:gap-2 truncate">
+                          <TrendingUp className="w-3 h-3 lg:w-[14px] lg:h-[14px] text-blue-500 shrink-0" />
                           <span className="lg:hidden">Complexity</span>
                           <span className="hidden lg:inline">Complexity Distribution</span>
                         </h2>
                       </div>
-                      <span className="hidden lg:inline-block text-[10px] font-mono px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 font-bold">{algorithms.length} algos</span>
+                      <span className="hidden lg:inline-block text-[9px] font-mono px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 font-bold">{algorithms.length} algos</span>
                     </div>
-                    
-                    <div className="relative z-10 flex flex-col gap-1 lg:gap-3 mb-2 lg:mb-0">
+
+                    <div className="relative z-10 flex flex-col gap-1 lg:gap-2 mb-2 lg:mb-0">
                       {groupCounts.map(g => {
                         const pct = Math.round((g.count / maxCount) * 100);
                         const barColor: Record<string, string> = { emerald: "bg-emerald-400 dark:bg-emerald-500", blue: "bg-blue-400 dark:bg-blue-500", violet: "bg-violet-400 dark:bg-violet-500", amber: "bg-amber-400 dark:bg-amber-500" };
@@ -451,7 +557,7 @@ const Index = () => {
                         return (
                           <div key={g.label} className="flex flex-col lg:flex-row lg:items-center gap-0.5 lg:gap-3">
                             <div className="flex items-center justify-between w-full lg:w-auto">
-                              <span className="text-[8px] lg:text-[11px] text-slate-500 dark:text-zinc-400 w-20 lg:w-28 shrink-0 font-mono truncate">{g.label}</span>
+                              <span className="text-[8px] lg:text-[10px] xl:text-[11px] text-slate-500 dark:text-zinc-400 w-20 lg:w-28 shrink-0 font-mono truncate">{g.label}</span>
                               <span className={`text-[8px] font-bold lg:hidden tabular-nums ${textColor[g.color]}`}>{g.count}</span>
                             </div>
                             <div className="flex-1 flex items-center gap-2">
@@ -465,14 +571,14 @@ const Index = () => {
                       })}
                     </div>
                     {/* Language coverage pills */}
-                    <div className="relative z-10 flex items-center gap-1.5 lg:gap-3 pt-2.5 lg:pt-4 border-t border-slate-100 dark:border-white/[0.05] mt-auto lg:mt-0">
-                      <span className="hidden lg:inline text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Languages</span>
+                    <div className="relative z-10 flex items-center gap-1.5 lg:gap-3 pt-2.5 lg:pt-3 xl:pt-4 border-t border-slate-100 dark:border-white/[0.05] mt-auto lg:mt-0">
+                      <span className="hidden lg:inline text-[9px] xl:text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">Languages</span>
                       <div className="flex gap-1.5 lg:gap-2 flex-wrap">
                         {langCoverage.map(l => {
                           const covered = algorithms.filter(a => (a as any)[l.key]).length;
                           const pct = algorithms.length > 0 ? Math.round((covered / algorithms.length) * 100) : 0;
                           return (
-                            <span key={l.lang} className="flex items-center gap-1 lg:gap-1.5 text-[8px] lg:text-[11px] font-semibold text-slate-600 dark:text-zinc-300 bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.07] px-1.5 lg:px-2.5 py-0.5 lg:py-1 rounded-md lg:rounded-lg">
+                            <span key={l.lang} className="flex items-center gap-1 lg:gap-1.5 text-[8px] lg:text-[10px] xl:text-[11px] font-semibold text-slate-600 dark:text-zinc-300 bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.07] px-1.5 lg:px-2.5 py-0.5 lg:py-1 rounded-md lg:rounded-lg backdrop-blur-sm">
                               <span className={`w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full ${l.dot}`} />
                               {l.lang}
                               <span className="hidden lg:inline opacity-60 font-normal">{pct}%</span>
@@ -487,7 +593,7 @@ const Index = () => {
                   <motion.div
                     whileHover={{ scale: 1.012 }}
                     onClick={() => navigate(`/view/${featured.id}`)}
-                    className="col-span-2 lg:col-span-7 rounded-[1.5rem] lg:rounded-[1.75rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-6 lg:p-8 flex flex-col lg:flex-row justify-between cursor-pointer shadow-[0_6px_30px_rgba(0,0,0,0.04)] lg:shadow-[0_6px_30px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] lg:dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] relative overflow-hidden group gap-6 lg:gap-0"
+                    className="col-span-1 lg:col-span-4 rounded-[1.25rem] lg:rounded-[1.75rem] border border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-white/[0.02] backdrop-blur-3xl p-4 sm:p-5 lg:p-5 flex flex-col justify-between cursor-pointer shadow-[0_6px_30px_rgba(0,0,0,0.04)] lg:shadow-[0_6px_30px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] lg:dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] relative overflow-hidden group gap-4 lg:gap-0"
                   >
                     {/* Background code watermark */}
                     <div className="absolute inset-0 flex items-center justify-end pr-6 pointer-events-none opacity-[0.035] dark:opacity-[0.07] select-none overflow-hidden">
@@ -497,6 +603,11 @@ const Index = () => {
                     </div>
                     <div className="absolute top-0 left-0 w-60 h-60 bg-gradient-to-br from-indigo-50/80 dark:from-indigo-600/[0.06] to-transparent pointer-events-none rounded-[1.5rem]" />
 
+                    {/* Abstract Background Graphic */}
+                    <div className="absolute -right-5 -bottom-5 opacity-[0.03] dark:opacity-[0.05] pointer-events-none hidden sm:block transition-transform duration-1000 group-hover:scale-105">
+                      <Sparkles size={200} strokeWidth={1} />
+                    </div>
+
                     <div className="relative z-10 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-2">
@@ -505,25 +616,22 @@ const Index = () => {
                           </div>
                           <div>
                             <p className="text-[10px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">Algorithm of the Moment</p>
-                            <p className="text-[10px] text-slate-400 dark:text-zinc-600">Rotates daily · click to explore</p>
+                            <p className="hidden sm:block text-[10px] text-slate-400 dark:text-zinc-600">Rotates daily · click to explore</p>
                           </div>
                         </div>
                         <ChevronRight size={18} className="text-slate-300 dark:text-zinc-600 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors mt-1 shrink-0 block lg:hidden" />
                       </div>
 
-                      <div className="mt-5">
-                        <span className="text-[10px] font-mono font-bold tracking-widest text-slate-400 dark:text-zinc-500 bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.07] px-2.5 py-1 rounded-md uppercase mb-3 inline-block">
-                          {featured.category}
-                        </span>
-                        <h3 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tracking-tight leading-tight mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
+                      <div className="mt-3 sm:mt-5 lg:mt-4">
+                        <h3 className="text-lg sm:text-2xl lg:text-xl font-black text-slate-800 dark:text-white tracking-tight leading-tight mb-1 sm:mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
                           {featured.title}
                         </h3>
-                        <p className="text-sm text-slate-500 dark:text-zinc-400 leading-relaxed line-clamp-2 max-w-lg font-light">
+                        <p className="hidden sm:block text-[10px] sm:text-sm lg:text-[11px] text-slate-500 dark:text-zinc-400 leading-relaxed line-clamp-2 max-w-lg font-light">
                           {featured.description}
                         </p>
                       </div>
 
-                      <div className="mt-5 sm:mt-6 grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3">
+                      <div className="mt-3 sm:mt-5 lg:mt-6 grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-center gap-1.5 sm:gap-2 lg:gap-3">
                         {[
                           { icon: Zap, label: "Time", val: featured.timeComplexity, c: "blue" },
                           { icon: Database, label: "Space", val: featured.spaceComplexity, c: "emerald" },
@@ -544,8 +652,72 @@ const Index = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="hidden lg:flex items-center justify-center shrink-0 pl-4">
-                       <ChevronRight size={32} className="text-slate-200 dark:text-white/[0.05] group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
+                    <div className="hidden lg:flex items-center justify-end shrink-0 pl-4 opacity-50 group-hover:opacity-100 transition-opacity">
+                      <ChevronRight size={24} className="text-slate-400 dark:text-zinc-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
+                    </div>
+                  </motion.div>
+
+                  {/* 5. Multiplayer Visualizer CTA */}
+                  <motion.div
+                    whileHover={{ scale: 1.012 }}
+                    className="col-span-1 lg:col-span-4 rounded-[1.25rem] lg:rounded-[1.75rem] border border-indigo-200/80 dark:border-indigo-500/20 bg-gradient-to-br from-indigo-50 dark:from-indigo-900/10 to-white dark:to-white/[0.02] backdrop-blur-3xl p-4 sm:p-5 flex flex-col justify-between shadow-[0_6px_30px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.04),0_6px_24px_rgba(0,0,0,0.18)] relative overflow-hidden group min-h-[160px] lg:min-h-[200px]"
+                  >
+                    <div className="absolute top-0 right-0 w-32 sm:w-60 h-32 sm:h-60 bg-gradient-to-bl from-indigo-100 dark:from-indigo-600/[0.1] to-transparent pointer-events-none rounded-[1.5rem]" />
+                    
+                    {/* Abstract Background Graphic */}
+                    <div className="absolute -right-10 -bottom-10 opacity-[0.04] dark:opacity-[0.05] pointer-events-none hidden sm:block transition-transform duration-1000 group-hover:scale-105">
+                      <Users size={240} strokeWidth={1} />
+                    </div>
+
+                    <div className="relative z-10 flex-1 flex flex-col">
+                      <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-4">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                          <Users size={12} className="text-white sm:w-3.5 sm:h-3.5" />
+                        </div>
+                        <p className="text-[8px] sm:text-[10px] font-mono font-bold text-indigo-500 uppercase tracking-widest truncate">Real-time Collab</p>
+                      </div>
+                      <h3 className="text-lg sm:text-2xl lg:text-xl font-black text-slate-800 dark:text-white tracking-tight leading-tight mb-1 sm:mb-2">Multiplayer<br className="hidden sm:block" /> Launchpad</h3>
+                      <p className="text-[10px] sm:text-sm lg:text-[11px] text-slate-500 dark:text-zinc-400 leading-relaxed font-light mb-3 sm:mb-5 line-clamp-2 sm:line-clamp-none">Host or join a live collaborative session for DSA visualization, code execution, or the full compiler.</p>
+                      <div className="mt-auto min-h-[48px] flex flex-col justify-end relative">
+                        {showCreateOptions ? (
+                          <div className="grid grid-cols-1 gap-2 animate-in fade-in slide-in-from-bottom-2">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs font-bold text-slate-700 dark:text-indigo-300">Select Environment</span>
+                              <button onClick={() => setShowCreateOptions(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors p-1"><X size={14} /></button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <button onClick={() => handleCreateRoom('dsa')} disabled={isProcessingRoom} className="py-2 bg-indigo-100/50 dark:bg-indigo-500/20 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 text-indigo-700 dark:text-indigo-300 font-bold text-[11px] rounded-lg transition-colors text-center border border-indigo-200/50 dark:border-indigo-500/20 disabled:opacity-50">DSA</button>
+                              <button onClick={() => handleCreateRoom('code')} disabled={isProcessingRoom} className="py-2 bg-indigo-100/50 dark:bg-indigo-500/20 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 text-indigo-700 dark:text-indigo-300 font-bold text-[11px] rounded-lg transition-colors text-center border border-indigo-200/50 dark:border-indigo-500/20 disabled:opacity-50">Code</button>
+                              <button onClick={() => handleCreateRoom('compiler')} disabled={isProcessingRoom} className="py-2 bg-indigo-100/50 dark:bg-indigo-500/20 hover:bg-indigo-200 dark:hover:bg-indigo-500/30 text-indigo-700 dark:text-indigo-300 font-bold text-[11px] rounded-lg transition-colors text-center border border-indigo-200/50 dark:border-indigo-500/20 disabled:opacity-50">Compiler</button>
+                            </div>
+                          </div>
+                        ) : showJoinInput ? (
+                          <div className="grid grid-cols-1 gap-2 animate-in fade-in slide-in-from-bottom-2">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs font-bold text-slate-700 dark:text-indigo-300">Join by Code</span>
+                              <button onClick={() => setShowJoinInput(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors p-1"><X size={14} /></button>
+                            </div>
+                            <form onSubmit={handleJoinSubmit} className="relative w-full">
+                              <input
+                                type="text"
+                                value={joinCode}
+                                onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                                placeholder="Enter Code"
+                                autoFocus
+                                className="w-full py-2 sm:py-2.5 pl-3 pr-9 bg-white dark:bg-[#0A0A0E]/80 border border-indigo-200 dark:border-indigo-500/30 text-slate-800 dark:text-white font-mono text-[12px] sm:text-[13px] rounded-lg outline-none focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors uppercase placeholder:text-slate-400 dark:placeholder:text-indigo-200/30 shadow-inner dark:shadow-[inset_0_1px_10px_rgba(0,0,0,0.5)]"
+                              />
+                              <button type="submit" className="absolute right-1 top-1 bottom-1 px-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-md transition-colors flex items-center justify-center disabled:opacity-50 shadow-sm" disabled={!joinCode.trim()}>
+                                <ArrowRight size={14} strokeWidth={3} />
+                              </button>
+                            </form>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-3 animate-in fade-in zoom-in-95 duration-200">
+                            <button onClick={() => setShowCreateOptions(true)} className="w-full py-2 sm:py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] sm:text-[13px] rounded-lg sm:rounded-xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-1 sm:gap-2 border border-indigo-500">Host Room</button>
+                            <button onClick={() => setShowJoinInput(true)} className="w-full py-2 sm:py-3 bg-white dark:bg-white/5 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 font-bold text-[10px] sm:text-[13px] rounded-lg sm:rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1 sm:gap-2 shadow-sm">Join Room</button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 </>
@@ -577,20 +749,22 @@ const Index = () => {
 
               <motion.div
                 layout
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                 className={`flex gap-2 w-full pb-1 sm:pb-0 ${showAllFilters ? 'flex-wrap' : 'overflow-x-auto hide-scrollbar snap-x snap-mandatory'}`}
               >
                 <AnimatePresence mode="popLayout">
                   {visible_pills.map((pill) => (
                     <motion.button
                       layout
-                      initial={{ opacity: 0, scale: 0.9 }}
+                      initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                       key={pill}
                       onClick={() => setActiveFilter(pill)}
-                      className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 shrink-0 snap-center shadow-sm dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] ${activeFilter === pill
-                          ? "bg-blue-600 dark:bg-blue-500 text-white shadow-md dark:shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-transparent"
-                          : "text-slate-600 dark:text-zinc-300 bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/[0.08]"
+                      className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-colors duration-300 shrink-0 snap-center shadow-sm dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] ${activeFilter === pill
+                        ? "bg-blue-600 dark:bg-blue-500 text-white shadow-md dark:shadow-[0_0_20px_rgba(59,130,246,0.3)] border border-transparent"
+                        : "text-slate-600 dark:text-zinc-300 bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/[0.08]"
                         }`}
                     >
                       {pill === "All" ? "View All" : pill}
@@ -601,8 +775,9 @@ const Index = () => {
                 {ALL_CATEGORIES.length > INITIAL_PILLS_COUNT && (
                   <motion.button
                     layout
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                     onClick={() => setShowAllFilters(!showAllFilters)}
-                    className="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300 border border-dashed border-slate-300 dark:border-white/[0.15] text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-400 dark:hover:border-white/[0.4] flex items-center gap-1.5 bg-white dark:bg-white/[0.02] hover:bg-slate-50 dark:hover:bg-white/[0.08] shrink-0 snap-center"
+                    className="px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-colors duration-300 border border-dashed border-slate-300 dark:border-white/[0.15] text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-400 dark:hover:border-white/[0.4] flex items-center gap-1.5 bg-white dark:bg-white/[0.02] hover:bg-slate-50 dark:hover:bg-white/[0.08] shrink-0 snap-center"
                   >
                     {showAllFilters ? (
                       <>Collapse <Minus size={12} strokeWidth={2.5} /></>

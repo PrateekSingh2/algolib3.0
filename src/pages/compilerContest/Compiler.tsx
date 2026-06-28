@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
-import Editor, { useMonaco } from '@monaco-editor/react';
+import Editor, { useMonaco, loader } from '@monaco-editor/react';
+
+// Configure Monaco Editor to use UNPKG instead of jsDelivr to bypass adblockers
+loader.config({ paths: { vs: 'https://unpkg.com/monaco-editor@0.44.0/min/vs' } });
 import { 
   Play, X, Trash2, Moon, Sun, Maximize2, Minimize, Copy, Save, Zap, 
   Settings, Terminal, CheckCircle2, Code2, Clock, Activity, ChevronRight, 
@@ -21,6 +24,8 @@ import {
   query, orderBy, where, serverTimestamp, type Timestamp
 } from 'firebase/firestore';
 import { firestoreDB } from '@/lib/firebase';
+import { useCollaborationRoom } from '../visualizer-code/hooks/useCollaborationRoom';
+import CollaborationControls from '../visualizer-dsa/components/CollaborationControls';
 
 // ─── Formatting Engine (Custom Fallbacks) ────────────────────────────────────
 
@@ -143,12 +148,23 @@ export default function Compiler() {
   const [executionStatus, setExecutionStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
   const [executionMetrics, setExecutionMetrics] = useState<{ time?: string | number; memory?: string | number } | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const { theme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const darkMode = theme === 'dark';
   const [input, setInput] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [navVisible, setNavVisible] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  
+  const code = codes[activeLang.id] ?? '';
+  const setCode = (val: string) => setCodes(prev => ({ ...prev, [activeLang.id]: val }));
+  
+  const collabState = useCollaborationRoom({ namespace: 'compiler_rooms', allowUnauthJoin: true });
+  const { roomId, role, roomState, viewerCount, participants, kickParticipant, createRoom, joinRoom, leaveRoom, broadcastState } = collabState;
+  
+  const roleRef = useRef(role);
+  const roomStateRef = useRef(roomState);
+  useEffect(() => { roleRef.current = role; }, [role]);
+  useEffect(() => { roomStateRef.current = roomState; }, [roomState]);
   
   // Vault state
   const [showVault, setShowVault] = useState(false);
@@ -290,6 +306,52 @@ export default function Compiler() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // ─── Multiplayer Sync Logic ───
+  const remoteCursorDecRef = useRef<any[]>([]);
+
+  useEffect(() => {
+    if (!roomId || !roomState) return;
+
+    // Viewers strictly follow host's language
+    if (role === 'viewer' && roomState.languageId && roomState.languageId !== activeLang.id) {
+      const targetLang = LANGUAGES.find(l => l.id === roomState.languageId);
+      if (targetLang) {
+        setActiveLang(targetLang);
+        if (!openTabs.find(t => t.id === targetLang.id)) {
+          setOpenTabs(prev => [...prev, targetLang]);
+        }
+      }
+    }
+
+    // Sync code content
+    if (roomState.code !== undefined && roomState.code !== code) {
+       if (role === 'viewer' || (role === 'host' && roomState.allowViewerEdits)) {
+           setCode(roomState.code);
+           setCodes(prev => ({ ...prev, [activeLang.id]: roomState.code! }));
+       }
+    }
+  }, [roomId, role, roomState, activeLang.id, openTabs, code]);
+
+  useEffect(() => {
+    if (!editorRef.current || !monaco || !roomState?.cursorPosition) return;
+    
+    // Don't show our own cursor
+    if (roomState.cursorPosition.userId === user?.uid) return;
+    
+    const pos = roomState.cursorPosition;
+    const newDec = [{
+      range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+      options: {
+        className: 'remote-cursor',
+        beforeContentClassName: 'remote-cursor-flag',
+        stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+      }
+    }];
+    
+    remoteCursorDecRef.current = editorRef.current.deltaDecorations(remoteCursorDecRef.current, newDec);
+  }, [roomState?.cursorPosition, monaco, user]);
+
 
   // Audio Player Effect
   useEffect(() => {
@@ -436,12 +498,16 @@ export default function Compiler() {
     }
   };
 
-  const code = codes[activeLang.id] ?? '';
-  const setCode = (val: string) => setCodes(prev => ({ ...prev, [activeLang.id]: val }));
+
 
   const handleLangSwitch = (lang: LangConfig) => {
     if (!openTabs.find(t => t.id === lang.id)) setOpenTabs(prev => [...prev, lang]);
     setActiveLang(lang);
+    
+    if ((roleRef.current === 'host') || (roleRef.current === 'viewer' && roomStateRef.current?.allowViewerEdits)) {
+      broadcastState({ languageId: lang.id, code: codes[lang.id] || '' });
+    }
+
     setOutput('');
     setExecutionStatus('idle');
     setExecutionMetrics(null);
@@ -600,6 +666,15 @@ export default function Compiler() {
         }
         .dark .vault-panel { background: #121212; border-right: 1px solid #27272a; }
         .vault-panel.closed { width: 0; border-right: none; }
+
+        /* Remote Cursor Styling */
+        @keyframes blink-remote-cursor {
+            0%, 100% { border-left-color: #3b82f6; }
+            50% { border-left-color: transparent; }
+        }
+        .remote-cursor { border-left: 2px solid #3b82f6; position: absolute; z-index: 99; margin-left: -1px; animation: blink-remote-cursor 1s step-end infinite; }
+        .remote-cursor-flag::before { content: ''; position: absolute; top: -4px; left: -4px; width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; box-shadow: 0 0 6px rgba(59, 130, 246, 0.8); pointer-events: none; z-index: 100; }
+
         
         @media (max-width: 768px) {
             .vault-panel { position: absolute; left: 0; top: 0; bottom: 0; z-index: 50; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
@@ -1044,6 +1119,22 @@ export default function Compiler() {
             {/* Actions */}
             <div className="topbar-actions flex items-center gap-1 md:gap-2 relative">
               
+              <CollaborationControls 
+                roomId={roomId}
+                role={role}
+                roomState={roomState}
+                onCreateRoom={async () => {
+                  return await createRoom({ code: codes[activeLang.id], languageId: activeLang.id, allowViewerEdits: false });
+                }}
+                onJoinRoom={joinRoom}
+                onLeaveRoom={leaveRoom}
+                onToggleEdit={(allow) => broadcastState({ allowViewerEdits: allow })}
+                allowUnauthJoin={true}
+                viewerCount={viewerCount}
+                participants={participants}
+                onKickParticipant={kickParticipant}
+              />
+
               {/* DESKTOP ONLY UTILITIES */}
               <div className="hidden md:flex items-center gap-1">
                 {/* Flow-State Music Button */}
@@ -1217,7 +1308,7 @@ export default function Compiler() {
                     </div>
                     
                     <button className="flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" onClick={() => { handleFormatCode(); setShowMobileMenu(false); }}><AlignLeft size={15} /> Format Code</button>
-                    <button className="flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" onClick={() => { setDarkMode(d => !d); setShowMobileMenu(false); }}>{darkMode ? <Sun size={15} /> : <Moon size={15} />} {darkMode ? 'Light Mode' : 'Dark Mode'}</button>
+                    <button className="flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" onClick={() => { toggleTheme(); setShowMobileMenu(false); }}>{darkMode ? <Sun size={15} /> : <Moon size={15} />} {darkMode ? 'Light Mode' : 'Dark Mode'}</button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1233,9 +1324,24 @@ export default function Compiler() {
                    <Code2 size={60} className="text-zinc-400 dark:text-zinc-500" />
                 </div>
                 <Editor
-                    height="100%" width="100%" theme={editorTheme} language={activeLang.monacoLang} value={code} onChange={v => setCode(v || '')}
-                    onMount={e => { editorRef.current = e; }}
-                    options={{ minimap: { enabled: editorSettings.minimap }, fontSize: editorSettings.fontSize, fontFamily: editorSettings.fontFamily, fontLigatures: true, wordWrap: editorSettings.wordWrap ? 'on' : 'off', quickSuggestions: editorSettings.suggestions, padding: { top: 24, bottom: 24 }, automaticLayout: true, scrollBeyondLastLine: false, lineNumbersMinChars: 3, cursorBlinking: 'smooth', smoothScrolling: true, renderLineHighlight: 'all', }}
+                    height="100%" width="100%" theme={editorTheme} language={activeLang.monacoLang} value={code} 
+                    onChange={v => {
+                      setCode(v || '');
+                      if ((role === 'host') || (role === 'viewer' && roomState?.allowViewerEdits)) {
+                        broadcastState({ code: v || '' });
+                      }
+                    }}
+                    onMount={(e, monacoInstance) => { 
+                      editorRef.current = e; 
+                      e.onDidChangeCursorPosition((ev: any) => {
+                        const currentRole = roleRef.current;
+                        const currentState = roomStateRef.current;
+                        if ((currentRole === 'host') || (currentRole === 'viewer' && currentState?.allowViewerEdits)) {
+                          broadcastState({ cursorPosition: { lineNumber: ev.position.lineNumber, column: ev.position.column, userId: user?.uid } });
+                        }
+                      });
+                    }}
+                    options={{ readOnly: role === 'viewer' && !roomState?.allowViewerEdits, minimap: { enabled: editorSettings.minimap }, fontSize: editorSettings.fontSize, fontFamily: editorSettings.fontFamily, fontLigatures: true, wordWrap: editorSettings.wordWrap ? 'on' : 'off', quickSuggestions: editorSettings.suggestions, padding: { top: 24, bottom: 24 }, automaticLayout: true, scrollBeyondLastLine: false, lineNumbersMinChars: 3, cursorBlinking: 'smooth', smoothScrolling: true, renderLineHighlight: 'all', }}
                 />
               </div>
             </Panel>

@@ -72,7 +72,7 @@ export const executeGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     await signInWithPopup(auth, provider);
-    stampSession(); // Mark session start time
+    stampSession(); // Mark session start time after successful login
   } catch (error) {
     console.error("Google Sign-In failed:", error);
     toast.error("Sign-in cancelled or failed.");
@@ -83,7 +83,7 @@ export const executeGithubSignIn = async () => {
   try {
     const provider = new GithubAuthProvider();
     await signInWithPopup(auth, provider);
-    stampSession(); // Mark session start time
+    stampSession(); // Mark session start time after successful login
   } catch (error) {
     console.error("GitHub Sign-In failed:", error);
     toast.error("GitHub Sign-in cancelled or failed.");

@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 import { Helmet } from 'react-helmet-async';
@@ -37,32 +38,58 @@ const BSTVisualizer = lazy(() => import('./BSTVisualizer'));
 const GraphVisualizer = lazy(() => import('./GraphVisualizer'));
 const HeapVisualizer = lazy(() => import('./HeapVisualizer'));
 
+import CollaborationControls from '../visualizer-code/components/CollaborationControls';
+import { useCollaborationRoom } from '../visualizer-code/hooks/useCollaborationRoom';
+import { CollaborationProvider } from '@/contexts/CollaborationContext';
+
 type VisualizerKey = 'll' | 'stack' | 'queue' | 'sorting' | 'bst' | 'graph' | 'heap';
 
 const AlienBackground = ({ mobile }: { mobile: boolean }) => (
   <div className="fixed inset-0 -z-10 bg-white dark:bg-[#020205] overflow-hidden">
     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-50 dark:from-[#00f5ff]/10 via-white dark:via-[#050510] to-blue-50 dark:to-[#000000]" />
-    
+
     {/* PREMIUM LIGHT BLUE / WHITE MESH GRADIENT */}
     <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-sky-200/40 rounded-full blur-[100px] dark:hidden mix-blend-multiply pointer-events-none" />
     <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-blue-100/50 rounded-full blur-[120px] dark:hidden mix-blend-multiply pointer-events-none" />
     <div className="absolute top-[40%] left-[20%] w-[30vw] h-[30vw] bg-indigo-100/40 rounded-full blur-[80px] dark:hidden mix-blend-multiply pointer-events-none" />
-    
+
     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.02] dark:opacity-[0.04] pointer-events-none" />
   </div>
 );
 
 const Visualizer = () => {
-  const [activeTab, setActiveTab] = useState<VisualizerKey>('ll');
+  const { dsType } = useParams<{ dsType: string }>();
+  const navigate = useNavigate();
+  const activeTab = (dsType as VisualizerKey) || 'll';
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [mobile, setMobile] = useState(false);
-  
+
+  const collabState = useCollaborationRoom();
+  const { roomId, role, roomState, createRoom, joinRoom, leaveRoom, viewerCount, participants, kickParticipant } = collabState;
+
   // HUD & Layout states
   const [showWelcome, setShowWelcome] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [topNavHidden, setTopNavHidden] = useState(() => 
+  const [topNavHidden, setTopNavHidden] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth <= 639 : false
   );
+
+  // --- COLLABORATION: Sync active visualizer tab ---
+  useEffect(() => {
+    if (role === 'host') {
+      collabState.broadcastState({ activeTab });
+    }
+  }, [activeTab, role]); // using collabState.broadcastState would cause a circular ref warning if not careful, but broadcastState is stable
+
+  useEffect(() => {
+    if (role === 'viewer' && collabState.roomState?.activeTab) {
+      if (collabState.roomState.activeTab !== activeTab) {
+        navigate(`/visualizer/dsa/${collabState.roomState.activeTab}`);
+      }
+    }
+  }, [role, collabState.roomState?.activeTab, activeTab, navigate]);
+  // -------------------------------------------------
 
   useEffect(() => {
     setTrackedActivity(`visualizer_${activeTab}`);
@@ -106,9 +133,9 @@ const Visualizer = () => {
           },
           body: JSON.stringify({ has_seen_welcome: true })
         });
-        
+
         if (!response.ok) throw new Error("Failed to update profile");
-        
+
         await refreshProfile();
       } else {
         localStorage.setItem('algoviz_welcome_seen', 'true');
@@ -136,11 +163,11 @@ const Visualizer = () => {
   const activeModule = menu.find((item) => item.id === activeTab);
 
   const selectTab = (tab: VisualizerKey) => {
-    setActiveTab(tab);
+    navigate(`/visualizer/dsa/${tab}`);
     setDrawerOpen(false);
   };
 
-  return (
+  const Content = (
     <>
       <Helmet>
         <title>AlgoLib | Interactive 60FPS DSA Visualizer</title>
@@ -271,13 +298,13 @@ const Visualizer = () => {
         )}
       </AnimatePresence>
 
-      <div className={`h-screen overflow-hidden text-black dark:text-white ${topNavHidden ? 'pt-2 sm:pt-3' : 'pt-[64px] sm:pt-[80px] lg:pt-[96px]'}`}>
+      <div className={`h-screen overflow-hidden text-black dark:text-white ${topNavHidden ? 'pt-2 sm:pt-3' : 'pt-[60px] sm:pt-[68px] lg:pt-[72px]'}`}>
         <div className="h-full flex flex-col lg:flex-row gap-3 p-2 sm:p-3 lg:p-4">
-          
+
           {/* --- DESKTOP SIDE PANEL --- */}
           <AnimatePresence initial={false}>
             {isSidebarOpen && (
-              <motion.aside 
+              <motion.aside
                 initial={{ width: 0, opacity: 0 }}
                 animate={{ width: 260, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
@@ -286,24 +313,27 @@ const Visualizer = () => {
               >
                 <div className="w-[260px] h-full flex flex-col absolute top-0 left-0">
                   <div className="p-6 border-b border-slate-100 dark:border-[#00f5ff]/20 shrink-0">
+                    <Link to="/visualizer" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-300 dark:bg-white/15 border border-slate-200 dark:border-white/10 text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-all mb-4 w-fit shadow-sm">
+                      <ArrowRightLeft size={12} className="rotate-180" /> Back
+                    </Link>
                     <h1 className="text-2xl font-black text-black dark:text-white flex items-center gap-3 tracking-tight">
                       <Database className="text-blue-500 dark:text-[#00f5ff]" size={24} /> AlgoViz
                     </h1>
                     <p className="text-[10px] uppercase tracking-[0.15em] mt-2 text-blue-500 dark:text-[#00f5ff] font-bold">Simulator Engine of AlgoLib</p>
                   </div>
-                  
+
                   <nav className="flex-1 py-4 flex flex-col overflow-y-auto custom-scrollbar">
                     {menu.map((item) => (
-                      <MenuButton 
-                        key={item.id} 
-                        item={item} 
-                        active={activeTab === item.id} 
-                        onSelect={selectTab} 
+                      <MenuButton
+                        key={item.id}
+                        item={item}
+                        active={activeTab === item.id}
+                        onSelect={selectTab}
                         isLocked={!user && item.id !== 'll'} // <-- Determine locked state
                       />
                     ))}
                   </nav>
-                  
+
                   <div className="p-6 border-t border-slate-100 dark:border-white/5 bg-white/60 backdrop-blur-xl dark:bg-black/40 shrink-0">
                     <div className="flex items-center gap-3 text-[10px] tracking-widest text-slate-700 dark:text-gray-500 font-mono">
                       <Activity size={16} className="text-emerald-500 dark:text-[#00ff88]" /> SYSTEM_READY
@@ -338,14 +368,30 @@ const Visualizer = () => {
                   <p className="text-xs text-slate-600 dark:text-gray-400 tracking-widest truncate">{activeModule?.label}</p>
                 </div>
               </div>
-              
-              <button
-                onClick={() => setTopNavHidden((prev) => !prev)}
-                className="h-11 min-w-11 shrink-0 px-3 rounded-xl border border-white/60 dark:border-white/10 bg-white/60 backdrop-blur-xl dark:bg-white/5 text-slate-700 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white active:scale-95 transition-all flex items-center justify-center shadow-sm dark:shadow-none"
-                aria-label="Toggle top navbar"
-              >
-                {topNavHidden ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
-              </button>
+
+              <div className="flex items-center gap-3">
+                <CollaborationControls
+                  roomId={roomId}
+                  role={role}
+                  roomState={roomState}
+                  onCreateRoom={async () => {
+                    // Empty initial state, will be hydrated by the specific visualizer
+                    return await createRoom({});
+                  }}
+                  onJoinRoom={joinRoom}
+                  onLeaveRoom={leaveRoom}
+                  viewerCount={viewerCount}
+                  participants={participants}
+                  onKickParticipant={kickParticipant}
+                />
+                <button
+                  onClick={() => setTopNavHidden((prev) => !prev)}
+                  className="h-11 min-w-11 shrink-0 px-3 rounded-xl border border-white/60 dark:border-white/10 bg-white/60 backdrop-blur-xl dark:bg-white/5 text-slate-700 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white active:scale-95 transition-all flex items-center justify-center shadow-sm dark:shadow-none"
+                  aria-label="Toggle top navbar"
+                >
+                  {topNavHidden ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                </button>
+              </div>
             </header>
 
             <div className="flex-1 min-h-0 p-2 sm:p-3 lg:p-4 flex flex-col gap-3">
@@ -366,8 +412,8 @@ const Visualizer = () => {
                         {!user && activeTab !== 'll' ? (
                           <div className="h-full w-full flex flex-col items-center justify-center text-center p-6 animate-in fade-in zoom-in duration-300">
                             <div className="h-20 w-20 rounded-2xl bg-cyan-50 dark:bg-cyan-950/40 border border-blue-200 dark:border-[#00f5ff]/20 flex items-center justify-center mb-6 shadow-sm dark:shadow-[0_0_40px_rgba(0,245,255,0.15)] relative overflow-hidden">
-                               <div className="absolute inset-0 bg-blue-100 dark:bg-[#00f5ff]/10 animate-pulse" />
-                               <Lock size={32} className="text-blue-500 dark:text-[#00f5ff] relative z-10" />
+                              <div className="absolute inset-0 bg-blue-100 dark:bg-[#00f5ff]/10 animate-pulse" />
+                              <Lock size={32} className="text-blue-500 dark:text-[#00f5ff] relative z-10" />
                             </div>
                             <h3 className="text-2xl md:text-3xl font-black font-mono tracking-tight text-slate-900 dark:text-white mb-3">
                               RESTRICTED SECTOR
@@ -376,8 +422,8 @@ const Visualizer = () => {
                               The <span className="text-blue-500 dark:text-[#00f5ff] font-mono">{activeModule?.label}</span> simulation module requires security clearance. Authenticate your account to unlock all advanced interactive algorithms.
                             </p>
                             {/* Assuming your app routes to /login for authentication */}
-                            <a 
-                              href="/login" 
+                            <a
+                              href="/login"
                               className="flex items-center gap-2 px-8 py-3.5 bg-blue-500 dark:bg-[#00f5ff] hover:bg-blue-400 dark:hover:bg-cyan-300 text-black font-bold text-sm rounded-xl transition-all shadow-md dark:shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:scale-105 active:scale-95"
                             >
                               <Cpu size={16} /> INITIALIZE LOGIN
@@ -417,6 +463,9 @@ const Visualizer = () => {
             >
               <div className="p-6 pt-12 border-b border-slate-100 dark:border-[#00f5ff]/20 flex items-center justify-between">
                 <div>
+                  <Link to="/visualizer" className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-all mb-4 w-fit shadow-sm">
+                    <ArrowRightLeft size={12} className="rotate-180" /> Back to Hub
+                  </Link>
                   <h2 className="text-2xl font-black text-black dark:text-white flex items-center gap-3 tracking-tight">
                     <Database className="text-blue-500 dark:text-[#00f5ff]" size={24} /> AlgoViz
                   </h2>
@@ -429,11 +478,11 @@ const Visualizer = () => {
 
               <div className="py-4 flex flex-col overflow-y-auto custom-scrollbar flex-1">
                 {menu.map((item) => (
-                  <MenuButton 
-                    key={item.id} 
-                    item={item} 
-                    active={activeTab === item.id} 
-                    onSelect={selectTab} 
+                  <MenuButton
+                    key={item.id}
+                    item={item}
+                    active={activeTab === item.id}
+                    onSelect={selectTab}
                     isLocked={!user && item.id !== 'll'} // <-- Determine locked state
                   />
                 ))}
@@ -449,6 +498,12 @@ const Visualizer = () => {
         )}
       </AnimatePresence>
     </>
+  );
+
+  return (
+    <CollaborationProvider value={collabState}>
+      {Content}
+    </CollaborationProvider>
   );
 };
 
@@ -468,16 +523,14 @@ const MenuButton = ({
   return (
     <button
       onClick={() => onSelect(item.id)}
-      className={`group w-full h-[60px] border-l-[3px] px-6 flex items-center gap-4 text-left transition-colors duration-300 relative ${
-        active
-          ? 'border-blue-500 dark:border-[#00f5ff] bg-blue-50/80 dark:bg-[#00f5ff]/10'
-          : 'border-transparent hover:bg-white/60 backdrop-blur-xl dark:hover:bg-white/5'
-      }`}
+      className={`group w-full h-[60px] border-l-[3px] px-6 flex items-center gap-4 text-left transition-colors duration-300 relative ${active
+        ? 'border-blue-500 dark:border-[#00f5ff] bg-blue-50/80 dark:bg-[#00f5ff]/10'
+        : 'border-transparent hover:bg-white/60 backdrop-blur-xl dark:hover:bg-white/5'
+        }`}
     >
       <Icon size={18} strokeWidth={active ? 2.5 : 2} className={active ? 'text-blue-600 dark:text-[#00f5ff]' : 'text-slate-500 dark:text-gray-500 group-hover:text-black dark:group-hover:text-gray-300'} />
-      <span className={`text-[11px] sm:text-xs font-bold font-mono tracking-widest uppercase flex-1 ${
-        active ? 'text-blue-600 dark:text-white' : 'text-slate-600 dark:text-gray-500 group-hover:text-black dark:group-hover:text-gray-300'
-      }`}>
+      <span className={`text-[11px] sm:text-xs font-bold font-mono tracking-widest uppercase flex-1 ${active ? 'text-blue-600 dark:text-white' : 'text-slate-600 dark:text-gray-500 group-hover:text-black dark:group-hover:text-gray-300'
+        }`}>
         {item.label}
       </span>
       {/* Small subtle lock icon if restricted */}

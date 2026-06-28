@@ -35,39 +35,40 @@ import Navbar from "./components/Navbar";
 // ─── ALL PAGE COMPONENTS ARE LAZY-LOADED ──────────────────────────────────────
 // Nothing below ships in the initial JS bundle — each chunk is downloaded
 // only when the user navigates to the corresponding route.
-const Index             = lazy(() => import("./pages/Index"));
-const LandingPage       = lazy(() => import("./pages/landing/LandingPage"));
-const Vectoris          = lazy(() => import("./pages/vectoris/Vectoris"));
-const VectorisWidget    = lazy(() => import("./components/VectorisWidget"));
-const Quiz              = lazy(() => import("./pages/quiz/Quiz"));
-const QuizPanel         = lazy(() => import("./pages/quiz/QuizPanel"));
-const QuizForge         = lazy(() => import("./pages/quiz/QuizForge"));
-const Maintenance       = lazy(() => import("./pages/Maintenance"));
-const SnippetView       = lazy(() => import("./pages/SnippetView"));
-const Visualizer        = lazy(() => import("./pages/visualizer/Visualizer"));
-const SnippetVisualizer = lazy(() => import("./pages/visualizer/SnippetVisualizer"));
-const DynamicVisualizerEngine = lazy(() => import("./pages/visualizer-dynamic/DynamicVisualizerEngine"));
-const Developer         = lazy(() => import("./pages/Developer"));
-const NotFound          = lazy(() => import("./pages/NotFound"));
-const Status            = lazy(() => import("./pages/Status/status"));
-const Docs              = lazy(() => import("./pages/Docs"));
-const Notes             = lazy(() => import("./pages/notes/Notes"));
-const Support           = lazy(() => import("./pages/legals/Support"));
-const Community         = lazy(() => import("./components/Community"));
-const EditProfile       = lazy(() => import("./pages/userprofile/EditProfile"));
-const PublicProfile     = lazy(() => import("./pages/userprofile/PublicProfile"));
-const Settings          = lazy(() => import("./pages/Settings"));
-const ContestPanel      = lazy(() => import("./pages/compilerContest/ContestPanel"));
-const Contests          = lazy(() => import("./pages/compilerContest/Contests"));
-const Compiler          = lazy(() => import("./pages/compilerContest/Compiler"));
-const Terms             = lazy(() => import("./pages/legals/Terms"));
-const Privacy           = lazy(() => import("./pages/legals/Privacy"));
-const Cookies           = lazy(() => import("./pages/legals/Cookies"));
-const Sheets            = lazy(() => import("./pages/sheets/Sheets"));
-const Testimonials      = lazy(() => import("./pages/Testimonials"));
-const DSASheet          = lazy(() => import("./pages/sheets/DSASheet"));
-const CPSheet           = lazy(() => import("./pages/sheets/CPSheet"));
-const TopicDetail       = lazy(() => import("./pages/sheets/TopicDetail"));
+const Index = lazy(() => import("./pages/Index"));
+const LandingPage = lazy(() => import("./pages/landing/LandingPage"));
+const Vectoris = lazy(() => import("./pages/vectoris/Vectoris"));
+const VectorisWidget = lazy(() => import("./components/VectorisWidget"));
+const Quiz = lazy(() => import("./pages/quiz/Quiz"));
+const QuizPanel = lazy(() => import("./pages/quiz/QuizPanel"));
+const QuizForge = lazy(() => import("./pages/quiz/QuizForge"));
+const Maintenance = lazy(() => import("./pages/Maintenance"));
+const SnippetView = lazy(() => import("./pages/SnippetView"));
+const VisualizerHub = lazy(() => import("./pages/visualizer-dsa/VisualizerHub"));
+const Visualizer = lazy(() => import("./pages/visualizer-dsa/Visualizer"));
+const SnippetVisualizer = lazy(() => import("./pages/visualizer-code/SnippetVisualizer"));
+const DynamicVisualizerEngine = lazy(() => import("./pages/visualizer-ai/DynamicVisualizerEngine"));
+const Developer = lazy(() => import("./pages/Developer"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Status = lazy(() => import("./pages/Status/status"));
+const Docs = lazy(() => import("./pages/Docs"));
+const Notes = lazy(() => import("./pages/notes/Notes"));
+const Support = lazy(() => import("./pages/legals/Support"));
+const Community = lazy(() => import("./components/Community"));
+const EditProfile = lazy(() => import("./pages/userprofile/EditProfile"));
+const PublicProfile = lazy(() => import("./pages/userprofile/PublicProfile"));
+const Settings = lazy(() => import("./pages/Settings"));
+const ContestPanel = lazy(() => import("./pages/compilerContest/ContestPanel"));
+const Contests = lazy(() => import("./pages/compilerContest/Contests"));
+const Compiler = lazy(() => import("./pages/compilerContest/Compiler"));
+const Terms = lazy(() => import("./pages/legals/Terms"));
+const Privacy = lazy(() => import("./pages/legals/Privacy"));
+const Cookies = lazy(() => import("./pages/legals/Cookies"));
+const Sheets = lazy(() => import("./pages/sheets/Sheets"));
+const Testimonials = lazy(() => import("./pages/Testimonials"));
+const DSASheet = lazy(() => import("./pages/sheets/DSASheet"));
+const CPSheet = lazy(() => import("./pages/sheets/CPSheet"));
+const TopicDetail = lazy(() => import("./pages/sheets/TopicDetail"));
 const queryClient = new QueryClient();
 
 // Removed sign in handlers to AuthContext to fix Fast Refresh issues
@@ -259,8 +260,8 @@ const CookieConsent = () => {
   );
 };
 
-class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
-  constructor(props: {children: React.ReactNode}) {
+class GlobalErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+  constructor(props: { children: React.ReactNode }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -291,7 +292,7 @@ class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {
           <p className="text-zinc-400 text-sm mb-8 max-w-md">
             The application encountered an unexpected runtime failure. This typically happens when background updates invalidate cached modules.
           </p>
-          <button 
+          <button
             onClick={() => {
               sessionStorage.removeItem('algolib_chunk_reloaded');
               window.location.reload();
@@ -317,12 +318,14 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, profile, loading } = useAuth();
   const location = useLocation();
 
-  const publicRoutes = ['/terms', '/privacy', '/cookies', '/developer', '/support', '/docs', '/compiler', '/visualizer', '/discover', '/testimonials'];
-  const isPublicRoute = publicRoutes.includes(location.pathname.replace(/\/$/, '')) || location.pathname.startsWith('/blog/') || location.pathname.startsWith('/user/');
+  const publicRoutes = ['/terms', '/privacy', '/cookies', '/developer', '/support', '/docs', '/compiler', '/visualizer', '/visualizer/code', '/discover', '/testimonials'];
+  const isPublicRoute = publicRoutes.includes(location.pathname.replace(/\/$/, '')) ||
+    location.pathname.startsWith('/blog/') ||
+    location.pathname.startsWith('/user/') ||
+    location.pathname.startsWith('/visualizer/dsa/');
 
   const getCleanPath = (path: string) => {
     if (path.startsWith('/view/')) return 'snippet_library';
-    if (path.startsWith('/visualizer')) return 'visualizer_ll';
     return path;
   };
 
@@ -373,9 +376,15 @@ const AppRoutes = () => {
         <Route path="/notes" element={<Notes />} />
         <Route path="/support" element={<Support />} />
         <Route path="/view/:id" element={<SnippetView />} />
-        <Route path="/visualizer" element={<Visualizer />} />
-        <Route path="/snippet-visualizer" element={<SnippetVisualizer />} />
-        <Route path="/ai-visualizer" element={<DynamicVisualizerEngine />} />
+        <Route path="/visualizer" element={<VisualizerHub />} />
+        <Route path="/visualizer/dsa" element={<Navigate to="/visualizer/dsa/ll" replace />} />
+        <Route path="/visualizer/dsa/:dsType" element={<Visualizer />} />
+        <Route path="/visualizer/code" element={<SnippetVisualizer />} />
+        <Route path="/visualizer/ai" element={<DynamicVisualizerEngine />} />
+
+        {/* Legacy backwards compatibility */}
+        <Route path="/snippet-visualizer" element={<Navigate to="/visualizer/code" replace />} />
+        <Route path="/ai-visualizer" element={<Navigate to="/visualizer/ai" replace />} />
         <Route path="/developer" element={<Developer />} />
         <Route path="/discussion" element={<Community />} />
         <Route path="/user/:username" element={<PublicProfile />} />

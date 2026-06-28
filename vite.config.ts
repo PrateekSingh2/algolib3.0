@@ -16,6 +16,10 @@ export default defineConfig(({ mode }) => ({
       '/.netlify/functions': {
         target: 'http://127.0.0.1:9999',
         changeOrigin: true,
+      },
+      '/api': {
+        target: 'http://127.0.0.1:9999',
+        changeOrigin: true,
       }
     },
     // ✅ HMR FIX: clientPort MUST match the port the browser connects to (8888, the
@@ -47,7 +51,7 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [ /^\/\.netlify\//, /^\/api\// ],
+        navigateFallbackDenylist: [/^\/\.netlify\//, /^\/api\//],
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 15728640,
       },
@@ -96,31 +100,31 @@ export default defineConfig(({ mode }) => ({
           if (!id.includes('node_modules')) return;
 
           // ── Heavy standalone vendors ─────────────────────────────────────────
-          if (id.includes('country-state-city'))             return 'geo-data';
-          if (id.includes('@monaco-editor'))                 return 'monaco-engine';
-          if (id.includes('firebase'))                       return 'firebase-core';
-          if (id.includes('@supabase'))                      return 'supabase-core';
+          if (id.includes('country-state-city')) return 'geo-data';
+          if (id.includes('@monaco-editor')) return 'monaco-engine';
+          if (id.includes('firebase')) return 'firebase-core';
+          if (id.includes('@supabase')) return 'supabase-core';
 
           // ── Animation & Motion ───────────────────────────────────────────────
-          if (id.includes('framer-motion'))                  return 'framer-motion';
+          if (id.includes('framer-motion')) return 'framer-motion';
 
           // ── Charts & Data Viz ────────────────────────────────────────────────
           if (id.includes('recharts') || id.includes('d3-') || id.includes('victory'))
-                                                             return 'charts';
+            return 'charts';
 
           // ── Icons (lucide is large — isolate it) ─────────────────────────────
-          if (id.includes('lucide-react'))                   return 'icons';
+          if (id.includes('lucide-react')) return 'icons';
 
           // ── Syntax & Math ────────────────────────────────────────────────────
-          if (id.includes('katex'))                          return 'katex';
-          if (id.includes('prismjs'))                        return 'syntax-highlighter';
+          if (id.includes('katex')) return 'katex';
+          if (id.includes('prismjs')) return 'syntax-highlighter';
 
           // ── Radix UI (group all primitives to share internal utils) ──────────
-          if (id.includes('@radix-ui'))                      return 'radix-ui';
+          if (id.includes('@radix-ui')) return 'radix-ui';
 
           // ── React Core (deduplicated — single dispatcher instance) ───────────
           if (id.includes('/react-dom/') || id.includes('/react/'))
-                                                             return 'react-core';
+            return 'react-core';
         },
       },
     },

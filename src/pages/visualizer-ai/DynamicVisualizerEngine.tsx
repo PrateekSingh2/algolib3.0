@@ -2,9 +2,13 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
+import { Link } from 'react-router-dom';
+import Navbar from '@/components/Navbar';
+import AppFooter from '@/components/AppFooter';
 import { 
   Sparkles, RotateCcw, AlertTriangle, Code2, Brain, Loader2, 
-  Terminal, Activity, Info, X, Copy, Check, ChevronRight, Zap, BookOpen 
+  Terminal, Activity, Info, X, Copy, Check, ChevronRight, Zap, BookOpen,
+  ArrowRightLeft
 } from 'lucide-react';
 
 // Import the modular sandbox we created above
@@ -14,7 +18,6 @@ import LiveSandbox from './LiveSandbox';
 interface VisualizerPayload { title: string; conceptSummary: string; componentCode: string; }
 type EngineState = 'idle' | 'loading' | 'success' | 'error';
 
-// Adjusted for Next.js API Routes instead of Netlify functions
 const FUNCTION_URL = '/.netlify/functions/realTimeVisualizer'; 
 const EXAMPLES = [
   'Binary Search Trace', 'Quick Sort Pivot Visualizer',
@@ -35,7 +38,11 @@ const CopyButton = ({ content }: { content: string }) => {
   return (
     <button 
       onClick={handleCopy} 
-      style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 500, background: '#21262d', border: '1px solid #30363d', color: copied ? '#10b981' : '#8b949e', cursor: 'pointer', transition: 'all 0.2s' }}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+        copied 
+          ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
+          : 'bg-white dark:bg-[#21262d] border-slate-200 dark:border-[#30363d] text-slate-600 dark:text-[#8b949e] hover:bg-slate-50 dark:hover:bg-[#30363d]'
+      }`}
     >
       {copied ? <Check size={12} /> : <Copy size={12} />}{copied ? 'Copied' : 'Copy'}
     </button>
@@ -43,8 +50,8 @@ const CopyButton = ({ content }: { content: string }) => {
 };
 
 const ShimmerNode = ({ width = '100%', height = '16px', radius = '6px' }: { width?: string; height?: string; radius?: string }) => (
-  <div style={{ width, height, borderRadius: radius, background: '#161b22', overflow: 'hidden', position: 'relative' }}>
-    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 50%, transparent 100%)', animation: 'shimmerMotion 1.6s infinite' }} />
+  <div style={{ width, height, borderRadius: radius }} className="bg-slate-200 dark:bg-[#161b22] overflow-hidden relative">
+    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 dark:via-white/5 to-transparent animate-[shimmerMotion_1.6s_infinite]" />
   </div>
 );
 
@@ -111,13 +118,11 @@ export default function VisualizerEngine() {
 
       if (!networkResponse.body) throw new Error('Streaming is not supported in this environment.');
 
-      // 1. Initialize Stream Readers
       const reader = networkResponse.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let rawContent = '';
-      let streamBuffer = ''; // Added to store cut-off text
+      let streamBuffer = '';
 
-      // 2. Consume the stream chunk by chunk safely
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -125,14 +130,11 @@ export default function VisualizerEngine() {
         streamBuffer += decoder.decode(value, { stream: true });
         const lines = streamBuffer.split('\n');
         
-        // The last line might be incomplete, pop it off and save it for the next loop
         streamBuffer = lines.pop() || '';
 
-        // Parse fully assembled OpenRouter SSE lines
         for (const line of lines) {
           const trimmedLine = line.trim();
           
-          // Check for direct JSON API error (non-streamed error response)
           if (trimmedLine.startsWith('{') && trimmedLine.endsWith('}')) {
              try {
                 const parsed = JSON.parse(trimmedLine);
@@ -150,7 +152,6 @@ export default function VisualizerEngine() {
                  throw new Error(`Upstream API Error: ${parsedData.error.message || JSON.stringify(parsedData.error)}`);
               }
 
-              // Extract text from standard or alternative formats
               const delta = parsedData.choices?.[0]?.delta?.content 
                          || parsedData.choices?.[0]?.message?.content 
                          || parsedData.choices?.[0]?.text
@@ -161,15 +162,13 @@ export default function VisualizerEngine() {
               }
             } catch (e) {
               if (e instanceof Error && e.message.includes('Upstream API Error')) {
-                 throw e; // Bubble up API errors immediately
+                 throw e; 
               }
-              // console.warn("SSE Parse Error on line:", trimmedLine);
             }
           }
         }
       }
 
-      // Process any trailing data in the buffer
       if (streamBuffer.trim().startsWith('data: ') && !streamBuffer.includes('[DONE]')) {
          try {
             const parsedData = JSON.parse(streamBuffer.trim().slice(6));
@@ -181,15 +180,10 @@ export default function VisualizerEngine() {
          }
       }
       
-      console.log("Raw Compiled AI Output Length:", rawContent.length);
-
-      // 3. Post-Process the fully accumulated string
       let parsedPayload: VisualizerPayload;
       
       try {
-        // Remove complete <think> blocks
         let cleanedText = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '');
-        // Remove unclosed <think> blocks (in case stream ended abruptly)
         cleanedText = cleanedText.replace(/<think>[\s\S]*$/i, '');
         cleanedText = cleanedText.trim();
         
@@ -197,7 +191,6 @@ export default function VisualizerEngine() {
         let summary = "Code compiled successfully.";
         let code = "";
 
-        // First, if the LLM stubbornly returned JSON anyway
         if (cleanedText.startsWith('{') && cleanedText.endsWith('}')) {
            try {
              const jsonCandidate = JSON.parse(cleanedText);
@@ -207,21 +200,16 @@ export default function VisualizerEngine() {
                 code = jsonCandidate.componentCode;
              }
            } catch (e) {
-             // Fall through to regex
            }
         }
 
-        // Only run regex extraction if we didn't already get the code from JSON
         if (!code) {
-          // Extract Title
           const titleMatch = cleanedText.match(/(?:Title|TITLE|title)[\s\*:|-]+(.*)/);
           if (titleMatch) title = titleMatch[1].trim().replace(/["']/g, '');
 
-          // Extract Summary
           const summaryMatch = cleanedText.match(/(?:Summary|SUMMARY|Concept Summary|conceptSummary)[\s\*:|-]+(.*)/);
           if (summaryMatch) summary = summaryMatch[1].trim().replace(/["']/g, '');
 
-          // Extract Code using markdown backticks
           const codeBlockMatch = cleanedText.match(/```(?:tsx|jsx|javascript|js|ts|react)?\s*([\s\S]*?)```/i);
           
           if (codeBlockMatch && codeBlockMatch[1].trim().length > 20) {
@@ -234,7 +222,6 @@ export default function VisualizerEngine() {
           }
         }
 
-        // MAGIC FIX: Auto-append render call if missing! 
         const hasRenderCall = (str: string) => /render\s*\(\s*</i.test(str);
         
         if (code && !hasRenderCall(code)) {
@@ -254,10 +241,9 @@ export default function VisualizerEngine() {
         parsedPayload = { title, conceptSummary: summary, componentCode: code };
 
       } catch (err) {
-        throw err; // Propagate the error so the UI handles it
+        throw err;
       }
 
-      // 4. Final Verification and Execution
       const finalRenderCheck = /render\s*\(\s*</i;
       if (!parsedPayload.componentCode || !finalRenderCheck.test(parsedPayload.componentCode)) {
         throw new Error('Engine rules verification mismatch: Missing valid render call in stream result.');
@@ -278,61 +264,57 @@ export default function VisualizerEngine() {
     }
   }, [submissionValid, inputCriteria]);
 
-  const elementContainerStyle = { borderRadius: '16px', border: '1px solid #21262d', background: '#0d1117', overflow: 'hidden' as const };
-  const functionalHeaderDeckStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', borderBottom: '1px solid #21262d', background: '#161b22' };
-  const auxiliaryButtonStyle = { display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', background: '#21262d', border: '1px solid #30363d', color: '#8b949e', cursor: 'pointer' as const, fontSize: '13px', fontWeight: 500 };
-
   return (
     <HelmetProvider>
       <Helmet>
         <title>AlgoLib Engine | Real-Time Code Synthesis</title>
       </Helmet>
 
-      {/* Global Styles for Keyframes & Scrollbars */}
       <style>{`
         @keyframes shimmerMotion { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
         @keyframes spinFrames { to { transform: rotate(360deg); } }
         @keyframes pulseFrames { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0d1117; }
-        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
-        body { background-color: #0a0a0f; margin: 0; }
       `}</style>
 
       {/* Background Decorators */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: -1, background: '#0a0a0f' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle 800px at 50% -100px, rgba(99,102,241,0.15), transparent)' }} />
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+      <div className="fixed inset-0 -z-10 bg-slate-50 dark:bg-[#0a0a0f]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_800px_at_50%_-100px,rgba(99,102,241,0.1),transparent)] dark:bg-[radial-gradient(circle_800px_at_50%_-100px,rgba(99,102,241,0.15),transparent)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px]" />
       </div>
 
-      <main style={{ minHeight: '100vh', padding: '40px 20px 100px', fontFamily: '"Inter", sans-serif' }}>
-        <div style={{ maxWidth: '920px', margin: '0 auto' }}>
+      <Navbar />
+
+      <main className="min-h-screen pt-24 pb-32 px-4 sm:px-6 font-sans">
+        <div className="max-w-[920px] mx-auto">
           
           {/* Header */}
-          <header style={{ textAlign: 'center', marginBottom: '36px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', borderRadius: '999px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#a5b4fc', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '16px' }}>
+          <header className="text-center mb-10">
+            <Link to="/visualizer" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-slate-200/50 dark:bg-zinc-800/50 hover:bg-slate-200 dark:hover:bg-zinc-800 text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all mb-6">
+              <ArrowRightLeft size={12} className="rotate-180" /> Back to Hub
+            </Link>
+            <br />
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-300 text-[11px] font-bold tracking-widest uppercase mb-4">
               <Zap size={12} /> CLAUDE 3.5 SONNET COMPILER CORE
             </div>
-            <h1 style={{ fontSize: '38px', fontWeight: 800, color: '#e6edf3', margin: '0 0 12px', letterSpacing: '-0.02em' }}>
+            <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-[#e6edf3] tracking-tight mb-4">
               Real-Time{' '}
-              <span style={{ background: 'linear-gradient(135deg, #6366f1, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <span className="text-transparent bg-clip-text bg-gradient-to-br from-indigo-500 to-purple-500">
                 Algorithmic Trace
               </span>{' '}
               Engine
             </h1>
-            <p style={{ color: '#8b949e', fontSize: '15px', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
-              Provide structural pseudocode parameters or functional scope definitions.
+            <p className="text-slate-600 dark:text-[#8b949e] text-[15px] max-w-2xl mx-auto leading-relaxed">
+              Provide structural pseudocode parameters or functional scope definitions to instantly synthesize an interactive visualizer.
             </p>
           </header>
 
           {/* Input UI */}
-          <div style={{ ...elementContainerStyle, boxShadow: submissionValid ? '0 0 32px rgba(99,102,241,0.08)' : 'none', transition: 'all 0.3s' }}>
-            <div style={functionalHeaderDeckStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e6edf3', fontSize: '13px', fontWeight: 600 }}>
-                <Terminal size={14} style={{ color: '#6366f1' }} /> Prompt Parameter Workspace
+          <div className={`rounded-2xl border border-slate-200 dark:border-[#21262d] bg-white dark:bg-[#0d1117] overflow-hidden transition-all duration-300 ${submissionValid ? 'shadow-[0_0_32px_rgba(99,102,241,0.08)]' : 'shadow-sm'}`}>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-[#21262d] bg-slate-50 dark:bg-[#161b22]">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-[#e6edf3] text-[13px] font-semibold">
+                <Terminal size={14} className="text-indigo-500" /> Prompt Parameter Workspace
               </div>
-              <span style={{ fontSize: '11px', color: '#4b5563', fontFamily: 'monospace' }}>{inputCriteria.length} / 2000</span>
+              <span className="text-[11px] text-slate-500 dark:text-[#4b5563] font-mono">{inputCriteria.length} / 2000</span>
             </div>
 
             <textarea
@@ -342,21 +324,29 @@ export default function VisualizerEngine() {
               disabled={processing}
               rows={6}
               placeholder={`Specify target execution logic rules. E.g.:\n- Trace standard Quick Sort step-by-step with pivot tracking\n- Build an interactive simulation for Binary Search Tree traversal loops...`}
-              style={{ width: '100%', background: '#0d1117', color: '#e6edf3', border: 'none', outline: 'none', resize: 'none', padding: '18px', fontSize: '14px', lineHeight: '1.7', fontFamily: 'monospace', boxSizing: 'border-box', minHeight: '150px' }}
+              className="w-full bg-transparent text-slate-800 dark:text-[#e6edf3] border-none outline-none resize-none p-5 text-sm leading-relaxed font-mono min-h-[150px] placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:ring-0"
             />
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderTop: '1px solid #21262d', background: '#0d1117', flexWrap: 'wrap', gap: '12px' }}>
-              <span style={{ color: '#4b5563', fontSize: '12px' }}>
-                Press <kbd style={{ padding: '2px 6px', background: '#21262d', border: '1px solid #30363d', borderRadius: '4px', color: '#8b949e', fontSize: '11px' }}>Ctrl + Enter</kbd> to compile
+            <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-200 dark:border-[#21262d] bg-slate-50 dark:bg-[#0d1117] flex-wrap gap-3">
+              <span className="text-slate-500 dark:text-[#4b5563] text-xs flex items-center gap-2">
+                Press <kbd className="px-2 py-0.5 bg-white dark:bg-[#21262d] border border-slate-200 dark:border-[#30363d] rounded font-mono text-[10px] shadow-sm">Ctrl + Enter</kbd> to compile
               </span>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                {(displayResults || processFailed) && <button onClick={masterReset} style={auxiliaryButtonStyle}><RotateCcw size={13} /> Reset</button>}
+              <div className="flex items-center gap-2.5">
+                {(displayResults || processFailed) && (
+                  <button onClick={masterReset} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-[#30363d] bg-white dark:bg-[#21262d] text-slate-600 dark:text-[#8b949e] text-[13px] font-semibold hover:bg-slate-50 dark:hover:bg-[#30363d] transition-colors">
+                    <RotateCcw size={14} /> Reset
+                  </button>
+                )}
                 <button
                   onClick={executeCompilation}
                   disabled={!submissionValid}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '8px', border: 'none', fontWeight: 600, fontSize: '14px', cursor: submissionValid ? 'pointer' : 'not-allowed', background: submissionValid ? '#6366f1' : '#1a1f35', color: submissionValid ? '#ffffff' : '#4b5563', boxShadow: submissionValid ? '0 4px 16px rgba(99,102,241,0.25)' : 'none', transition: 'all 0.2s' }}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
+                    submissionValid 
+                      ? 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-[0_4px_16px_rgba(99,102,241,0.25)] hover:shadow-[0_4px_20px_rgba(99,102,241,0.4)]' 
+                      : 'bg-slate-100 dark:bg-[#1a1f35] text-slate-400 dark:text-[#4b5563] cursor-not-allowed'
+                  }`}
                 >
-                  {processing ? <><Loader2 size={14} style={{ animation: 'spinFrames 1s linear infinite' }} /> Building Runtime{streamDots}</> : <><Sparkles size={14} /> Synthesize Trace</>}
+                  {processing ? <><Loader2 size={16} className="animate-spin" /> Building Runtime{streamDots}</> : <><Sparkles size={16} /> Synthesize Trace</>}
                 </button>
               </div>
             </div>
@@ -364,16 +354,16 @@ export default function VisualizerEngine() {
 
           {/* Quick Selections */}
           {executionState === 'idle' && (
-            <div style={{ marginTop: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4b5563', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
-                <BookOpen size={12} /> Standard Algorithmic Blueprints
+            <div className="mt-8">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-[#4b5563] text-[11px] font-bold uppercase tracking-wider mb-4">
+                <BookOpen size={14} /> Standard Algorithmic Blueprints
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <div className="flex flex-wrap gap-2">
                 {EXAMPLES.map(blueprintItem => (
                   <button key={blueprintItem} onClick={() => { setInputCriteria(blueprintItem); textInputAreaRef.current?.focus(); }}
-                    style={{ padding: '6px 14px', borderRadius: '999px', background: '#0d1117', border: '1px solid #21262d', color: '#8b949e', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.15s' }}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-[#21262d] text-slate-600 dark:text-[#8b949e] text-xs font-medium hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
                   >
-                    <ChevronRight size={12} style={{ color: '#6366f1' }} /> {blueprintItem}
+                    <ChevronRight size={12} className="text-indigo-500" /> {blueprintItem}
                   </button>
                 ))}
               </div>
@@ -382,81 +372,81 @@ export default function VisualizerEngine() {
 
           {/* Loading Skeletal View */}
           {processing && (
-            <div style={{ ...elementContainerStyle, marginTop: '32px' }}>
-              <div style={{ ...functionalHeaderDeckStyle, background: 'rgba(99,102,241,0.03)', borderBottom: '1px solid rgba(99,102,241,0.12)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a5b4fc', fontSize: '13px', fontWeight: 600 }}>
-                  <Brain size={14} style={{ animation: 'pulseFrames 1.5s infinite ease-in-out', color: '#6366f1' }} />
-                  Compiling runtime visual context layers
-                </div>
+            <div className="mt-8 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 bg-white dark:bg-[#0d1117] overflow-hidden shadow-sm">
+              <div className="flex items-center gap-2 px-5 py-3 bg-indigo-50/50 dark:bg-indigo-500/5 border-b border-indigo-100 dark:border-indigo-500/10 text-indigo-600 dark:text-indigo-300 text-[13px] font-semibold">
+                <Brain size={16} className="animate-pulse" /> Compiling runtime visual context layers
               </div>
-              <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="p-6 flex flex-col gap-4">
                 <ShimmerNode width="35%" height="22px" />
                 <ShimmerNode width="90%" height="14px" />
                 <ShimmerNode width="75%" height="14px" />
-                <div style={{ marginTop: '12px' }}><ShimmerNode height="280px" radius="12px" /></div>
+                <div className="mt-3"><ShimmerNode height="280px" radius="12px" /></div>
               </div>
             </div>
           )}
 
           {/* Error Message */}
           {processFailed && (
-            <div style={{ marginTop: '32px', border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.02)', borderRadius: '12px', padding: '16px 20px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-              <div style={{ padding: '8px', background: 'rgba(239,68,68,0.08)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.15)' }}>
-                <AlertTriangle size={16} style={{ color: '#ef4444' }} />
+            <div className="mt-8 border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/5 rounded-2xl p-5 flex gap-4 items-start">
+              <div className="p-2 bg-red-100 dark:bg-red-500/10 rounded-lg border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-500 shrink-0">
+                <AlertTriangle size={18} />
               </div>
-              <div style={{ flex: 1 }}>
-                <strong style={{ color: '#f87171', display: 'block', fontSize: '14px', marginBottom: '4px' }}>Pipeline Parsing Instability</strong>
-                <p style={{ color: '#8b949e', fontSize: '13px', margin: 0, lineHeight: 1.5 }}>{runtimeError}</p>
+              <div className="flex-1">
+                <strong className="block text-red-700 dark:text-red-400 text-sm mb-1.5 font-bold">Pipeline Parsing Instability</strong>
+                <p className="text-red-600/80 dark:text-[#8b949e] text-[13px] m-0 leading-relaxed">{runtimeError}</p>
               </div>
-              <button onClick={masterReset} style={{ background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer' }}><X size={16} /></button>
+              <button onClick={masterReset} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors shrink-0 p-1"><X size={16} /></button>
             </div>
           )}
 
           {/* Live Result View */}
           {displayResults && responsePayload && (
-            <div ref={viewportScrollAnchorRef} style={{ marginTop: '32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div ref={viewportScrollAnchorRef} className="mt-8 flex flex-col gap-6">
               
-              <div style={elementContainerStyle}>
-                <div style={functionalHeaderDeckStyle}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Brain size={14} style={{ color: '#6366f1' }} />
-                    <span style={{ color: '#e6edf3', fontWeight: 600, fontSize: '14px' }}>{responsePayload.title}</span>
+              <div className="rounded-2xl border border-slate-200 dark:border-[#21262d] bg-white dark:bg-[#0d1117] overflow-hidden shadow-sm">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-[#21262d] bg-slate-50 dark:bg-[#161b22]">
+                  <div className="flex items-center gap-2">
+                    <Brain size={16} className="text-indigo-500" />
+                    <span className="text-slate-900 dark:text-[#e6edf3] font-bold text-sm">{responsePayload.title}</span>
                   </div>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '999px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#10b981', fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em' }}>
-                    <Activity size={10} /> PARSED READY
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-extrabold tracking-widest uppercase">
+                    <Activity size={12} /> PARSED READY
                   </span>
                 </div>
-                <div style={{ padding: '16px 20px', display: 'flex', gap: '12px', alignItems: 'flex-start', background: '#0d1117' }}>
-                  <Info size={14} style={{ color: '#6366f1', flexShrink: 0, marginTop: '2px' }} />
-                  <p style={{ color: '#8b949e', fontSize: '13px', lineHeight: 1.6, margin: 0 }}>{responsePayload.conceptSummary}</p>
+                <div className="p-5 flex gap-3 items-start bg-white dark:bg-[#0d1117]">
+                  <Info size={16} className="text-indigo-500 shrink-0 mt-0.5" />
+                  <p className="text-slate-600 dark:text-[#8b949e] text-[13px] leading-relaxed m-0">{responsePayload.conceptSummary}</p>
                 </div>
               </div>
 
-              <div style={{ ...elementContainerStyle, boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: '#0d1117', borderBottom: '1px solid #21262d' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      {['#ef4444', '#f59e0b', '#10b981'].map(colorDot => <span key={colorDot} style={{ width: '10px', height: '10px', borderRadius: '50%', background: colorDot, opacity: 0.8 }} />)}
+              <div className="rounded-2xl border border-slate-200 dark:border-[#21262d] bg-white dark:bg-[#0d1117] overflow-hidden shadow-xl shadow-slate-200/50 dark:shadow-[0_20px_40px_rgba(0,0,0,0.25)]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-[#21262d] bg-slate-50 dark:bg-[#0d1117] gap-4 sm:gap-0">
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 opacity-90" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 opacity-90" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 opacity-90" />
                     </div>
-                    <span style={{ fontSize: '12px', color: '#4b5563', fontFamily: 'monospace' }}>sandbox://algolib.compiler.runtime</span>
+                    <span className="text-[11px] text-slate-500 dark:text-[#4b5563] font-mono bg-slate-200/50 dark:bg-[#21262d] px-2 py-0.5 rounded">sandbox://algolib.compiler.runtime</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => setInspectCodeMode(prev => !prev)} style={auxiliaryButtonStyle}>
-                      <Code2 size={12} /> {inspectCodeMode ? 'Hide Trace Code' : 'Inspect Architecture'}
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setInspectCodeMode(prev => !prev)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#30363d] bg-white dark:bg-[#21262d] text-slate-600 dark:text-[#8b949e] text-xs font-semibold hover:bg-slate-50 dark:hover:bg-[#30363d] transition-colors">
+                      <Code2 size={14} /> {inspectCodeMode ? 'Hide Trace Code' : 'Inspect Architecture'}
                     </button>
                     <CopyButton content={responsePayload.componentCode} />
                   </div>
                 </div>
 
-                {/* THE RENDERED SANDBOX IS INJECTED HERE */}
-                <LiveSandbox code={responsePayload.componentCode} />
+                <div className="bg-white dark:bg-[#0d1117]">
+                  <LiveSandbox code={responsePayload.componentCode} />
+                </div>
 
                 {inspectCodeMode && (
-                  <div style={{ borderTop: '1px solid #21262d', background: '#0a0a0f' }}>
-                    <div style={{ padding: '10px 18px', background: '#161b22', borderBottom: '1px solid #21262d', color: '#8b949e', fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em' }}>
+                  <div className="border-t border-slate-200 dark:border-[#21262d] bg-slate-50 dark:bg-[#0a0a0f]">
+                    <div className="px-5 py-3 border-b border-slate-200 dark:border-[#21262d] bg-slate-100 dark:bg-[#161b22] text-slate-500 dark:text-[#8b949e] text-[11px] font-bold tracking-widest uppercase">
                       GENERATED WORKSPACE REACT LOGIC COMPONENT
                     </div>
-                    <pre style={{ margin: 0, padding: '18px', fontSize: '12px', fontFamily: 'monospace', color: '#8b949e', overflow: 'auto', maxHeight: '350px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                    <pre className="m-0 p-5 text-[12px] font-mono text-slate-700 dark:text-[#8b949e] overflow-auto max-h-[350px] leading-relaxed whitespace-pre-wrap custom-scrollbar">
                       {responsePayload.componentCode}
                     </pre>
                   </div>
@@ -466,6 +456,8 @@ export default function VisualizerEngine() {
           )}
         </div>
       </main>
+      
+      <AppFooter />
     </HelmetProvider>
   );
 }
