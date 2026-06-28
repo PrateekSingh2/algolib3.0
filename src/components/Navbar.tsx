@@ -184,7 +184,7 @@ const Navbar = () => {
     }
   };
 
-  const avatarSrc  = user?.photoURL  || "https://placehold.co/96x96/111/fff?text=U";
+  const avatarSrc  = profile?.avatar_url || user?.photoURL  || "https://placehold.co/96x96/111/fff?text=U";
   const avatarName = profile?.display_name || user?.displayName || "Engineer";
 
   // ── Reusable Pieces ─────────────────────────────────────────────────────────
