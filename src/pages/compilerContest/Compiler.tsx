@@ -25,7 +25,7 @@ import {
 } from 'firebase/firestore';
 import { firestoreDB } from '@/lib/firebase';
 import { useCollaborationRoom } from '../visualizer-code/hooks/useCollaborationRoom';
-import CollaborationControls from '../visualizer-dsa/components/CollaborationControls';
+import CollaborationControls from '../visualizer-code/components/CollaborationControls';
 
 // ─── Formatting Engine (Custom Fallbacks) ────────────────────────────────────
 
