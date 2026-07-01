@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
+import { useAuth } from '@/contexts/AuthContext';
+import AuthModal from '@/components/AuthModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -29,7 +31,8 @@ import {
   FileCode,
   Info,
   Layers,
-  Cpu
+  Cpu,
+  Lock
 } from 'lucide-react';
 
 import Navbar from '@/components/Navbar';
@@ -262,6 +265,9 @@ const MLNotes = () => {
   const [copiedEntire, setCopiedEntire] = useState(false);
   const [copiedBlockIdx, setCopiedBlockIdx] = useState<number | null>(null);
 
+  const { user } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   const activeNote = NOTES_LIST[activeNoteIdx];
 
   useEffect(() => {
@@ -375,6 +381,7 @@ const MLNotes = () => {
                   <SidebarContent
                     activeNoteIdx={activeNoteIdx}
                     onSelect={handleSelectNote}
+                    user={user}
                   />
                 </div>
               </motion.aside>
@@ -398,6 +405,7 @@ const MLNotes = () => {
             <SidebarContent
               activeNoteIdx={activeNoteIdx}
               onSelect={handleSelectNote}
+              user={user}
             />
           </div>
         </aside>
@@ -461,7 +469,26 @@ const MLNotes = () => {
 
           {/* Core Notebook Content Viewer */}
           <div className="flex-1 space-y-6">
-            {filteredBlocks.length > 0 ? (
+            {!user && activeNote.id !== '00' ? (
+              <div className="h-full w-full flex flex-col items-center justify-center text-center p-6 animate-in fade-in zoom-in duration-300 mt-10">
+                <div className="h-20 w-20 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-[#00ff88]/20 flex items-center justify-center mb-6 shadow-sm dark:shadow-[0_0_40px_rgba(0,255,136,0.15)] relative overflow-hidden">
+                  <div className="absolute inset-0 bg-emerald-100 dark:bg-[#00ff88]/10 animate-pulse" />
+                  <Lock size={32} className="text-emerald-500 dark:text-[#00ff88] relative z-10" />
+                </div>
+                <h3 className="text-2xl md:text-3xl font-black font-mono tracking-tight text-slate-900 dark:text-white mb-3">
+                  RESTRICTED SECTOR
+                </h3>
+                <p className="text-slate-700 dark:text-gray-400 max-w-md text-sm leading-relaxed mb-8">
+                  The <span className="text-emerald-500 dark:text-[#00ff88] font-mono">{activeNote.title}</span> module requires security clearance. Authenticate your account to unlock all advanced notes.
+                </p>
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="flex items-center gap-2 px-8 py-3.5 bg-emerald-500 dark:bg-[#00ff88] hover:bg-emerald-400 dark:hover:bg-emerald-300 text-black font-bold text-sm rounded-xl transition-all shadow-md dark:shadow-[0_0_20px_rgba(0,255,136,0.3)] hover:scale-105 active:scale-95"
+                >
+                  <Cpu size={16} /> INITIALIZE LOGIN
+                </button>
+              </div>
+            ) : filteredBlocks.length > 0 ? (
               filteredBlocks.map((block, idx) => {
                 if (block.type === 'header') {
                   return (
@@ -571,17 +598,19 @@ const MLNotes = () => {
       </main>
 
       <AppFooter />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );
 };
 
-// Sidebar note list content
 const SidebarContent = ({
   activeNoteIdx,
-  onSelect
+  onSelect,
+  user
 }: {
   activeNoteIdx: number;
   onSelect: (idx: number) => void;
+  user: any;
 }) => {
   return (
     <nav className="space-y-2 mt-4">
@@ -620,9 +649,13 @@ const SidebarContent = ({
               </span>
             </div>
 
-            <div className={`self-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-slate-400 dark:text-zinc-500 ${isActive ? 'text-emerald-500 dark:text-emerald-400 opacity-100' : ''
+            <div className={`self-center transition-opacity duration-200 text-slate-400 dark:text-zinc-500 ${!user && note.id !== '00' ? 'opacity-100' : isActive ? 'text-emerald-500 dark:text-emerald-400 opacity-100' : 'opacity-0 group-hover:opacity-100'
               }`}>
-              <ChevronRight size={14} className="transform group-hover:translate-x-0.5 transition-transform duration-200" />
+              {!user && note.id !== '00' ? (
+                <Lock size={14} className="text-slate-400 dark:text-zinc-600" />
+              ) : (
+                <ChevronRight size={14} className="transform group-hover:translate-x-0.5 transition-transform duration-200" />
+              )}
             </div>
           </button>
         );

@@ -391,7 +391,7 @@ const AppRoutes = () => {
         <Route path="/ml" element={<MLHub />} />
         <Route path="/notes/ml" element={<Navigate to="/notes/ml/00" replace />} />
         <Route path="/notes/ml/:topicId" element={<MLNotes />} />
-        <Route path="/ml/visualizer" element={<Navigate to="/ml/visualizer/linear-regression" replace />} />
+        <Route path="/ml/visualizer" element={<Navigate to="/ml/visualizer/neural-network" replace />} />
         <Route path="/ml/visualizer/:mlType" element={<MLVisualizer />} />
 
         {/* Legacy backwards compatibility */}

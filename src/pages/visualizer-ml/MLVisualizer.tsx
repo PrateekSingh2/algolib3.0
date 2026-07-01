@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Helmet } from 'react-helmet-async';
 import {
   Activity,
@@ -18,9 +19,12 @@ import {
   ListTree,
   Users,
   Info,
+  Lock,
+  Cpu,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
+import AuthModal from '@/components/AuthModal';
 import { setTrackedActivity } from '@/hooks/useActivityTracker';
 
 const LinearRegressionVisualizer = lazy(() => import('./LinearRegressionVisualizer'));
@@ -30,7 +34,7 @@ const LogisticRegressionVisualizer = lazy(() => import('./LogisticRegressionVisu
 const NeuralNetworkVisualizer = lazy(() => import('./NeuralNetworkVisualizer'));
 const DecisionTreeVisualizer = lazy(() => import('./DecisionTreeVisualizer'));
 
-type VisualizerKey = 'linear-regression' | 'kmeans' | 'knn' | 'logistic-regression' | 'neural-network' | 'decision-tree';
+type VisualizerKey = 'neural-network' | 'linear-regression' | 'kmeans' | 'knn' | 'logistic-regression' | 'decision-tree';
 
 const AlienBackground = () => (
   <div className="fixed inset-0 -z-10 bg-white dark:bg-[#020205] overflow-hidden">
@@ -71,11 +75,14 @@ const MultiplayerNotice = ({ onClose }: { onClose: () => void }) => (
 const MLVisualizer = () => {
   const { mlType } = useParams<{ mlType: string }>();
   const navigate = useNavigate();
-  const activeTab = (mlType as VisualizerKey) || 'linear-regression';
+  const activeTab = (mlType as VisualizerKey) || 'neural-network';
+
+  const { user } = useAuth();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showMultiplayerNotice, setShowMultiplayerNotice] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [topNavHidden, setTopNavHidden] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth <= 639 : false
   );
@@ -86,10 +93,10 @@ const MLVisualizer = () => {
 
   const menu = useMemo(
     () => [
+      { id: 'neural-network' as VisualizerKey, label: 'Neural Network', icon: BrainCircuit, component: <NeuralNetworkVisualizer /> },
       { id: 'linear-regression' as VisualizerKey, label: 'Linear Regression', icon: LineChart, component: <LinearRegressionVisualizer /> },
       { id: 'logistic-regression' as VisualizerKey, label: 'Logistic Regression', icon: Spline, component: <LogisticRegressionVisualizer /> },
       { id: 'decision-tree' as VisualizerKey, label: 'Decision Tree', icon: ListTree, component: <DecisionTreeVisualizer /> },
-      { id: 'neural-network' as VisualizerKey, label: 'Neural Network', icon: BrainCircuit, component: <NeuralNetworkVisualizer /> },
       { id: 'kmeans' as VisualizerKey, label: 'K-Means Clustering', icon: Network, component: <KMeansVisualizer /> },
       { id: 'knn' as VisualizerKey, label: 'K-Nearest Neighbors', icon: GitGraph, component: <KNNVisualizer /> },
     ],
@@ -156,6 +163,7 @@ const MLVisualizer = () => {
                         item={item}
                         active={activeTab === item.id}
                         onSelect={selectTab}
+                        isLocked={!user && item.id !== 'neural-network'}
                       />
                     ))}
                   </nav>
@@ -237,7 +245,28 @@ const MLVisualizer = () => {
                         transition={{ duration: 0.25, ease: 'easeOut' }}
                         className="h-full w-full"
                       >
-                        {activeModule?.component}
+                        {!user && activeTab !== 'neural-network' ? (
+                          <div className="h-full w-full flex flex-col items-center justify-center text-center p-6 animate-in fade-in zoom-in duration-300">
+                            <div className="h-20 w-20 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-[#00ff88]/20 flex items-center justify-center mb-6 shadow-sm dark:shadow-[0_0_40px_rgba(0,255,136,0.15)] relative overflow-hidden">
+                              <div className="absolute inset-0 bg-emerald-100 dark:bg-[#00ff88]/10 animate-pulse" />
+                              <Lock size={32} className="text-emerald-500 dark:text-[#00ff88] relative z-10" />
+                            </div>
+                            <h3 className="text-2xl md:text-3xl font-black font-mono tracking-tight text-slate-900 dark:text-white mb-3">
+                              RESTRICTED SECTOR
+                            </h3>
+                            <p className="text-slate-700 dark:text-gray-400 max-w-md text-sm leading-relaxed mb-8">
+                              The <span className="text-emerald-500 dark:text-[#00ff88] font-mono">{activeModule?.label}</span> simulation module requires security clearance. Authenticate your account to unlock all advanced interactive algorithms.
+                            </p>
+                            <button
+                              onClick={() => setIsAuthModalOpen(true)}
+                              className="flex items-center gap-2 px-8 py-3.5 bg-emerald-500 dark:bg-[#00ff88] hover:bg-emerald-400 dark:hover:bg-emerald-300 text-black font-bold text-sm rounded-xl transition-all shadow-md dark:shadow-[0_0_20px_rgba(0,255,136,0.3)] hover:scale-105 active:scale-95"
+                            >
+                              <Cpu size={16} /> INITIALIZE LOGIN
+                            </button>
+                          </div>
+                        ) : (
+                          activeModule?.component
+                        )}
                       </motion.div>
                     </AnimatePresence>
                   </Suspense>
@@ -289,6 +318,7 @@ const MLVisualizer = () => {
                     item={item}
                     active={activeTab === item.id}
                     onSelect={selectTab}
+                    isLocked={!user && item.id !== 'neural-network'}
                   />
                 ))}
               </div>
@@ -302,6 +332,7 @@ const MLVisualizer = () => {
           </>
         )}
       </AnimatePresence>
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );
 };
@@ -310,10 +341,12 @@ const MenuButton = ({
   item,
   active,
   onSelect,
+  isLocked,
 }: {
   item: { id: VisualizerKey; label: string; icon: React.ComponentType<any> };
   active: boolean;
   onSelect: (tab: VisualizerKey) => void;
+  isLocked?: boolean;
 }) => {
   const Icon = item.icon;
   return (
@@ -329,6 +362,9 @@ const MenuButton = ({
         }`}>
         {item.label}
       </span>
+      {isLocked && (
+        <Lock size={14} className="text-slate-400 dark:text-gray-600 group-hover:text-slate-700 dark:group-hover:text-gray-400 absolute right-6" />
+      )}
     </button>
   );
 };

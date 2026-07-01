@@ -3,11 +3,16 @@ import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
+import AuthModal from '@/components/AuthModal';
+import { useAuth } from '@/contexts/AuthContext';
 import AppFooter from '@/components/AppFooter';
-import { Database, Code2, Zap, ArrowRight, Network, Sparkles, Binary, Clock } from 'lucide-react';
+import { Database, Code2, Zap, ArrowRight, Network, Sparkles, Binary, Clock, BrainCircuit } from 'lucide-react';
 import { setTrackedActivity } from '@/hooks/useActivityTracker';
 
 const VisualizerHub = () => {
+  const { user } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
+
   useEffect(() => {
     setTrackedActivity('visualizer_hub');
   }, []);
@@ -21,6 +26,15 @@ const VisualizerHub = () => {
       color: "blue",
       glow: "rgba(59, 130, 246, 0.5)",
       features: ["7+ Data Structures", "Real-time Execution", "Speed Control"]
+    },
+    {
+      title: "Machine Learning Visualizer",
+      description: "Interactive real-time visualizations for Regression, Classification, and Clustering algorithms.",
+      path: "/ml/visualizer",
+      icon: BrainCircuit,
+      color: "orange",
+      glow: "rgba(249, 115, 22, 0.5)",
+      features: ["Neural Networks", "Decision Trees", "Linear Regression"]
     },
     {
       title: "Step-by-Step Code Execution",
@@ -75,7 +89,7 @@ const VisualizerHub = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto w-full">
           {visualizers.map((viz, idx) => {
             const Icon = viz.icon;
             const Wrapper = viz.isComingSoon ? 'div' : Link;
@@ -87,7 +101,16 @@ const VisualizerHub = () => {
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
                 className={viz.isComingSoon ? "opacity-75 cursor-not-allowed" : ""}
               >
-                <Wrapper to={viz.path} className={`group relative block h-full ${viz.isComingSoon ? 'pointer-events-none' : ''}`}>
+                <Wrapper 
+                  to={viz.path} 
+                  onClick={(e: any) => {
+                    if (viz.path === '/visualizer/code' && !user) {
+                      e.preventDefault();
+                      setIsAuthModalOpen(true);
+                    }
+                  }}
+                  className={`group relative block h-full ${viz.isComingSoon ? 'pointer-events-none' : ''}`}
+                >
                   <div 
                     className="absolute inset-0 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                     style={{ backgroundColor: viz.glow }}
@@ -101,6 +124,7 @@ const VisualizerHub = () => {
                     <div className="flex justify-between items-start mb-6">
                       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm border
                         ${viz.color === 'blue' ? 'bg-blue-50 border-blue-100 text-blue-600 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-400' : ''}
+                        ${viz.color === 'orange' ? 'bg-orange-50 border-orange-100 text-orange-600 dark:bg-orange-500/10 dark:border-orange-500/20 dark:text-orange-400' : ''}
                         ${viz.color === 'emerald' ? 'bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400' : ''}
                         ${viz.color === 'violet' ? 'bg-violet-50 border-violet-100 text-violet-600 dark:bg-violet-500/10 dark:border-violet-500/20 dark:text-violet-400' : ''}
                       `}>
@@ -125,6 +149,7 @@ const VisualizerHub = () => {
                         <div key={fIdx} className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-zinc-300">
                           <div className={`w-1.5 h-1.5 rounded-full 
                             ${viz.color === 'blue' ? 'bg-blue-500' : ''}
+                            ${viz.color === 'orange' ? 'bg-orange-500' : ''}
                             ${viz.color === 'emerald' ? 'bg-emerald-500' : ''}
                             ${viz.color === 'violet' ? 'bg-violet-500' : ''}
                           `} />
@@ -136,6 +161,7 @@ const VisualizerHub = () => {
                     <div className={`mt-auto flex items-center justify-between text-sm font-bold
                       ${viz.isComingSoon ? 'text-slate-400 dark:text-zinc-500' : 
                         viz.color === 'blue' ? 'text-blue-600 dark:text-blue-400' : 
+                        viz.color === 'orange' ? 'text-orange-600 dark:text-orange-400' : 
                         viz.color === 'emerald' ? 'text-emerald-600 dark:text-emerald-400' : 
                         'text-violet-600 dark:text-violet-400'
                       }
@@ -152,6 +178,7 @@ const VisualizerHub = () => {
       </main>
 
       <AppFooter />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );
 };

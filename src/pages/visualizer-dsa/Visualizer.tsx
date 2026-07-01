@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
+import AuthModal from '@/components/AuthModal';
 import { setTrackedActivity } from '@/hooks/useActivityTracker';
 
 const LinkedListVisualizer = lazy(() => import('./LinkedListVisualizer'));
@@ -72,6 +73,7 @@ const Visualizer = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [topNavHidden, setTopNavHidden] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // --- COLLABORATION: Sync active visualizer tab ---
   useEffect(() => {
@@ -420,12 +422,12 @@ const Visualizer = () => {
                               The <span className="text-blue-500 dark:text-[#00f5ff] font-mono">{activeModule?.label}</span> simulation module requires security clearance. Authenticate your account to unlock all advanced interactive algorithms.
                             </p>
                             {/* Assuming your app routes to /login for authentication */}
-                            <a
-                              href="/login"
+                            <button
+                              onClick={() => setIsAuthModalOpen(true)}
                               className="flex items-center gap-2 px-8 py-3.5 bg-blue-500 dark:bg-[#00f5ff] hover:bg-blue-400 dark:hover:bg-cyan-300 text-black font-bold text-sm rounded-xl transition-all shadow-md dark:shadow-[0_0_20px_rgba(0,245,255,0.3)] hover:scale-105 active:scale-95"
                             >
                               <Cpu size={16} /> INITIALIZE LOGIN
-                            </a>
+                            </button>
                           </div>
                         ) : (
                           activeModule?.component
@@ -495,6 +497,7 @@ const Visualizer = () => {
           </>
         )}
       </AnimatePresence>
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );
 

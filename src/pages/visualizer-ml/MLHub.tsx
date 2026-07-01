@@ -3,11 +3,16 @@ import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
+import AuthModal from '@/components/AuthModal';
+import { useAuth } from '@/contexts/AuthContext';
 import AppFooter from '@/components/AppFooter';
 import { BrainCircuit, BookText, ArrowRight, Sparkles, Clock, LineChart } from 'lucide-react';
 import { setTrackedActivity } from '@/hooks/useActivityTracker';
 
 const MLHub = () => {
+  const { user } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
+
   useEffect(() => {
     setTrackedActivity('ml_hub');
   }, []);
@@ -86,7 +91,16 @@ const MLHub = () => {
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
                 className={section.isComingSoon ? "opacity-75 cursor-not-allowed" : ""}
               >
-                <Wrapper to={section.path} className={`group relative block h-full ${section.isComingSoon ? 'pointer-events-none' : 'hover:-translate-y-1.5 transition-transform duration-500'}`}>
+                <Wrapper 
+                  to={section.path} 
+                  onClick={(e: any) => {
+                    if (section.path === '/notes/ml' && !user) {
+                      e.preventDefault();
+                      setIsAuthModalOpen(true);
+                    }
+                  }}
+                  className={`group relative block h-full ${section.isComingSoon ? 'pointer-events-none' : 'hover:-translate-y-1.5 transition-transform duration-500'}`}
+                >
                   <div 
                     className="absolute inset-0 rounded-3xl blur-2xl opacity-0 group-hover:opacity-70 transition-opacity duration-500"
                     style={{ backgroundColor: section.glow }}
@@ -148,6 +162,7 @@ const MLHub = () => {
       </main>
 
       <AppFooter />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );
 };
