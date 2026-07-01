@@ -647,6 +647,40 @@ export default function Compiler() {
     <div className={`compiler-root ${isFullscreen ? 'is-fullscreen' : ''} ${darkMode ? 'dark' : ''}`} data-theme={darkMode ? 'dark' : 'light'} ref={compilerRef}>
       <Helmet>
         <title>AlgoLib Compiler | Lightning-Fast Online IDE & Code Runner</title>
+        <meta name="title" content="AlgoLib Compiler | Lightning-Fast Online IDE & Code Runner" />
+        <meta name="description" content="Online compiler for programming languages with real-time execution and pre-built snippet injection capabilities." />
+        <meta name="keywords" content="Online Compiler, Programming Language, Real-time Execution, Code Runner, Snippet Injection" />
+        <link rel="canonical" href="https://algolib.netlify.app/visualizer/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://algolib.netlify.app/visualizer/" />
+        <meta property="og:title" content="AlgoLib | Interactive 60FPS DSA Visualizer" />
+        <meta property="og:description" content="Master Data Structures and Algorithms with AlgoLib's interactive 60FPS visualizer. Explore concepts visually in real-time." />
+        <meta property="og:image" content="https://ik.imagekit.io/g7e4hyclo/graph.png" />
+        <meta property="og:image:alt" content="AlgoLib Interactive Algorithm Simulator" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://algolib.netlify.app/visualizer/" />
+        <meta name="twitter:title" content="AlgoLib | Interactive 60FPS DSA Visualizer" />
+        <meta name="twitter:description" content="Master Data Structures and Algorithms with AlgoLib's interactive visualizer. Understand complex computer science concepts effortlessly." />
+        <meta name="twitter:image" content="https://ik.imagekit.io/g7e4hyclo/graph.png" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "AlgoLib DSA Visualizer",
+            "url": "https://algolib.netlify.app/visualizer/",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Web",
+            "description": "An interactive 60FPS visualizer for Data Structures and Algorithms. Features real-time simulations for Linked Lists, Stacks, Queues, Trees, Heaps, and Graphs.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+            "creator": { "@type": "Organization", "name": "AlgoLib" },
+            "featureList": [
+              "Real-time 60FPS Visualization",
+              "Interactive Speed Controls",
+              "Multiple DSA Modules (LinkedList, Sorting Algorithms, Stack, Queue, Heap, Trees, Graphs)",
+              "Holographic UI Engine"
+            ]
+          })}
+        </script>
       </Helmet>
 
       {/* Hidden Audio Player for Flow-State */}

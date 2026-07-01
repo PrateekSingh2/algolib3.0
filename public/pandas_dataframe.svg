@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#020617;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="colHeader" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:0.9"/>
+    </linearGradient>
+    <linearGradient id="idxHeader" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:0.9"/>
+    </linearGradient>
+    <linearGradient id="cell" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:0.8"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" rx="16" fill="url(#bgGrad)" />
+  <rect width="800" height="500" rx="16" fill="url(#grid)" />
+
+  <text x="400" y="50" font-family="system-ui, sans-serif" font-size="24" font-weight="800" fill="#f8fafc" text-anchor="middle" letter-spacing="1">Anatomy of a Pandas DataFrame</text>
+  <text x="400" y="75" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">A 2D labeled data structure with columns of potentially different types</text>
+
+  <g transform="translate(150, 140)">
+    
+    <!-- Column Headers -->
+    <g transform="translate(100, 0)">
+      <rect x="0" y="0" width="120" height="40" rx="4" fill="url(#colHeader)" stroke="#60a5fa" stroke-width="1.5"/>
+      <text x="60" y="25" font-family="monospace" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">Name</text>
+      
+      <rect x="125" y="0" width="100" height="40" rx="4" fill="url(#colHeader)" stroke="#60a5fa" stroke-width="1.5"/>
+      <text x="175" y="25" font-family="monospace" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">Age</text>
+      
+      <rect x="230" y="0" width="120" height="40" rx="4" fill="url(#colHeader)" stroke="#60a5fa" stroke-width="1.5"/>
+      <text x="290" y="25" font-family="monospace" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">City</text>
+    </g>
+
+    <!-- Index Column -->
+    <g transform="translate(0, 45)">
+      <rect x="0" y="0" width="95" height="40" rx="4" fill="url(#idxHeader)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="47.5" y="25" font-family="monospace" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">0</text>
+      
+      <rect x="0" y="45" width="95" height="40" rx="4" fill="url(#idxHeader)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="47.5" y="70" font-family="monospace" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">1</text>
+      
+      <rect x="0" y="90" width="95" height="40" rx="4" fill="url(#idxHeader)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="47.5" y="115" font-family="monospace" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">2</text>
+      
+      <rect x="0" y="135" width="95" height="40" rx="4" fill="url(#idxHeader)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="47.5" y="160" font-family="monospace" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">3</text>
+    </g>
+
+    <!-- Data Cells -->
+    <g transform="translate(100, 45)">
+      <!-- Row 0 -->
+      <rect x="0" y="0" width="120" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="60" y="25" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">Alice</text>
+      <rect x="125" y="0" width="100" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="175" y="25" font-family="monospace" font-size="14" fill="#cbd5e1" text-anchor="middle">28</text>
+      <rect x="230" y="0" width="120" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="290" y="25" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">New York</text>
+      
+      <!-- Row 1 -->
+      <rect x="0" y="45" width="120" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="60" y="70" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">Bob</text>
+      <rect x="125" y="45" width="100" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="175" y="70" font-family="monospace" font-size="14" fill="#cbd5e1" text-anchor="middle">34</text>
+      <rect x="230" y="45" width="120" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="290" y="70" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">London</text>
+
+      <!-- Row 2 -->
+      <rect x="0" y="90" width="120" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="60" y="115" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">Charlie</text>
+      <rect x="125" y="90" width="100" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="175" y="115" font-family="monospace" font-size="14" fill="#cbd5e1" text-anchor="middle">22</text>
+      <rect x="230" y="90" width="120" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="290" y="115" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">Paris</text>
+
+      <!-- Row 3 -->
+      <rect x="0" y="135" width="120" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="60" y="160" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">Diana</text>
+      <rect x="125" y="135" width="100" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="175" y="160" font-family="monospace" font-size="14" fill="#cbd5e1" text-anchor="middle">NaN</text>
+      <rect x="230" y="135" width="120" height="40" rx="4" fill="url(#cell)" stroke="#334155" stroke-width="1"/>
+      <text x="290" y="160" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">Tokyo</text>
+    </g>
+
+    <!-- Annotations -->
+    <!-- Column Annotation -->
+    <path d="M 275 -15 L 275 -30 L 410 -30" fill="none" stroke="#60a5fa" stroke-width="2" stroke-dasharray="4 4"/>
+    <text x="420" y="-25" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#93c5fd">df.columns (Series of labels)</text>
+    
+    <!-- Index Annotation -->
+    <path d="M -15 110 L -40 110" fill="none" stroke="#34d399" stroke-width="2" stroke-dasharray="4 4"/>
+    <text x="-50" y="115" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#6ee7b7" text-anchor="end">df.index</text>
+
+    <!-- Series Annotation (Highlighting Column "Age") -->
+    <rect x="217" y="37" width="116" height="186" rx="8" fill="none" stroke="#f472b6" stroke-width="3" stroke-dasharray="6 4" />
+    <path d="M 275 235 L 275 260 L 410 260" fill="none" stroke="#f472b6" stroke-width="2" stroke-dasharray="4 4"/>
+    <text x="420" y="265" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#f9a8d4">A single column is a Series</text>
+  </g>
+</svg>

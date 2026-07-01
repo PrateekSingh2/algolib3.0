@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#020617;stop-opacity:1"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="agentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1"/>
+    </linearGradient>
+    <linearGradient id="envGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#047857;stop-opacity:1"/>
+    </linearGradient>
+    <marker id="arrowL" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#60a5fa" />
+    </marker>
+    <marker id="arrowR" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#34d399" />
+    </marker>
+    <marker id="arrowR_orange" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" />
+    </marker>
+  </defs>
+
+  <rect width="800" height="450" rx="16" fill="url(#bgGrad)" />
+  <rect width="800" height="450" rx="16" fill="url(#grid)" />
+
+  <text x="400" y="50" font-family="system-ui, sans-serif" font-size="24" font-weight="800" fill="#f8fafc" text-anchor="middle" letter-spacing="1">The Reinforcement Learning Loop</text>
+
+  <!-- Agent Box -->
+  <g transform="translate(150, 180)">
+    <rect x="0" y="0" width="160" height="100" rx="12" fill="url(#agentGrad)" stroke="#60a5fa" stroke-width="2"/>
+    <text x="80" y="45" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#bfdbfe" text-anchor="middle">Agent</text>
+    <text x="80" y="65" font-family="system-ui, sans-serif" font-size="14" fill="#93c5fd" text-anchor="middle">(The Brain/Policy)</text>
+    
+    <!-- Robot icon -->
+    <rect x="70" y="15" width="20" height="15" fill="#bfdbfe" rx="2"/>
+    <circle cx="75" cy="22" r="2" fill="#1e40af"/>
+    <circle cx="85" cy="22" r="2" fill="#1e40af"/>
+  </g>
+
+  <!-- Environment Box -->
+  <g transform="translate(490, 180)">
+    <rect x="0" y="0" width="160" height="100" rx="12" fill="url(#envGrad)" stroke="#34d399" stroke-width="2"/>
+    <text x="80" y="45" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#a7f3d0" text-anchor="middle">Environment</text>
+    <text x="80" y="65" font-family="system-ui, sans-serif" font-size="14" fill="#6ee7b7" text-anchor="middle">(The World/Game)</text>
+    
+    <!-- World icon -->
+    <circle cx="80" cy="22" r="10" fill="#a7f3d0"/>
+    <path d="M 75 15 Q 85 20 78 28 M 80 15 Q 95 25 85 28" fill="none" stroke="#047857" stroke-width="1.5"/>
+  </g>
+
+  <!-- Action Arrow (Agent -> Env) -->
+  <path d="M 310 200 Q 400 150 490 200" fill="none" stroke="#60a5fa" stroke-width="4" marker-end="url(#arrowL)"/>
+  <rect x="350" y="145" width="100" height="30" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="400" y="165" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#60a5fa" text-anchor="middle">Action (Aₜ)</text>
+
+  <!-- State Arrow (Env -> Agent) -->
+  <path d="M 490 260 Q 400 310 310 260" fill="none" stroke="#34d399" stroke-width="4" marker-end="url(#arrowR)"/>
+  <rect x="350" y="285" width="100" height="30" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="400" y="305" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#34d399" text-anchor="middle">State (Sₜ₊₁)</text>
+
+  <!-- Reward Arrow (Env -> Agent) -->
+  <path d="M 490 280 Q 400 360 310 280" fill="none" stroke="#f59e0b" stroke-width="4" marker-end="url(#arrowR_orange)"/>
+  <rect x="340" y="335" width="120" height="30" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="400" y="355" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#f59e0b" text-anchor="middle">Reward (Rₜ₊₁)</text>
+
+  <!-- Explanation Boxes -->
+  <g transform="translate(100, 390)">
+    <text x="130" y="0" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">Goal: Maximize cumulative reward</text>
+  </g>
+  <g transform="translate(570, 390)">
+    <text x="0" y="0" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">Updates state based on action</text>
+  </g>
+  
+</svg>

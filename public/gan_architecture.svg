@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#020617;stop-opacity:1"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="genGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:0.9"/>
+    </linearGradient>
+    <linearGradient id="discGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7f1d1d;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#b91c1c;stop-opacity:0.9"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+    </marker>
+  </defs>
+
+  <rect width="900" height="450" rx="16" fill="url(#bgGrad)" />
+  <rect width="900" height="450" rx="16" fill="url(#grid)" />
+
+  <text x="450" y="45" font-family="system-ui, sans-serif" font-size="24" font-weight="800" fill="#f8fafc" text-anchor="middle" letter-spacing="1">Generative Adversarial Network (GAN)</text>
+  <text x="450" y="65" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Two networks playing a continuous game of cat and mouse</text>
+
+  <!-- Real Data Pipeline -->
+  <g transform="translate(100, 100)">
+    <rect x="0" y="0" width="120" height="80" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="2"/>
+    <text x="60" y="35" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#a7f3d0" text-anchor="middle">Real Data</text>
+    <text x="60" y="55" font-family="system-ui, sans-serif" font-size="12" fill="#6ee7b7" text-anchor="middle">(Actual Photos)</text>
+  </g>
+  <path d="M 220 140 L 530 140 L 530 190" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Random Noise Input -->
+  <g transform="translate(100, 260)">
+    <rect x="0" y="0" width="120" height="80" rx="8" fill="#334155" stroke="#64748b" stroke-width="2"/>
+    <text x="60" y="35" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#e2e8f0" text-anchor="middle">Random Noise</text>
+    <text x="60" y="55" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">(Latent Vector)</text>
+  </g>
+  <path d="M 220 300 L 250 300" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Generator Network -->
+  <g transform="translate(260, 240)">
+    <rect x="0" y="0" width="140" height="120" rx="8" fill="url(#genGrad)" stroke="#3b82f6" stroke-width="2"/>
+    <text x="70" y="45" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="#bfdbfe" text-anchor="middle">Generator</text>
+    <text x="70" y="65" font-family="system-ui, sans-serif" font-size="12" fill="#93c5fd" text-anchor="middle">"The Counterfeiter"</text>
+    <text x="70" y="90" font-family="system-ui, sans-serif" font-size="12" fill="#93c5fd" text-anchor="middle">Tries to fool Disc.</text>
+  </g>
+  <path d="M 400 300 L 440 300" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Generated Data -->
+  <g transform="translate(450, 260)">
+    <rect x="0" y="0" width="120" height="80" rx="8" fill="#4c1d95" stroke="#a78bfa" stroke-width="2"/>
+    <text x="60" y="35" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#ddd6fe" text-anchor="middle">Fake Data</text>
+    <text x="60" y="55" font-family="system-ui, sans-serif" font-size="12" fill="#c4b5fd" text-anchor="middle">(Generated)</text>
+  </g>
+  <path d="M 570 300 L 610 300 L 610 270" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Discriminator Network -->
+  <g transform="translate(530, 200)">
+    <rect x="0" y="0" width="140" height="70" rx="8" fill="url(#discGrad)" stroke="#ef4444" stroke-width="2"/>
+    <text x="70" y="30" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="#fecaca" text-anchor="middle">Discriminator</text>
+    <text x="70" y="50" font-family="system-ui, sans-serif" font-size="12" fill="#fca5a5" text-anchor="middle">"The Police"</text>
+  </g>
+  <path d="M 670 235 L 720 235" stroke="#64748b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Output Probability -->
+  <g transform="translate(730, 210)">
+    <rect x="0" y="0" width="120" height="50" rx="4" fill="#334155" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="60" y="22" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#f8fafc" text-anchor="middle">Prediction</text>
+    <text x="60" y="40" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">Real vs. Fake</text>
+  </g>
+
+  <!-- Loss / Backprop Arrows -->
+  <path d="M 790 260 L 790 390 L 600 390" stroke="#ef4444" stroke-width="2" stroke-dasharray="5 5" fill="none" marker-end="url(#arrow)"/>
+  <text x="695" y="380" font-family="system-ui, sans-serif" font-size="12" fill="#ef4444" text-anchor="middle">Discriminator Loss</text>
+
+  <path d="M 790 260 L 790 420 L 330 420 L 330 370" stroke="#3b82f6" stroke-width="2" stroke-dasharray="5 5" fill="none" marker-end="url(#arrow)"/>
+  <text x="560" y="410" font-family="system-ui, sans-serif" font-size="12" fill="#3b82f6" text-anchor="middle">Generator Loss (Update weights to fool Discriminator)</text>
+</svg>

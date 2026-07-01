@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#020617;stop-opacity:1"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="800" height="450" rx="16" fill="url(#bgGrad)" />
+  <rect width="800" height="450" rx="16" fill="url(#grid)" />
+
+  <text x="400" y="50" font-family="system-ui, sans-serif" font-size="24" font-weight="800" fill="#f8fafc" text-anchor="middle" letter-spacing="1">The Normal Distribution (Gaussian)</text>
+  <text x="400" y="70" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">The 68-95-99.7 Empirical Rule</text>
+
+  <g transform="translate(100, 100)">
+    <!-- Axes -->
+    <path d="M 0 250 L 600 250" stroke="#cbd5e1" stroke-width="2"/>
+    <path d="M 300 250 L 300 30" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="5 5"/>
+
+    <!-- Bell Curve path (approximate normal distribution using Bezier curves) -->
+    <!-- Center = 300, 250 -->
+    <!-- Max height = 300, 40 -->
+    <!-- 1 std dev = 200, 400 -->
+    <path d="M 0 248 C 150 248 200 40 300 40 C 400 40 450 248 600 248" fill="none" stroke="#3b82f6" stroke-width="4"/>
+
+    <!-- Shading for 1 Standard Deviation (68%) -->
+    <path d="M 200 250 L 200 135 C 230 70 260 40 300 40 C 340 40 370 70 400 135 L 400 250 Z" fill="#3b82f6" opacity="0.3"/>
+    
+    <!-- Shading for 2 Standard Deviations (95%) - left -->
+    <path d="M 100 250 L 100 230 C 130 200 160 170 200 135 L 200 250 Z" fill="#60a5fa" opacity="0.2"/>
+    
+    <!-- Shading for 2 Standard Deviations (95%) - right -->
+    <path d="M 500 250 L 500 230 C 470 200 440 170 400 135 L 400 250 Z" fill="#60a5fa" opacity="0.2"/>
+
+    <!-- Lines and Labels for Standard Deviations -->
+    <!-- Mean (μ) -->
+    <text x="300" y="270" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#f8fafc" text-anchor="middle">μ</text>
+    
+    <!-- -1σ -->
+    <path d="M 200 250 L 200 135" stroke="#f8fafc" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="200" y="270" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">μ - 1σ</text>
+    
+    <!-- +1σ -->
+    <path d="M 400 250 L 400 135" stroke="#f8fafc" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="400" y="270" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">μ + 1σ</text>
+    
+    <!-- -2σ -->
+    <path d="M 100 250 L 100 230" stroke="#f8fafc" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="100" y="270" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">μ - 2σ</text>
+    
+    <!-- +2σ -->
+    <path d="M 500 250 L 500 230" stroke="#f8fafc" stroke-width="1" stroke-dasharray="3 3"/>
+    <text x="500" y="270" font-family="system-ui, sans-serif" font-size="14" fill="#cbd5e1" text-anchor="middle">μ + 2σ</text>
+
+    <!-- Percentages -->
+    <text x="250" y="180" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="#f8fafc" text-anchor="middle">34.1%</text>
+    <text x="350" y="180" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="#f8fafc" text-anchor="middle">34.1%</text>
+    
+    <text x="150" y="220" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#f8fafc" text-anchor="middle">13.6%</text>
+    <text x="450" y="220" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#f8fafc" text-anchor="middle">13.6%</text>
+    
+    <text x="50" y="240" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#f8fafc" text-anchor="middle">2.1%</text>
+    <text x="550" y="240" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" fill="#f8fafc" text-anchor="middle">2.1%</text>
+
+    <!-- Range Brackets -->
+    <!-- 68% -->
+    <path d="M 200 300 L 200 310 L 400 310 L 400 300" fill="none" stroke="#60a5fa" stroke-width="2"/>
+    <text x="300" y="325" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#60a5fa" text-anchor="middle">68% of data</text>
+    
+    <!-- 95% -->
+    <path d="M 100 335 L 100 345 L 500 345 L 500 335" fill="none" stroke="#93c5fd" stroke-width="2"/>
+    <text x="300" y="360" font-family="system-ui, sans-serif" font-size="14" font-weight="bold" fill="#93c5fd" text-anchor="middle">95% of data</text>
+  </g>
+</svg>

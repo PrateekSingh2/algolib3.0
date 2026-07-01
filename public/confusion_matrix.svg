@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#020617;stop-opacity:1"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="gradTN" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#064e3b;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#047857;stop-opacity:0.8"/>
+    </linearGradient>
+    <linearGradient id="gradTP" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:0.8"/>
+    </linearGradient>
+    <linearGradient id="gradFP" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7f1d1d;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#b91c1c;stop-opacity:0.8"/>
+    </linearGradient>
+    <linearGradient id="gradFN" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c2d12;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#c2410c;stop-opacity:0.8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="500" rx="16" fill="url(#bgGrad)" />
+  <rect width="800" height="500" rx="16" fill="url(#grid)" />
+
+  <text x="400" y="50" font-family="system-ui, sans-serif" font-size="24" font-weight="800" fill="#f8fafc" text-anchor="middle" letter-spacing="1">The Confusion Matrix</text>
+  <text x="400" y="75" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Understanding Classification Errors (Example: Spam Filter)</text>
+
+  <g transform="translate(220, 150)">
+    
+    <!-- Matrix Background -->
+    <rect x="0" y="0" width="400" height="300" fill="none" stroke="#334155" stroke-width="2" rx="8"/>
+
+    <!-- True Negative (Top Left) -->
+    <rect x="10" y="10" width="185" height="135" fill="url(#gradTN)" stroke="#34d399" stroke-width="2" rx="6"/>
+    <text x="102" y="55" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#a7f3d0" text-anchor="middle">True Negative</text>
+    <text x="102" y="75" font-family="monospace" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">(TN)</text>
+    <text x="102" y="105" font-family="system-ui, sans-serif" font-size="12" fill="#6ee7b7" text-anchor="middle">Was Not Spam</text>
+    <text x="102" y="125" font-family="system-ui, sans-serif" font-size="12" fill="#6ee7b7" text-anchor="middle">Predicted Not Spam ✅</text>
+
+    <!-- False Positive (Top Right) -->
+    <rect x="205" y="10" width="185" height="135" fill="url(#gradFP)" stroke="#f87171" stroke-width="2" rx="6"/>
+    <text x="297" y="45" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#fecaca" text-anchor="middle">False Positive</text>
+    <text x="297" y="65" font-family="monospace" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">(FP)</text>
+    <text x="297" y="85" font-family="system-ui, sans-serif" font-size="12" fill="#fca5a5" text-anchor="middle" font-style="italic">Type I Error</text>
+    <text x="297" y="110" font-family="system-ui, sans-serif" font-size="12" fill="#fca5a5" text-anchor="middle">Was Not Spam</text>
+    <text x="297" y="130" font-family="system-ui, sans-serif" font-size="12" fill="#fca5a5" text-anchor="middle">Predicted Spam ❌</text>
+
+    <!-- False Negative (Bottom Left) -->
+    <rect x="10" y="155" width="185" height="135" fill="url(#gradFN)" stroke="#fb923c" stroke-width="2" rx="6"/>
+    <text x="102" y="190" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#fed7aa" text-anchor="middle">False Negative</text>
+    <text x="102" y="210" font-family="monospace" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">(FN)</text>
+    <text x="102" y="230" font-family="system-ui, sans-serif" font-size="12" fill="#fdba74" text-anchor="middle" font-style="italic">Type II Error</text>
+    <text x="102" y="255" font-family="system-ui, sans-serif" font-size="12" fill="#fdba74" text-anchor="middle">Was Spam</text>
+    <text x="102" y="275" font-family="system-ui, sans-serif" font-size="12" fill="#fdba74" text-anchor="middle">Predicted Not Spam ❌</text>
+
+    <!-- True Positive (Bottom Right) -->
+    <rect x="205" y="155" width="185" height="135" fill="url(#gradTP)" stroke="#60a5fa" stroke-width="2" rx="6"/>
+    <text x="297" y="200" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" fill="#bfdbfe" text-anchor="middle">True Positive</text>
+    <text x="297" y="220" font-family="monospace" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">(TP)</text>
+    <text x="297" y="250" font-family="system-ui, sans-serif" font-size="12" fill="#93c5fd" text-anchor="middle">Was Spam</text>
+    <text x="297" y="270" font-family="system-ui, sans-serif" font-size="12" fill="#93c5fd" text-anchor="middle">Predicted Spam ✅</text>
+
+    <!-- X Axis Labels (Predictions) -->
+    <text x="200" y="-30" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="#cbd5e1" text-anchor="middle">Predicted Class</text>
+    <text x="102" y="-10" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Negative (0)</text>
+    <text x="297" y="-10" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Positive (1)</text>
+
+    <!-- Y Axis Labels (Actual) -->
+    <g transform="translate(-30, 150) rotate(-90)">
+      <text x="0" y="-20" font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="#cbd5e1" text-anchor="middle">Actual Class</text>
+      <text x="75" y="0" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Negative (0)</text>
+      <text x="-75" y="0" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Positive (1)</text>
+    </g>
+
+  </g>
+</svg>

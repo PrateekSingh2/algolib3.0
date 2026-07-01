@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#020617;stop-opacity:1"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+    </pattern>
+    <radialGradient id="nodeInput" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1"/>
+    </radialGradient>
+    <radialGradient id="nodeHidden" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#a78bfa;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#6d28d9;stop-opacity:1"/>
+    </radialGradient>
+    <radialGradient id="nodeOutput" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#f472b6;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#be185d;stop-opacity:1"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="800" height="450" rx="16" fill="url(#bgGrad)" />
+  <rect width="800" height="450" rx="16" fill="url(#grid)" />
+
+  <text x="400" y="50" font-family="system-ui, sans-serif" font-size="24" font-weight="800" fill="#f8fafc" text-anchor="middle" letter-spacing="1">Deep Neural Network Architecture</text>
+
+  <!-- Connectors -->
+  <g stroke="#475569" stroke-width="1.5" opacity="0.6">
+    <!-- Input to Hidden 1 -->
+    <path d="M 150 150 L 300 100" />
+    <path d="M 150 150 L 300 175" />
+    <path d="M 150 150 L 300 250" />
+    <path d="M 150 150 L 300 325" />
+    
+    <path d="M 150 225 L 300 100" />
+    <path d="M 150 225 L 300 175" />
+    <path d="M 150 225 L 300 250" />
+    <path d="M 150 225 L 300 325" />
+    
+    <path d="M 150 300 L 300 100" />
+    <path d="M 150 300 L 300 175" />
+    <path d="M 150 300 L 300 250" />
+    <path d="M 150 300 L 300 325" />
+
+    <!-- Hidden 1 to Hidden 2 -->
+    <path d="M 300 100 L 450 100" />
+    <path d="M 300 100 L 450 175" />
+    <path d="M 300 100 L 450 250" />
+    <path d="M 300 100 L 450 325" />
+    
+    <path d="M 300 175 L 450 100" />
+    <path d="M 300 175 L 450 175" />
+    <path d="M 300 175 L 450 250" />
+    <path d="M 300 175 L 450 325" />
+    
+    <path d="M 300 250 L 450 100" />
+    <path d="M 300 250 L 450 175" />
+    <path d="M 300 250 L 450 250" />
+    <path d="M 300 250 L 450 325" />
+    
+    <path d="M 300 325 L 450 100" />
+    <path d="M 300 325 L 450 175" />
+    <path d="M 300 325 L 450 250" />
+    <path d="M 300 325 L 450 325" />
+
+    <!-- Hidden 2 to Output -->
+    <path d="M 450 100 L 600 187.5" />
+    <path d="M 450 100 L 600 262.5" />
+    
+    <path d="M 450 175 L 600 187.5" />
+    <path d="M 450 175 L 600 262.5" />
+    
+    <path d="M 450 250 L 600 187.5" />
+    <path d="M 450 250 L 600 262.5" />
+    
+    <path d="M 450 325 L 600 187.5" />
+    <path d="M 450 325 L 600 262.5" />
+  </g>
+
+  <!-- Input Layer -->
+  <circle cx="150" cy="150" r="25" fill="url(#nodeInput)"/>
+  <circle cx="150" cy="225" r="25" fill="url(#nodeInput)"/>
+  <circle cx="150" cy="300" r="25" fill="url(#nodeInput)"/>
+  <text x="150" y="375" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#93c5fd" text-anchor="middle">Input Layer</text>
+
+  <!-- Hidden Layer 1 -->
+  <circle cx="300" cy="100" r="25" fill="url(#nodeHidden)"/>
+  <circle cx="300" cy="175" r="25" fill="url(#nodeHidden)"/>
+  <circle cx="300" cy="250" r="25" fill="url(#nodeHidden)"/>
+  <circle cx="300" cy="325" r="25" fill="url(#nodeHidden)"/>
+  <text x="300" y="375" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#c4b5fd" text-anchor="middle">Hidden Layer 1</text>
+
+  <!-- Hidden Layer 2 -->
+  <circle cx="450" cy="100" r="25" fill="url(#nodeHidden)"/>
+  <circle cx="450" cy="175" r="25" fill="url(#nodeHidden)"/>
+  <circle cx="450" cy="250" r="25" fill="url(#nodeHidden)"/>
+  <circle cx="450" cy="325" r="25" fill="url(#nodeHidden)"/>
+  <text x="450" y="375" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#c4b5fd" text-anchor="middle">Hidden Layer 2</text>
+
+  <!-- Output Layer -->
+  <circle cx="600" cy="187.5" r="25" fill="url(#nodeOutput)"/>
+  <circle cx="600" cy="262.5" r="25" fill="url(#nodeOutput)"/>
+  <text x="600" y="375" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#f9a8d4" text-anchor="middle">Output Layer</text>
+
+  <!-- Math Equation Box -->
+  <rect x="680" y="195" width="100" height="60" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="730" y="220" font-family="system-ui, sans-serif" font-size="12" fill="#f8fafc" text-anchor="middle">y = σ(Wx + b)</text>
+  <text x="730" y="240" font-family="system-ui, sans-serif" font-size="10" fill="#94a3b8" text-anchor="middle">Activation Func</text>
+
+</svg>

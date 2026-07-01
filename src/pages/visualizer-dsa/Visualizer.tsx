@@ -71,9 +71,7 @@ const Visualizer = () => {
   // HUD & Layout states
   const [showWelcome, setShowWelcome] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [topNavHidden, setTopNavHidden] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth <= 639 : false
-  );
+  const [topNavHidden, setTopNavHidden] = useState(false);
 
   // --- COLLABORATION: Sync active visualizer tab ---
   useEffect(() => {

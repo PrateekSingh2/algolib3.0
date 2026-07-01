@@ -40,6 +40,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { name: "Visualizer",      path: "/visualizer", icon: Network,         description: "Steps execution engine" },
       { name: "Compiler",        path: "/compiler",   icon: TerminalSquare,  description: "Multi-language code runner" },
+      { name: "AI/ML Hub",       path: "/ml",         icon: BrainCircuit,    description: "Explore Machine Learning" },
       { name: "Vectoris",      path: "/vectoris",   icon: BarChart3,       description: "AlgoLib AI assistant" },
     ],
   },

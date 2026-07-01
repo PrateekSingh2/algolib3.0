@@ -48,11 +48,15 @@ const VisualizerHub = lazy(() => import("./pages/visualizer-dsa/VisualizerHub"))
 const Visualizer = lazy(() => import("./pages/visualizer-dsa/Visualizer"));
 const SnippetVisualizer = lazy(() => import("./pages/visualizer-code/SnippetVisualizer"));
 const DynamicVisualizerEngine = lazy(() => import("./pages/visualizer-ai/DynamicVisualizerEngine"));
+const MLHub = lazy(() => import("./pages/visualizer-ml/MLHub"));
+const MLNotes = lazy(() => import("./pages/visualizer-ml/MLNotes"));
+const MLVisualizer = lazy(() => import("./pages/visualizer-ml/MLVisualizer"));
 const Developer = lazy(() => import("./pages/Developer"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Status = lazy(() => import("./pages/Status/status"));
 const Docs = lazy(() => import("./pages/Docs"));
 const Notes = lazy(() => import("./pages/notes/Notes"));
+const NotesHub = lazy(() => import("./pages/notes/NotesHub")); // Notes Hub entry page
 const Support = lazy(() => import("./pages/legals/Support"));
 const Community = lazy(() => import("./components/Community"));
 const EditProfile = lazy(() => import("./pages/userprofile/EditProfile"));
@@ -79,6 +83,7 @@ const ModuleLoader = () => <OrbitalLoader />;
 // --- GLOBAL MAINTENANCE GUARD ---
 const SYSTEM_MODULES = [
   { id: '/', name: 'Home' }, { id: '/compiler', name: 'Compiler' }, { id: '/visualizer', name: 'Visualizer Dashboard' },
+  { id: '/ml', name: 'ML Hub' },
   { id: '/vectoris', name: 'Vectoris' }, { id: '/view-profile', name: 'View Profile' }, { id: '/edit-profile', name: 'Edit Profile' },
   { id: '/contests', name: 'Contest' }, { id: '/quiz-panel', name: 'Quiz' }, { id: '/discussion', name: 'Community' },
   { id: '/docs', name: 'Documentation' }, { id: '/notes', name: 'AlgoLib Notes' }, { id: '/sheets', name: 'Practice Sheets' },
@@ -318,11 +323,12 @@ const AuthGuard = ({ children }: { children: React.ReactNode }) => {
   const { user, profile, loading } = useAuth();
   const location = useLocation();
 
-  const publicRoutes = ['/terms', '/privacy', '/cookies', '/developer', '/support', '/docs', '/compiler', '/visualizer', '/visualizer/code', '/discover', '/testimonials'];
+  const publicRoutes = ['/terms', '/privacy', '/cookies', '/developer', '/support', '/docs', '/compiler', '/visualizer', '/visualizer/code', '/discover', '/testimonials', '/ml'];
   const isPublicRoute = publicRoutes.includes(location.pathname.replace(/\/$/, '')) ||
     location.pathname.startsWith('/blog/') ||
     location.pathname.startsWith('/user/') ||
-    location.pathname.startsWith('/visualizer/dsa/');
+    location.pathname.startsWith('/visualizer/dsa/') ||
+    location.pathname.startsWith('/ml/');
 
   const getCleanPath = (path: string) => {
     if (path.startsWith('/view/')) return 'snippet_library';
@@ -373,7 +379,8 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/docs" element={<Docs />} />
-        <Route path="/notes" element={<Notes />} />
+        <Route path="/notes" element={<NotesHub />} />
+        <Route path="/notes/:tab" element={<Notes />} />
         <Route path="/support" element={<Support />} />
         <Route path="/view/:id" element={<SnippetView />} />
         <Route path="/visualizer" element={<VisualizerHub />} />
@@ -381,6 +388,11 @@ const AppRoutes = () => {
         <Route path="/visualizer/dsa/:dsType" element={<Visualizer />} />
         <Route path="/visualizer/code" element={<SnippetVisualizer />} />
         <Route path="/visualizer/ai" element={<DynamicVisualizerEngine />} />
+        <Route path="/ml" element={<MLHub />} />
+        <Route path="/notes/ml" element={<Navigate to="/notes/ml/00" replace />} />
+        <Route path="/notes/ml/:topicId" element={<MLNotes />} />
+        <Route path="/ml/visualizer" element={<Navigate to="/ml/visualizer/linear-regression" replace />} />
+        <Route path="/ml/visualizer/:mlType" element={<MLVisualizer />} />
 
         {/* Legacy backwards compatibility */}
         <Route path="/snippet-visualizer" element={<Navigate to="/visualizer/code" replace />} />

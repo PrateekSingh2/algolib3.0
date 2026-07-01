@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowDown, ArrowUp, ArrowRight, RotateCcw, Layers, Play, Pause, StepForward, StepBack,
-  Terminal, Activity, Zap, Box, Trash2, Cpu, Crosshair, Minimize2, Maximize2
+  Terminal, Activity, Zap, Box, Trash2, Cpu, Crosshair, Minimize2, Maximize2,
+  Info, Settings2, X
 } from 'lucide-react';
 import { useCollaboration } from '@/contexts/CollaborationContext';
 
@@ -54,6 +55,7 @@ const StackVisualizer = () => {
       { id: 'init2', val: 88, color: '#ff00ff' }
   ]);
   const [inputValue, setInputValue] = useState<number>(0);
+  const [showInfo, setShowInfo] = useState(false);
   
   // Engine State - HUD Hidden by Default
   const [showHUD, setShowHUD] = useState<boolean>(false);
@@ -258,17 +260,25 @@ const StackVisualizer = () => {
   };
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-gradient-to-br from-[#c4c3ff] via-[#e6e6ff] to-[#fce4ff] dark:bg-none dark:bg-[#09090b] font-sans text-slate-900 dark:text-white overflow-hidden">
-      <CyberGrid />
+    <div className="flex flex-col-reverse lg:flex-row-reverse gap-4 lg:gap-6 h-full w-full relative font-sans text-slate-900 dark:text-white lg:p-3">
       
-      <div className="flex-1 flex flex-col lg:flex-row relative z-10 overflow-hidden min-h-0">
-        
-        {/* LEFT: COMMAND CENTER */}
-        <div className="w-full lg:w-[340px] bg-white/40 backdrop-blur-2xl/95 lg:bg-white/40 backdrop-blur-2xl/80 dark:bg-black/95 dark:lg:bg-black/80 backdrop-blur-md border-slate-200 dark:border-white/10 flex flex-col h-[38%] lg:h-full shadow-2xl shrink-0 z-20 overflow-hidden order-1 lg:border-r">
+      {/* LEFT: COMMAND CENTER */}
+      <div className="w-full lg:w-80 flex flex-col gap-4 shrink-0 flex-1 min-h-0 lg:flex-none overflow-y-auto custom-scrollbar lg:pr-2 pb-4 lg:pb-0">
 
-          <div className="overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar pb-6 flex-1 lg:max-h-none pt-4 lg:pt-6">
-            
-            <div className="bg-white/60 backdrop-blur-xl dark:bg-white/5 p-4 rounded-xl border border-slate-200 dark:border-white/10 space-y-4">
+        {/* Controls Block 1 */}
+        <div className="bg-white/60 backdrop-blur-xl dark:bg-[#0d1117] border border-slate-200 dark:border-[#30363d] rounded-2xl p-5 shadow-sm shrink-0">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+              <Settings2 size={18} /> Controls
+            </div>
+            <button 
+              onClick={() => setShowInfo(true)}
+              className="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-colors"
+            >
+              <Info size={16} />
+            </button>
+          </div>
+          <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold text-slate-700 dark:text-gray-400 uppercase">Step Engine</span>
                 <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${isPaused ? 'border-amber-500 text-amber-600 dark:text-amber-500' : 'border-blue-500 dark:border-cyan-500 text-blue-600 dark:text-cyan-500'}`}>
@@ -296,8 +306,11 @@ const StackVisualizer = () => {
                     </button>
                 </div>
               </div>
-            </div>
+          </div>
+        </div>
 
+        {/* Controls Block 2 */}
+        <div className="bg-white/60 backdrop-blur-xl dark:bg-[#0d1117] border border-slate-200 dark:border-[#30363d] rounded-2xl p-5 shadow-sm shrink-0">
             <div className="space-y-4">
                <div className="flex gap-2">
                   <div className="flex-1">
@@ -322,14 +335,10 @@ const StackVisualizer = () => {
                   <Trash2 size={14}/> FORMAT MEMORY
                </button>
             </div>
-          </div>
         </div>
-
-        {/* VISIBLE GLOWING SEPARATOR LINE (Mobile Only) */}
-        <div className="lg:hidden h-[2px] w-full bg-gradient-to-r from-cyan-500/10 via-cyan-500/60 to-cyan-500/10 shrink-0 z-30 order-2" />
-
-        {/* RIGHT: THE ARENA */}
-        <div className="order-3 lg:order-2 flex-1 relative flex flex-col p-3 sm:p-4 lg:p-6 min-w-0 overflow-hidden lg:h-full w-full">
+      </div>
+      {/* RIGHT: THE ARENA */}
+      <div className="h-[48vh] shrink-0 lg:h-auto lg:flex-1 bg-white/60 backdrop-blur-xl dark:bg-[#0d1117] border border-slate-200 dark:border-[#30363d] rounded-2xl p-4 sm:p-6 shadow-sm relative overflow-hidden flex flex-col">
           
           {/* SMALL HUD TOGGLE */}
           <div className="flex justify-start lg:justify-start items-center mb-2 lg:mb-3 shrink-0 gap-2">
@@ -343,7 +352,7 @@ const StackVisualizer = () => {
           </div>
 
           {/* Central Arena Layout */}
-          <div className="flex-1 min-h-0 border border-slate-200 dark:border-white/5 bg-white/60 backdrop-blur-xl/50 dark:bg-black/30 rounded-2xl relative flex flex-col shadow-inner mb-2 lg:mb-4 w-full overflow-hidden">
+          <div className="flex-1 min-h-0 border border-slate-200 dark:border-[#30363d] bg-white/60 backdrop-blur-xl/50 dark:bg-[#0a0c10] rounded-2xl relative flex flex-col shadow-inner mb-2 lg:mb-4 w-full overflow-hidden">
              
              {/* Horizontal Scroll support */}
              <div className="flex-1 w-full h-full overflow-x-auto overflow-y-hidden custom-scrollbar touch-pan-x flex items-end justify-center pb-4">
@@ -417,8 +426,8 @@ const StackVisualizer = () => {
                    className="flex gap-2 lg:gap-4 w-full shrink-0 overflow-hidden"
                 >
                    {/* 1. HINGLISH INTERPRETER */}
-                   <div className="flex-1 shrink-0 bg-white/40 backdrop-blur-2xl/90 dark:bg-black/80 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-xl flex flex-col shadow-2xl overflow-hidden h-full relative">
-                       <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-slate-200 dark:border-white/10 flex justify-between items-center bg-white/60 backdrop-blur-xl dark:bg-white/5 shrink-0">
+                   <div className="flex-1 shrink-0 bg-slate-50 dark:bg-[#161b22] border border-slate-200 dark:border-[#30363d] rounded-xl flex flex-col shadow-inner overflow-hidden h-full relative">
+                       <div className="px-3 lg:px-4 py-2 lg:py-3 border-b border-slate-200 dark:border-[#30363d] flex justify-between items-center bg-white/60 dark:bg-[#0d1117] shrink-0">
                           <div className="flex items-center gap-1.5 lg:gap-2 text-blue-600 dark:text-cyan-400">
                               <Terminal size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4"/>
                               <span className="text-[9px] lg:text-[10px] font-black tracking-widest uppercase">Hinglish_Trace</span>
@@ -440,7 +449,7 @@ const StackVisualizer = () => {
                    </div>
 
                    {/* 2. THE SPAWN ZONE (HEAP) */}
-                   <div className="w-[130px] lg:w-[350px] shrink-0 border border-blue-200 dark:border-cyan-500/30 bg-blue-50 dark:bg-cyan-900/10 rounded-xl relative flex flex-col items-center justify-center shadow-inner h-full overflow-hidden">
+                   <div className="w-[130px] lg:w-[350px] shrink-0 border border-blue-200 dark:border-[#30363d] bg-blue-50 dark:bg-[#161b22] rounded-xl relative flex flex-col items-center justify-center shadow-inner h-full overflow-hidden">
                       <div className="absolute top-2 right-2 lg:top-3 lg:right-4 flex items-center gap-1.5 lg:gap-2 text-[8px] lg:text-[10px] font-mono text-blue-600 dark:text-cyan-500 uppercase tracking-widest">
                           <Box size={14} className="w-3.5 h-3.5 lg:w-4 lg:h-4" /> <span className="hidden lg:inline">Spawn_Zone</span><span className="lg:hidden">Heap</span>
                       </div>
@@ -485,7 +494,46 @@ const StackVisualizer = () => {
           </AnimatePresence>
 
         </div>
-      </div>
+
+      {/* Info Modal */}
+      <AnimatePresence>
+        {showInfo && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 rounded-2xl"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 10 }} 
+              animate={{ scale: 1, y: 0 }} 
+              exit={{ scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-[#0d1117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative"
+            >
+              <button 
+                onClick={() => setShowInfo(false)}
+                className="absolute top-4 right-4 h-8 w-8 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-full flex items-center justify-center text-slate-500 transition-colors"
+              >
+                <X size={16} />
+              </button>
+              
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                <Activity className="text-emerald-500" /> Stack Visualizer
+              </h3>
+              
+              <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300 mt-4 h-max overflow-y-auto max-h-[60vh] custom-scrollbar pr-2">
+                <p>
+                  A <strong>Stack</strong> is a linear data structure that follows the Last-In-First-Out (LIFO) principle. Elements are added and removed from the top.
+                </p>
+                <h4 className="font-bold text-slate-800 dark:text-slate-200 mt-4">Key Operations</h4>
+                <p>
+                  You can <strong>Push</strong> (insert) elements onto the top or <strong>Pop</strong> (remove) elements from the top.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
