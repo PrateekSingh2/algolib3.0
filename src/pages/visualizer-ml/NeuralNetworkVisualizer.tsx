@@ -45,7 +45,7 @@ const NeuralNetworkVisualizer = () => {
 
   const step = useCallback(() => {
     const now = performance.now();
-    if (now - lastUpdateRef.current < 200) return;
+    if (now - lastUpdateRef.current < 200) return true;
     lastUpdateRef.current = now;
 
     const { activeLayer: al, isForward: fwd, epoch: ep, loss: ls, targetLoss: tl, layers: lrs } = stateRef.current;
@@ -70,17 +70,20 @@ const NeuralNetworkVisualizer = () => {
           setActiveLayer(-1);
           setIsForward(true);
           if (requestRef.current) cancelAnimationFrame(requestRef.current);
-          return;
+          return false;
         }
       }
     }
     setActiveLayer(nextLayer);
     setIsForward(nextFwd);
+    return true;
   }, []);
 
   const animate = useCallback(() => {
-    step();
-    requestRef.current = requestAnimationFrame(animate);
+    const shouldContinue = step();
+    if (shouldContinue !== false) {
+      requestRef.current = requestAnimationFrame(animate);
+    }
   }, [step]);
 
   const toggleRun = () => {
