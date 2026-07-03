@@ -233,7 +233,7 @@ const Footer: React.FC<FooterProps> = ({ onRestrictedClick }) => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></span>
               </div>
-              <span className="text-[11px] text-slate-700 dark:text-zinc-300 font-mono tracking-wide uppercase">All systems operational</span>
+              <a href="/status" target="_blank" rel="noreferrer" aria-label="Status" className="text-[11px] text-slate-700 dark:text-zinc-300 font-mono tracking-wide uppercase">All systems operational</a>
             </div>
           </div>
 

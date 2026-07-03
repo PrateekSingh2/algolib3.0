@@ -21,6 +21,7 @@ import {
   Info,
   Lock,
   Cpu,
+  PenTool,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
@@ -33,8 +34,9 @@ const KNNVisualizer = lazy(() => import('./KNNVisualizer'));
 const LogisticRegressionVisualizer = lazy(() => import('./LogisticRegressionVisualizer'));
 const NeuralNetworkVisualizer = lazy(() => import('./NeuralNetworkVisualizer'));
 const DecisionTreeVisualizer = lazy(() => import('./DecisionTreeVisualizer'));
+const DigitRecognitionVisualizer = lazy(() => import('./DigitRecognitionVisualizer'));
 
-type VisualizerKey = 'neural-network' | 'linear-regression' | 'kmeans' | 'knn' | 'logistic-regression' | 'decision-tree';
+type VisualizerKey = 'neural-network' | 'linear-regression' | 'kmeans' | 'knn' | 'logistic-regression' | 'decision-tree' | 'digit-recognition';
 
 const AlienBackground = () => (
   <div className="fixed inset-0 -z-10 bg-white dark:bg-[#020205] overflow-hidden">
@@ -94,6 +96,7 @@ const MLVisualizer = () => {
   const menu = useMemo(
     () => [
       { id: 'neural-network' as VisualizerKey, label: 'Neural Network', icon: BrainCircuit, component: <NeuralNetworkVisualizer /> },
+      { id: 'digit-recognition' as VisualizerKey, label: 'Handwriting Recognition', icon: PenTool, component: <DigitRecognitionVisualizer /> },
       { id: 'linear-regression' as VisualizerKey, label: 'Linear Regression', icon: LineChart, component: <LinearRegressionVisualizer /> },
       { id: 'logistic-regression' as VisualizerKey, label: 'Logistic Regression', icon: Spline, component: <LogisticRegressionVisualizer /> },
       { id: 'decision-tree' as VisualizerKey, label: 'Decision Tree', icon: ListTree, component: <DecisionTreeVisualizer /> },
