@@ -58,10 +58,10 @@ Follow these steps to initialize the matrix:
 
 ```sh
 # Step 1: Clone the repository using the project's Git URL.
-git clone [https://github.com/PrateekSingh2/AlgoLib-v6.git](https://github.com/PrateekSingh2/AlgoLib-v6.git)
+git clone [https://github.com/PrateekSingh2/algolib3.0.git](https://github.com/PrateekSingh2/algoLib3.0.git)
 
 # Step 2: Navigate to the project directory.
-cd AlgoLib-v6
+cd algoLib3.0
 
 # Step 3: Install the necessary dependencies.
 pnpm install
