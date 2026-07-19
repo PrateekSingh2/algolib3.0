@@ -52,7 +52,7 @@ Engineered for maximum performance and scalability, leveraging modern web techno
 
 ## 🚀 Local Development
 
-If you want to work locally using your own IDE, you can clone this repo and run the simulator engine on your machine. The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+If you want to work locally using your own IDE, you can clone this repo and run the simulator engine on your machine. The only requirement is having Node.js & pnpm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 Follow these steps to initialize the matrix:
 
@@ -64,7 +64,7 @@ git clone [https://github.com/PrateekSingh2/AlgoLib-v6.git](https://github.com/P
 cd AlgoLib-v6
 
 # Step 3: Install the necessary dependencies.
-npm install
+pnpm install
 
 # Step 4: Start the development server with auto-reloading and instant preview.
-npm run dev
+pnpm run dev:all
